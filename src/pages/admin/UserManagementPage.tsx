@@ -319,20 +319,35 @@ export const UserManagementPage: React.FC = () => {
     }
     setLockTargetUser(target);
     setLockActionType(target.status === 'LOCKED' ? 'UNLOCK' : 'LOCK');
-    setLockReason('Quản trị viên tạm khóa tài khoản để rà soát');
+    setLockReason(''); // Bắt buộc admin phải nhập lý do khóa
   };
 
   // Submit Khóa / Mở Khóa (S1-10)
   const handleConfirmLockToggle = async () => {
     if (!lockTargetUser) return;
+
+    // Bắt buộc ghi lý do khi khóa tài khoản
+    if (lockActionType === 'LOCK') {
+      if (!lockReason || lockReason.trim().length === 0) {
+        setActionAlert({
+          type: 'error',
+          message: 'Bắt buộc phải ghi rõ lý do khóa tài khoản!'
+        });
+        return;
+      }
+    }
+
     setLockLoading(true);
     try {
       if (lockActionType === 'LOCK') {
-        const res = await lockAdminUser(lockTargetUser.id, lockReason);
+        const res = await lockAdminUser(lockTargetUser.id, lockReason.trim());
         if (res.success) {
+          const isSales = lockTargetUser.roles.includes('ROLE_SALES_REP') || lockTargetUser.roles.includes('ROLE_SALES_MANAGER');
           setActionAlert({
             type: 'success',
-            message: `Đã khóa tài khoản [${lockTargetUser.username}] thành công.`
+            message: `Đã khóa tài khoản [${lockTargetUser.username}] và thu hồi phiên làm việc thành công.${
+              isSales ? ' (Lưu ý: Các đại lý do nhân sự này phụ trách đã được gắn cảnh báo Cần bàn giao)' : ''
+            }`
           });
           loadUsers();
         } else {
@@ -565,6 +580,24 @@ export const UserManagementPage: React.FC = () => {
                               )}
                             </span>
                             <span className="user-mgmt-username">@{item.username}</span>
+                            {isLocked && (item.handoverRequired || item.roles.includes('ROLE_SALES_REP') || item.roles.includes('ROLE_SALES_MANAGER')) && (
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                padding: '2px 8px',
+                                borderRadius: 4,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                background: '#FEF3C7',
+                                color: '#92400E',
+                                border: '1px solid #FDE68A',
+                                marginTop: 4,
+                                width: 'fit-content'
+                              }}>
+                                ⚠️ Cần bàn giao đại lý
+                              </span>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -622,16 +655,48 @@ export const UserManagementPage: React.FC = () => {
                                 Trụ sở chính & Toàn quốc
                               </span>
                             )}
+
+                          {isLocked && (item.handoverRequired || item.roles.includes('ROLE_SALES_REP') || item.roles.includes('ROLE_SALES_MANAGER')) && (
+                            <div style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: '#B45309',
+                              background: '#FFFBEB',
+                              padding: '3px 8px',
+                              borderRadius: 6,
+                              border: '1px solid #FDE68A',
+                              marginTop: 4
+                            }}>
+                              ⚠️ Đại lý địa bàn cần bàn giao
+                            </div>
+                          )}
                         </div>
                       </td>
 
                       {/* Cột 5: Trạng thái */}
                       <td className="user-mgmt-td" style={{ textAlign: 'center' }}>
                         {isLocked ? (
-                          <span className="user-mgmt-status-badge locked">
-                            <Lock size={12} />
-                            Đã khóa
-                          </span>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                            <span className="user-mgmt-status-badge locked">
+                              <Lock size={12} />
+                              Đã khóa
+                            </span>
+                            {item.lockReason && (
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  color: '#DC2626',
+                                  fontStyle: 'italic',
+                                  maxWidth: 140,
+                                  textAlign: 'center',
+                                  lineHeight: 1.2
+                                }}
+                                title={item.lockReason}
+                              >
+                                "{item.lockReason}"
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <span className="user-mgmt-status-badge active">
                             <CheckCircle2 size={12} />
@@ -1378,21 +1443,58 @@ export const UserManagementPage: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ padding: '0 24px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ padding: '0 24px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               {lockActionType === 'LOCK' ? (
                 <>
-                  <p style={{ fontSize: 12.5, color: '#4B5563', lineHeight: 1.5 }}>
-                    Khi bị khóa, tài khoản này sẽ bị thu hồi phiên làm việc và từ chối đăng nhập ngay
-                    lập tức.
-                  </p>
+                  <div style={{
+                    padding: '10px 14px',
+                    borderRadius: 10,
+                    background: '#FEF2F2',
+                    border: '1px solid #FECACA',
+                    color: '#991B1B',
+                    fontSize: 12.5,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 8
+                  }}>
+                    <AlertTriangle size={16} style={{ color: '#DC2626', flexShrink: 0, marginTop: 1 }} />
+                    <div>
+                      <strong>Thu hồi phiên mở ngay lập tức:</strong> Khi bị khóa, tài khoản này sẽ bị thu hồi phiên làm việc (JWT) tức thì và bị từ chối đăng nhập cho đến khi được mở khóa.
+                    </div>
+                  </div>
+
+                  {/* Cảnh báo bàn giao đại lý cho Sales */}
+                  {(lockTargetUser.roles.includes('ROLE_SALES_REP') || lockTargetUser.roles.includes('ROLE_SALES_MANAGER')) && (
+                    <div style={{
+                      padding: '12px 14px',
+                      borderRadius: 10,
+                      background: '#FFFBEB',
+                      border: '1px solid #FCD34D',
+                      color: '#92400E',
+                      fontSize: 12.5,
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 8
+                    }}>
+                      <AlertTriangle size={18} style={{ color: '#D97706', flexShrink: 0, marginTop: 2 }} />
+                      <div>
+                        <strong style={{ color: '#B45309' }}>⚠️ CẢNH BÁO BÀN GIAO ĐẠI LÝ:</strong> Nhân viên này thuộc khối <strong>Kinh doanh (Sales)</strong> đang phụ trách mạng lưới đại lý. Khi tài khoản bị khóa, hệ thống sẽ tự động kích hoạt cảnh báo <strong>cần bàn giao đại lý</strong> để cấp quản lý kịp thời phân công người phụ trách mới!
+                      </div>
+                    </div>
+                  )}
+
                   <div className="user-mgmt-form-group">
-                    <label className="user-mgmt-form-label">Lý do khóa tài khoản:</label>
+                    <label className="user-mgmt-form-label">
+                      Lý do khóa tài khoản <span style={{ color: '#DC2626' }}>* (Bắt buộc)</span>:
+                    </label>
                     <input
                       type="text"
+                      required
                       value={lockReason}
                       onChange={(e) => setLockReason(e.target.value)}
-                      placeholder="ví dụ: Nghỉ việc, vi phạm quy định bảo mật..."
+                      placeholder="Nhập lý do khóa cụ thể (ví dụ: Nghỉ việc, vi phạm bảo mật...)"
                       className="user-mgmt-form-input"
+                      autoFocus
                     />
                   </div>
                 </>
@@ -1415,7 +1517,7 @@ export const UserManagementPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleConfirmLockToggle}
-                disabled={lockLoading}
+                disabled={lockLoading || (lockActionType === 'LOCK' && !lockReason.trim())}
                 className="user-mgmt-btn-submit"
                 style={{
                   background:

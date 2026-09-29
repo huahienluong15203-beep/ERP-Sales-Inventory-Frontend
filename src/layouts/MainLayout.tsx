@@ -19,20 +19,6 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   // Trạng thái mở Dropdown chuyển nhanh vai trò
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState<boolean>(false);
-  // Thời gian đồng bộ hiện tại
-  const [syncTime, setSyncTime] = useState<string>('');
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false });
-      const dateStr = now.toLocaleDateString('vi-VN');
-      setSyncTime(`${timeStr} (${dateStr})`);
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Đóng Mobile Drawer khi đổi route
   useEffect(() => {
@@ -267,11 +253,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             </div>
           </div>
 
-          {/* Thời gian đồng bộ */}
-          <div className="erp-topbar-sync-info" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6B7280' }}>
-            <Icons.Clock size={14} style={{ color: '#F85606' }} />
-            <span>Đồng bộ lần cuối: {syncTime}</span>
-          </div>
+
 
           {/* Dropdown Đổi Vai Trò Tinh Tế (Hỗ trợ demo kiểm thử menu) */}
           <div className="erp-role-switcher-container">

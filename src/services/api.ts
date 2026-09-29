@@ -431,6 +431,8 @@ export interface AdminUserItem {
   email: string;
   phone?: string;
   status: 'ACTIVE' | 'LOCKED' | string;
+  lockReason?: string;
+  handoverRequired?: boolean;
   mustChangePassword: boolean;
   roles: RoleName[];
   warehouses: RefItem[];
