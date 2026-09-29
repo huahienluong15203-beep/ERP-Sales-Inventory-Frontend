@@ -72,31 +72,43 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
     currentMenu?.description || 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống';
 
   return (
-    <div className="erp-app-shell">
+    <div className="min-h-screen bg-[#F5F6F8] flex flex-row w-full antialiased font-sans">
       {/* 1. BACKDROP OVERLAY TRÊN MÀN HÌNH 360px (Bấm để đóng Drawer) */}
       {isMobileMenuOpen && (
         <div
-          className="erp-mobile-backdrop"
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
           aria-label="Đóng menu"
         />
       )}
 
-      {/* 2. SIDEBAR ĐIỀU HƯỚNG PHÂN QUYỀN (CHUẨN APP ETC - NỀN TRẮNG & MENU PILL) */}
-      <aside className={`erp-sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
+      {/* 2. SIDEBAR ĐIỀU HƯỚNG PHÂN QUYỀN (CHUẨN NỀN TRẮNG & MENU PILL) */}
+      <aside
+        className={`fixed top-0 bottom-0 left-0 z-50 w-[270px] bg-white border-r border-gray-200/80 flex flex-col shrink-0 transition-transform duration-300 ease-in-out lg:static lg:h-screen lg:sticky ${
+          isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0 shadow-none'
+        }`}
+      >
         {/* Header của Sidebar */}
-        <div className="erp-sidebar-header">
-          <div className="erp-logo-brand" onClick={() => navigate('/dashboard')} title="Về bảng điều khiển">
-            <img src="/logo-cube.png" alt="ERP Logo" className="erp-logo-img" />
-            <div className="erp-logo-text">
-              <span className="erp-brand-title">ERP SALES & INVENTORY</span>
-              <span className="erp-brand-sub">Bán Hàng & Quản Trị Kho</span>
+        <div className="h-[68px] px-5 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
+          <div
+            className="flex items-center gap-3 cursor-pointer select-none transition-opacity hover:opacity-85"
+            onClick={() => navigate('/dashboard')}
+            title="Về bảng điều khiển"
+          >
+            <img src="/logo-cube.png" alt="ERP Logo" className="w-10 h-10 object-contain shrink-0 bg-transparent block" />
+            <div className="flex flex-col">
+              <span className="font-extrabold text-[13.5px] tracking-wide text-gray-900 leading-tight">
+                ERP SALES & INVENTORY
+              </span>
+              <span className="text-[10.5px] text-orange-600 font-semibold tracking-wide">
+                Bán Hàng & Quản Trị Kho
+              </span>
             </div>
           </div>
           {/* Nút đóng Sidebar trên Mobile 360px */}
           <button
             type="button"
-            className="erp-mobile-close-btn"
+            className="lg:hidden p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
             onClick={() => setIsMobileMenuOpen(false)}
             aria-label="Đóng menu"
           >
@@ -104,9 +116,9 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
           </button>
         </div>
 
-        {/* Khối Thẻ VAI TRÒ HỆ THỐNG (Chuẩn App ETC) */}
-        <div className="erp-sidebar-role-badge">
-          <div className="erp-sidebar-role-title flex items-center justify-between">
+        {/* Khối Thẻ VAI TRÒ HỆ THỐNG */}
+        <div className="p-3.5 mx-3 mt-3 rounded-xl bg-gray-50/80 border border-gray-100 shrink-0">
+          <div className="text-[10px] font-bold tracking-wider uppercase text-gray-400 flex items-center justify-between mb-1.5">
             <span>VAI TRÒ HỆ THỐNG</span>
             {user?.roles && user.roles.length > 1 && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold">
@@ -114,9 +126,9 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
               </span>
             )}
           </div>
-          <div className="erp-sidebar-role-name flex items-center justify-between">
+          <div className="flex items-center justify-between font-bold text-teal-700 text-xs">
             <div className="flex items-center gap-1.5 overflow-hidden">
-              <span className="erp-role-dot-online flex-shrink-0" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs ring-2 ring-emerald-500/20 shrink-0" />
               {user?.roles && user.roles.length > 1 ? (
                 <select
                   value={currentRole}
@@ -131,89 +143,62 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
                   ))}
                 </select>
               ) : (
-                <span>{currentRoleMeta.label}</span>
+                <span className="truncate">{currentRoleMeta.label}</span>
               )}
             </div>
             {user?.roles && user.roles.length > 1 && (
               <Icons.ChevronDown size={14} className="text-gray-400 pointer-events-none" />
             )}
           </div>
-          <div
-            style={{
-              fontSize: '11px',
-              color: '#6B7280',
-              marginTop: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            <Icons.MapPin size={12} color="#F85606" />
-            <span
-              style={{
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                maxWidth: '220px'
-              }}
-              title={user?.warehouse || user?.workLocation}
-            >
+          <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-1.5 truncate">
+            <Icons.MapPin size={12} className="text-orange-500 shrink-0" />
+            <span className="truncate" title={user?.warehouse || user?.workLocation}>
               {user?.warehouse || user?.workLocation || 'Trụ sở chính'}
             </span>
           </div>
         </div>
 
-        {/* Danh sách Menu lọc theo quyền (Story S1-06: Chỉ hiển thị menu thuộc quyền) */}
-        <nav className="erp-sidebar-nav" aria-label="Menu điều hướng hệ thống">
+        {/* Danh sách Menu lọc theo quyền */}
+        <nav className="flex-1 overflow-y-auto px-3.5 py-3 space-y-4" aria-label="Menu điều hướng hệ thống">
           {isLoading ? (
-            <div style={{ padding: '20px 10px' }}>
-              <div
-                style={{
-                  height: '38px',
-                  background: '#F3F4F6',
-                  borderRadius: '9999px',
-                  marginBottom: '10px'
-                }}
-              />
-              <div
-                style={{
-                  height: '38px',
-                  background: '#F3F4F6',
-                  borderRadius: '9999px',
-                  marginBottom: '10px'
-                }}
-              />
-              <div style={{ height: '38px', background: '#F3F4F6', borderRadius: '9999px' }} />
+            <div className="p-4 space-y-2.5">
+              <div className="h-9 bg-gray-100 rounded-full animate-pulse" />
+              <div className="h-9 bg-gray-100 rounded-full animate-pulse" />
+              <div className="h-9 bg-gray-100 rounded-full animate-pulse" />
             </div>
           ) : menus.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '30px 10px', color: '#9CA3AF' }}>
-              <Icons.AlertTriangle size={24} />
-              <p style={{ fontSize: '13px', marginTop: '6px' }}>
-                Chưa có mục menu nào được cấp quyền.
-              </p>
+            <div className="text-center py-8 px-2 text-gray-400">
+              <Icons.AlertTriangle size={24} className="mx-auto mb-2 text-amber-500" />
+              <p className="text-xs">Chưa có mục menu nào được cấp quyền.</p>
             </div>
           ) : (
             Object.entries(groupedMenus).map(([epicKey, items]) => (
-              <div key={epicKey} className="erp-menu-group">
-                <div className="erp-menu-group-title">
+              <div key={epicKey} className="space-y-1">
+                <div className="px-3 text-[10.5px] font-bold text-gray-400 tracking-wider uppercase">
                   <span>{epicKey}</span>
                 </div>
-                <ul className="erp-menu-list">
+                <ul className="space-y-1">
                   {items.map((item) => {
                     const isActive = location.pathname === item.path;
                     return (
-                      <li key={item.path} className="erp-menu-item">
+                      <li key={item.path}>
                         <Link
                           to={item.path}
-                          className={`erp-menu-link ${isActive ? 'active' : ''}`}
+                          className={`flex items-center gap-3 px-3.5 py-2.5 rounded-full text-xs font-bold transition-all duration-200 ${
+                            isActive
+                              ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm shadow-orange-500/25'
+                              : 'text-gray-600 hover:text-orange-600 hover:bg-orange-50/70 font-semibold'
+                          }`}
                           title={item.description}
                         >
-                          <span className="erp-menu-icon">
+                          <span className="shrink-0">
                             <DynamicIcon name={item.icon} size={18} />
                           </span>
-                          <span className="erp-menu-title">{item.title}</span>
+                          <span className="truncate flex-1">{item.title}</span>
                           {item.badge && (
-                            <span className="erp-menu-badge">{item.badge}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-white/20 text-white">
+                              {item.badge}
+                            </span>
                           )}
                         </Link>
                       </li>
@@ -225,11 +210,11 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
           )}
         </nav>
 
-        {/* Nút Đăng Xuất dạng Pill cố định góc dưới bên trái (như App ETC) */}
-        <div className="erp-sidebar-footer">
+        {/* Nút Đăng Xuất dạng Pill cố định góc dưới bên trái */}
+        <div className="p-3.5 border-t border-gray-100 shrink-0">
           <button
             type="button"
-            className="erp-sidebar-logout-btn"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-full text-xs font-bold text-red-600 bg-red-50/70 hover:bg-red-100 border border-red-100 transition-colors"
             onClick={async () => {
               await logout();
               navigate('/login');
@@ -243,14 +228,14 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
       </aside>
 
       {/* 3. KHU VỰC NỘI DUNG CHÍNH (MAIN AREA) */}
-      <div className="erp-main-area">
-        {/* Topbar điều hướng trên cùng (Chuẩn App ETC) */}
-        <header className="erp-topbar">
-          <div className="erp-topbar-left">
-            {/* Nút Hamburger bật menu cho mobile (Touch target 44px x 44px) */}
+      <div className="flex-1 flex flex-col min-w-0 bg-[#F5F6F8]">
+        {/* Topbar điều hướng trên cùng */}
+        <header className="h-[68px] bg-white border-b border-gray-200/80 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+          <div className="flex items-center gap-3.5">
+            {/* Nút Hamburger bật menu cho mobile */}
             <button
               type="button"
-              className="erp-hamburger-btn"
+              className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Mở menu điều hướng"
               id="btn-mobile-menu-toggle"
@@ -259,30 +244,30 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             </button>
 
             {/* Tiêu đề trang + mô tả hoạt động bên dưới */}
-            <div className="erp-page-title-box">
-              <h1 className="erp-page-heading">{pageTitle}</h1>
-              <span className="erp-page-subheading">{pageSubtitle}</span>
+            <div className="flex flex-col">
+              <h1 className="text-base sm:text-lg font-extrabold text-gray-900 tracking-tight leading-tight">
+                {pageTitle}
+              </h1>
+              <span className="text-[11.5px] text-gray-500 font-medium hidden sm:inline">
+                {pageSubtitle}
+              </span>
             </div>
           </div>
 
-
-
-
-
-          {/* Khối User Profile Avatar ở Header (như App ETC) */}
+          {/* Khối User Profile Avatar ở Header */}
           <div
-            className="erp-header-user-block"
+            className="flex items-center gap-3 py-1.5 px-3 rounded-full hover:bg-gray-50 transition cursor-pointer border border-transparent hover:border-gray-200"
             onClick={() => navigate('/profile')}
             title="Xem hồ sơ cá nhân"
           >
-            <div className="erp-header-avatar">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 text-white font-extrabold text-xs flex items-center justify-center shadow-xs ring-2 ring-orange-100">
               {getAvatarInitials(user?.fullName, currentRole)}
             </div>
-            <div className="erp-header-user-info">
-              <span className="erp-header-fullname">
+            <div className="hidden md:flex flex-col text-left">
+              <span className="text-xs font-bold text-gray-800 leading-tight">
                 {user?.fullName || 'Người Dùng'}
               </span>
-              <span className="erp-header-username">
+              <span className="text-[10.5px] text-gray-400 font-mono">
                 {user?.username || 'user'}
               </span>
             </div>
@@ -290,7 +275,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
         </header>
 
         {/* Nội dung trang */}
-        <main className="erp-page-content" id="main-content">
+        <main className="flex-1 w-full p-4 sm:p-6 lg:p-8" id="main-content">
           {children}
         </main>
       </div>

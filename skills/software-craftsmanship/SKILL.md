@@ -4,7 +4,7 @@ description: Shared engineering principles for high-quality software development
 ---
 
 # Software Craftsmanship & Collaboration
-
+- 100% UI USE Tailwind css not base css 
 A shared guide for engineers across frontend and backend disciplines to deliver resilient, maintainable, and cohesive software.
 
 ## 1. Clean Code & Design Principles
