@@ -255,53 +255,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
 
 
-          {/* Dropdown Đổi Vai Trò Tinh Tế (Hỗ trợ demo kiểm thử menu) */}
-          <div className="erp-role-switcher-container">
-            <button
-              type="button"
-              className="erp-role-selector-btn"
-              onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-              id="btn-role-switcher"
-              title="Bấm để đổi vai trò kiểm tra menu"
-            >
-              <span className="erp-role-dot-online" />
-              <span>{currentRoleMeta.label}</span>
-              <Icons.ChevronDown size={14} />
-            </button>
 
-            {isRoleDropdownOpen && (
-              <div className="erp-role-dropdown-menu">
-                <div className="erp-role-dropdown-header">
-                  Chuyển đổi vai trò hệ thống:
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  {allRoles.map((role) => {
-                    const meta = ROLE_METADATA_MAP[role];
-                    const isSelected = role === currentRole;
-                    return (
-                      <button
-                        key={role}
-                        type="button"
-                        className={`erp-role-option-item ${isSelected ? 'selected' : ''}`}
-                        onClick={async () => {
-                          await switchRole(role);
-                          setIsRoleDropdownOpen(false);
-                        }}
-                      >
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontWeight: 600 }}>{meta.label}</span>
-                          <span style={{ fontSize: '11px', color: '#6B7280' }}>
-                            {meta.sampleLocation}
-                          </span>
-                        </div>
-                        {isSelected && <Icons.Check size={16} color="#F85606" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
 
           {/* Khối User Profile Avatar ở Header (như App ETC) */}
           <div

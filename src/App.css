@@ -321,78 +321,8 @@
 
 
 
-/* Dropdown Đổi Vai Trò Tinh Tế */
-.erp-role-switcher-container {
-  position: relative;
-}
 
-.erp-role-selector-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
-  border-radius: var(--erp-radius-full);
-  background: #FFF5F1;
-  border: 1px solid #FFD8CC;
-  color: #C93B00;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.erp-role-selector-btn:hover {
-  background: #FFEBE3;
-}
-
-.erp-role-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: 280px;
-  background: #FFFFFF;
-  border-radius: var(--erp-radius-md);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-  border: 1px solid var(--erp-border);
-  padding: 8px;
-  z-index: 200;
-  animation: erpFadeIn 0.2s ease-out;
-}
-
-.erp-role-dropdown-header {
-  padding: 6px 8px 8px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #9CA3AF;
-  text-transform: uppercase;
-  border-bottom: 1px solid #F3F4F6;
-  margin-bottom: 6px;
-}
-
-.erp-role-option-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: background 0.15s;
-  text-align: left;
-}
-
-.erp-role-option-item:hover {
-  background: #F9FAFB;
-}
-
-.erp-role-option-item.selected {
-  background: #FFF5F1;
-  color: #F85606;
-  font-weight: 600;
-}
-
-/* User Profile Block ở Header (như App ETC) */
+/* User Profile Block ở Header */
 .erp-header-user-block {
   display: flex;
   align-items: center;
