@@ -9,7 +9,7 @@ interface AuthContextType {
   currentRole: RoleName;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<{ success: boolean; message?: string }>;
+  login: (username: string, password: string) => Promise<{ success: boolean; message?: string; user?: UserProfile }>;
   logout: () => Promise<void>;
   switchRole: (role: RoleName) => Promise<void>;
   hasPermission: (path: string) => boolean;
@@ -63,7 +63,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   /**
    * Đăng nhập người dùng (Story S1-01)
    */
-  const login = async (username: string, password: string): Promise<{ success: boolean; message?: string }> => {
+  const login = async (username: string, password: string): Promise<{ success: boolean; message?: string; user?: UserProfile }> => {
     setIsLoading(true);
     try {
       const result = await loginUser(username, password);
@@ -72,7 +72,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setCurrentRole(result.user.role);
         localStorage.setItem(STORAGE_ROLE_KEY, result.user.role);
         await loadUserContext(result.user.role);
-        return { success: true };
+        return { success: true, user: result.user };
       } else {
         return { success: false, message: result.message || 'Đăng nhập không thành công' };
       }

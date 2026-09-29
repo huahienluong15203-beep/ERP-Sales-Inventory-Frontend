@@ -241,6 +241,16 @@ export const Icons: Record<string, React.FC<IconProps>> = {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" />
     </svg>
+  ),
+  Mail: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+    </svg>
+  ),
+  Key: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="7.5" cy="15.5" r="5.5" /><path d="m21 2-9.6 9.6" /><path d="m15.5 7.5 3 3L22 7l-3-3" />
+    </svg>
   )
 };
 
@@ -297,3 +307,5 @@ export const ChevronDown = Icons.ChevronDown;
 export const Check = Icons.Check;
 export const RefreshCw = Icons.RefreshCw;
 export const LogOut = Icons.LogOut;
+export const Mail = Icons.Mail;
+export const Key = Icons.Key;

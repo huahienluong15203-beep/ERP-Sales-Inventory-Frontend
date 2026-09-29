@@ -104,7 +104,8 @@ export async function loginUser(usernameInput: string, passwordInput: string): P
         role: primaryRole,
         roles: backendRoles as RoleName[],
         warehouse: getSampleWarehouse(primaryRole),
-        workLocation: ROLE_METADATA_MAP[primaryRole]?.sampleLocation || 'Văn phòng điều hành'
+        workLocation: ROLE_METADATA_MAP[primaryRole]?.sampleLocation || 'Văn phòng điều hành',
+        mustChangePassword: !!data.mustChangePassword
       };
 
       return {
@@ -209,6 +210,111 @@ export async function logoutUser(): Promise<void> {
   } finally {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('erp_active_role');
+  }
+}
+
+/**
+ * S1-03: Gửi email yêu cầu đặt lại mật khẩu (hiệu lực 30 phút)
+ */
+export async function sendForgotPasswordEmail(email: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim() })
+    });
+    const data = await response.json().catch(() => null);
+    if (response.ok) {
+      return {
+        success: true,
+        message: data?.message || 'Nếu email của bạn tồn tại trong hệ thống, chúng tôi đã gửi liên kết đặt lại mật khẩu. Vui lòng kiểm tra hộp thư!'
+      };
+    } else {
+      return {
+        success: false,
+        message: data?.message || 'Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau.'
+      };
+    }
+  } catch {
+    return {
+      success: false,
+      message: 'Không thể kết nối tới máy chủ backend. Vui lòng kiểm tra lại dịch vụ!'
+    };
+  }
+}
+
+/**
+ * S1-03: Đặt lại mật khẩu mới qua token nhận từ email
+ */
+export async function resetPasswordWithToken(
+  token: string,
+  newPassword: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token.trim(), newPassword })
+    });
+    const data = await response.json().catch(() => null);
+    if (response.ok) {
+      return {
+        success: true,
+        message: data?.message || 'Đặt lại mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới.'
+      };
+    } else {
+      return {
+        success: false,
+        message: data?.message || 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.'
+      };
+    }
+  } catch {
+    return {
+      success: false,
+      message: 'Không thể kết nối tới máy chủ backend. Vui lòng thử lại sau!'
+    };
+  }
+}
+
+/**
+ * S1-04: Đổi mật khẩu khi đang đăng nhập (hoặc đổi lần đầu)
+ */
+export async function changePasswordApi(
+  currentPassword: string,
+  newPassword: string,
+  confirmPassword?: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      return { success: false, message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!' };
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ currentPassword, newPassword, confirmPassword })
+    });
+    const data = await response.json().catch(() => null);
+    if (response.ok) {
+      return {
+        success: true,
+        message: data?.message || 'Đổi mật khẩu thành công! Mật khẩu mới của bạn đã có hiệu lực.'
+      };
+    } else {
+      return {
+        success: false,
+        message: data?.message || 'Đổi mật khẩu không thành công. Vui lòng kiểm tra lại mật khẩu hiện tại.'
+      };
+    }
+  } catch {
+    return {
+      success: false,
+      message: 'Không thể kết nối tới máy chủ backend. Vui lòng thử lại sau!'
+    };
   }
 }
 

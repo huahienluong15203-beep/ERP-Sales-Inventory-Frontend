@@ -8,6 +8,7 @@ import { ModulePage } from '../pages/common/ModulePage';
 import { ForbiddenPage } from '../pages/common/ForbiddenPage';
 import { NotFoundPage } from '../pages/common/NotFoundPage';
 import { LoginPage } from '../pages/auth/LoginPage';
+import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -22,6 +23,11 @@ export const AppRoutes: React.FC = () => {
   // 1. Tuyến đường trang Đăng nhập
   if (pathname === '/login') {
     return <LoginPage />;
+  }
+
+  // 1b. Tuyến đường trang Đặt lại mật khẩu (từ liên kết xác thực email)
+  if (pathname === '/reset-password') {
+    return <ResetPasswordPage />;
   }
 
   // 2. Nếu chưa đăng nhập -> Chuyển hướng về /login

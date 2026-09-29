@@ -114,12 +114,12 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
         {/* Header của Sidebar */}
         <div className="erp-sidebar-header">
           <div className="erp-logo-brand" onClick={() => navigate('/dashboard')}>
-            <div className="erp-logo-icon">
-              <Icons.Warehouse size={22} />
+            <div className="erp-logo-icon" style={{ background: 'transparent', boxShadow: 'none', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <img src="/logo-cube.png" alt="ERP Logo" style={{ width: '34px', height: 'auto', display: 'block' }} />
             </div>
             <div className="erp-logo-text">
-              <span className="erp-brand-title">ERP SALES & WH</span>
-              <span className="erp-brand-sub">Quản Trị Bán Hàng & Kho</span>
+              <span className="erp-brand-title">ERP SALES & INVENTORY</span>
+              <span className="erp-brand-sub">Bán Hàng & Quản Trị Kho</span>
             </div>
           </div>
           {/* Nút đóng Sidebar trên Mobile 360px */}

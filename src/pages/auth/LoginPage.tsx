@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
-import { SYSTEM_DEMO_CREDENTIALS } from '../../services/api';
+import { SYSTEM_DEMO_CREDENTIALS, sendForgotPasswordEmail, changePasswordApi } from '../../services/api';
 import {
-  Package,
   User,
   Lock,
   Eye,
@@ -13,33 +12,59 @@ import {
   HelpCircle,
   Sun,
   Moon,
+  Mail,
+  Key,
+  CheckCircle2,
+  ArrowLeft,
+  ShieldCheck,
   Sparkles
 } from '../../components/common/Icons';
+
+type AuthViewMode = 'login' | 'forgot_password';
 
 export const LoginPage: React.FC = () => {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
+  // Chế độ xem: Đăng nhập thường hoặc Quên mật khẩu
+  const [viewMode, setViewMode] = useState<AuthViewMode>('login');
+
+  // Form đăng nhập
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin123');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  // Form quên mật khẩu
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSuccessMessage, setForgotSuccessMessage] = useState<string | null>(null);
+
+  // Modal bắt buộc đổi mật khẩu lần đầu (S1-04 + S1-08)
+  const [showForceChangeModal, setShowForceChangeModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
+  // Trạng thái chung
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showHintModal, setShowHintModal] = useState(false);
+  const [showDemoDrawer, setShowDemoDrawer] = useState(false);
   const [isLightMode, setIsLightMode] = useState(false);
 
-  // Nếu đã đăng nhập thì tự động chuyển vào dashboard
-  React.useEffect(() => {
-    if (isAuthenticated) {
+  // Nếu đã đăng nhập và không phải đang đổi mật khẩu thì vào dashboard
+  useEffect(() => {
+    if (isAuthenticated && !showForceChangeModal) {
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, showForceChangeModal, navigate]);
 
-  const handleSubmit = async (e: FormEvent) => {
+  // Xử lý Đăng Nhập (S1-01)
+  const handleLoginSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!username.trim()) {
+    const cleanUsername = username.trim();
+    if (!cleanUsername) {
       setErrorMessage('Vui lòng nhập tên đăng nhập!');
       return;
     }
@@ -50,16 +75,88 @@ export const LoginPage: React.FC = () => {
     }
 
     setIsSubmitting(true);
-
     try {
-      const result = await login(username, password);
+      const result = await login(cleanUsername, password);
       if (result.success) {
-        navigate('/dashboard', { replace: true });
+        // Kiểm tra xem tài khoản có gắn cờ bắt buộc đổi mật khẩu lần đầu không (S1-08)
+        if (result.user?.mustChangePassword) {
+          setShowForceChangeModal(true);
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
       } else {
-        setErrorMessage(result.message || 'Đăng nhập thất bại!');
+        setErrorMessage(result.message || 'Tài khoản hoặc mật khẩu không chính xác!');
       }
     } catch {
-      setErrorMessage('Có lỗi xảy ra trong quá trình đăng nhập. Vui lòng thử lại!');
+      setErrorMessage('Không thể kết nối tới máy chủ backend. Vui lòng thử lại sau!');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Xử lý Quên Mật Khẩu (S1-03)
+  const handleForgotSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setForgotSuccessMessage(null);
+
+    const email = forgotEmail.trim();
+    if (!email) {
+      setErrorMessage('Vui lòng nhập địa chỉ email của bạn!');
+      return;
+    }
+
+    if (!email.includes('@') || !email.includes('.')) {
+      setErrorMessage('Địa chỉ email không đúng định dạng!');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await sendForgotPasswordEmail(email);
+      if (res.success) {
+        setForgotSuccessMessage(res.message);
+      } else {
+        setErrorMessage(res.message);
+      }
+    } catch {
+      setErrorMessage('Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra lại dịch vụ!');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Xử lý Đổi Mật Khẩu Lần Đầu (S1-04)
+  const handleForceChangePasswordSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    if (newPassword.length < 8 || !/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      setErrorMessage('Mật khẩu mới phải có ít nhất 8 ký tự, bao gồm cả chữ cái và chữ số!');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setErrorMessage('Xác nhận mật khẩu mới không trùng khớp!');
+      return;
+    }
+
+    if (newPassword === password) {
+      setErrorMessage('Mật khẩu mới không được trùng với mật khẩu tạm!');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await changePasswordApi(password, newPassword, confirmNewPassword);
+      if (res.success) {
+        setShowForceChangeModal(false);
+        navigate('/dashboard', { replace: true });
+      } else {
+        setErrorMessage(res.message);
+      }
+    } catch {
+      setErrorMessage('Có lỗi xảy ra khi đổi mật khẩu. Vui lòng thử lại!');
     } finally {
       setIsSubmitting(false);
     }
@@ -68,7 +165,7 @@ export const LoginPage: React.FC = () => {
   const handleSelectDemoAccount = (uname: string, pass: string) => {
     setUsername(uname);
     setPassword(pass);
-    setShowHintModal(false);
+    setShowDemoDrawer(false);
     setErrorMessage(null);
   };
 
@@ -81,25 +178,29 @@ export const LoginPage: React.FC = () => {
         justifyContent: 'space-between',
         alignItems: 'center',
         background: isLightMode
-          ? 'linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%)'
-          : 'linear-gradient(135deg, #090E17 0%, #111827 50%, #0F172A 100%)',
-        color: isLightMode ? '#111827' : '#F9FAFB',
-        fontFamily: 'var(--erp-font-sans)',
-        padding: '24px 16px',
+          ? 'linear-gradient(135deg, #F8FAFC 0%, #EDF2F7 100%)'
+          : 'radial-gradient(ellipse at 50% 15%, rgba(249, 115, 22, 0.09) 0%, rgba(9, 13, 22, 0) 65%), linear-gradient(135deg, #090D16 0%, #0F172A 55%, #0B0F19 100%)',
+        color: isLightMode ? '#0F172A' : '#F8FAFC',
+        fontFamily: 'var(--erp-font-sans, system-ui, -apple-system, sans-serif)',
+        padding: '20px 16px',
         position: 'relative',
         transition: 'background 0.3s ease'
       }}
     >
-      {/* Nút chuyển chế độ sáng tối ở góc trên bên phải (như App ETC) */}
+      {/* Thanh công cụ phụ ở góc trên */}
       <div
         style={{
           width: '100%',
           maxWidth: '1200px',
           display: 'flex',
-          justifyContent: 'flex-end',
-          marginBottom: '12px'
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '8px'
         }}
       >
+
+
+        {/* Nút chuyển chế độ Sáng / Tối */}
         <button
           type="button"
           onClick={() => setIsLightMode(!isLightMode)}
@@ -107,68 +208,66 @@ export const LoginPage: React.FC = () => {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '8px 16px',
+            padding: '7px 14px',
             borderRadius: '9999px',
-            fontSize: '13px',
+            fontSize: '12.5px',
             fontWeight: 500,
-            background: isLightMode ? '#FFFFFF' : 'rgba(255, 255, 255, 0.08)',
-            color: isLightMode ? '#374151' : '#E5E7EB',
-            border: isLightMode ? '1px solid #E5E7EB' : '1px solid rgba(255, 255, 255, 0.12)',
+            background: isLightMode ? '#FFFFFF' : 'rgba(255, 255, 255, 0.06)',
+            color: isLightMode ? '#334155' : '#E2E8F0',
+            border: isLightMode ? '1px solid #E2E8F0' : '1px solid rgba(255, 255, 255, 0.12)',
             boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
             cursor: 'pointer',
             transition: 'all 0.2s ease'
           }}
         >
-          {isLightMode ? <Moon size={16} /> : <Sun size={16} color="#FBBF24" />}
+          {isLightMode ? <Moon size={15} /> : <Sun size={15} color="#FBBF24" />}
           <span>{isLightMode ? 'Chế độ Tối' : 'Chế độ Sáng'}</span>
         </button>
       </div>
 
-      {/* Centered Login Card (Phong cách chuẩn App ETC + Tone Cam Lazada) */}
+      {/* Auth Card Trung Tâm */}
       <div
         style={{
           width: '100%',
           maxWidth: '440px',
-          background: isLightMode ? '#FFFFFF' : 'rgba(19, 27, 44, 0.95)',
+          background: isLightMode ? '#FFFFFF' : 'rgba(15, 23, 42, 0.92)',
           borderRadius: '24px',
-          border: isLightMode ? '1px solid #E5E7EB' : '1px solid rgba(255, 255, 255, 0.08)',
+          border: isLightMode ? '1px solid #E2E8F0' : '1px solid rgba(255, 255, 255, 0.08)',
           boxShadow: isLightMode
-            ? '0 20px 40px -15px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0,0,0,0.02)'
-            : '0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 30px rgba(248, 86, 6, 0.1)',
+            ? '0 25px 50px -12px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(0,0,0,0.04)'
+            : '0 30px 60px -15px rgba(0, 0, 0, 0.85), 0 0 35px rgba(249, 115, 22, 0.12)',
           padding: '36px 32px',
-          backdropFilter: 'blur(16px)',
-          margin: 'auto 0'
+          backdropFilter: 'blur(20px)',
+          margin: 'auto 0',
+          position: 'relative'
         }}
       >
-        {/* Logo & Subtitle */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '56px',
-              height: '56px',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, #FF6A00 0%, #EE4D2D 100%)',
-              color: '#FFFFFF',
-              boxShadow: '0 8px 20px rgba(238, 77, 45, 0.35)',
-              marginBottom: '16px'
-            }}
-          >
-            <Package size={30} />
+        {/* LOGO CHÍNH THỨC DỰ ÁN */}
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <div style={{ display: 'inline-block', marginBottom: '14px' }}>
+            <img
+              src="/logo-cube.png"
+              alt="ERP Sales & Inventory Logo"
+              style={{
+                width: '110px',
+                height: 'auto',
+                display: 'block',
+                margin: '0 auto',
+                filter: 'drop-shadow(0 12px 28px rgba(249, 115, 22, 0.28))'
+              }}
+            />
           </div>
 
           <h1
             style={{
               fontSize: '22px',
               fontWeight: 800,
-              letterSpacing: '0.3px',
-              color: isLightMode ? '#111827' : '#FFFFFF',
-              marginBottom: '6px'
+              letterSpacing: '-0.3px',
+              color: isLightMode ? '#0F172A' : '#FFFFFF',
+              margin: '0 0 4px 0'
             }}
           >
-            ERP <span style={{ color: '#F85606' }}>SALES & WH</span>
+            ERP SALES & INVENTORY
           </h1>
 
           <div
@@ -178,10 +277,10 @@ export const LoginPage: React.FC = () => {
               gap: '6px',
               fontSize: '12.5px',
               fontWeight: 500,
-              color: isLightMode ? '#6B7280' : '#38BDF8'
+              color: isLightMode ? '#64748B' : '#94A3B8'
             }}
           >
-            <Sparkles size={14} />
+            <Sparkles size={13} color="#F97316" />
             <span>Hệ Thống Bán Hàng & Quản Trị Kho</span>
           </div>
         </div>
@@ -196,11 +295,12 @@ export const LoginPage: React.FC = () => {
               padding: '12px 14px',
               borderRadius: '12px',
               background: isLightMode ? '#FEF2F2' : 'rgba(239, 68, 68, 0.12)',
-              border: isLightMode ? '1px solid #FCA5A5' : '1px solid rgba(239, 68, 68, 0.3)',
-              color: isLightMode ? '#B91C1C' : '#FCA5A5',
+              border: isLightMode ? '1px solid #FECACA' : '1px solid rgba(239, 68, 68, 0.25)',
+              color: isLightMode ? '#DC2626' : '#FCA5A5',
               fontSize: '13px',
               marginBottom: '20px',
-              lineHeight: 1.4
+              lineHeight: 1.45,
+              animation: 'fadeIn 0.2s ease'
             }}
           >
             <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
@@ -208,300 +308,729 @@ export const LoginPage: React.FC = () => {
           </div>
         )}
 
-        {/* Form Đăng Nhập */}
-        <form onSubmit={handleSubmit}>
-          {/* Tên Đăng Nhập */}
-          <div style={{ marginBottom: '20px' }}>
-            <label
-              htmlFor="username"
-              style={{
-                display: 'block',
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '0.8px',
-                textTransform: 'uppercase',
-                color: isLightMode ? '#4B5563' : '#94A3B8',
-                marginBottom: '8px'
-              }}
-            >
-              TÊN ĐĂNG NHẬP
-            </label>
-            <div
-              style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center'
-              }}
-            >
-              <div
+        {/* ======================= CHẾ ĐỘ 1: ĐĂNG NHẬP (S1-01) ======================= */}
+        {viewMode === 'login' && (
+          <form onSubmit={handleLoginSubmit}>
+            {/* Tên Đăng Nhập */}
+            <div style={{ marginBottom: '18px' }}>
+              <label
+                htmlFor="username"
                 style={{
-                  position: 'absolute',
-                  left: '14px',
-                  color: isLightMode ? '#9CA3AF' : '#64748B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  pointerEvents: 'none'
+                  display: 'block',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '0.8px',
+                  textTransform: 'uppercase',
+                  color: isLightMode ? '#475569' : '#94A3B8',
+                  marginBottom: '8px'
                 }}
               >
-                <User size={18} />
+                TÊN ĐĂNG NHẬP
+              </label>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '14px',
+                    color: isLightMode ? '#94A3B8' : '#64748B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  <User size={18} />
+                </div>
+                <input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Tên tài khoản (vd: admin, wh_staff...)"
+                  disabled={isSubmitting}
+                  style={{
+                    width: '100%',
+                    height: '46px',
+                    paddingLeft: '44px',
+                    paddingRight: '14px',
+                    borderRadius: '12px',
+                    border: isLightMode ? '1.5px solid #E2E8F0' : '1.5px solid rgba(255, 255, 255, 0.1)',
+                    background: isLightMode ? '#F8FAFC' : 'rgba(11, 15, 25, 0.65)',
+                    color: isLightMode ? '#0F172A' : '#FFFFFF',
+                    fontSize: '14px',
+                    outline: 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#F97316';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.15)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = isLightMode ? '#E2E8F0' : 'rgba(255, 255, 255, 0.1)';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
               </div>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Nhập tên đăng nhập (vd: admin, wh_staff...)"
-                disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  height: '46px',
-                  paddingLeft: '44px',
-                  paddingRight: '14px',
-                  borderRadius: '12px',
-                  border: isLightMode
-                    ? '1.5px solid #E5E7EB'
-                    : '1.5px solid rgba(255, 255, 255, 0.1)',
-                  background: isLightMode ? '#F9FAFB' : 'rgba(15, 23, 42, 0.6)',
-                  color: isLightMode ? '#111827' : '#FFFFFF',
-                  fontSize: '14px',
-                  transition: 'all 0.2s ease'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#F85606';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(248, 86, 6, 0.15)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = isLightMode
-                    ? '#E5E7EB'
-                    : 'rgba(255, 255, 255, 0.1)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              />
             </div>
-          </div>
 
-          {/* Mật Khẩu */}
-          <div style={{ marginBottom: '24px' }}>
-            <label
-              htmlFor="password"
-              style={{
-                display: 'block',
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '0.8px',
-                textTransform: 'uppercase',
-                color: isLightMode ? '#4B5563' : '#94A3B8',
-                marginBottom: '8px'
-              }}
-            >
-              MẬT KHẨU
-            </label>
-            <div
-              style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center'
-              }}
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '14px',
-                  color: isLightMode ? '#9CA3AF' : '#64748B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  pointerEvents: 'none'
-                }}
-              >
-                <Lock size={18} />
+            {/* Mật Khẩu */}
+            <div style={{ marginBottom: '18px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label
+                  htmlFor="password"
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    letterSpacing: '0.8px',
+                    textTransform: 'uppercase',
+                    color: isLightMode ? '#475569' : '#94A3B8'
+                  }}
+                >
+                  MẬT KHẨU
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode('forgot_password');
+                    setErrorMessage(null);
+                  }}
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#F97316',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0
+                  }}
+                >
+                  Quên mật khẩu?
+                </button>
               </div>
-              <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Nhập mật khẩu..."
-                disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  height: '46px',
-                  paddingLeft: '44px',
-                  paddingRight: '44px',
-                  borderRadius: '12px',
-                  border: isLightMode
-                    ? '1.5px solid #E5E7EB'
-                    : '1.5px solid rgba(255, 255, 255, 0.1)',
-                  background: isLightMode ? '#F9FAFB' : 'rgba(15, 23, 42, 0.6)',
-                  color: isLightMode ? '#111827' : '#FFFFFF',
-                  fontSize: '14px',
-                  transition: 'all 0.2s ease'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#F85606';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(248, 86, 6, 0.15)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = isLightMode
-                    ? '#E5E7EB'
-                    : 'rgba(255, 255, 255, 0.1)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  background: 'none',
-                  border: 'none',
-                  color: isLightMode ? '#9CA3AF' : '#64748B',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '14px',
+                    color: isLightMode ? '#94A3B8' : '#64748B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  <Lock size={18} />
+                </div>
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Nhập mật khẩu..."
+                  disabled={isSubmitting}
+                  style={{
+                    width: '100%',
+                    height: '46px',
+                    paddingLeft: '44px',
+                    paddingRight: '44px',
+                    borderRadius: '12px',
+                    border: isLightMode ? '1.5px solid #E2E8F0' : '1.5px solid rgba(255, 255, 255, 0.1)',
+                    background: isLightMode ? '#F8FAFC' : 'rgba(11, 15, 25, 0.65)',
+                    color: isLightMode ? '#0F172A' : '#FFFFFF',
+                    fontSize: '14px',
+                    outline: 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#F97316';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.15)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = isLightMode ? '#E2E8F0' : 'rgba(255, 255, 255, 0.1)';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    background: 'none',
+                    border: 'none',
+                    color: isLightMode ? '#94A3B8' : '#64748B',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Nút Đăng Nhập dạng Pill Gradient Cam Lazada có Spinner */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            style={{
-              width: '100%',
-              height: '48px',
-              borderRadius: '9999px',
-              background: 'linear-gradient(135deg, #FF6A00 0%, #EE4D2D 100%)',
-              color: '#FFFFFF',
-              fontSize: '15px',
-              fontWeight: 700,
-              letterSpacing: '0.3px',
-              boxShadow: '0 6px 18px rgba(238, 77, 45, 0.35)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '10px',
-              cursor: isSubmitting ? 'not-allowed' : 'pointer',
-              opacity: isSubmitting ? 0.8 : 1,
-              transition: 'all 0.2s ease'
-            }}
-          >
-            {isSubmitting ? (
-              <div
-                style={{
-                  width: '22px',
-                  height: '22px',
-                  borderRadius: '50%',
-                  border: '3px solid rgba(255, 255, 255, 0.3)',
-                  borderTopColor: '#FFFFFF',
-                  animation: 'erpSpin 0.8s linear infinite'
-                }}
-              />
-            ) : (
-              <span>ĐĂNG NHẬP</span>
-            )}
-          </button>
-        </form>
+            {/* Ghi nhớ đăng nhập */}
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '22px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: isLightMode ? '#475569' : '#94A3B8' }}>
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  style={{
+                    accentColor: '#F97316',
+                    width: '16px',
+                    height: '16px',
+                    cursor: 'pointer'
+                  }}
+                />
+                <span>Duy trì trạng thái đăng nhập</span>
+              </label>
+            </div>
 
-        {/* Dòng Quên mật khẩu & Hỗ trợ chuẩn App ETC */}
-        <div
-          style={{
-            marginTop: '22px',
-            textAlign: 'center',
-            fontSize: '12.5px',
-            color: isLightMode ? '#6B7280' : '#94A3B8'
-          }}
-        >
-          <span>Quên mật khẩu? </span>
-          <span style={{ color: '#F85606', fontWeight: 600, cursor: 'pointer' }}>
-            Vui lòng liên hệ Quản trị viên để được hỗ trợ
-          </span>
-        </div>
-
-        {/* Nút nhỏ xem danh sách tài khoản hệ thống (ẩn gọn gàng, không phá giao diện) */}
-        <div style={{ marginTop: '18px', textAlign: 'center' }}>
-          <button
-            type="button"
-            onClick={() => setShowHintModal(!showHintModal)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '12px',
-              color: isLightMode ? '#9CA3AF' : '#64748B',
-              cursor: 'pointer',
-              padding: '4px 10px',
-              borderRadius: '8px',
-              background: 'transparent',
-              transition: 'color 0.2s'
-            }}
-          >
-            <HelpCircle size={14} />
-            <span>Xem danh sách tài khoản mẫu</span>
-          </button>
-
-          {showHintModal && (
-            <div
+            {/* Nút Đăng Nhập */}
+            <button
+              type="submit"
+              disabled={isSubmitting}
               style={{
-                marginTop: '12px',
-                padding: '12px',
+                width: '100%',
+                height: '48px',
                 borderRadius: '12px',
-                background: isLightMode ? '#F9FAFB' : 'rgba(15, 23, 42, 0.8)',
-                border: isLightMode ? '1px solid #E5E7EB' : '1px solid rgba(255, 255, 255, 0.08)',
-                textAlign: 'left',
-                fontSize: '12px'
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                color: '#FFFFFF',
+                fontSize: '14.5px',
+                fontWeight: 700,
+                letterSpacing: '0.4px',
+                boxShadow: '0 8px 22px rgba(249, 115, 22, 0.38)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                border: 'none',
+                opacity: isSubmitting ? 0.8 : 1,
+                transition: 'all 0.2s ease'
               }}
             >
-              <div
-                style={{
-                  fontWeight: 600,
-                  marginBottom: '8px',
-                  color: isLightMode ? '#374151' : '#E2E8F0'
-                }}
-              >
-                Nhấp để điền nhanh:
+              {isSubmitting ? (
+                <div
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    border: '3px solid rgba(255, 255, 255, 0.3)',
+                    borderTopColor: '#FFFFFF',
+                    animation: 'erpSpin 0.8s linear infinite'
+                  }}
+                />
+              ) : (
+                <span>ĐĂNG NHẬP HỆ THỐNG</span>
+              )}
+            </button>
+          </form>
+        )}
+
+        {/* ======================= CHẾ ĐỘ 2: QUÊN MẬT KHẨU (S1-03) ======================= */}
+        {viewMode === 'forgot_password' && (
+          <div>
+            {forgotSuccessMessage ? (
+              <div style={{ textAlign: 'center', padding: '16px 0', animation: 'fadeIn 0.3s ease' }}>
+                <div
+                  style={{
+                    width: '52px',
+                    height: '52px',
+                    borderRadius: '50%',
+                    background: 'rgba(34, 197, 94, 0.15)',
+                    color: '#22C55E',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '14px'
+                  }}
+                >
+                  <CheckCircle2 size={30} />
+                </div>
+                <h3
+                  style={{
+                    fontSize: '16px',
+                    fontWeight: 700,
+                    color: isLightMode ? '#0F172A' : '#FFFFFF',
+                    marginBottom: '6px'
+                  }}
+                >
+                  Đã Gửi Liên Kết!
+                </h3>
+                <p
+                  style={{
+                    fontSize: '13px',
+                    color: isLightMode ? '#475569' : '#CBD5E1',
+                    lineHeight: 1.5,
+                    marginBottom: '20px'
+                  }}
+                >
+                  {forgotSuccessMessage}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode('login');
+                    setForgotSuccessMessage(null);
+                    setErrorMessage(null);
+                  }}
+                  style={{
+                    width: '100%',
+                    height: '44px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                    color: '#FFFFFF',
+                    fontSize: '13.5px',
+                    fontWeight: 700,
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  QUAY LẠI ĐĂNG NHẬP
+                </button>
               </div>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                  gap: '6px'
-                }}
-              >
-                {Object.entries(SYSTEM_DEMO_CREDENTIALS).map(([key, acc]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => handleSelectDemoAccount(key, acc.pass)}
+            ) : (
+              <form onSubmit={handleForgotSubmit}>
+                <div style={{ marginBottom: '18px' }}>
+                  <label
+                    htmlFor="forgot-email"
                     style={{
-                      padding: '6px 10px',
-                      borderRadius: '6px',
-                      background: isLightMode ? '#FFFFFF' : 'rgba(255, 255, 255, 0.05)',
-                      border: isLightMode ? '1px solid #E5E7EB' : '1px solid rgba(255, 255, 255, 0.08)',
-                      color: isLightMode ? '#1F2937' : '#CBD5E1',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      display: 'flex',
-                      flexDirection: 'column'
+                      display: 'block',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      letterSpacing: '0.8px',
+                      textTransform: 'uppercase',
+                      color: isLightMode ? '#475569' : '#94A3B8',
+                      marginBottom: '8px'
                     }}
                   >
-                    <span style={{ fontWeight: 600 }}>{acc.name}</span>
-                    <span style={{ fontSize: '11px', color: '#F85606' }}>
-                      {key} / {acc.pass}
-                    </span>
+                    ĐỊA CHỈ EMAIL TÀI KHOẢN
+                  </label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: '14px',
+                        color: isLightMode ? '#94A3B8' : '#64748B',
+                        display: 'flex',
+                        alignItems: 'center',
+                        pointerEvents: 'none'
+                      }}
+                    >
+                      <Mail size={18} />
+                    </div>
+                    <input
+                      id="forgot-email"
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="Nhập email của bạn (vd: okluon123pk@gmail.com)..."
+                      disabled={isSubmitting}
+                      style={{
+                        width: '100%',
+                        height: '46px',
+                        paddingLeft: '44px',
+                        paddingRight: '14px',
+                        borderRadius: '12px',
+                        border: isLightMode ? '1.5px solid #E2E8F0' : '1.5px solid rgba(255, 255, 255, 0.1)',
+                        background: isLightMode ? '#F8FAFC' : 'rgba(11, 15, 25, 0.65)',
+                        color: isLightMode ? '#0F172A' : '#FFFFFF',
+                        fontSize: '14px',
+                        outline: 'none',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#F97316';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.15)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = isLightMode ? '#E2E8F0' : 'rgba(255, 255, 255, 0.1)';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    />
+                  </div>
+                  <p style={{ fontSize: '12px', color: isLightMode ? '#64748B' : '#94A3B8', marginTop: '6px' }}>
+                    * Hệ thống sẽ gửi email chứa liên kết đặt lại mật khẩu có hiệu lực trong 30 phút.
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  style={{
+                    width: '100%',
+                    height: '46px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                    color: '#FFFFFF',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    letterSpacing: '0.3px',
+                    boxShadow: '0 8px 20px rgba(249, 115, 22, 0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    border: 'none',
+                    opacity: isSubmitting ? 0.8 : 1,
+                    transition: 'all 0.2s ease',
+                    marginBottom: '16px'
+                  }}
+                >
+                  {isSubmitting ? (
+                    <div
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        border: '3px solid rgba(255, 255, 255, 0.3)',
+                        borderTopColor: '#FFFFFF',
+                        animation: 'erpSpin 0.8s linear infinite'
+                      }}
+                    />
+                  ) : (
+                    <span>GỬI LIÊN KẾT ĐẶT LẠI</span>
+                  )}
+                </button>
+
+                <div style={{ textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewMode('login');
+                      setErrorMessage(null);
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: isLightMode ? '#64748B' : '#94A3B8',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '4px'
+                    }}
+                  >
+                    <ArrowLeft size={16} />
+                    <span>Quay lại trang Đăng nhập</span>
                   </button>
-                ))}
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+
+        {/* Nút Xem Danh Sách Tài Khoản Mẫu (Hỗ trợ chấm điểm / test nhanh) */}
+        {viewMode === 'login' && (
+          <div style={{ marginTop: '22px', textAlign: 'center' }}>
+            <button
+              type="button"
+              onClick={() => setShowDemoDrawer(!showDemoDrawer)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '12px',
+                color: isLightMode ? '#94A3B8' : '#64748B',
+                cursor: 'pointer',
+                padding: '4px 10px',
+                borderRadius: '8px',
+                background: 'transparent',
+                border: 'none',
+                transition: 'color 0.2s'
+              }}
+            >
+              <HelpCircle size={14} />
+              <span>{showDemoDrawer ? 'Ẩn danh sách tài khoản mẫu' : 'Xem danh sách tài khoản mẫu'}</span>
+            </button>
+
+            {showDemoDrawer && (
+              <div
+                style={{
+                  marginTop: '12px',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  background: isLightMode ? '#F8FAFC' : 'rgba(11, 15, 25, 0.75)',
+                  border: isLightMode ? '1px solid #E2E8F0' : '1px solid rgba(255, 255, 255, 0.08)',
+                  textAlign: 'left',
+                  fontSize: '12px',
+                  animation: 'fadeIn 0.2s ease'
+                }}
+              >
+                <div style={{ fontWeight: 600, marginBottom: '8px', color: isLightMode ? '#334155' : '#E2E8F0' }}>
+                  Bấm vào vai trò để tự động điền:
+                </div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                    gap: '6px'
+                  }}
+                >
+                  {Object.entries(SYSTEM_DEMO_CREDENTIALS).map(([key, acc]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => handleSelectDemoAccount(key, acc.pass)}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        background: isLightMode ? '#FFFFFF' : 'rgba(255, 255, 255, 0.04)',
+                        border: isLightMode ? '1px solid #E2E8F0' : '1px solid rgba(255, 255, 255, 0.06)',
+                        color: isLightMode ? '#1E293B' : '#CBD5E1',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}
+                    >
+                      <span style={{ fontWeight: 600 }}>{acc.name}</span>
+                      <span style={{ fontSize: '11px', color: '#F97316' }}>
+                        {key} / {acc.pass}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Footer Thông Tin Bản Quyền & Trụ Sở dưới đáy trang */}
+      {/* ======================= MODAL: BẮT BUỘC ĐỔI MẬT KHẨU LẦN ĐẦU (S1-04 & S1-08) ======================= */}
+      {showForceChangeModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            zIndex: 9999
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '460px',
+              background: isLightMode ? '#FFFFFF' : '#0F172A',
+              borderRadius: '24px',
+              border: '1px solid rgba(249, 115, 22, 0.3)',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(249, 115, 22, 0.15)',
+              padding: '32px 28px',
+              animation: 'fadeIn 0.25s ease'
+            }}
+          >
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  background: 'rgba(249, 115, 22, 0.15)',
+                  color: '#F97316',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '12px'
+                }}
+              >
+                <ShieldCheck size={32} />
+              </div>
+              <h2
+                style={{
+                  fontSize: '19px',
+                  fontWeight: 800,
+                  color: isLightMode ? '#0F172A' : '#FFFFFF',
+                  margin: '0 0 6px 0'
+                }}
+              >
+                YÊU CẦU ĐỔI MẬT KHẨU
+              </h2>
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: isLightMode ? '#64748B' : '#94A3B8',
+                  lineHeight: 1.45,
+                  margin: 0
+                }}
+              >
+                Tài khoản của bạn đang sử dụng mật khẩu tạm do Quản trị viên cấp. Vui lòng thiết lập mật khẩu mới để bảo vệ tài khoản của bạn.
+              </p>
+            </div>
+
+            {errorMessage && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  color: '#FCA5A5',
+                  fontSize: '12.5px',
+                  marginBottom: '16px'
+                }}
+              >
+                <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleForceChangePasswordSubmit}>
+              {/* Mật khẩu mới */}
+              <div style={{ marginBottom: '16px' }}>
+                <label
+                  htmlFor="new-pwd"
+                  style={{
+                    display: 'block',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    letterSpacing: '0.8px',
+                    textTransform: 'uppercase',
+                    color: isLightMode ? '#475569' : '#94A3B8',
+                    marginBottom: '6px'
+                  }}
+                >
+                  MẬT KHẨU MỚI
+                </label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <div style={{ position: 'absolute', left: '12px', color: '#64748B', display: 'flex' }}>
+                    <Key size={16} />
+                  </div>
+                  <input
+                    id="new-pwd"
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Tối thiểu 8 ký tự (chữ & số)..."
+                    disabled={isSubmitting}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      paddingLeft: '38px',
+                      paddingRight: '38px',
+                      borderRadius: '10px',
+                      border: '1.5px solid rgba(255, 255, 255, 0.12)',
+                      background: 'rgba(11, 15, 25, 0.7)',
+                      color: '#FFFFFF',
+                      fontSize: '13.5px',
+                      outline: 'none'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      background: 'none',
+                      border: 'none',
+                      color: '#64748B',
+                      cursor: 'pointer',
+                      display: 'flex'
+                    }}
+                  >
+                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Nhập lại mật khẩu mới */}
+              <div style={{ marginBottom: '20px' }}>
+                <label
+                  htmlFor="confirm-pwd"
+                  style={{
+                    display: 'block',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    letterSpacing: '0.8px',
+                    textTransform: 'uppercase',
+                    color: isLightMode ? '#475569' : '#94A3B8',
+                    marginBottom: '6px'
+                  }}
+                >
+                  XÁC NHẬN MẬT KHẨU MỚI
+                </label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <div style={{ position: 'absolute', left: '12px', color: '#64748B', display: 'flex' }}>
+                    <Lock size={16} />
+                  </div>
+                  <input
+                    id="confirm-pwd"
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    placeholder="Nhập lại mật khẩu mới..."
+                    disabled={isSubmitting}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      paddingLeft: '38px',
+                      paddingRight: '14px',
+                      borderRadius: '10px',
+                      border: '1.5px solid rgba(255, 255, 255, 0.12)',
+                      background: 'rgba(11, 15, 25, 0.7)',
+                      color: '#FFFFFF',
+                      fontSize: '13.5px',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                style={{
+                  width: '100%',
+                  height: '46px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                  color: '#FFFFFF',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  letterSpacing: '0.3px',
+                  border: 'none',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 6px 18px rgba(249, 115, 22, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                {isSubmitting ? (
+                  <div
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      border: '2px solid rgba(255, 255, 255, 0.3)',
+                      borderTopColor: '#FFFFFF',
+                      animation: 'erpSpin 0.8s linear infinite'
+                    }}
+                  />
+                ) : (
+                  <span>LƯU MẬT KHẨU & TIẾP TỤC</span>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Footer Thông Tin Bản Quyền & Trụ Sở */}
       <div
         style={{
           width: '100%',
@@ -512,7 +1041,7 @@ export const LoginPage: React.FC = () => {
           alignItems: 'center',
           gap: '16px',
           fontSize: '12px',
-          color: isLightMode ? '#9CA3AF' : '#64748B',
+          color: isLightMode ? '#94A3B8' : '#64748B',
           textAlign: 'center',
           marginTop: '16px'
         }}
