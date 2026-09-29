@@ -84,7 +84,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
         />
       )}
 
-      {/* 2. SIDEBAR ĐIỀU HƯỚNG PHÂN QUYỀN (CHUẨN APP ETC - NỀN TRẮNG & MENU PILL) */}
+      {/* 2. SIDEBAR ĐIỀU HƯỚNG PHÂN QUYỀN  - NỀN TRẮNG & MENU PILL) */}
       <aside className={`erp-sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
         {/* Header của Sidebar */}
         <div className="erp-sidebar-header">
@@ -106,7 +106,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
           </button>
         </div>
 
-        {/* Khối Thẻ VAI TRÒ HỆ THỐNG (Chuẩn App ETC) */}
+        {/* Khối Thẻ VAI TRÒ HỆ THỐNG  */}
         <div className="erp-sidebar-role-badge">
           <div className="erp-sidebar-role-title flex items-center justify-between">
             <span>VAI TRÒ HỆ THỐNG</span>
@@ -118,7 +118,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
           </div>
           <div className="erp-sidebar-role-name flex items-center justify-between">
             <div className="flex items-center gap-1.5 overflow-hidden">
-              <span className="erp-role-dot-online flex-shrink-0" />
+
               {user?.roles && user.roles.length > 1 ? (
                 <select
                   value={currentRole}
@@ -139,29 +139,6 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             {user?.roles && user.roles.length > 1 && (
               <Icons.ChevronDown size={14} className="text-gray-400 pointer-events-none" />
             )}
-          </div>
-          <div
-            style={{
-              fontSize: '11px',
-              color: '#6B7280',
-              marginTop: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            <Icons.MapPin size={12} color="#F85606" />
-            <span
-              style={{
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                maxWidth: '220px'
-              }}
-              title={user?.warehouse || user?.workLocation}
-            >
-              {(user?.warehouse && user.warehouse !== 'Trụ sở chính & Toàn quốc') || (user?.workLocation && user.workLocation !== 'Trụ sở điều hành Hà Nội') || 'Chưa có'}
-            </span>
           </div>
         </div>
 
