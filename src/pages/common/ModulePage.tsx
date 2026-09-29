@@ -1,6 +1,6 @@
-import React from 'react';
+import type { FC } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { ROLE_METADATA_MAP, RoleName } from '../../types/user';
+import { ROLE_METADATA_MAP, type RoleName } from '../../types/user';
 import { Icons, DynamicIcon } from '../../components/common/Icons';
 
 interface ModulePageProps {
@@ -11,7 +11,7 @@ interface ModulePageProps {
   allowedRoles: RoleName[];
 }
 
-export const ModulePage: React.FC<ModulePageProps> = ({
+export const ModulePage: FC<ModulePageProps> = ({
   title,
   epic,
   description,

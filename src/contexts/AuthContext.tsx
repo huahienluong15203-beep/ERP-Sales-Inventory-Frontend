@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { RoleName, UserProfile, MenuItem } from '../types/user';
+import { createContext, useContext, useState, useEffect, useCallback, type FC, type ReactNode } from 'react';
+import type { RoleName, UserProfile, MenuItem } from '../types/user';
 import { fetchUserNavigationContext, loginUser, logoutUser } from '../services/api';
 import { checkPathPermission } from '../services/menuConfig';
 
@@ -21,7 +21,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const STORAGE_ROLE_KEY = 'erp_active_role';
 const STORAGE_TOKEN_KEY = 'accessToken';
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [currentRole, setCurrentRole] = useState<RoleName>(() => {
     const savedRole = localStorage.getItem(STORAGE_ROLE_KEY) as RoleName;
     const validRoles: RoleName[] = [

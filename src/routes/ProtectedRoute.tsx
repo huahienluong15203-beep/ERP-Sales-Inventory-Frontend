@@ -1,6 +1,6 @@
-import React, { ReactNode } from 'react';
+import type { FC, ReactNode } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { RoleName } from '../types/user';
+import type { RoleName } from '../types/user';
 import { ForbiddenPage } from '../pages/common/ForbiddenPage';
 import { useLocation } from './Router';
 
@@ -14,7 +14,7 @@ interface ProtectedRouteProps {
  * Tuân thủ quy chuẩn skills/role-based-routing/SKILL.md
  * Nếu không đủ quyền -> Hiển thị ngay ForbiddenPage trong giao diện dùng chung (S1-07)
  */
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, children }) => {
+export const ProtectedRoute: FC<ProtectedRouteProps> = ({ allowedRoles, children }) => {
   const { currentRole, isLoading } = useAuth();
   const location = useLocation();
 

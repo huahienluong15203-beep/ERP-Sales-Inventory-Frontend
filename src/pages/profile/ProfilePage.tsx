@@ -1,9 +1,8 @@
-import React from 'react';
+import type { FC } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ROLE_METADATA_MAP } from '../../types/user';
-import { Icons } from '../../components/common/Icons';
 
-export const ProfilePage: React.FC = () => {
+export const ProfilePage: FC = () => {
   const { user, currentRole } = useAuth();
   const roleMeta = ROLE_METADATA_MAP[currentRole];
 

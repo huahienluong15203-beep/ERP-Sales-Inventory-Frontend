@@ -1,4 +1,5 @@
-import { RoleName, UserContextResponse, UserProfile, ROLE_METADATA_MAP } from '../types/user';
+import type { RoleName, UserContextResponse, UserProfile } from '../types/user';
+import { ROLE_METADATA_MAP } from '../types/user';
 import { getAuthorizedMenus } from './menuConfig';
 
 const API_BASE_URL = 'http://localhost:8080';

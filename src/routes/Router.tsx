@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, Children, isValidElement } from 'react';
+import React, { createContext, useContext, useState, useEffect, Children, isValidElement } from 'react';
+import type { ReactNode } from 'react';
 
 interface RouterContextType {
   pathname: string;

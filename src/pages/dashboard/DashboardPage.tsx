@@ -1,11 +1,11 @@
-import React from 'react';
+import type { FC } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
-import { ROLE_METADATA_MAP, RoleName } from '../../types/user';
+import { ROLE_METADATA_MAP, type RoleName } from '../../types/user';
 import { ALL_SYSTEM_MENUS } from '../../services/menuConfig';
 import { Icons } from '../../components/common/Icons';
 
-export const DashboardPage: React.FC = () => {
+export const DashboardPage: FC = () => {
   const { user, currentRole, switchRole } = useAuth();
   const navigate = useNavigate();
 

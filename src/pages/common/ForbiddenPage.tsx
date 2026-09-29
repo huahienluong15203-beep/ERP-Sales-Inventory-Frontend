@@ -1,7 +1,7 @@
-import React from 'react';
+import type { FC } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from '../../routes/Router';
-import { ROLE_METADATA_MAP, RoleName } from '../../types/user';
+import { ROLE_METADATA_MAP, type RoleName } from '../../types/user';
 import { getAllowedRolesForPath } from '../../services/menuConfig';
 import { Icons } from '../../components/common/Icons';
 
@@ -10,7 +10,7 @@ interface ForbiddenPageProps {
   requiredRoles?: RoleName[];
 }
 
-export const ForbiddenPage: React.FC<ForbiddenPageProps> = ({ attemptedPath, requiredRoles }) => {
+export const ForbiddenPage: FC<ForbiddenPageProps> = ({ attemptedPath, requiredRoles }) => {
   const { user, currentRole, switchRole } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

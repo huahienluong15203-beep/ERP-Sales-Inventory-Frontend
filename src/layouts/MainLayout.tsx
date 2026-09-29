@@ -1,14 +1,14 @@
-import React, { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect, type FC, type ReactNode } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation, Link } from '../routes/Router';
-import { ROLE_METADATA_MAP, RoleName } from '../types/user';
+import { ROLE_METADATA_MAP, type RoleName } from '../types/user';
 import { Icons, DynamicIcon } from '../components/common/Icons';
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
-export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
   const { user, menus, currentRole, switchRole, logout, isLoading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();

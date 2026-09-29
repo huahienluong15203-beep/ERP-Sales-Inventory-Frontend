@@ -1,4 +1,4 @@
-import { MenuItem, RoleName } from '../types/user';
+import type { MenuItem, RoleName } from '../types/user';
 
 /**
  * Danh mục toàn bộ các phân hệ và mục chức năng của hệ thống ERP Sales & Inventory

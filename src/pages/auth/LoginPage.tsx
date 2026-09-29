@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState, useEffect, type FC, type FormEvent } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
-import { ROLE_METADATA_MAP, RoleName } from '../../types/user';
+import { ROLE_METADATA_MAP, type RoleName } from '../../types/user';
 import { Icons } from '../../components/common/Icons';
 
 interface DemoAccount {
@@ -22,7 +22,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   { username: 'customer_agent', pass: 'cust123', role: 'ROLE_CUSTOMER', name: 'Đại Lý Minh Phát', badge: 'Đại lý B2B' },
 ];
 
-export const LoginPage: React.FC = () => {
+export const LoginPage: FC = () => {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -33,13 +33,13 @@ export const LoginPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Nếu đã đăng nhập thì tự động chuyển vào dashboard
-  React.useEffect(() => {
+  useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password) {
       setErrorMessage('Vui lòng nhập đầy đủ tên tài khoản và mật khẩu!');
