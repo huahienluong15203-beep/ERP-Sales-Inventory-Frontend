@@ -206,6 +206,7 @@ export const LoginPage: React.FC = () => {
                 height: 'auto',
                 display: 'block',
                 margin: '0 auto',
+                transform: 'translateX(-15px)',
                 filter: 'drop-shadow(0 6px 14px rgba(249, 115, 22, 0.18))'
               }}
             />
