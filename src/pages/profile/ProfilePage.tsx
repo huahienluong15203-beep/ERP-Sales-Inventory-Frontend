@@ -265,14 +265,14 @@ export const ProfilePage: FC = () => {
                     <span
                       key={r}
                       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold border ${isCurrent
-                          ? 'bg-orange-50 text-orange-700 border-orange-200'
-                          : 'bg-gray-50 text-gray-600 border-gray-200'
+                        ? 'bg-orange-50 text-orange-700 border-orange-200'
+                        : 'bg-gray-50 text-gray-600 border-gray-200'
                         }`}
                       title={meta?.description}
                     >
                       {isCurrent && <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />}
                       <span>{meta?.label || r}</span>
-                      {isCurrent && <span className="text-[9.5px] text-orange-600 font-bold">(Hiện tại)</span>}
+
                     </span>
                   );
                 })}
@@ -304,8 +304,8 @@ export const ProfilePage: FC = () => {
             {result && (
               <div
                 className={`flex items-start gap-2 rounded-lg p-2 text-xs font-medium border ${result.type === 'success'
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                    : 'bg-red-50 text-red-700 border-red-200'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-red-50 text-red-700 border-red-200'
                   }`}
               >
                 {result.type === 'success' ? (
@@ -363,10 +363,10 @@ export const ProfilePage: FC = () => {
                           <span className="text-gray-400">Độ phức tạp:</span>
                           <span
                             className={`font-bold ${strength === 'weak'
-                                ? 'text-red-500'
-                                : strength === 'medium'
-                                  ? 'text-amber-500'
-                                  : 'text-emerald-600'
+                              ? 'text-red-500'
+                              : strength === 'medium'
+                                ? 'text-amber-500'
+                                : 'text-emerald-600'
                               }`}
                           >
                             {strengthCfg.label}

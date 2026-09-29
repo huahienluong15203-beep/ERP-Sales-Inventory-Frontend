@@ -168,11 +168,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
         <div className="erp-sidebar-role-badge">
           <div className="erp-sidebar-role-title flex items-center justify-between">
             <span>VAI TRÒ HỆ THỐNG</span>
-            {user?.roles && user.roles.length > 1 && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold">
-                {user.roles.length} vai trò
-              </span>
-            )}
+
           </div>
           <div className="erp-sidebar-role-name flex items-center justify-between">
             {user?.roles && user.roles.length > 1 ? (
