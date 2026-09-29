@@ -1,111 +1,143 @@
+/* ==========================================================================
+   ERP SALES & INVENTORY - DESIGN SYSTEM & CORE FOUNDATION
+   Tone chủ đạo: Xanh lá tươi mát & Trắng sạch sẽ (Fresh Emerald & Crisp White)
+   Tuân thủ quy chuẩn skills/erp-ui-design-system/SKILL.md
+   Hỗ trợ tối ưu từ màn hình di động 360px đến Desktop 4K
+   ========================================================================== */
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* Bảng màu thương hiệu chính: Xanh lá cây (Emerald Green) */
+  --erp-primary: #059669;
+  --erp-primary-hover: #047857;
+  --erp-primary-light: #ecfdf5;
+  --erp-primary-subtle: #d1fae5;
+  --erp-primary-dark: #064e3b;
+  --erp-primary-gradient: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  --erp-primary-glow: rgba(5, 150, 105, 0.25);
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* Màu vàng cam ấm điểm xuyết (Warm Amber) tương tự mẫu thiết kế */
+  --erp-accent-amber: #f59e0b;
+  --erp-accent-amber-hover: #d97706;
+  --erp-accent-amber-light: #fef3c7;
+  --erp-accent-amber-text: #92400e;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Màu trạng thái nghiệp vụ chuẩn ERP */
+  --erp-success: #059669;
+  --erp-success-bg: #ecfdf5;
+  --erp-success-text: #065f46;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  --erp-warning: #d97706;
+  --erp-warning-bg: #fffbeb;
+  --erp-warning-text: #92400e;
+
+  --erp-danger: #dc2626;
+  --erp-danger-bg: #fef2f2;
+  --erp-danger-text: #991b1b;
+
+  --erp-info: #0284c7;
+  --erp-info-bg: #f0f9ff;
+  --erp-info-text: #075985;
+
+  /* Màu trung tính & Nền ứng dụng (Trắng & Xanh ngọc siêu nhẹ) */
+  --erp-bg-app: #f4fbf7;
+  --erp-bg-surface: #ffffff;
+  --erp-bg-sidebar: #064e3b;
+  --erp-bg-sidebar-hover: #065f46;
+  --erp-bg-sidebar-active: #047857;
+
+  --erp-text-main: #0f172a;
+  --erp-text-muted: #475569;
+  --erp-text-light: #94a3b8;
+  --erp-text-white: #ffffff;
+
+  --erp-border: #e2e8f0;
+  --erp-border-mint: #d1fae5;
+  --erp-border-subtle: #f0fdf4;
+  --erp-border-sidebar: #047857;
+
+  /* Kích thước layout & Breakpoints */
+  --erp-sidebar-width: 280px;
+  --erp-topbar-height: 64px;
+
+  /* Typography */
+  --erp-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --erp-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, monospace;
+
+  /* Bo góc mềm mại (Soft Curvature) như trong hình mẫu */
+  --erp-radius-sm: 8px;
+  --erp-radius-md: 12px;
+  --erp-radius-lg: 18px;
+  --erp-radius-xl: 24px;
+  --erp-radius-full: 9999px;
+
+  /* Shadows êm dịu ánh xanh */
+  --erp-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  --erp-shadow-md: 0 4px 12px -1px rgba(5, 150, 105, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+  --erp-shadow-lg: 0 12px 24px -4px rgba(5, 150, 105, 0.12), 0 4px 8px -2px rgba(0, 0, 0, 0.04);
+  --erp-shadow-green: 0 8px 20px rgba(5, 150, 105, 0.22);
+  --erp-shadow-drawer: 0 25px 50px -12px rgba(6, 78, 59, 0.4);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  background-color: var(--erp-bg-app);
+  color: var(--erp-text-main);
+  font-family: var(--erp-font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
+  width: 100%;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
 }
 
-body {
-  margin: 0;
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
+ul, ol {
+  list-style: none;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
+/* Scrollbar tinh chỉnh sắc xanh ngọc */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #a7f3d0;
   border-radius: 4px;
-  color: var(--text-h);
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+::-webkit-scrollbar-thumb:hover {
+  background: #6ee7b7;
 }

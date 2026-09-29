@@ -1,184 +1,1851 @@
-.counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
-  margin-bottom: 24px;
+/* ==========================================================================
+   ERP SALES & INVENTORY - GIAO DIỆN & PHÂN QUYỀN ĐIỀU HƯỚNG (S1-06 & S1-07)
+   Tone màu chủ đạo: Xanh lá tươi mát & Trắng sạch sẽ (Fresh Emerald & Crisp White)
+   Tuân thủ quy chuẩn skills/erp-ui-design-system/SKILL.md
+   Tối ưu hóa đặc biệt cho màn hình 360px và các trang báo lỗi đồng bộ
+   ========================================================================== */
 
-  &:hover {
-    border-color: var(--accent-border);
-  }
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-}
-
-.hero {
+/* 1. APP SHELL LAYOUT */
+.erp-app-shell {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
   position: relative;
-
-  .base,
-  .framework,
-  .vite {
-    inset-inline: 0;
-    margin: 0 auto;
-  }
-
-  .base {
-    width: 170px;
-    position: relative;
-    z-index: 0;
-  }
-
-  .framework,
-  .vite {
-    position: absolute;
-  }
-
-  .framework {
-    z-index: 1;
-    top: 34px;
-    height: 28px;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
-      scale(1.4);
-  }
-
-  .vite {
-    z-index: 0;
-    top: 107px;
-    height: 26px;
-    width: auto;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
-      scale(0.8);
-  }
+  background-color: var(--erp-bg-app);
 }
 
-#center {
+/* 2. SIDEBAR ĐIỀU HƯỚNG PHÂN QUYỀN (TONE XANH LÁ RỪNG ĐẬM & TRẮNG) */
+.erp-sidebar {
+  width: var(--erp-sidebar-width);
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: var(--erp-bg-sidebar);
+  color: #e2e8f0;
   display: flex;
   flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
-  flex-grow: 1;
-
-  @media (max-width: 1024px) {
-    padding: 32px 20px 24px;
-    gap: 18px;
-  }
+  z-index: 100;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 2px 0 15px rgba(6, 78, 59, 0.2);
+  border-right: 1px solid var(--erp-border-sidebar);
 }
 
-#next-steps {
+.erp-sidebar-header {
+  height: var(--erp-topbar-height);
   display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
-
-  & > div {
-    flex: 1 1 0;
-    padding: 32px;
-    @media (max-width: 1024px) {
-      padding: 24px 20px;
-    }
-  }
-
-  .icon {
-    margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
-    text-align: center;
-  }
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--erp-border-sidebar);
+  background: rgba(6, 78, 59, 0.98);
 }
 
-#docs {
-  border-right: 1px solid var(--border);
-
-  @media (max-width: 1024px) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-}
-
-#next-steps ul {
-  list-style: none;
-  padding: 0;
+.erp-logo-brand {
   display: flex;
-  gap: 8px;
-  margin: 32px 0 0;
-
-  .logo {
-    height: 18px;
-  }
-
-  a {
-    color: var(--text-h);
-    font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
-    display: flex;
-    padding: 6px 12px;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    transition: box-shadow 0.3s;
-
-    &:hover {
-      box-shadow: var(--shadow);
-    }
-    .button-icon {
-      height: 18px;
-      width: 18px;
-    }
-  }
-
-  @media (max-width: 1024px) {
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-
-    li {
-      flex: 1 1 calc(50% - 8px);
-    }
-
-    a {
-      width: 100%;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-  }
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
 }
 
-#spacer {
-  height: 88px;
-  border-top: 1px solid var(--border);
-  @media (max-width: 1024px) {
-    height: 48px;
-  }
+.erp-logo-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--erp-radius-md);
+  background: linear-gradient(135deg, #10b981, #059669);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.4);
 }
 
-.ticks {
+.erp-logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.erp-brand-title {
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.erp-brand-sub {
+  font-size: 11px;
+  color: #a7f3d0;
+  letter-spacing: 0.2px;
+  font-weight: 500;
+}
+
+.erp-mobile-close-btn {
+  display: none;
+  color: #a7f3d0;
+  padding: 6px;
+  border-radius: var(--erp-radius-sm);
+  transition: background 0.2s;
+}
+
+.erp-mobile-close-btn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Danh sách Menu lọc theo quyền */
+.erp-sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.erp-menu-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.erp-menu-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #6ee7b7;
+  padding: 4px 12px;
+  margin-bottom: 2px;
+}
+
+.erp-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.erp-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--erp-radius-md);
+  color: #ecfdf5;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.18s ease;
   position: relative;
+  min-height: 44px; /* Chuẩn touch target 44px */
+}
+
+.erp-menu-link:hover {
+  background-color: var(--erp-bg-sidebar-hover);
+  color: #ffffff;
+  transform: translateX(2px);
+}
+
+.erp-menu-link.active {
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.35), rgba(16, 185, 129, 0.15));
+  color: #ffffff;
+  font-weight: 700;
+  border-left: 3px solid #34d399;
+  box-shadow: inset 0 0 10px rgba(52, 211, 153, 0.15);
+}
+
+.erp-menu-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a7f3d0;
+  flex-shrink: 0;
+}
+
+.erp-menu-link.active .erp-menu-icon {
+  color: #34d399;
+}
+
+.erp-menu-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.erp-menu-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--erp-radius-full);
+  background: #04362a;
+  color: #6ee7b7;
+  border: 1px solid #065f46;
+}
+
+.erp-menu-badge.badge-mobile {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+/* 3. PROFILE CARD THÔNG TIN NGƯỜI DÙNG Ở CHÂN SIDEBAR (Story S1-06 Tiêu chí 2) */
+.erp-sidebar-footer {
+  padding: 14px 12px;
+  border-top: 1px solid var(--erp-border-sidebar);
+  background: rgba(4, 54, 42, 0.98);
+}
+
+.erp-profile-card {
+  background: #04362a;
+  border: 1px solid #065f46;
+  border-radius: var(--erp-radius-lg);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.erp-profile-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.erp-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--erp-radius-full);
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  font-weight: 800;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+
+.erp-profile-names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 3px;
+}
+
+.erp-user-fullname {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.erp-user-role-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--erp-radius-sm);
+  border: 1px solid transparent;
+  width: fit-content;
+  white-space: nowrap;
+}
+
+.erp-profile-location {
+  padding-top: 8px;
+  border-top: 1px solid #065f46;
+}
+
+.erp-location-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #a7f3d0;
+}
+
+.erp-loc-icon {
+  color: #34d399;
+  flex-shrink: 0;
+}
+
+.erp-loc-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.erp-profile-actions {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed #065f46;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.erp-profile-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #a7f3d0;
+  padding: 5px 10px;
+  border-radius: var(--erp-radius-sm);
+  transition: all 0.15s;
+}
+
+.erp-profile-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+/* 4. KHU VỰC CHÍNH (MAIN AREA) */
+.erp-main-area {
+  flex: 1;
+  margin-left: var(--erp-sidebar-width);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  width: calc(100% - var(--erp-sidebar-width));
+}
+
+/* Topbar Trắng Sạch & Viền Xanh Ngọc */
+.erp-topbar {
+  height: var(--erp-topbar-height);
+  background-color: var(--erp-bg-surface);
+  border-bottom: 1.5px solid var(--erp-border-mint);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.05);
+}
+
+.erp-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.erp-hamburger-btn {
+  display: none;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--erp-radius-md);
+  color: var(--erp-primary);
+  background: var(--erp-primary-light);
+  border: 1px solid var(--erp-border-mint);
+  transition: all 0.15s;
+}
+
+.erp-hamburger-btn:hover {
+  background: var(--erp-primary-subtle);
+}
+
+.erp-topbar-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.erp-bc-root {
+  color: var(--erp-primary);
+  font-weight: 700;
+}
+
+.erp-bc-divider {
+  color: #a7f3d0;
+}
+
+.erp-bc-current {
+  font-weight: 700;
+  color: var(--erp-text-main);
+}
+
+.erp-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Role Switcher Dropdown (Tone Xanh lá & Trắng) */
+.erp-role-switcher-container {
+  position: relative;
+}
+
+.erp-role-selector-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--erp-primary-light);
+  border: 1.5px solid var(--erp-border-mint);
+  border-radius: var(--erp-radius-full);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--erp-primary-dark);
+  transition: all 0.18s;
+  min-height: 40px;
+}
+
+.erp-role-selector-btn:hover {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+}
+
+.erp-role-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--erp-radius-full);
+  flex-shrink: 0;
+}
+
+.erp-chevron {
+  transition: transform 0.2s ease;
+  color: var(--erp-primary);
+}
+
+.erp-chevron.rotate {
+  transform: rotate(180deg);
+}
+
+.erp-role-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  background: white;
+  border-radius: var(--erp-radius-lg);
+  box-shadow: 0 15px 30px -5px rgba(5, 150, 105, 0.2);
+  border: 1.5px solid var(--erp-border-mint);
+  padding: 8px;
+  z-index: 100;
+  animation: dropdownFadeIn 0.18s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.erp-role-dropdown-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--erp-primary-dark);
+  padding: 8px 12px 8px;
+  border-bottom: 1px solid var(--erp-border-mint);
+}
+
+.erp-role-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.erp-role-option-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-radius: var(--erp-radius-md);
+  text-align: left;
+  transition: background 0.15s;
   width: 100%;
+}
 
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: -4.5px;
-    border: 5px solid transparent;
+.erp-role-option-item:hover {
+  background: #f0fdf4;
+}
+
+.erp-role-option-item.selected {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+}
+
+.erp-role-option-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.erp-role-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--erp-radius-sm);
+  width: fit-content;
+}
+
+.erp-role-desc {
+  font-size: 11.5px;
+  color: var(--erp-text-muted);
+  line-height: 1.3;
+}
+
+.text-brand {
+  color: var(--erp-primary);
+}
+
+.erp-topbar-location-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: #ffffff;
+  border: 1.5px solid var(--erp-border-mint);
+  border-radius: var(--erp-radius-full);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--erp-primary-dark);
+}
+
+.erp-topbar-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: #ffffff;
+  border: 1.5px solid #fee2e2;
+  border-radius: var(--erp-radius-full);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #dc2626;
+  transition: all 0.15s;
+  min-height: 38px;
+}
+
+.erp-topbar-logout-btn:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+/* Page Content Container */
+.erp-page-content {
+  flex: 1;
+  padding: 24px;
+}
+
+/* 5. GIAO DIỆN TRANG BÁO LỖI (Story S1-07: 403 Forbidden & 404 Not Found) */
+.erp-error-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - var(--erp-topbar-height) - 48px);
+  padding: 16px 0;
+}
+
+.erp-error-card {
+  width: 100%;
+  max-width: 680px;
+  background: white;
+  border-radius: var(--erp-radius-xl);
+  border: 1.5px solid var(--erp-border-mint);
+  box-shadow: var(--erp-shadow-lg);
+  padding: 38px 34px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.erp-error-icon-wrapper {
+  width: 84px;
+  height: 84px;
+  border-radius: var(--erp-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.erp-error-icon-wrapper.forbidden {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 2px solid #fee2e2;
+}
+
+.erp-error-icon-wrapper.not-found {
+  background: #fffbeb;
+  color: #d97706;
+  border: 2px solid #fef3c7;
+}
+
+.erp-error-badge {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 4px 16px;
+  border-radius: var(--erp-radius-full);
+  margin-bottom: 12px;
+}
+
+.erp-error-badge.forbidden {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.erp-error-badge.not-found {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.erp-error-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--erp-text-main);
+  margin-bottom: 12px;
+  line-height: 1.3;
+}
+
+.erp-error-desc {
+  font-size: 15px;
+  color: var(--erp-text-muted);
+  max-width: 540px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.erp-code-pill {
+  background: var(--erp-primary-light);
+  border: 1px solid var(--erp-border-mint);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: var(--erp-font-mono);
+  font-size: 13.5px;
+  color: var(--erp-primary-dark);
+  font-weight: 600;
+}
+
+/* Hộp so sánh quyền hạn */
+.erp-permission-box {
+  width: 100%;
+  background: #f0fdf4;
+  border: 1.5px solid var(--erp-border-mint);
+  border-radius: var(--erp-radius-lg);
+  padding: 18px 22px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.erp-permission-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+@media (min-width: 500px) {
+  .erp-permission-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.erp-permission-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--erp-primary-dark);
+}
+
+.erp-permission-val {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--erp-text-main);
+}
+
+.erp-role-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--erp-radius-full);
+  font-size: 12.5px;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.erp-role-tag-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--erp-radius-full);
+}
+
+.erp-allowed-roles-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.erp-allowed-pill {
+  font-size: 11.5px;
+  font-weight: 700;
+  background: #ffffff;
+  color: var(--erp-primary-dark);
+  border: 1px solid var(--erp-border-mint);
+  padding: 3px 10px;
+  border-radius: var(--erp-radius-full);
+}
+
+.erp-help-note {
+  background: #fffbeb;
+  border-left: 4px solid var(--erp-accent-amber);
+  padding: 14px 18px;
+  border-radius: var(--erp-radius-md);
+  font-size: 13.5px;
+  color: #92400e;
+  text-align: left;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+/* Nút hành động gợi ý quay lại luồng làm việc */
+.erp-action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+@media (min-width: 480px) {
+  .erp-action-group {
+    flex-direction: row;
+    justify-content: center;
+  }
+}
+
+.erp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: var(--erp-radius-full);
+  font-size: 14.5px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  min-height: 46px; /* Touch target >= 44px */
+}
+
+.erp-btn-primary {
+  background: var(--erp-primary-gradient);
+  color: white;
+  box-shadow: var(--erp-shadow-green);
+}
+
+.erp-btn-primary:hover {
+  background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(5, 150, 105, 0.35);
+}
+
+.erp-btn-secondary {
+  background: white;
+  color: var(--erp-primary-dark);
+  border: 1.5px solid var(--erp-border-mint);
+}
+
+.erp-btn-secondary:hover {
+  background: #f0fdf4;
+  border-color: #6ee7b7;
+}
+
+.erp-btn-sm {
+  padding: 6px 14px;
+  font-size: 12.5px;
+  min-height: 36px;
+}
+
+.erp-btn-outline {
+  border: 1.5px dashed var(--erp-primary);
+  color: var(--erp-primary-dark);
+  background: var(--erp-primary-light);
+}
+
+.erp-btn-outline:hover {
+  background: #d1fae5;
+}
+
+/* Trợ giúp kiểm thử cho giảng viên */
+.erp-test-helper {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1.5px dashed var(--erp-border-mint);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.erp-test-helper-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--erp-primary-dark);
+}
+
+.erp-test-helper-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+/* 6. DASHBOARD & CARDS (TONE XANH LÁ - TRẮNG) */
+.erp-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Welcome Banner phong cách Gradient Xanh lá rạng rỡ như mẫu thiết kế */
+.erp-welcome-banner {
+  background: var(--erp-primary-gradient);
+  color: white;
+  border-radius: var(--erp-radius-xl);
+  padding: 32px 36px;
+  box-shadow: var(--erp-shadow-green);
+  position: relative;
+  overflow: hidden;
+}
+
+.erp-welcome-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  border-radius: var(--erp-radius-full);
+  font-size: 12.5px;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.erp-welcome-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 10px;
+  letter-spacing: -0.5px;
+}
+
+.erp-welcome-desc {
+  font-size: 15px;
+  color: #ecfdf5;
+  max-width: 800px;
+  line-height: 1.6;
+}
+
+.erp-card {
+  background: white;
+  border-radius: var(--erp-radius-xl);
+  border: 1.5px solid var(--erp-border-mint);
+  box-shadow: var(--erp-shadow-md);
+  overflow: hidden;
+}
+
+.erp-card-header {
+  padding: 18px 24px;
+  border-bottom: 1.5px solid var(--erp-border-mint);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fafffc;
+}
+
+.erp-card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.erp-card-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--erp-primary-dark);
+}
+
+.erp-card-body {
+  padding: 24px;
+}
+
+.erp-test-card {
+  border: 2px solid var(--erp-primary);
+  background: #ffffff;
+}
+
+.erp-test-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 900px) {
+  .erp-test-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.erp-test-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.erp-test-col-title {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--erp-primary-dark);
+}
+
+.erp-test-col-desc {
+  font-size: 13.5px;
+  color: var(--erp-text-muted);
+}
+
+.erp-role-btn-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.erp-role-quick-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f0fdf4;
+  border: 1.5px solid var(--erp-border-mint);
+  border-radius: var(--erp-radius-md);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--erp-primary-dark);
+  text-align: left;
+  transition: all 0.15s;
+  min-height: 40px;
+}
+
+.erp-role-quick-btn:hover {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+  transform: translateY(-1px);
+}
+
+.erp-role-quick-btn.active {
+  background: var(--erp-primary);
+  border-color: var(--erp-primary-hover);
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);
+}
+
+.erp-role-quick-btn.active .erp-role-quick-dot {
+  background-color: #ffffff !important;
+}
+
+.erp-role-quick-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--erp-radius-full);
+  flex-shrink: 0;
+}
+
+.erp-forbidden-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.erp-link-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: var(--erp-radius-md);
+  font-size: 13.5px;
+  font-weight: 700;
+  text-align: left;
+  transition: all 0.15s;
+  min-height: 44px;
+}
+
+.erp-link-btn.danger {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1.5px solid #fecaca;
+}
+
+.erp-link-btn.danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.erp-link-btn.warning {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1.5px solid #fde68a;
+}
+
+.erp-link-btn.warning:hover {
+  background: #fef3c7;
+}
+
+.erp-alert-note {
+  padding: 12px 16px;
+  background: #ecfdf5;
+  border: 1.5px solid #a7f3d0;
+  border-radius: var(--erp-radius-md);
+  color: #065f46;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.erp-test-subtitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--erp-primary-dark);
+  display: block;
+}
+
+/* Metrics Grid */
+.erp-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.erp-metric-card {
+  background: white;
+  border: 1.5px solid var(--erp-border-mint);
+  border-radius: var(--erp-radius-xl);
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--erp-shadow-sm);
+  transition: transform 0.2s ease;
+}
+
+.erp-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--erp-shadow-md);
+}
+
+.erp-metric-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: var(--erp-radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.erp-metric-icon.bg-blue { background: linear-gradient(135deg, #10b981, #059669); }
+.erp-metric-icon.bg-emerald { background: linear-gradient(135deg, #059669, #047857); }
+.erp-metric-icon.bg-amber { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+.erp-metric-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.erp-metric-label {
+  font-size: 12.5px;
+  color: var(--erp-text-muted);
+  font-weight: 600;
+}
+
+.erp-metric-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--erp-primary-dark);
+}
+
+.erp-metric-value.text-sm {
+  font-size: 14px;
+}
+
+/* 7. MODULE PAGE & TABLE */
+.erp-module-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.erp-module-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .erp-module-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.erp-module-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.erp-module-icon-box {
+  width: 56px;
+  height: 56px;
+  background: white;
+  border: 1.5px solid var(--erp-border-mint);
+  border-radius: var(--erp-radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--erp-primary);
+  box-shadow: var(--erp-shadow-md);
+  flex-shrink: 0;
+}
+
+.erp-module-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.erp-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--erp-radius-full);
+}
+
+.badge-epic { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+.badge-success { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+.badge-info { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+.badge-neutral { background: #f1f5f9; color: #475569; }
+
+.erp-module-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--erp-primary-dark);
+  line-height: 1.2;
+}
+
+.erp-module-desc {
+  font-size: 14px;
+  color: var(--erp-text-muted);
+}
+
+.erp-user-badge-mini {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 16px;
+  border-radius: var(--erp-radius-full);
+  font-size: 12px;
+  border: 1px solid var(--erp-border-mint);
+}
+
+.erp-context-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  border: 1.5px solid var(--erp-border-mint);
+  border-radius: var(--erp-radius-lg);
+  padding: 12px 20px;
+  font-size: 13.5px;
+  color: var(--erp-primary-dark);
+}
+
+.erp-context-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.erp-context-divider {
+  color: #6ee7b7;
+}
+
+.erp-info-callout {
+  display: flex;
+  gap: 12px;
+  background: #f0fdf4;
+  border: 1.5px solid #a7f3d0;
+  border-radius: var(--erp-radius-lg);
+  padding: 16px;
+  font-size: 13.5px;
+  color: #166534;
+  margin-bottom: 20px;
+}
+
+.erp-allowed-pills-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.erp-pill-mini {
+  background: #ffffff;
+  border: 1px solid #86efac;
+  padding: 3px 10px;
+  border-radius: var(--erp-radius-full);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--erp-primary-dark);
+}
+
+.erp-pill-mini.current {
+  background: var(--erp-primary);
+  color: white;
+  border-color: var(--erp-primary-hover);
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
+}
+
+.erp-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.erp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  text-align: left;
+}
+
+.erp-table th {
+  background: #f0fdf4;
+  color: var(--erp-primary-dark);
+  font-weight: 700;
+  padding: 14px 18px;
+  border-bottom: 1.5px solid var(--erp-border-mint);
+  white-space: nowrap;
+}
+
+.erp-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid #f0fdf4;
+  color: var(--erp-text-main);
+}
+
+.erp-table tbody tr:hover {
+  background-color: #f7fdfa;
+}
+
+.erp-status-badge {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--erp-radius-full);
+}
+
+.erp-status-badge.status-active {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.erp-status-badge.status-pending {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+/* Profile Detail Grid */
+.erp-profile-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 600px) {
+  .erp-profile-detail-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.erp-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  background: #f7fdfa;
+  border-radius: var(--erp-radius-lg);
+  border: 1.5px solid var(--erp-border-mint);
+}
+
+.erp-detail-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--erp-primary-dark);
+}
+
+.erp-detail-value {
+  font-size: 14.5px;
+  color: var(--erp-text-main);
+}
+
+.erp-detail-value.font-bold {
+  font-weight: 800;
+}
+
+/* Loading & Skeletons */
+.erp-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 16px;
+  color: var(--erp-primary-dark);
+  font-weight: 600;
+}
+
+.erp-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3.5px solid var(--erp-border-mint);
+  border-top-color: var(--erp-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.erp-menu-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+}
+
+.skeleton-bar {
+  height: 38px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--erp-radius-md);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.2; }
+}
+
+/* ==========================================================================
+   8. TỐI ƯU HOÁ ĐẶC BIỆT CHO MÀN HÌNH DI ĐỘNG 360PX (Acceptance Criteria S1-06)
+   ========================================================================== */
+@media (max-width: 860px) {
+  .erp-sidebar {
+    transform: translateX(-100%);
+    width: 280px;
+    max-width: 85vw;
+    box-shadow: var(--erp-shadow-drawer);
   }
 
-  &::before {
+  .erp-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .erp-mobile-close-btn {
+    display: flex;
+  }
+
+  .erp-mobile-backdrop {
+    position: fixed;
+    top: 0;
     left: 0;
-    border-left-color: var(--border);
+    width: 100vw;
+    height: 100vh;
+    background: rgba(6, 78, 59, 0.7);
+    backdrop-filter: blur(3px);
+    z-index: 90;
   }
-  &::after {
-    right: 0;
-    border-right-color: var(--border);
+
+  .erp-main-area {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .erp-hamburger-btn {
+    display: flex;
+  }
+
+  .erp-topbar {
+    padding: 0 12px;
+  }
+
+  .erp-topbar-location-badge {
+    display: none;
+  }
+
+  .erp-page-content {
+    padding: 16px 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  html, body {
+    font-size: 14px;
+  }
+
+  .erp-topbar {
+    padding: 0 8px;
+    height: 56px;
+  }
+
+  .erp-topbar-breadcrumb {
+    font-size: 13px;
+  }
+
+  .erp-role-selector-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .erp-role-dropdown-menu {
+    width: 290px;
+    right: -10px;
+  }
+
+  .erp-welcome-banner {
+    padding: 20px 18px;
+  }
+
+  .erp-welcome-title {
+    font-size: 21px;
+  }
+
+  .erp-welcome-desc {
+    font-size: 13px;
+  }
+
+  .erp-error-card {
+    padding: 24px 14px;
+  }
+
+  .erp-error-title {
+    font-size: 19px;
+  }
+
+  .erp-error-desc {
+    font-size: 13.5px;
+  }
+
+  .erp-permission-box {
+    padding: 12px 10px;
+  }
+
+  .erp-btn {
+    width: 100%;
+    padding: 11px 16px;
+    font-size: 13.5px;
+  }
+
+  .erp-card-body {
+    padding: 16px 12px;
+  }
+
+  .erp-module-title {
+    font-size: 19px;
+  }
+
+  .erp-context-strip {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .erp-context-divider {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   9. GIAO DIỆN TRANG ĐĂNG NHẬP (LOGIN PAGE - TONE XANH LÁ & TRẮNG)
+   ========================================================================== */
+.erp-login-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #064e3b 0%, #04362a 50%, #02241c 100%);
+  padding: 24px 16px;
+  position: relative;
+  overflow-y: auto;
+}
+
+.erp-login-container {
+  display: flex;
+  width: 100%;
+  max-width: 1040px;
+  min-height: 600px;
+  background: #ffffff;
+  border-radius: var(--erp-radius-xl);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  border: 1.5px solid var(--erp-border-mint);
+}
+
+.erp-login-card {
+  flex: 1.1;
+  padding: 44px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #ffffff;
+}
+
+.erp-login-header {
+  margin-bottom: 24px;
+}
+
+.erp-login-logo {
+  width: 54px;
+  height: 54px;
+  border-radius: var(--erp-radius-lg);
+  background: var(--erp-primary-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-bottom: 16px;
+  box-shadow: var(--erp-shadow-green);
+}
+
+.erp-login-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--erp-primary-dark);
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.erp-login-subtitle {
+  font-size: 14px;
+  color: var(--erp-text-muted);
+  margin-top: 4px;
+}
+
+.erp-login-error-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1.5px solid #fecaca;
+  border-radius: var(--erp-radius-md);
+  color: #b91c1c;
+  font-size: 13.5px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  animation: dropdownFadeIn 0.2s ease-out;
+}
+
+.erp-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.erp-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.erp-form-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.erp-form-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--erp-primary-dark);
+}
+
+.erp-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.erp-input-icon {
+  position: absolute;
+  left: 14px;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.erp-form-input {
+  width: 100%;
+  padding: 12px 40px 12px 42px;
+  font-size: 14.5px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #f7fdfa;
+  border: 1.5px solid var(--erp-border-mint);
+  border-radius: var(--erp-radius-md);
+  outline: none;
+  transition: all 0.18s ease;
+  min-height: 46px;
+}
+
+.erp-form-input:focus {
+  background: #ffffff;
+  border-color: var(--erp-primary);
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
+}
+
+.erp-input-toggle-btn {
+  position: absolute;
+  right: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--erp-primary);
+  padding: 4px 8px;
+  border-radius: var(--erp-radius-sm);
+}
+
+.erp-input-toggle-btn:hover {
+  color: var(--erp-primary-hover);
+  background: var(--erp-primary-light);
+}
+
+.erp-btn-login {
+  margin-top: 6px;
+  width: 100%;
+  padding: 13px;
+  font-size: 15px;
+  font-weight: 800;
+  border-radius: var(--erp-radius-full);
+}
+
+.erp-btn-login:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.erp-spinner-sm {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Phần tài khoản mẫu để giáo viên chấm điểm */
+.erp-login-demo-section {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1.5px dashed var(--erp-border-mint);
+}
+
+.erp-demo-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.erp-demo-divider span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--erp-primary);
+  background: #ffffff;
+  padding: 0 10px;
+  text-align: center;
+}
+
+.erp-demo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.erp-demo-acc-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 9px 12px;
+  background: #f7fdfa;
+  border: 1.5px solid var(--erp-border-mint);
+  border-radius: var(--erp-radius-md);
+  text-align: left;
+  transition: all 0.18s ease;
+  min-height: 50px;
+}
+
+.erp-demo-acc-btn:hover {
+  background: #ecfdf5;
+  border-color: #34d399;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(5, 150, 105, 0.15);
+}
+
+.erp-demo-acc-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: var(--erp-radius-full);
+}
+
+.erp-demo-acc-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.erp-demo-acc-role {
+  font-size: 10.5px;
+  color: #64748b;
+}
+
+/* Khối bên phải: Giới thiệu hệ thống (Tone Xanh lá tươi tắn như mẫu thiết kế) */
+.erp-login-aside {
+  flex: 0.9;
+  background: linear-gradient(135deg, #047857 0%, #059669 50%, #10b981 100%);
+  color: #ffffff;
+  padding: 44px 36px;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.erp-aside-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.erp-aside-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #064e3b;
+  background: #d1fae5;
+  padding: 4px 12px;
+  border-radius: var(--erp-radius-full);
+  width: fit-content;
+}
+
+.erp-aside-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.3;
+  letter-spacing: -0.5px;
+}
+
+.erp-aside-desc {
+  font-size: 15px;
+  color: #ecfdf5;
+  line-height: 1.6;
+}
+
+.erp-aside-features {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.erp-aside-feat-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 13.5px;
+  line-height: 1.4;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 10px 14px;
+  border-radius: var(--erp-radius-lg);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.erp-aside-feat-item svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #ffffff;
+}
+
+.erp-aside-feat-item strong {
+  color: #ffffff;
+  display: block;
+}
+
+.erp-aside-feat-item span {
+  color: #d1fae5;
+  font-size: 12.5px;
+}
+
+/* ĐIỀU CHỈNH LOGIN TRÊN MOBILE 360PX */
+@media (max-width: 860px) {
+  .erp-login-aside {
+    display: none;
+  }
+
+  .erp-login-container {
+    max-width: 480px;
+  }
+
+  .erp-login-card {
+    padding: 28px 20px;
+  }
+}
+
+@media (max-width: 380px) {
+  .erp-login-card {
+    padding: 20px 14px;
+  }
+
+  .erp-login-title {
+    font-size: 21px;
+  }
+
+  .erp-demo-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .erp-tb-logout-text {
+    display: none;
   }
 }
