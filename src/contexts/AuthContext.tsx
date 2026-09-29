@@ -9,34 +9,58 @@ interface AuthContextType {
   currentRole: RoleName;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<{ success: boolean; message?: string }>;
+  login: (username: string, password: string) => Promise<{ success: boolean; message?: string; user?: UserProfile }>;
   logout: () => Promise<void>;
   switchRole: (role: RoleName) => Promise<void>;
   hasPermission: (path: string) => boolean;
   refreshContext: () => Promise<void>;
+  clearMustChangePassword: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_ROLE_KEY = 'erp_active_role';
 const STORAGE_TOKEN_KEY = 'accessToken';
+const STORAGE_USER_KEY = 'erp_user_profile';
+
+const ROLE_PRIORITY: RoleName[] = [
+  'ROLE_ADMIN',
+  'ROLE_SALES_MANAGER',
+  'ROLE_WH_MANAGER',
+  'ROLE_ACCOUNTANT',
+  'ROLE_WAREHOUSE',
+  'ROLE_SALES_REP',
+  'ROLE_CUSTOMER'
+];
+
+function getHighestPriorityRole(roles: RoleName[]): RoleName {
+  if (!roles || roles.length === 0) return 'ROLE_ADMIN';
+  const sorted = roles.slice().sort((a, b) => {
+    const ia = ROLE_PRIORITY.indexOf(a);
+    const ib = ROLE_PRIORITY.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+  return sorted[0];
+}
 
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [currentRole, setCurrentRole] = useState<RoleName>(() => {
     const savedRole = localStorage.getItem(STORAGE_ROLE_KEY) as RoleName;
-    const validRoles: RoleName[] = [
-      'ROLE_ADMIN',
-      'ROLE_SALES_REP',
-      'ROLE_SALES_MANAGER',
-      'ROLE_WAREHOUSE',
-      'ROLE_WH_MANAGER',
-      'ROLE_ACCOUNTANT',
-      'ROLE_CUSTOMER'
-    ];
-    return validRoles.includes(savedRole) ? savedRole : 'ROLE_ADMIN';
+    return ROLE_PRIORITY.includes(savedRole) ? savedRole : 'ROLE_ADMIN';
   });
 
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    const saved = localStorage.getItem(STORAGE_USER_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
+
   const [menus, setMenus] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -47,7 +71,23 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setIsLoading(true);
     try {
       const data = await fetchUserNavigationContext(role);
-      setUser(data.user);
+      if (data.user) {
+        const availableRoles = (data.user.roles as RoleName[]) || [];
+        // Nếu vai trò hiện tại đã bị gỡ/không còn trong danh sách roles của user, tự động chuyển về vai trò cao nhất
+        let activeRole = role;
+        if (availableRoles.length > 0 && !availableRoles.includes(role)) {
+          activeRole = getHighestPriorityRole(availableRoles);
+          setCurrentRole(activeRole);
+          localStorage.setItem(STORAGE_ROLE_KEY, activeRole);
+          data.user.role = activeRole;
+        }
+
+        setUser((prev) => {
+          const merged = { ...prev, ...data.user };
+          localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(merged));
+          return merged;
+        });
+      }
       setMenus(data.menus);
     } catch (err) {
       console.error('Lỗi khi tải ngữ cảnh phân quyền người dùng:', err);
@@ -63,7 +103,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   /**
    * Đăng nhập người dùng (Story S1-01)
    */
-  const login = async (username: string, password: string): Promise<{ success: boolean; message?: string }> => {
+  const login = async (username: string, password: string): Promise<{ success: boolean; message?: string; user?: UserProfile }> => {
     setIsLoading(true);
     try {
       const result = await loginUser(username, password);
@@ -71,8 +111,10 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setIsAuthenticated(true);
         setCurrentRole(result.user.role);
         localStorage.setItem(STORAGE_ROLE_KEY, result.user.role);
+        localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(result.user));
+        setUser(result.user);
         await loadUserContext(result.user.role);
-        return { success: true };
+        return { success: true, user: result.user };
       } else {
         return { success: false, message: result.message || 'Đăng nhập không thành công' };
       }
@@ -90,6 +132,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       await logoutUser();
       setIsAuthenticated(false);
       setUser(null);
+      localStorage.removeItem(STORAGE_USER_KEY);
     } finally {
       setIsLoading(false);
     }
@@ -105,14 +148,27 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
 
   /**
-   * Kiểm tra quyền truy cập đường dẫn dựa trên vai trò hiện tại
+   * Kiểm tra quyền truy cập đường dẫn dựa trên các vai trò người dùng được cấp
    */
   const hasPermission = (path: string): boolean => {
-    return checkPathPermission(path, currentRole);
+    const userRoles = user?.roles && user.roles.length > 0 ? user.roles : [currentRole];
+    return checkPathPermission(path, userRoles);
   };
 
   const refreshContext = async () => {
     await loadUserContext(currentRole);
+  };
+
+  /**
+   * Xóa cờ bắt buộc đổi mật khẩu khi user đã đổi mật khẩu thành công (S1-04)
+   */
+  const clearMustChangePassword = () => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, mustChangePassword: false };
+      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   return (
@@ -127,7 +183,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         logout,
         switchRole,
         hasPermission,
-        refreshContext
+        refreshContext,
+        clearMustChangePassword
       }}
     >
       {children}

@@ -23,6 +23,7 @@ export interface UserProfile {
   warehouse?: string;     // Kho làm việc (đối với nhân sự kho/admin)
   workLocation?: string;  // Địa bàn làm việc (đối với kinh doanh/đại lý)
   avatar?: string;
+  mustChangePassword?: boolean;
 }
 
 export interface MenuItem {
@@ -61,7 +62,7 @@ export const ROLE_METADATA_MAP: Record<RoleName, RoleMetadata> = {
     badgeColor: '#047857',
     badgeBg: '#ecfdf5',
     defaultPath: '/dashboard',
-    sampleLocation: 'Trụ sở chính & Toàn quốc'
+    sampleLocation: 'Chưa có'
   },
   ROLE_SALES_REP: {
     name: 'ROLE_SALES_REP',
