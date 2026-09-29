@@ -195,8 +195,8 @@ export async function loginUser(usernameInput: string, passwordInput: string): P
         email: `${username}@erp.com`,
         role: role,
         roles: [role],
-        warehouse: 'Trụ sở chính & Toàn quốc',
-        workLocation: 'Văn phòng làm việc'
+        warehouse: 'Chưa có',
+        workLocation: 'Chưa có'
       }
     };
   }
@@ -415,7 +415,7 @@ function getSampleFullName(role: RoleName): string {
 function getSampleWarehouse(role: RoleName): string {
   switch (role) {
     case 'ROLE_ADMIN':
-      return 'Trụ sở chính & Toàn quốc';
+      return 'Chưa có';
     case 'ROLE_WAREHOUSE':
       return 'Kho Tổng Miền Bắc (WH-MB01)';
     case 'ROLE_WH_MANAGER':

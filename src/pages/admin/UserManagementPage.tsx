@@ -663,7 +663,7 @@ export const UserManagementPage: React.FC = () => {
                           {(!item.warehouses || item.warehouses.length === 0) &&
                             (!item.regions || item.regions.length === 0) && (
                               <span className="user-mgmt-location-empty">
-                                Trụ sở chính & Toàn quốc
+                                Chưa có
                               </span>
                             )}
 

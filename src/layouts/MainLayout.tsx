@@ -69,7 +69,9 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
         ? 'Hồ Sơ Cá Nhân'
         : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
   const pageSubtitle =
-    currentMenu?.description || 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống';
+    location.pathname === '/profile'
+      ? 'Thông tin cá nhân & thiết lập an toàn tài khoản'
+      : currentMenu?.description || 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống';
 
   return (
     <div className="erp-app-shell">
@@ -158,7 +160,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
               }}
               title={user?.warehouse || user?.workLocation}
             >
-              {user?.warehouse || user?.workLocation || 'Trụ sở chính'}
+              {(user?.warehouse && user.warehouse !== 'Trụ sở chính & Toàn quốc') || (user?.workLocation && user.workLocation !== 'Trụ sở điều hành Hà Nội') || 'Chưa có'}
             </span>
           </div>
         </div>

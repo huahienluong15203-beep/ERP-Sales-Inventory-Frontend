@@ -62,7 +62,7 @@ export const ROLE_METADATA_MAP: Record<RoleName, RoleMetadata> = {
     badgeColor: '#047857',
     badgeBg: '#ecfdf5',
     defaultPath: '/dashboard',
-    sampleLocation: 'Trụ sở chính & Toàn quốc'
+    sampleLocation: 'Chưa có'
   },
   ROLE_SALES_REP: {
     name: 'ROLE_SALES_REP',
