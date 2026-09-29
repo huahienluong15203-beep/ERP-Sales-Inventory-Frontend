@@ -10,8 +10,6 @@ import {
   EyeOff,
   AlertCircle,
   HelpCircle,
-  Sun,
-  Moon,
   Mail,
   Key,
   CheckCircle2,
@@ -49,7 +47,6 @@ export const LoginPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDemoDrawer, setShowDemoDrawer] = useState(false);
-  const [isLightMode, setIsLightMode] = useState(false);
 
   // Nếu đã đăng nhập và không phải đang đổi mật khẩu thì vào dashboard
   useEffect(() => {
@@ -177,83 +174,39 @@ export const LoginPage: React.FC = () => {
         flexDirection: 'column',
         justifyContent: 'space-between',
         alignItems: 'center',
-        background: isLightMode
-          ? 'linear-gradient(135deg, #F8FAFC 0%, #EDF2F7 100%)'
-          : 'radial-gradient(ellipse at 50% 15%, rgba(249, 115, 22, 0.09) 0%, rgba(9, 13, 22, 0) 65%), linear-gradient(135deg, #090D16 0%, #0F172A 55%, #0B0F19 100%)',
-        color: isLightMode ? '#0F172A' : '#F8FAFC',
+        background: 'linear-gradient(135deg, #F8FAFC 0%, #EEF2F6 100%)',
+        color: '#0F172A',
         fontFamily: 'var(--erp-font-sans, system-ui, -apple-system, sans-serif)',
-        padding: '20px 16px',
-        position: 'relative',
-        transition: 'background 0.3s ease'
+        padding: '24px 16px',
+        position: 'relative'
       }}
     >
-      {/* Thanh công cụ phụ ở góc trên */}
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '1200px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '8px'
-        }}
-      >
-
-
-        {/* Nút chuyển chế độ Sáng / Tối */}
-        <button
-          type="button"
-          onClick={() => setIsLightMode(!isLightMode)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '7px 14px',
-            borderRadius: '9999px',
-            fontSize: '12.5px',
-            fontWeight: 500,
-            background: isLightMode ? '#FFFFFF' : 'rgba(255, 255, 255, 0.06)',
-            color: isLightMode ? '#334155' : '#E2E8F0',
-            border: isLightMode ? '1px solid #E2E8F0' : '1px solid rgba(255, 255, 255, 0.12)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          {isLightMode ? <Moon size={15} /> : <Sun size={15} color="#FBBF24" />}
-          <span>{isLightMode ? 'Chế độ Tối' : 'Chế độ Sáng'}</span>
-        </button>
-      </div>
-
-      {/* Auth Card Trung Tâm */}
+      {/* Auth Card Trung Tâm (Chuẩn Nền Trắng Doanh Nghiệp) */}
       <div
         style={{
           width: '100%',
           maxWidth: '440px',
-          background: isLightMode ? '#FFFFFF' : 'rgba(15, 23, 42, 0.92)',
+          background: '#FFFFFF',
           borderRadius: '24px',
-          border: isLightMode ? '1px solid #E2E8F0' : '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: isLightMode
-            ? '0 25px 50px -12px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(0,0,0,0.04)'
-            : '0 30px 60px -15px rgba(0, 0, 0, 0.85), 0 0 35px rgba(249, 115, 22, 0.12)',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 20px 45px -10px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)',
           padding: '36px 32px',
-          backdropFilter: 'blur(20px)',
           margin: 'auto 0',
           position: 'relative'
         }}
       >
         {/* LOGO CHÍNH THỨC DỰ ÁN */}
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ display: 'inline-block', marginBottom: '14px' }}>
+          <div style={{ display: 'inline-block', marginBottom: '12px' }}>
             <img
               src="/logo-cube.png"
               alt="ERP Sales & Inventory Logo"
               style={{
-                width: '110px',
+                width: '100px',
                 height: 'auto',
                 display: 'block',
                 margin: '0 auto',
-                filter: 'drop-shadow(0 12px 28px rgba(249, 115, 22, 0.28))'
+                filter: 'drop-shadow(0 6px 14px rgba(249, 115, 22, 0.18))'
               }}
             />
           </div>
@@ -263,7 +216,7 @@ export const LoginPage: React.FC = () => {
               fontSize: '22px',
               fontWeight: 800,
               letterSpacing: '-0.3px',
-              color: isLightMode ? '#0F172A' : '#FFFFFF',
+              color: '#0F172A',
               margin: '0 0 4px 0'
             }}
           >
@@ -277,7 +230,7 @@ export const LoginPage: React.FC = () => {
               gap: '6px',
               fontSize: '12.5px',
               fontWeight: 500,
-              color: isLightMode ? '#64748B' : '#94A3B8'
+              color: '#64748B'
             }}
           >
             <Sparkles size={13} color="#F97316" />
@@ -294,9 +247,9 @@ export const LoginPage: React.FC = () => {
               gap: '10px',
               padding: '12px 14px',
               borderRadius: '12px',
-              background: isLightMode ? '#FEF2F2' : 'rgba(239, 68, 68, 0.12)',
-              border: isLightMode ? '1px solid #FECACA' : '1px solid rgba(239, 68, 68, 0.25)',
-              color: isLightMode ? '#DC2626' : '#FCA5A5',
+              background: '#FEF2F2',
+              border: '1px solid #FECACA',
+              color: '#DC2626',
               fontSize: '13px',
               marginBottom: '20px',
               lineHeight: 1.45,
@@ -321,7 +274,7 @@ export const LoginPage: React.FC = () => {
                   fontWeight: 700,
                   letterSpacing: '0.8px',
                   textTransform: 'uppercase',
-                  color: isLightMode ? '#475569' : '#94A3B8',
+                  color: '#475569',
                   marginBottom: '8px'
                 }}
               >
@@ -332,7 +285,7 @@ export const LoginPage: React.FC = () => {
                   style={{
                     position: 'absolute',
                     left: '14px',
-                    color: isLightMode ? '#94A3B8' : '#64748B',
+                    color: '#94A3B8',
                     display: 'flex',
                     alignItems: 'center',
                     pointerEvents: 'none'
@@ -353,9 +306,9 @@ export const LoginPage: React.FC = () => {
                     paddingLeft: '44px',
                     paddingRight: '14px',
                     borderRadius: '12px',
-                    border: isLightMode ? '1.5px solid #E2E8F0' : '1.5px solid rgba(255, 255, 255, 0.1)',
-                    background: isLightMode ? '#F8FAFC' : 'rgba(11, 15, 25, 0.65)',
-                    color: isLightMode ? '#0F172A' : '#FFFFFF',
+                    border: '1.5px solid #E2E8F0',
+                    background: '#F8FAFC',
+                    color: '#0F172A',
                     fontSize: '14px',
                     outline: 'none',
                     transition: 'all 0.2s ease'
@@ -363,10 +316,12 @@ export const LoginPage: React.FC = () => {
                   onFocus={(e) => {
                     e.target.style.borderColor = '#F97316';
                     e.target.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.15)';
+                    e.target.style.background = '#FFFFFF';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = isLightMode ? '#E2E8F0' : 'rgba(255, 255, 255, 0.1)';
+                    e.target.style.borderColor = '#E2E8F0';
                     e.target.style.boxShadow = 'none';
+                    e.target.style.background = '#F8FAFC';
                   }}
                 />
               </div>
@@ -382,7 +337,7 @@ export const LoginPage: React.FC = () => {
                     fontWeight: 700,
                     letterSpacing: '0.8px',
                     textTransform: 'uppercase',
-                    color: isLightMode ? '#475569' : '#94A3B8'
+                    color: '#475569'
                   }}
                 >
                   MẬT KHẨU
@@ -412,7 +367,7 @@ export const LoginPage: React.FC = () => {
                   style={{
                     position: 'absolute',
                     left: '14px',
-                    color: isLightMode ? '#94A3B8' : '#64748B',
+                    color: '#94A3B8',
                     display: 'flex',
                     alignItems: 'center',
                     pointerEvents: 'none'
@@ -433,9 +388,9 @@ export const LoginPage: React.FC = () => {
                     paddingLeft: '44px',
                     paddingRight: '44px',
                     borderRadius: '12px',
-                    border: isLightMode ? '1.5px solid #E2E8F0' : '1.5px solid rgba(255, 255, 255, 0.1)',
-                    background: isLightMode ? '#F8FAFC' : 'rgba(11, 15, 25, 0.65)',
-                    color: isLightMode ? '#0F172A' : '#FFFFFF',
+                    border: '1.5px solid #E2E8F0',
+                    background: '#F8FAFC',
+                    color: '#0F172A',
                     fontSize: '14px',
                     outline: 'none',
                     transition: 'all 0.2s ease'
@@ -443,10 +398,12 @@ export const LoginPage: React.FC = () => {
                   onFocus={(e) => {
                     e.target.style.borderColor = '#F97316';
                     e.target.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.15)';
+                    e.target.style.background = '#FFFFFF';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = isLightMode ? '#E2E8F0' : 'rgba(255, 255, 255, 0.1)';
+                    e.target.style.borderColor = '#E2E8F0';
                     e.target.style.boxShadow = 'none';
+                    e.target.style.background = '#F8FAFC';
                   }}
                 />
                 <button
@@ -457,7 +414,7 @@ export const LoginPage: React.FC = () => {
                     right: '12px',
                     background: 'none',
                     border: 'none',
-                    color: isLightMode ? '#94A3B8' : '#64748B',
+                    color: '#94A3B8',
                     cursor: 'pointer',
                     padding: '4px',
                     display: 'flex',
@@ -471,7 +428,7 @@ export const LoginPage: React.FC = () => {
 
             {/* Ghi nhớ đăng nhập */}
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '22px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: isLightMode ? '#475569' : '#94A3B8' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#475569' }}>
                 <input
                   type="checkbox"
                   checked={rememberMe}
@@ -500,7 +457,7 @@ export const LoginPage: React.FC = () => {
                 fontSize: '14.5px',
                 fontWeight: 700,
                 letterSpacing: '0.4px',
-                boxShadow: '0 8px 22px rgba(249, 115, 22, 0.38)',
+                boxShadow: '0 8px 22px rgba(249, 115, 22, 0.35)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -539,8 +496,8 @@ export const LoginPage: React.FC = () => {
                     width: '52px',
                     height: '52px',
                     borderRadius: '50%',
-                    background: 'rgba(34, 197, 94, 0.15)',
-                    color: '#22C55E',
+                    background: '#ECFDF5',
+                    color: '#10B981',
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -553,7 +510,7 @@ export const LoginPage: React.FC = () => {
                   style={{
                     fontSize: '16px',
                     fontWeight: 700,
-                    color: isLightMode ? '#0F172A' : '#FFFFFF',
+                    color: '#0F172A',
                     marginBottom: '6px'
                   }}
                 >
@@ -562,7 +519,7 @@ export const LoginPage: React.FC = () => {
                 <p
                   style={{
                     fontSize: '13px',
-                    color: isLightMode ? '#475569' : '#CBD5E1',
+                    color: '#475569',
                     lineHeight: 1.5,
                     marginBottom: '20px'
                   }}
@@ -602,7 +559,7 @@ export const LoginPage: React.FC = () => {
                       fontWeight: 700,
                       letterSpacing: '0.8px',
                       textTransform: 'uppercase',
-                      color: isLightMode ? '#475569' : '#94A3B8',
+                      color: '#475569',
                       marginBottom: '8px'
                     }}
                   >
@@ -613,7 +570,7 @@ export const LoginPage: React.FC = () => {
                       style={{
                         position: 'absolute',
                         left: '14px',
-                        color: isLightMode ? '#94A3B8' : '#64748B',
+                        color: '#94A3B8',
                         display: 'flex',
                         alignItems: 'center',
                         pointerEvents: 'none'
@@ -634,9 +591,9 @@ export const LoginPage: React.FC = () => {
                         paddingLeft: '44px',
                         paddingRight: '14px',
                         borderRadius: '12px',
-                        border: isLightMode ? '1.5px solid #E2E8F0' : '1.5px solid rgba(255, 255, 255, 0.1)',
-                        background: isLightMode ? '#F8FAFC' : 'rgba(11, 15, 25, 0.65)',
-                        color: isLightMode ? '#0F172A' : '#FFFFFF',
+                        border: '1.5px solid #E2E8F0',
+                        background: '#F8FAFC',
+                        color: '#0F172A',
                         fontSize: '14px',
                         outline: 'none',
                         transition: 'all 0.2s ease'
@@ -646,12 +603,12 @@ export const LoginPage: React.FC = () => {
                         e.target.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.15)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isLightMode ? '#E2E8F0' : 'rgba(255, 255, 255, 0.1)';
+                        e.target.style.borderColor = '#E2E8F0';
                         e.target.style.boxShadow = 'none';
                       }}
                     />
                   </div>
-                  <p style={{ fontSize: '12px', color: isLightMode ? '#64748B' : '#94A3B8', marginTop: '6px' }}>
+                  <p style={{ fontSize: '12px', color: '#64748B', marginTop: '6px' }}>
                     * Hệ thống sẽ gửi email chứa liên kết đặt lại mật khẩu có hiệu lực trong 30 phút.
                   </p>
                 </div>
@@ -709,7 +666,7 @@ export const LoginPage: React.FC = () => {
                       gap: '6px',
                       fontSize: '13px',
                       fontWeight: 600,
-                      color: isLightMode ? '#64748B' : '#94A3B8',
+                      color: '#64748B',
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
@@ -736,7 +693,7 @@ export const LoginPage: React.FC = () => {
                 alignItems: 'center',
                 gap: '6px',
                 fontSize: '12px',
-                color: isLightMode ? '#94A3B8' : '#64748B',
+                color: '#64748B',
                 cursor: 'pointer',
                 padding: '4px 10px',
                 borderRadius: '8px',
@@ -755,14 +712,14 @@ export const LoginPage: React.FC = () => {
                   marginTop: '12px',
                   padding: '12px',
                   borderRadius: '12px',
-                  background: isLightMode ? '#F8FAFC' : 'rgba(11, 15, 25, 0.75)',
-                  border: isLightMode ? '1px solid #E2E8F0' : '1px solid rgba(255, 255, 255, 0.08)',
+                  background: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
                   textAlign: 'left',
                   fontSize: '12px',
                   animation: 'fadeIn 0.2s ease'
                 }}
               >
-                <div style={{ fontWeight: 600, marginBottom: '8px', color: isLightMode ? '#334155' : '#E2E8F0' }}>
+                <div style={{ fontWeight: 600, marginBottom: '8px', color: '#334155' }}>
                   Bấm vào vai trò để tự động điền:
                 </div>
                 <div
@@ -780,13 +737,22 @@ export const LoginPage: React.FC = () => {
                       style={{
                         padding: '6px 10px',
                         borderRadius: '6px',
-                        background: isLightMode ? '#FFFFFF' : 'rgba(255, 255, 255, 0.04)',
-                        border: isLightMode ? '1px solid #E2E8F0' : '1px solid rgba(255, 255, 255, 0.06)',
-                        color: isLightMode ? '#1E293B' : '#CBD5E1',
+                        background: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        color: '#1E293B',
                         cursor: 'pointer',
                         textAlign: 'left',
                         display: 'flex',
-                        flexDirection: 'column'
+                        flexDirection: 'column',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#F97316';
+                        e.currentTarget.style.background = '#FFF7ED';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#E2E8F0';
+                        e.currentTarget.style.background = '#FFFFFF';
                       }}
                     >
                       <span style={{ fontWeight: 600 }}>{acc.name}</span>
@@ -808,8 +774,8 @@ export const LoginPage: React.FC = () => {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(8px)',
+            background: 'rgba(15, 23, 42, 0.45)',
+            backdropFilter: 'blur(6px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -821,10 +787,10 @@ export const LoginPage: React.FC = () => {
             style={{
               width: '100%',
               maxWidth: '460px',
-              background: isLightMode ? '#FFFFFF' : '#0F172A',
+              background: '#FFFFFF',
               borderRadius: '24px',
-              border: '1px solid rgba(249, 115, 22, 0.3)',
-              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(249, 115, 22, 0.15)',
+              border: '1px solid #E2E8F0',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.15)',
               padding: '32px 28px',
               animation: 'fadeIn 0.25s ease'
             }}
@@ -835,7 +801,7 @@ export const LoginPage: React.FC = () => {
                   width: '56px',
                   height: '56px',
                   borderRadius: '50%',
-                  background: 'rgba(249, 115, 22, 0.15)',
+                  background: '#FFF2EE',
                   color: '#F97316',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -849,7 +815,7 @@ export const LoginPage: React.FC = () => {
                 style={{
                   fontSize: '19px',
                   fontWeight: 800,
-                  color: isLightMode ? '#0F172A' : '#FFFFFF',
+                  color: '#0F172A',
                   margin: '0 0 6px 0'
                 }}
               >
@@ -858,7 +824,7 @@ export const LoginPage: React.FC = () => {
               <p
                 style={{
                   fontSize: '13px',
-                  color: isLightMode ? '#64748B' : '#94A3B8',
+                  color: '#64748B',
                   lineHeight: 1.45,
                   margin: 0
                 }}
@@ -875,9 +841,9 @@ export const LoginPage: React.FC = () => {
                   gap: '8px',
                   padding: '10px 12px',
                   borderRadius: '10px',
-                  background: 'rgba(239, 68, 68, 0.12)',
-                  border: '1px solid rgba(239, 68, 68, 0.25)',
-                  color: '#FCA5A5',
+                  background: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  color: '#DC2626',
                   fontSize: '12.5px',
                   marginBottom: '16px'
                 }}
@@ -898,14 +864,14 @@ export const LoginPage: React.FC = () => {
                     fontWeight: 700,
                     letterSpacing: '0.8px',
                     textTransform: 'uppercase',
-                    color: isLightMode ? '#475569' : '#94A3B8',
+                    color: '#475569',
                     marginBottom: '6px'
                   }}
                 >
                   MẬT KHẨU MỚI
                 </label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <div style={{ position: 'absolute', left: '12px', color: '#64748B', display: 'flex' }}>
+                  <div style={{ position: 'absolute', left: '12px', color: '#94A3B8', display: 'flex' }}>
                     <Key size={16} />
                   </div>
                   <input
@@ -921,11 +887,17 @@ export const LoginPage: React.FC = () => {
                       paddingLeft: '38px',
                       paddingRight: '38px',
                       borderRadius: '10px',
-                      border: '1.5px solid rgba(255, 255, 255, 0.12)',
-                      background: 'rgba(11, 15, 25, 0.7)',
-                      color: '#FFFFFF',
+                      border: '1.5px solid #CBD5E1',
+                      background: '#F8FAFC',
+                      color: '#0F172A',
                       fontSize: '13.5px',
                       outline: 'none'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#F97316';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#CBD5E1';
                     }}
                   />
                   <button
@@ -936,7 +908,7 @@ export const LoginPage: React.FC = () => {
                       right: '10px',
                       background: 'none',
                       border: 'none',
-                      color: '#64748B',
+                      color: '#94A3B8',
                       cursor: 'pointer',
                       display: 'flex'
                     }}
@@ -956,14 +928,14 @@ export const LoginPage: React.FC = () => {
                     fontWeight: 700,
                     letterSpacing: '0.8px',
                     textTransform: 'uppercase',
-                    color: isLightMode ? '#475569' : '#94A3B8',
+                    color: '#475569',
                     marginBottom: '6px'
                   }}
                 >
                   XÁC NHẬN MẬT KHẨU MỚI
                 </label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <div style={{ position: 'absolute', left: '12px', color: '#64748B', display: 'flex' }}>
+                  <div style={{ position: 'absolute', left: '12px', color: '#94A3B8', display: 'flex' }}>
                     <Lock size={16} />
                   </div>
                   <input
@@ -979,11 +951,17 @@ export const LoginPage: React.FC = () => {
                       paddingLeft: '38px',
                       paddingRight: '14px',
                       borderRadius: '10px',
-                      border: '1.5px solid rgba(255, 255, 255, 0.12)',
-                      background: 'rgba(11, 15, 25, 0.7)',
-                      color: '#FFFFFF',
+                      border: '1.5px solid #CBD5E1',
+                      background: '#F8FAFC',
+                      color: '#0F172A',
                       fontSize: '13.5px',
                       outline: 'none'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#F97316';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#CBD5E1';
                     }}
                   />
                 </div>
@@ -1041,7 +1019,7 @@ export const LoginPage: React.FC = () => {
           alignItems: 'center',
           gap: '16px',
           fontSize: '12px',
-          color: isLightMode ? '#94A3B8' : '#64748B',
+          color: '#64748B',
           textAlign: 'center',
           marginTop: '16px'
         }}

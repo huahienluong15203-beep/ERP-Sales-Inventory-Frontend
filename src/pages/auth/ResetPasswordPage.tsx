@@ -9,9 +9,7 @@ import {
   AlertCircle,
   CheckCircle2,
   ArrowLeft,
-  Key,
-  Sun,
-  Moon
+  Key
 } from '../../components/common/Icons';
 
 export const ResetPasswordPage: React.FC = () => {
@@ -27,7 +25,6 @@ export const ResetPasswordPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLightMode, setIsLightMode] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -86,63 +83,23 @@ export const ResetPasswordPage: React.FC = () => {
         flexDirection: 'column',
         justifyContent: 'space-between',
         alignItems: 'center',
-        background: isLightMode
-          ? 'linear-gradient(135deg, #F8FAFC 0%, #EDF2F7 100%)'
-          : 'radial-gradient(ellipse at 50% 20%, rgba(249, 115, 22, 0.08) 0%, rgba(11, 15, 25, 0) 65%), linear-gradient(135deg, #090D16 0%, #0F172A 60%, #0B0F19 100%)',
-        color: isLightMode ? '#0F172A' : '#F8FAFC',
+        background: 'linear-gradient(135deg, #F8FAFC 0%, #EEF2F6 100%)',
+        color: '#0F172A',
         fontFamily: 'var(--erp-font-sans, system-ui, -apple-system, sans-serif)',
         padding: '24px 16px',
-        position: 'relative',
-        transition: 'background 0.3s ease'
+        position: 'relative'
       }}
     >
-      {/* Nút chuyển chế độ sáng/tối */}
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '1200px',
-          display: 'flex',
-          justifyContent: 'flex-end',
-          marginBottom: '8px'
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setIsLightMode(!isLightMode)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 16px',
-            borderRadius: '9999px',
-            fontSize: '13px',
-            fontWeight: 500,
-            background: isLightMode ? '#FFFFFF' : 'rgba(255, 255, 255, 0.06)',
-            color: isLightMode ? '#334155' : '#E2E8F0',
-            border: isLightMode ? '1px solid #E2E8F0' : '1px solid rgba(255, 255, 255, 0.12)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          {isLightMode ? <Moon size={16} /> : <Sun size={16} color="#FBBF24" />}
-          <span>{isLightMode ? 'Chế độ Tối' : 'Chế độ Sáng'}</span>
-        </button>
-      </div>
-
-      {/* Card Đặt lại mật khẩu */}
+      {/* Card Đặt lại mật khẩu (Nền Trắng Doanh Nghiệp) */}
       <div
         style={{
           width: '100%',
           maxWidth: '440px',
-          background: isLightMode ? '#FFFFFF' : 'rgba(15, 23, 42, 0.9)',
+          background: '#FFFFFF',
           borderRadius: '24px',
-          border: isLightMode ? '1px solid #E2E8F0' : '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: isLightMode
-            ? '0 25px 50px -12px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(0,0,0,0.04)'
-            : '0 30px 60px -15px rgba(0, 0, 0, 0.8), 0 0 40px rgba(249, 115, 22, 0.12)',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 20px 45px -10px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)',
           padding: '36px 32px',
-          backdropFilter: 'blur(20px)',
           margin: 'auto 0'
         }}
       >
@@ -157,7 +114,7 @@ export const ResetPasswordPage: React.FC = () => {
                 height: 'auto',
                 display: 'block',
                 margin: '0 auto',
-                filter: 'drop-shadow(0 12px 28px rgba(249, 115, 22, 0.28))'
+                filter: 'drop-shadow(0 6px 14px rgba(249, 115, 22, 0.18))'
               }}
             />
           </div>
@@ -166,7 +123,7 @@ export const ResetPasswordPage: React.FC = () => {
               fontSize: '21px',
               fontWeight: 800,
               letterSpacing: '-0.3px',
-              color: isLightMode ? '#0F172A' : '#FFFFFF',
+              color: '#0F172A',
               marginBottom: '4px'
             }}
           >
@@ -175,7 +132,7 @@ export const ResetPasswordPage: React.FC = () => {
           <p
             style={{
               fontSize: '13px',
-              color: isLightMode ? '#64748B' : '#94A3B8',
+              color: '#64748B',
               margin: 0
             }}
           >
@@ -192,9 +149,9 @@ export const ResetPasswordPage: React.FC = () => {
               gap: '10px',
               padding: '12px 14px',
               borderRadius: '12px',
-              background: isLightMode ? '#FEF2F2' : 'rgba(239, 68, 68, 0.12)',
-              border: isLightMode ? '1px solid #FECACA' : '1px solid rgba(239, 68, 68, 0.25)',
-              color: isLightMode ? '#DC2626' : '#FCA5A5',
+              background: '#FEF2F2',
+              border: '1px solid #FECACA',
+              color: '#DC2626',
               fontSize: '13px',
               marginBottom: '20px',
               lineHeight: 1.4
@@ -219,8 +176,8 @@ export const ResetPasswordPage: React.FC = () => {
                 width: '56px',
                 height: '56px',
                 borderRadius: '50%',
-                background: 'rgba(34, 197, 94, 0.15)',
-                color: '#22C55E',
+                background: '#ECFDF5',
+                color: '#10B981',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -233,7 +190,7 @@ export const ResetPasswordPage: React.FC = () => {
               style={{
                 fontSize: '17px',
                 fontWeight: 700,
-                color: isLightMode ? '#0F172A' : '#FFFFFF',
+                color: '#0F172A',
                 marginBottom: '8px'
               }}
             >
@@ -242,7 +199,7 @@ export const ResetPasswordPage: React.FC = () => {
             <p
               style={{
                 fontSize: '13.5px',
-                color: isLightMode ? '#475569' : '#CBD5E1',
+                color: '#475569',
                 lineHeight: 1.5,
                 marginBottom: '20px'
               }}
@@ -252,7 +209,7 @@ export const ResetPasswordPage: React.FC = () => {
             <p
               style={{
                 fontSize: '12.5px',
-                color: isLightMode ? '#94A3B8' : '#64748B',
+                color: '#94A3B8',
                 marginBottom: '20px'
               }}
             >
@@ -289,7 +246,7 @@ export const ResetPasswordPage: React.FC = () => {
                   fontWeight: 700,
                   letterSpacing: '0.8px',
                   textTransform: 'uppercase',
-                  color: isLightMode ? '#475569' : '#94A3B8',
+                  color: '#475569',
                   marginBottom: '8px'
                 }}
               >
@@ -300,7 +257,7 @@ export const ResetPasswordPage: React.FC = () => {
                   style={{
                     position: 'absolute',
                     left: '14px',
-                    color: isLightMode ? '#94A3B8' : '#64748B',
+                    color: '#94A3B8',
                     display: 'flex',
                     alignItems: 'center',
                     pointerEvents: 'none'
@@ -321,11 +278,9 @@ export const ResetPasswordPage: React.FC = () => {
                     paddingLeft: '44px',
                     paddingRight: '44px',
                     borderRadius: '12px',
-                    border: isLightMode
-                      ? '1.5px solid #E2E8F0'
-                      : '1.5px solid rgba(255, 255, 255, 0.1)',
-                    background: isLightMode ? '#F8FAFC' : 'rgba(11, 15, 25, 0.6)',
-                    color: isLightMode ? '#0F172A' : '#FFFFFF',
+                    border: '1.5px solid #E2E8F0',
+                    background: '#F8FAFC',
+                    color: '#0F172A',
                     fontSize: '14px',
                     outline: 'none',
                     transition: 'all 0.2s ease'
@@ -333,10 +288,12 @@ export const ResetPasswordPage: React.FC = () => {
                   onFocus={(e) => {
                     e.target.style.borderColor = '#F97316';
                     e.target.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.15)';
+                    e.target.style.background = '#FFFFFF';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = isLightMode ? '#E2E8F0' : 'rgba(255, 255, 255, 0.1)';
+                    e.target.style.borderColor = '#E2E8F0';
                     e.target.style.boxShadow = 'none';
+                    e.target.style.background = '#F8FAFC';
                   }}
                 />
                 <button
@@ -347,7 +304,7 @@ export const ResetPasswordPage: React.FC = () => {
                     right: '12px',
                     background: 'none',
                     border: 'none',
-                    color: isLightMode ? '#94A3B8' : '#64748B',
+                    color: '#94A3B8',
                     cursor: 'pointer',
                     padding: '4px',
                     display: 'flex',
@@ -369,7 +326,7 @@ export const ResetPasswordPage: React.FC = () => {
                   fontWeight: 700,
                   letterSpacing: '0.8px',
                   textTransform: 'uppercase',
-                  color: isLightMode ? '#475569' : '#94A3B8',
+                  color: '#475569',
                   marginBottom: '8px'
                 }}
               >
@@ -380,7 +337,7 @@ export const ResetPasswordPage: React.FC = () => {
                   style={{
                     position: 'absolute',
                     left: '14px',
-                    color: isLightMode ? '#94A3B8' : '#64748B',
+                    color: '#94A3B8',
                     display: 'flex',
                     alignItems: 'center',
                     pointerEvents: 'none'
@@ -401,11 +358,9 @@ export const ResetPasswordPage: React.FC = () => {
                     paddingLeft: '44px',
                     paddingRight: '44px',
                     borderRadius: '12px',
-                    border: isLightMode
-                      ? '1.5px solid #E2E8F0'
-                      : '1.5px solid rgba(255, 255, 255, 0.1)',
-                    background: isLightMode ? '#F8FAFC' : 'rgba(11, 15, 25, 0.6)',
-                    color: isLightMode ? '#0F172A' : '#FFFFFF',
+                    border: '1.5px solid #E2E8F0',
+                    background: '#F8FAFC',
+                    color: '#0F172A',
                     fontSize: '14px',
                     outline: 'none',
                     transition: 'all 0.2s ease'
@@ -413,10 +368,12 @@ export const ResetPasswordPage: React.FC = () => {
                   onFocus={(e) => {
                     e.target.style.borderColor = '#F97316';
                     e.target.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.15)';
+                    e.target.style.background = '#FFFFFF';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = isLightMode ? '#E2E8F0' : 'rgba(255, 255, 255, 0.1)';
+                    e.target.style.borderColor = '#E2E8F0';
                     e.target.style.boxShadow = 'none';
+                    e.target.style.background = '#F8FAFC';
                   }}
                 />
                 <button
@@ -427,7 +384,7 @@ export const ResetPasswordPage: React.FC = () => {
                     right: '12px',
                     background: 'none',
                     border: 'none',
-                    color: isLightMode ? '#94A3B8' : '#64748B',
+                    color: '#94A3B8',
                     cursor: 'pointer',
                     padding: '4px',
                     display: 'flex',
@@ -439,41 +396,41 @@ export const ResetPasswordPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Bảng checklist kiểm tra mật khẩu */}
+            {/* Checklist Tiêu Chuẩn Mật Khẩu */}
             <div
               style={{
-                marginBottom: '24px',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: '12px',
                 padding: '12px 14px',
-                borderRadius: '10px',
-                background: isLightMode ? '#F1F5F9' : 'rgba(255, 255, 255, 0.04)',
-                border: isLightMode ? '1px solid #E2E8F0' : '1px solid rgba(255, 255, 255, 0.06)',
+                marginBottom: '22px',
                 fontSize: '12px'
               }}
             >
-              <div style={{ fontWeight: 600, color: isLightMode ? '#475569' : '#94A3B8', marginBottom: '8px' }}>
-                Tiêu chuẩn bảo mật mật khẩu:
+              <div style={{ fontWeight: 600, color: '#334155', marginBottom: '8px' }}>
+                Yêu cầu mật khẩu an toàn:
               </div>
-              <div style={{ display: 'grid', gap: '6px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: hasMinLength ? '#22C55E' : (isLightMode ? '#64748B' : '#94A3B8') }}>
-                  <span>{hasMinLength ? '✓' : '○'}</span>
-                  <span>Tối thiểu 8 ký tự</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: hasMinLength ? '#10B981' : '#64748B' }}>
+                  <CheckCircle2 size={14} color={hasMinLength ? '#10B981' : '#CBD5E1'} />
+                  <span>Ít nhất 8 ký tự</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: hasLetter ? '#22C55E' : (isLightMode ? '#64748B' : '#94A3B8') }}>
-                  <span>{hasLetter ? '✓' : '○'}</span>
-                  <span>Chứa ít nhất một chữ cái</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: hasLetter ? '#10B981' : '#64748B' }}>
+                  <CheckCircle2 size={14} color={hasLetter ? '#10B981' : '#CBD5E1'} />
+                  <span>Bao gồm chữ cái (A-Z, a-z)</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: hasNumber ? '#22C55E' : (isLightMode ? '#64748B' : '#94A3B8') }}>
-                  <span>{hasNumber ? '✓' : '○'}</span>
-                  <span>Chứa ít nhất một chữ số (0-9)</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: hasNumber ? '#10B981' : '#64748B' }}>
+                  <CheckCircle2 size={14} color={hasNumber ? '#10B981' : '#CBD5E1'} />
+                  <span>Bao gồm ít nhất một chữ số (0-9)</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isMatch ? '#22C55E' : (isLightMode ? '#64748B' : '#94A3B8') }}>
-                  <span>{isMatch ? '✓' : '○'}</span>
-                  <span>Mật khẩu xác nhận trùng khớp</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: isMatch ? '#10B981' : '#64748B' }}>
+                  <CheckCircle2 size={14} color={isMatch ? '#10B981' : '#CBD5E1'} />
+                  <span>Xác nhận mật khẩu trùng khớp</span>
                 </div>
               </div>
             </div>
 
-            {/* Nút lưu mật khẩu */}
+            {/* Nút Submit */}
             <button
               type="submit"
               disabled={isSubmitting || !isFormValid || !token}
@@ -481,21 +438,24 @@ export const ResetPasswordPage: React.FC = () => {
                 width: '100%',
                 height: '48px',
                 borderRadius: '12px',
-                background: isFormValid
+                background: isFormValid && token
                   ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)'
-                  : (isLightMode ? '#CBD5E1' : '#334155'),
+                  : '#CBD5E1',
                 color: '#FFFFFF',
                 fontSize: '14.5px',
                 fontWeight: 700,
                 letterSpacing: '0.4px',
-                boxShadow: isFormValid ? '0 8px 20px rgba(249, 115, 22, 0.35)' : 'none',
+                boxShadow: isFormValid && token
+                  ? '0 8px 22px rgba(249, 115, 22, 0.35)'
+                  : 'none',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '10px',
-                cursor: isFormValid && !isSubmitting ? 'pointer' : 'not-allowed',
+                cursor: isFormValid && token && !isSubmitting ? 'pointer' : 'not-allowed',
                 border: 'none',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                marginBottom: '16px'
               }}
             >
               {isSubmitting ? (
@@ -513,56 +473,42 @@ export const ResetPasswordPage: React.FC = () => {
                 <span>LƯU MẬT KHẨU MỚI</span>
               )}
             </button>
+
+            <div style={{ textAlign: 'center' }}>
+              <button
+                type="button"
+                onClick={() => navigate('/login')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#64748B',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
+              >
+                <ArrowLeft size={16} />
+                <span>Quay lại Đăng nhập</span>
+              </button>
+            </div>
           </form>
         )}
-
-        {/* Nút quay lại đăng nhập */}
-        <div style={{ marginTop: '22px', textAlign: 'center' }}>
-          <button
-            type="button"
-            onClick={() => navigate('/login')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13px',
-              fontWeight: 600,
-              color: isLightMode ? '#64748B' : '#94A3B8',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '6px 12px',
-              borderRadius: '8px',
-              transition: 'color 0.2s'
-            }}
-          >
-            <ArrowLeft size={16} />
-            <span>Quay lại trang Đăng nhập</span>
-          </button>
-        </div>
       </div>
 
       {/* Footer */}
       <div
         style={{
-          width: '100%',
-          maxWidth: '1200px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '16px',
           fontSize: '12px',
-          color: isLightMode ? '#94A3B8' : '#64748B',
+          color: '#64748B',
           textAlign: 'center',
           marginTop: '16px'
         }}
       >
-        <span>ERP Sales & Inventory System</span>
-        <span>•</span>
-        <span>Hotline: 1900 6868</span>
-        <span>•</span>
-        <span>Bảo mật 256-bit SSL</span>
+        <span>© 2026 ERP Sales & Inventory System. All rights reserved.</span>
       </div>
     </div>
   );

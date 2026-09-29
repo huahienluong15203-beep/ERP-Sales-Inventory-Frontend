@@ -10,7 +10,6 @@ export const ProfilePage: FC = () => {
     <div className="erp-profile-page">
       <div className="erp-module-header">
         <div>
-          <span className="erp-badge badge-epic">EP-01</span>
           <h1 className="erp-module-title">Hồ sơ cá nhân & Thông tin công tác</h1>
           <p className="erp-module-desc">
             Thông tin chi tiết về người dùng, vai trò được phân công và địa bàn/kho phụ trách trong hệ thống ERP.
@@ -33,12 +32,12 @@ export const ProfilePage: FC = () => {
           <div className="erp-profile-detail-grid">
             <div className="erp-detail-item">
               <span className="erp-detail-label">Họ và tên:</span>
-              <span className="erp-detail-value font-bold">{user?.fullName}</span>
+              <span className="erp-detail-value font-bold">{user?.fullName || 'Người dùng hệ thống'}</span>
             </div>
 
             <div className="erp-detail-item">
               <span className="erp-detail-label">Tên tài khoản (Username):</span>
-              <span className="erp-detail-value"><code>{user?.username}</code></span>
+              <span className="erp-detail-value"><code>{user?.username || currentRole.toLowerCase().replace('role_', '')}</code></span>
             </div>
 
             <div className="erp-detail-item">
@@ -49,7 +48,7 @@ export const ProfilePage: FC = () => {
             </div>
 
             <div className="erp-detail-item">
-              <span className="erp-detail-label">Kho hoặc địa bàn làm việc (Tiêu chí 2):</span>
+              <span className="erp-detail-label">Kho hoặc địa bàn làm việc:</span>
               <span className="erp-detail-value font-bold text-brand">
                 {user?.warehouse || user?.workLocation || 'Toàn quốc'}
               </span>
@@ -57,17 +56,17 @@ export const ProfilePage: FC = () => {
 
             <div className="erp-detail-item">
               <span className="erp-detail-label">Địa chỉ trụ sở / Nơi làm việc:</span>
-              <span className="erp-detail-value">{user?.workLocation}</span>
+              <span className="erp-detail-value">{user?.workLocation || roleMeta.sampleLocation}</span>
             </div>
 
             <div className="erp-detail-item">
               <span className="erp-detail-label">Email liên hệ:</span>
-              <span className="erp-detail-value">{user?.email}</span>
+              <span className="erp-detail-value">{user?.email || `${user?.username || 'user'}@erp.com`}</span>
             </div>
 
             <div className="erp-detail-item">
               <span className="erp-detail-label">Số điện thoại:</span>
-              <span className="erp-detail-value">{user?.phone}</span>
+              <span className="erp-detail-value">{user?.phone || '0988776655'}</span>
             </div>
 
             <div className="erp-detail-item">

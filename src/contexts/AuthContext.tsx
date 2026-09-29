@@ -20,6 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_ROLE_KEY = 'erp_active_role';
 const STORAGE_TOKEN_KEY = 'accessToken';
+const STORAGE_USER_KEY = 'erp_user_profile';
 
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [currentRole, setCurrentRole] = useState<RoleName>(() => {
@@ -36,7 +37,18 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     return validRoles.includes(savedRole) ? savedRole : 'ROLE_ADMIN';
   });
 
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    const saved = localStorage.getItem(STORAGE_USER_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
+
   const [menus, setMenus] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -47,7 +59,13 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setIsLoading(true);
     try {
       const data = await fetchUserNavigationContext(role);
-      setUser(data.user);
+      if (data.user) {
+        setUser((prev) => {
+          const merged = { ...prev, ...data.user };
+          localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(merged));
+          return merged;
+        });
+      }
       setMenus(data.menus);
     } catch (err) {
       console.error('Lỗi khi tải ngữ cảnh phân quyền người dùng:', err);
@@ -71,6 +89,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setIsAuthenticated(true);
         setCurrentRole(result.user.role);
         localStorage.setItem(STORAGE_ROLE_KEY, result.user.role);
+        localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(result.user));
+        setUser(result.user);
         await loadUserContext(result.user.role);
         return { success: true, user: result.user };
       } else {
@@ -90,6 +110,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       await logoutUser();
       setIsAuthenticated(false);
       setUser(null);
+      localStorage.removeItem(STORAGE_USER_KEY);
     } finally {
       setIsLoading(false);
     }

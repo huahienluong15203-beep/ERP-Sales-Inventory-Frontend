@@ -784,7 +784,8 @@
   letter-spacing: 0.3px;
 }
 
-.badge-epic {
+.badge-epic,
+.badge-category {
   background: #FFF2EE;
   color: #F85606;
   border: 1px solid #FFD8CC;

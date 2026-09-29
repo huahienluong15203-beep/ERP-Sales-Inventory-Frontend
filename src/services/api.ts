@@ -350,7 +350,7 @@ export async function fetchUserNavigationContext(role: RoleName): Promise<UserCo
           role: role,
           roles: data.user.roles || [role]
         },
-        menus: data.menus
+        menus: getAuthorizedMenus(role)
       };
     }
   } catch {
@@ -416,4 +416,466 @@ function getSampleWarehouse(role: RoleName): string {
     default:
       return 'Chi nhánh chính';
   }
+}
+
+export interface RefItem {
+  id: number;
+  code: string;
+  name: string;
+}
+
+export interface AdminUserItem {
+  id: number;
+  username: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  status: 'ACTIVE' | 'LOCKED' | string;
+  mustChangePassword: boolean;
+  roles: RoleName[];
+  warehouses: RefItem[];
+  regions: RefItem[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface AdminPageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface AdminFormOptions {
+  roles: RoleName[];
+  warehouses: RefItem[];
+  regions: RefItem[];
+}
+
+export interface CreateAdminUserPayload {
+  username: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  roles: RoleName[];
+  warehouseIds?: number[];
+  regionIds?: number[];
+}
+
+export interface UpdateAdminUserPayload {
+  fullName: string;
+  email: string;
+  phone?: string;
+}
+
+export interface UpdateAssignmentsPayload {
+  roles: RoleName[];
+  warehouseIds?: number[];
+  regionIds?: number[];
+}
+
+export interface CreateAdminUserResult {
+  success: boolean;
+  message?: string;
+  user?: AdminUserItem;
+  activationEmailSent?: boolean;
+}
+
+/**
+ * Lấy danh sách tài khoản quản trị (S1-09: Tìm kiếm, lọc theo vai trò, trạng thái, phân trang mặc định 20 dòng)
+ */
+export async function fetchAdminUsers(params: {
+  keyword?: string;
+  role?: string;
+  status?: string;
+  page?: number;
+  size?: number;
+}): Promise<AdminPageResponse<AdminUserItem>> {
+  const query = new URLSearchParams();
+  if (params.keyword) query.set('keyword', params.keyword);
+  if (params.role) query.set('role', params.role);
+  if (params.status) query.set('status', params.status);
+  query.set('page', String(params.page ?? 0));
+  query.set('size', String(params.size ?? 20));
+
+  try {
+    const token = localStorage.getItem('accessToken');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE_URL}/api/admin/users?${query.toString()}`, {
+      method: 'GET',
+      headers
+    });
+
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback if backend offline
+  }
+
+  // Fallback demo data
+  return getMockAdminUsers(params);
+}
+
+/**
+ * Lấy danh mục vai trò, kho, địa bàn cho form tạo/sửa
+ */
+export async function fetchAdminFormOptions(): Promise<AdminFormOptions> {
+  try {
+    const token = localStorage.getItem('accessToken');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE_URL}/api/admin/users/form-options`, {
+      method: 'GET',
+      headers
+    });
+
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback
+  }
+
+  return {
+    roles: [
+      'ROLE_ADMIN',
+      'ROLE_SALES_MANAGER',
+      'ROLE_SALES_REP',
+      'ROLE_WAREHOUSE',
+      'ROLE_WH_MANAGER',
+      'ROLE_ACCOUNTANT',
+      'ROLE_CUSTOMER'
+    ],
+    warehouses: [
+      { id: 1, code: 'WH-MB01', name: 'Kho Tổng Miền Bắc (Hà Nội)' },
+      { id: 2, code: 'WH-MN01', name: 'Kho Tổng Miền Nam (Bình Dương)' },
+      { id: 3, code: 'WH-MT01', name: 'Kho Trung Chuyển Miền Trung (Đà Nẵng)' },
+      { id: 4, code: 'WH-MK01', name: 'Kho Vệ Tinh Mekong (Cần Thơ)' }
+    ],
+    regions: [
+      { id: 1, code: 'REG-HN-NOI', name: 'Khu Vực Hà Nội - Nội Thành' },
+      { id: 2, code: 'REG-HN-NGOAI', name: 'Khu Vực Hà Nội - Ngoại Thành & Lân Cận' },
+      { id: 3, code: 'REG-HCM-TT', name: 'Khu Vực TP.HCM - Trung Tâm' },
+      { id: 4, code: 'REG-HCM-DONG', name: 'Khu Vực TP.HCM - Khu Đông & Thủ Đức' },
+      { id: 5, code: 'REG-MDNB', name: 'Miền Đông Nam Bộ (Đồng Nai, Bình Dương)' },
+      { id: 6, code: 'REG-MT', name: 'Khu Vực Duyên Hải Miền Trung' }
+    ]
+  };
+}
+
+/**
+ * Tạo tài khoản mới (S1-08) - Trả thông báo cụ thể nếu tài khoản, email, số điện thoại bị trùng
+ */
+export async function createAdminUser(
+  payload: CreateAdminUserPayload
+): Promise<CreateAdminUserResult> {
+  try {
+    const token = localStorage.getItem('accessToken');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE_URL}/api/admin/users`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (res.status === 201 || res.ok) {
+      return {
+        success: true,
+        user: data?.user,
+        activationEmailSent: data?.activationEmailSent ?? false,
+        message: 'Tạo tài khoản thành công! Email kích hoạt kèm mật khẩu tạm đã được gửi tới người dùng.'
+      };
+    } else {
+      return {
+        success: false,
+        message: data?.message || 'Không thể tạo tài khoản. Vui lòng kiểm tra lại thông tin nhập!'
+      };
+    }
+  } catch {
+    return {
+      success: false,
+      message: 'Không thể kết nối máy chủ backend. Vui lòng thử lại sau!'
+    };
+  }
+}
+
+/**
+ * Cập nhật thông tin cơ bản của tài khoản (S1-08)
+ */
+export async function updateAdminUser(
+  id: number,
+  payload: UpdateAdminUserPayload
+): Promise<{ success: boolean; message: string; user?: AdminUserItem }> {
+  try {
+    const token = localStorage.getItem('accessToken');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json().catch(() => null);
+    if (res.ok) {
+      return {
+        success: true,
+        message: 'Cập nhật thông tin tài khoản thành công!',
+        user: data
+      };
+    } else {
+      return {
+        success: false,
+        message: data?.message || 'Cập nhật thông tin thất bại.'
+      };
+    }
+  } catch {
+    return {
+      success: false,
+      message: 'Không thể kết nối máy chủ backend.'
+    };
+  }
+}
+
+/**
+ * Gán vai trò, kho, địa bàn (S1-09)
+ */
+export async function updateAdminAssignments(
+  id: number,
+  payload: UpdateAssignmentsPayload
+): Promise<{ success: boolean; message: string; user?: AdminUserItem }> {
+  try {
+    const token = localStorage.getItem('accessToken');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}/assignments`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json().catch(() => null);
+    if (res.ok) {
+      return {
+        success: true,
+        message: 'Cập nhật phân quyền, kho và địa bàn thành công!',
+        user: data
+      };
+    } else {
+      return {
+        success: false,
+        message: data?.message || 'Cập nhật phân quyền thất bại.'
+      };
+    }
+  } catch {
+    return {
+      success: false,
+      message: 'Không thể kết nối máy chủ backend.'
+    };
+  }
+}
+
+/**
+ * Khóa tài khoản (S1-10)
+ */
+export async function lockAdminUser(
+  id: number,
+  reason?: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const token = localStorage.getItem('accessToken');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}/lock`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ reason: reason || 'Quản trị viên khóa thủ công' })
+    });
+
+    const data = await res.json().catch(() => null);
+    if (res.ok) {
+      return { success: true, message: 'Khóa tài khoản thành công!' };
+    } else {
+      return { success: false, message: data?.message || 'Không thể khóa tài khoản.' };
+    }
+  } catch {
+    return { success: false, message: 'Lỗi kết nối máy chủ.' };
+  }
+}
+
+/**
+ * Mở khóa tài khoản (S1-10)
+ */
+export async function unlockAdminUser(
+  id: number
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const token = localStorage.getItem('accessToken');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}/unlock`, {
+      method: 'PATCH',
+      headers
+    });
+
+    const data = await res.json().catch(() => null);
+    if (res.ok) {
+      return { success: true, message: 'Mở khóa tài khoản thành công!' };
+    } else {
+      return { success: false, message: data?.message || 'Không thể mở khóa tài khoản.' };
+    }
+  } catch {
+    return { success: false, message: 'Lỗi kết nối máy chủ.' };
+  }
+}
+
+// Mock fallback helper
+function getMockAdminUsers(params: {
+  keyword?: string;
+  role?: string;
+  status?: string;
+  page?: number;
+  size?: number;
+}): AdminPageResponse<AdminUserItem> {
+  const allUsers: AdminUserItem[] = [
+    {
+      id: 1,
+      username: 'admin',
+      fullName: 'Quản Trị Viên Hệ Thống',
+      email: 'admin@erp.com',
+      phone: '0901234567',
+      status: 'ACTIVE',
+      mustChangePassword: false,
+      roles: ['ROLE_ADMIN'],
+      warehouses: [{ id: 1, code: 'WH-MB01', name: 'Kho Tổng Miền Bắc (Hà Nội)' }],
+      regions: [{ id: 1, code: 'REG-HN-NOI', name: 'Khu Vực Hà Nội - Nội Thành' }],
+      createdAt: '2026-03-01T08:00:00'
+    },
+    {
+      id: 2,
+      username: 'sales_manager',
+      fullName: 'Trần Quản Lý Kinh Doanh',
+      email: 'manager@erp.com',
+      phone: '0902345678',
+      status: 'ACTIVE',
+      mustChangePassword: false,
+      roles: ['ROLE_SALES_MANAGER'],
+      warehouses: [],
+      regions: [{ id: 3, code: 'REG-HCM-TT', name: 'Khu Vực TP.HCM - Trung Tâm' }],
+      createdAt: '2026-03-02T09:30:00'
+    },
+    {
+      id: 3,
+      username: 'sales_rep',
+      fullName: 'Lê Văn Bán Hàng',
+      email: 'salesrep@erp.com',
+      phone: '0903456789',
+      status: 'ACTIVE',
+      mustChangePassword: false,
+      roles: ['ROLE_SALES_REP'],
+      warehouses: [],
+      regions: [{ id: 4, code: 'REG-HCM-DONG', name: 'Khu Vực TP.HCM - Khu Đông & Thủ Đức' }],
+      createdAt: '2026-03-03T10:15:00'
+    },
+    {
+      id: 4,
+      username: 'wh_staff',
+      fullName: 'Nguyễn Văn Thủ Kho',
+      email: 'warehouse@erp.com',
+      phone: '0904567890',
+      status: 'ACTIVE',
+      mustChangePassword: false,
+      roles: ['ROLE_WAREHOUSE'],
+      warehouses: [{ id: 1, code: 'WH-MB01', name: 'Kho Tổng Miền Bắc (Hà Nội)' }],
+      regions: [],
+      createdAt: '2026-03-04T11:00:00'
+    },
+    {
+      id: 5,
+      username: 'wh_manager',
+      fullName: 'Hoàng Quản Lý Kho',
+      email: 'whmanager@erp.com',
+      phone: '0905678901',
+      status: 'ACTIVE',
+      mustChangePassword: false,
+      roles: ['ROLE_WH_MANAGER'],
+      warehouses: [
+        { id: 1, code: 'WH-MB01', name: 'Kho Tổng Miền Bắc (Hà Nội)' },
+        { id: 2, code: 'WH-MN01', name: 'Kho Tổng Miền Nam (Bình Dương)' }
+      ],
+      regions: [],
+      createdAt: '2026-03-05T14:20:00'
+    },
+    {
+      id: 6,
+      username: 'accountant',
+      fullName: 'Phạm Thị Kế Toán',
+      email: 'accountant@erp.com',
+      phone: '0906789012',
+      status: 'ACTIVE',
+      mustChangePassword: false,
+      roles: ['ROLE_ACCOUNTANT'],
+      warehouses: [],
+      regions: [],
+      createdAt: '2026-03-06T15:45:00'
+    },
+    {
+      id: 7,
+      username: 'customer_agent',
+      fullName: 'Đại Lý Minh Phát (B2B)',
+      email: 'minhphat@daily.com',
+      phone: '0907890123',
+      status: 'ACTIVE',
+      mustChangePassword: false,
+      roles: ['ROLE_CUSTOMER'],
+      warehouses: [{ id: 4, code: 'WH-MK01', name: 'Kho Vệ Tinh Mekong (Cần Thơ)' }],
+      regions: [],
+      createdAt: '2026-03-07T16:00:00'
+    }
+  ];
+
+  let filtered = allUsers;
+  if (params.keyword) {
+    const kw = params.keyword.toLowerCase().trim();
+    filtered = filtered.filter(
+      (u) =>
+        u.username.toLowerCase().includes(kw) ||
+        u.fullName.toLowerCase().includes(kw) ||
+        (u.phone && u.phone.includes(kw))
+    );
+  }
+  if (params.role) {
+    filtered = filtered.filter((u) => u.roles.includes(params.role as RoleName));
+  }
+  if (params.status) {
+    filtered = filtered.filter((u) => u.status === params.status);
+  }
+
+  const page = params.page ?? 0;
+  const size = params.size ?? 20;
+  const startIndex = page * size;
+  const content = filtered.slice(startIndex, startIndex + size);
+  const totalElements = filtered.length;
+  const totalPages = Math.ceil(totalElements / size) || 1;
+
+  return {
+    content,
+    page,
+    size,
+    totalElements,
+    totalPages
+  };
 }
