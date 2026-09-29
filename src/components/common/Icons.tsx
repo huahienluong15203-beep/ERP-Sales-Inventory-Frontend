@@ -241,6 +241,56 @@ export const Icons: Record<string, React.FC<IconProps>> = {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" />
     </svg>
+  ),
+  Mail: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+    </svg>
+  ),
+  Key: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="7.5" cy="15.5" r="5.5" /><path d="m21 2-9.6 9.6" /><path d="m15.5 7.5 3 3L22 7l-3-3" />
+    </svg>
+  ),
+  Search: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+    </svg>
+  ),
+  Info: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="16" y2="12" /><line x1="12" x2="12.01" y1="8" y2="8" />
+    </svg>
+  ),
+  Plus: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M5 12h14" /><path d="M12 5v14" />
+    </svg>
+  ),
+  Phone: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  ),
+  Unlock: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" />
+    </svg>
+  ),
+  Edit: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  ),
+  Filter: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+    </svg>
+  ),
+  ChevronLeft: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="m15 18-6-6 6-6" />
+    </svg>
   )
 };
 
@@ -284,8 +334,10 @@ export const AlertCircle = Icons.AlertCircle;
 export const CheckCircle2 = Icons.CheckCircle2;
 export const Clock = Icons.Clock;
 export const ChevronRight = Icons.ChevronRight;
+export const ChevronLeft = Icons.ChevronLeft;
 export const User = Icons.User;
 export const Lock = Icons.Lock;
+export const Unlock = Icons.Unlock;
 export const Eye = Icons.Eye;
 export const EyeOff = Icons.EyeOff;
 export const HelpCircle = Icons.HelpCircle;
@@ -297,3 +349,11 @@ export const ChevronDown = Icons.ChevronDown;
 export const Check = Icons.Check;
 export const RefreshCw = Icons.RefreshCw;
 export const LogOut = Icons.LogOut;
+export const Mail = Icons.Mail;
+export const Key = Icons.Key;
+export const Search = Icons.Search;
+export const Plus = Icons.Plus;
+export const Phone = Icons.Phone;
+export const Edit = Icons.Edit;
+export const Filter = Icons.Filter;
+export const Info = Icons.Info;

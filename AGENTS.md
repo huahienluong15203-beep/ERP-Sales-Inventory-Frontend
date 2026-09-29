@@ -5,6 +5,7 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
 ## 1. Think Before Coding
+- 100% UI USE Tailwind css not base css 
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
 
@@ -112,3 +113,4 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - **DoR (Đưa vào Sprint)**: Viết đúng mẫu `Là [Vai trò], tôi muốn [Hành động], để [Giá trị]`, AC rõ ràng kiểm chứng được, kích thước <= 8 SP (nếu lớn hơn phải chẻ nhỏ thành API và UI riêng tại Sprint Planning).
 - **DoD (Nghiệm thu Story)**: Pass 100% AC, >=1 Reviewer duyệt (Core có Tech Lead), Unit test tầng service độ phủ nhánh mới >= 60%, CI pass 100%, deploy Staging thành công, bảo mật server-side RBAC, responsive 360px, không lỗi Major/Blocker, PO (Nguyễn Thiên) ký nghiệm thu trên Staging.
 - **Chỉ dẫn cho AI Agent**: Luôn tra đúng Epic/Scope để đặt tên nhánh và commit; Luôn dùng DB Transaction và Pessimistic Lock khi động vào kho/nợ; Luôn quy đổi Base Unit; Tuyệt đối không để lộ giá vốn ra API công khai; Tuân thủ phong cách can thiệp tối giản (Surgical Changes).
+

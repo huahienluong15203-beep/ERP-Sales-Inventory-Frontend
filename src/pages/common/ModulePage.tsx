@@ -5,7 +5,7 @@ import { Icons, DynamicIcon } from '../../components/common/Icons';
 
 interface ModulePageProps {
   title: string;
-  epic: string;
+  epic?: string;
   description: string;
   iconName: string;
   allowedRoles: RoleName[];
@@ -31,7 +31,9 @@ export const ModulePage: FC<ModulePageProps> = ({
           </div>
           <div>
             <div className="erp-module-badges">
-              <span className="erp-badge badge-epic">{epic}</span>
+              {epic && !epic.startsWith('EP-') && (
+                <span className="erp-badge badge-category">{epic}</span>
+              )}
               <span className="erp-badge badge-success">Đã xác thực quyền</span>
             </div>
             <h1 className="erp-module-title">{title}</h1>
@@ -47,16 +49,16 @@ export const ModulePage: FC<ModulePageProps> = ({
         </div>
       </div>
 
-      {/* Thông tin ngữ cảnh người dùng đang làm việc (Tiêu chí 2 S1-06) */}
+      {/* Thông tin ngữ cảnh người dùng đang làm việc */}
       <div className="erp-context-strip">
         <div className="erp-context-item">
           <Icons.User size={15} />
-          <span>Nhân sự: <strong>{user?.fullName}</strong></span>
+          <span>Nhân sự: <strong>{user?.fullName || 'Người dùng'}</strong></span>
         </div>
         <div className="erp-context-divider">•</div>
         <div className="erp-context-item">
           <Icons.MapPin size={15} />
-          <span>Điểm công tác: <strong>{user?.warehouse || user?.workLocation}</strong></span>
+          <span>Điểm công tác: <strong>{user?.warehouse || user?.workLocation || 'Trụ sở chính'}</strong></span>
         </div>
         <div className="erp-context-divider">•</div>
         <div className="erp-context-item">
