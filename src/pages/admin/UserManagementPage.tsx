@@ -33,7 +33,8 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Filter
+  Filter,
+  Info
 } from '../../components/common/Icons';
 
 export const UserManagementPage: React.FC = () => {
@@ -197,9 +198,16 @@ export const UserManagementPage: React.FC = () => {
       return;
     }
 
+    const isSalesStaff = createForm.roles.some((r) => r === 'ROLE_SALES_REP' || r === 'ROLE_SALES_MANAGER');
+    const sanitizedPayload: CreateAdminUserPayload = {
+      ...createForm,
+      warehouseIds: isWhStaff ? createForm.warehouseIds : [],
+      regionIds: isSalesStaff ? createForm.regionIds : []
+    };
+
     setCreateLoading(true);
     try {
-      const result = await createAdminUser(createForm);
+      const result = await createAdminUser(sanitizedPayload);
       if (result.success) {
         setIsCreateModalOpen(false);
         setActionAlert({
@@ -230,10 +238,12 @@ export const UserManagementPage: React.FC = () => {
       email: target.email,
       phone: target.phone || ''
     });
+    const hasWh = target.roles.some((r) => r === 'ROLE_WAREHOUSE' || r === 'ROLE_WH_MANAGER');
+    const hasSales = target.roles.some((r) => r === 'ROLE_SALES_REP' || r === 'ROLE_SALES_MANAGER');
     setEditAssignmentsForm({
       roles: [...target.roles],
-      warehouseIds: target.warehouses.map((w) => w.id),
-      regionIds: target.regions.map((r) => r.id)
+      warehouseIds: hasWh ? target.warehouses.map((w) => w.id) : [],
+      regionIds: hasSales ? target.regions.map((r) => r.id) : []
     });
     setIsEditModalOpen(true);
   };
@@ -310,9 +320,19 @@ export const UserManagementPage: React.FC = () => {
       return;
     }
 
+    const isSalesStaff = editAssignmentsForm.roles.some(
+      (r) => r === 'ROLE_SALES_REP' || r === 'ROLE_SALES_MANAGER'
+    );
+
+    const sanitizedPayload: UpdateAssignmentsPayload = {
+      ...editAssignmentsForm,
+      warehouseIds: isWhStaff ? editAssignmentsForm.warehouseIds : [],
+      regionIds: isSalesStaff ? editAssignmentsForm.regionIds : []
+    };
+
     setEditLoading(true);
     try {
-      const res = await updateAdminAssignments(editingUser.id, editAssignmentsForm);
+      const res = await updateAdminAssignments(editingUser.id, sanitizedPayload);
       if (res.success) {
         setIsEditModalOpen(false);
         setActionAlert({
@@ -367,9 +387,8 @@ export const UserManagementPage: React.FC = () => {
           const isSales = lockTargetUser.roles.includes('ROLE_SALES_REP') || lockTargetUser.roles.includes('ROLE_SALES_MANAGER');
           setActionAlert({
             type: 'success',
-            message: `Đã khóa tài khoản [${lockTargetUser.username}] và thu hồi phiên làm việc thành công.${
-              isSales ? ' (Lưu ý: Các đại lý do nhân sự này phụ trách đã được gắn cảnh báo Cần bàn giao)' : ''
-            }`
+            message: `Đã khóa tài khoản [${lockTargetUser.username}] và thu hồi phiên làm việc thành công.${isSales ? ' (Lưu ý: Các đại lý do nhân sự này phụ trách đã được gắn cảnh báo Cần bàn giao)' : ''
+              }`
           });
           loadUsers();
         } else {
@@ -461,9 +480,8 @@ export const UserManagementPage: React.FC = () => {
       {/* Thông báo thông điệp hệ thống */}
       {actionAlert && (
         <div
-          className={`user-mgmt-alert ${
-            actionAlert.type === 'success' ? 'user-mgmt-alert-success' : 'user-mgmt-alert-error'
-          }`}
+          className={`user-mgmt-alert ${actionAlert.type === 'success' ? 'user-mgmt-alert-success' : 'user-mgmt-alert-error'
+            }`}
         >
           {actionAlert.type === 'success' ? (
             <CheckCircle2 size={18} style={{ color: '#059669', flexShrink: 0, marginTop: 2 }} />
@@ -536,9 +554,18 @@ export const UserManagementPage: React.FC = () => {
               <Filter size={15} />
               <span>Lọc</span>
             </button>
-            <button type="button" onClick={handleResetFilters} className="user-mgmt-btn-reset">
-              Reset
-            </button>
+            {(keyword || selectedRole || selectedStatus) && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="user-mgmt-btn-cancel"
+                style={{ padding: '8px 12px', height: '38px', borderRadius: '8px', cursor: 'pointer' }}
+                title="Xóa bộ lọc"
+              >
+                <RefreshCw size={14} />
+                <span>Đặt lại</span>
+              </button>
+            )}
           </div>
         </form>
       </div>
@@ -940,14 +967,17 @@ export const UserManagementPage: React.FC = () => {
                             type="checkbox"
                             checked={isSelected}
                             onChange={(e) => {
-                              if (e.target.checked) {
-                                setCreateForm({ ...createForm, roles: [...createForm.roles, r] });
-                              } else {
-                                setCreateForm({
-                                  ...createForm,
-                                  roles: createForm.roles.filter((role) => role !== r)
-                                });
-                              }
+                              const newRoles = e.target.checked
+                                ? [...createForm.roles, r]
+                                : createForm.roles.filter((role) => role !== r);
+                              const hasWh = newRoles.some((role) => role === 'ROLE_WAREHOUSE' || role === 'ROLE_WH_MANAGER');
+                              const hasSales = newRoles.some((role) => role === 'ROLE_SALES_REP' || role === 'ROLE_SALES_MANAGER');
+                              setCreateForm({
+                                ...createForm,
+                                roles: newRoles,
+                                warehouseIds: hasWh ? createForm.warehouseIds : [],
+                                regionIds: hasSales ? createForm.regionIds : []
+                              });
                             }}
                             style={{ marginTop: 2, accentColor: '#F85606' }}
                           />
@@ -965,94 +995,114 @@ export const UserManagementPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Quy tắc 2: Người dùng thuộc vai trò kho phải gắn với ít nhất một kho cụ thể */}
-                <div className="user-mgmt-form-group">
-                  <label
-                    className="user-mgmt-form-label"
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                  >
-                    <span>Kho hàng phụ trách</span>
-                    {createForm.roles.some(
-                      (r) => r === 'ROLE_WAREHOUSE' || r === 'ROLE_WH_MANAGER'
-                    ) && (
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: '#B45309',
-                          fontWeight: 700,
-                          background: '#FEF3C7',
-                          padding: '2px 8px',
-                          borderRadius: 4
-                        }}
-                      >
-                        * Bắt buộc chọn ít nhất 1 kho cho vai trò Kho!
-                      </span>
-                    )}
-                  </label>
-                  <div className="user-mgmt-checkbox-grid">
-                    {formOptions.warehouses.map((wh) => {
-                      const isSelected = createForm.warehouseIds?.includes(wh.id);
-                      return (
+                {/* Quy tắc 2: Phân công kho hàng (Chỉ dành cho nhân sự thuộc bộ phận Kho) */}
+                {(() => {
+                  const isCreateWarehouseRole = createForm.roles.some((r) => r === 'ROLE_WAREHOUSE' || r === 'ROLE_WH_MANAGER');
+                  const isCreateSalesRole = createForm.roles.some((r) => r === 'ROLE_SALES_REP' || r === 'ROLE_SALES_MANAGER');
+                  return (
+                    <>
+                      <div className="user-mgmt-form-group">
                         <label
-                          key={wh.id}
-                          className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
+                          className="user-mgmt-form-label"
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                         >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              const cur = createForm.warehouseIds || [];
-                              if (e.target.checked) {
-                                setCreateForm({ ...createForm, warehouseIds: [...cur, wh.id] });
-                              } else {
-                                setCreateForm({
-                                  ...createForm,
-                                  warehouseIds: cur.filter((id) => id !== wh.id)
-                                });
-                              }
-                            }}
-                            style={{ accentColor: '#F85606' }}
-                          />
-                          <span style={{ fontSize: 12.5 }}>{wh.name}</span>
+                          <span>Kho hàng phụ trách</span>
+                          {isCreateWarehouseRole && (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                color: '#B45309',
+                                fontWeight: 700,
+                                background: '#FEF3C7',
+                                padding: '2px 8px',
+                                borderRadius: 4
+                              }}
+                            >
+                              * Bắt buộc chọn ít nhất 1 kho cho vai trò Kho!
+                            </span>
+                          )}
                         </label>
-                      );
-                    })}
-                  </div>
-                </div>
+                        {isCreateWarehouseRole ? (
+                          <div className="user-mgmt-checkbox-grid">
+                            {formOptions.warehouses.map((wh) => {
+                              const isSelected = createForm.warehouseIds?.includes(wh.id);
+                              return (
+                                <label
+                                  key={wh.id}
+                                  className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={(e) => {
+                                      const cur = createForm.warehouseIds || [];
+                                      if (e.target.checked) {
+                                        setCreateForm({ ...createForm, warehouseIds: [...cur, wh.id] });
+                                      } else {
+                                        setCreateForm({
+                                          ...createForm,
+                                          warehouseIds: cur.filter((id) => id !== wh.id)
+                                        });
+                                      }
+                                    }}
+                                    style={{ accentColor: '#F85606' }}
+                                  />
+                                  <span style={{ fontSize: 12.5 }}>{wh.name}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="user-mgmt-assignment-note">
+                            <Info size={16} style={{ color: '#94A3B8', flexShrink: 0 }} />
+                            <span>Không áp dụng. Chỉ nhân sự thuộc bộ phận Kho (Quản lý kho / Thủ kho) mới được phân công quản lý kho hàng.</span>
+                          </div>
+                        )}
+                      </div>
 
-                {/* Địa bàn phụ trách */}
-                <div className="user-mgmt-form-group">
-                  <label className="user-mgmt-form-label">Địa bàn phụ trách (Kinh doanh)</label>
-                  <div className="user-mgmt-checkbox-grid">
-                    {formOptions.regions.map((reg) => {
-                      const isSelected = createForm.regionIds?.includes(reg.id);
-                      return (
-                        <label
-                          key={reg.id}
-                          className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              const cur = createForm.regionIds || [];
-                              if (e.target.checked) {
-                                setCreateForm({ ...createForm, regionIds: [...cur, reg.id] });
-                              } else {
-                                setCreateForm({
-                                  ...createForm,
-                                  regionIds: cur.filter((id) => id !== reg.id)
-                                });
-                              }
-                            }}
-                            style={{ accentColor: '#2563EB' }}
-                          />
-                          <span style={{ fontSize: 12.5 }}>{reg.name}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
+                      {/* Địa bàn phụ trách (Chỉ dành cho nhân sự thuộc bộ phận Kinh doanh) */}
+                      <div className="user-mgmt-form-group">
+                        <label className="user-mgmt-form-label">Địa bàn phụ trách (Kinh doanh)</label>
+                        {isCreateSalesRole ? (
+                          <div className="user-mgmt-checkbox-grid">
+                            {formOptions.regions.map((reg) => {
+                              const isSelected = createForm.regionIds?.includes(reg.id);
+                              return (
+                                <label
+                                  key={reg.id}
+                                  className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={(e) => {
+                                      const cur = createForm.regionIds || [];
+                                      if (e.target.checked) {
+                                        setCreateForm({ ...createForm, regionIds: [...cur, reg.id] });
+                                      } else {
+                                        setCreateForm({
+                                          ...createForm,
+                                          regionIds: cur.filter((id) => id !== reg.id)
+                                        });
+                                      }
+                                    }}
+                                    style={{ accentColor: '#2563EB' }}
+                                  />
+                                  <span style={{ fontSize: 12.5 }}>{reg.name}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="user-mgmt-assignment-note">
+                            <Info size={16} style={{ color: '#94A3B8', flexShrink: 0 }} />
+                            <span>Không áp dụng. Chỉ nhân sự thuộc bộ phận Kinh doanh (Quản lý kinh doanh / Nhân viên kinh doanh) mới được phân công địa bàn.</span>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Footer */}
@@ -1244,9 +1294,8 @@ export const UserManagementPage: React.FC = () => {
                         return (
                           <label
                             key={r}
-                            className={`user-mgmt-checkbox-card ${
-                              isSelected ? 'selected' : ''
-                            } ${isLockedAdmin ? 'disabled' : ''}`}
+                            className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''
+                              } ${isLockedAdmin ? 'disabled' : ''}`}
                             title={
                               isLockedAdmin
                                 ? 'Không thể tự thu hồi vai trò Quản trị hệ thống của chính mình!'
@@ -1258,17 +1307,17 @@ export const UserManagementPage: React.FC = () => {
                               checked={isSelected}
                               disabled={isLockedAdmin}
                               onChange={(e) => {
-                                if (e.target.checked) {
-                                  setEditAssignmentsForm({
-                                    ...editAssignmentsForm,
-                                    roles: [...editAssignmentsForm.roles, r]
-                                  });
-                                } else {
-                                  setEditAssignmentsForm({
-                                    ...editAssignmentsForm,
-                                    roles: editAssignmentsForm.roles.filter((role) => role !== r)
-                                  });
-                                }
+                                const newRoles = e.target.checked
+                                  ? [...editAssignmentsForm.roles, r]
+                                  : editAssignmentsForm.roles.filter((role) => role !== r);
+                                const hasWh = newRoles.some((role) => role === 'ROLE_WAREHOUSE' || role === 'ROLE_WH_MANAGER');
+                                const hasSales = newRoles.some((role) => role === 'ROLE_SALES_REP' || role === 'ROLE_SALES_MANAGER');
+                                setEditAssignmentsForm({
+                                  ...editAssignmentsForm,
+                                  roles: newRoles,
+                                  warehouseIds: hasWh ? editAssignmentsForm.warehouseIds : [],
+                                  regionIds: hasSales ? editAssignmentsForm.regionIds : []
+                                });
                               }}
                               style={{ marginTop: 2, accentColor: '#F85606' }}
                             />
@@ -1309,100 +1358,120 @@ export const UserManagementPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Quy tắc 2: Người dùng thuộc vai trò kho phải gắn với ít nhất một kho cụ thể */}
-                  <div className="user-mgmt-form-group">
-                    <label
-                      className="user-mgmt-form-label"
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                    >
-                      <span>Kho hàng phụ trách</span>
-                      {editAssignmentsForm.roles.some(
-                        (r) => r === 'ROLE_WAREHOUSE' || r === 'ROLE_WH_MANAGER'
-                      ) && (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            color: '#B45309',
-                            fontWeight: 700,
-                            background: '#FEF3C7',
-                            padding: '2px 8px',
-                            borderRadius: 4
-                          }}
-                        >
-                          * Bắt buộc gắn ít nhất 1 kho cho nhân sự Kho!
-                        </span>
-                      )}
-                    </label>
-                    <div className="user-mgmt-checkbox-grid">
-                      {formOptions.warehouses.map((wh) => {
-                        const isSelected = editAssignmentsForm.warehouseIds?.includes(wh.id);
-                        return (
+                  {/* Quy tắc 2: Phân công kho hàng & Địa bàn theo đúng chức năng nhiệm vụ */}
+                  {(() => {
+                    const isEditWarehouseRole = editAssignmentsForm.roles.some((r) => r === 'ROLE_WAREHOUSE' || r === 'ROLE_WH_MANAGER');
+                    const isEditSalesRole = editAssignmentsForm.roles.some((r) => r === 'ROLE_SALES_REP' || r === 'ROLE_SALES_MANAGER');
+                    return (
+                      <>
+                        <div className="user-mgmt-form-group">
                           <label
-                            key={wh.id}
-                            className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
+                            className="user-mgmt-form-label"
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                           >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                const cur = editAssignmentsForm.warehouseIds || [];
-                                if (e.target.checked) {
-                                  setEditAssignmentsForm({
-                                    ...editAssignmentsForm,
-                                    warehouseIds: [...cur, wh.id]
-                                  });
-                                } else {
-                                  setEditAssignmentsForm({
-                                    ...editAssignmentsForm,
-                                    warehouseIds: cur.filter((id) => id !== wh.id)
-                                  });
-                                }
-                              }}
-                              style={{ accentColor: '#F85606' }}
-                            />
-                            <span style={{ fontSize: 12.5 }}>{wh.name}</span>
+                            <span>Kho hàng phụ trách</span>
+                            {isEditWarehouseRole && (
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  color: '#B45309',
+                                  fontWeight: 700,
+                                  background: '#FEF3C7',
+                                  padding: '2px 8px',
+                                  borderRadius: 4
+                                }}
+                              >
+                                * Bắt buộc gắn ít nhất 1 kho cho nhân sự Kho!
+                              </span>
+                            )}
                           </label>
-                        );
-                      })}
-                    </div>
-                  </div>
+                          {isEditWarehouseRole ? (
+                            <div className="user-mgmt-checkbox-grid">
+                              {formOptions.warehouses.map((wh) => {
+                                const isSelected = editAssignmentsForm.warehouseIds?.includes(wh.id);
+                                return (
+                                  <label
+                                    key={wh.id}
+                                    className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        const cur = editAssignmentsForm.warehouseIds || [];
+                                        if (e.target.checked) {
+                                          setEditAssignmentsForm({
+                                            ...editAssignmentsForm,
+                                            warehouseIds: [...cur, wh.id]
+                                          });
+                                        } else {
+                                          setEditAssignmentsForm({
+                                            ...editAssignmentsForm,
+                                            warehouseIds: cur.filter((id) => id !== wh.id)
+                                          });
+                                        }
+                                      }}
+                                      style={{ accentColor: '#F85606' }}
+                                    />
+                                    <span style={{ fontSize: 12.5 }}>{wh.name}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="user-mgmt-assignment-note">
+                              <Info size={16} style={{ color: '#94A3B8', flexShrink: 0 }} />
+                              <span>Không áp dụng. Chỉ nhân sự thuộc bộ phận Kho (Quản lý kho / Thủ kho) mới được phân công quản lý kho hàng.</span>
+                            </div>
+                          )}
+                        </div>
 
-                  {/* Địa bàn */}
-                  <div className="user-mgmt-form-group">
-                    <label className="user-mgmt-form-label">Địa bàn phụ trách</label>
-                    <div className="user-mgmt-checkbox-grid">
-                      {formOptions.regions.map((reg) => {
-                        const isSelected = editAssignmentsForm.regionIds?.includes(reg.id);
-                        return (
-                          <label
-                            key={reg.id}
-                            className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                const cur = editAssignmentsForm.regionIds || [];
-                                if (e.target.checked) {
-                                  setEditAssignmentsForm({
-                                    ...editAssignmentsForm,
-                                    regionIds: [...cur, reg.id]
-                                  });
-                                } else {
-                                  setEditAssignmentsForm({
-                                    ...editAssignmentsForm,
-                                    regionIds: cur.filter((id) => id !== reg.id)
-                                  });
-                                }
-                              }}
-                              style={{ accentColor: '#2563EB' }}
-                            />
-                            <span style={{ fontSize: 12.5 }}>{reg.name}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
+                        {/* Địa bàn phụ trách (Chỉ dành cho nhân sự thuộc bộ phận Kinh doanh) */}
+                        <div className="user-mgmt-form-group">
+                          <label className="user-mgmt-form-label">Địa bàn phụ trách (Kinh doanh)</label>
+                          {isEditSalesRole ? (
+                            <div className="user-mgmt-checkbox-grid">
+                              {formOptions.regions.map((reg) => {
+                                const isSelected = editAssignmentsForm.regionIds?.includes(reg.id);
+                                return (
+                                  <label
+                                    key={reg.id}
+                                    className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        const cur = editAssignmentsForm.regionIds || [];
+                                        if (e.target.checked) {
+                                          setEditAssignmentsForm({
+                                            ...editAssignmentsForm,
+                                            regionIds: [...cur, reg.id]
+                                          });
+                                        } else {
+                                          setEditAssignmentsForm({
+                                            ...editAssignmentsForm,
+                                            regionIds: cur.filter((id) => id !== reg.id)
+                                          });
+                                        }
+                                      }}
+                                      style={{ accentColor: '#2563EB' }}
+                                    />
+                                    <span style={{ fontSize: 12.5 }}>{reg.name}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="user-mgmt-assignment-note">
+                              <Info size={16} style={{ color: '#94A3B8', flexShrink: 0 }} />
+                              <span>Không áp dụng. Chỉ nhân sự thuộc bộ phận Kinh doanh (Quản lý kinh doanh / Nhân viên kinh doanh) mới được phân công địa bàn.</span>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
 
                   <div className="user-mgmt-modal-footer" style={{ margin: '16px -24px -22px', borderBottomLeftRadius: 18, borderBottomRightRadius: 18 }}>
                     <button
@@ -1555,8 +1624,8 @@ export const UserManagementPage: React.FC = () => {
                   {lockLoading
                     ? 'Đang xử lý...'
                     : lockActionType === 'LOCK'
-                    ? 'Xác nhận khóa'
-                    : 'Xác nhận mở khóa'}
+                      ? 'Xác nhận khóa'
+                      : 'Xác nhận mở khóa'}
                 </span>
               </button>
             </div>

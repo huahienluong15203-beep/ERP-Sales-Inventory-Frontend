@@ -257,6 +257,11 @@ export const Icons: Record<string, React.FC<IconProps>> = {
       <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
     </svg>
   ),
+  Info: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="16" y2="12" /><line x1="12" x2="12.01" y1="8" y2="8" />
+    </svg>
+  ),
   Plus: ({ size = 20, color = 'currentColor', ...props }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M5 12h14" /><path d="M12 5v14" />
@@ -351,3 +356,4 @@ export const Plus = Icons.Plus;
 export const Phone = Icons.Phone;
 export const Edit = Icons.Edit;
 export const Filter = Icons.Filter;
+export const Info = Icons.Info;

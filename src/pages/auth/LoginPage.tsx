@@ -21,7 +21,7 @@ import {
 type AuthViewMode = 'login' | 'forgot_password';
 
 export const LoginPage: React.FC = () => {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user, clearMustChangePassword } = useAuth();
   const navigate = useNavigate();
 
   // Chế độ xem: Đăng nhập thường hoặc Quên mật khẩu
@@ -50,10 +50,10 @@ export const LoginPage: React.FC = () => {
 
   // Nếu đã đăng nhập và không phải đang đổi mật khẩu thì vào dashboard
   useEffect(() => {
-    if (isAuthenticated && !showForceChangeModal) {
+    if (isAuthenticated && !user?.mustChangePassword && !showForceChangeModal) {
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, showForceChangeModal, navigate]);
+  }, [isAuthenticated, user?.mustChangePassword, showForceChangeModal, navigate]);
 
   // Xử lý Đăng Nhập (S1-01)
   const handleLoginSubmit = async (e: FormEvent) => {
@@ -147,6 +147,7 @@ export const LoginPage: React.FC = () => {
     try {
       const res = await changePasswordApi(password, newPassword, confirmNewPassword);
       if (res.success) {
+        clearMustChangePassword();
         setShowForceChangeModal(false);
         navigate('/dashboard', { replace: true });
       } else {

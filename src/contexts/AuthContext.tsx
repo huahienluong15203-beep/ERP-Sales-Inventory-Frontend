@@ -14,6 +14,7 @@ interface AuthContextType {
   switchRole: (role: RoleName) => Promise<void>;
   hasPermission: (path: string) => boolean;
   refreshContext: () => Promise<void>;
+  clearMustChangePassword: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -158,6 +159,18 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     await loadUserContext(currentRole);
   };
 
+  /**
+   * Xóa cờ bắt buộc đổi mật khẩu khi user đã đổi mật khẩu thành công (S1-04)
+   */
+  const clearMustChangePassword = () => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, mustChangePassword: false };
+      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -170,7 +183,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         logout,
         switchRole,
         hasPermission,
-        refreshContext
+        refreshContext,
+        clearMustChangePassword
       }}
     >
       {children}

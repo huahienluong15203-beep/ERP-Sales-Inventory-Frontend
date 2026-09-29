@@ -1699,3 +1699,16 @@
     transform: scale(1);
   }
 }
+
+.user-mgmt-assignment-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 9px;
+  border: 1px dashed #CBD5E1;
+  background: #F8FAFC;
+  color: #64748B;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
