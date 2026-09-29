@@ -86,7 +86,7 @@ const STRENGTH_CONFIG: Record<StrengthLevel, { label: string; color: string; bar
 };
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Trang hồ sơ cá nhân & bảo mật tài khoản (100% Tailwind CSS)
+   Trang hồ sơ cá nhân & bảo mật tài khoản (100% Tailwind CSS, bố cục thoáng đãng)
    ──────────────────────────────────────────────────────────────────────── */
 export const ProfilePage: FC = () => {
   const { user, currentRole, logout } = useAuth();
@@ -155,12 +155,12 @@ export const ProfilePage: FC = () => {
   const userRoles = user?.roles && user.roles.length > 0 ? user.roles : [currentRole];
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
 
       {/* ─────────────────────────────────────────────────────────────
           1. HERO OVERVIEW BANNER: Thông tin tóm tắt toàn màn hình
           ───────────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-6 sm:p-8 relative overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-8 relative overflow-hidden">
         {/* Họa tiết trang trí góc mờ nhẹ */}
         <div className="absolute -right-12 -top-12 w-64 h-64 rounded-full bg-gradient-to-br from-orange-500/10 to-amber-500/5 blur-2xl pointer-events-none" />
 
@@ -197,13 +197,13 @@ export const ProfilePage: FC = () => {
               </div>
             </div>
 
-            {/* Nút thao tác nhanh chuyển sang Đổi mật khẩu hoặc Thông tin */}
+            {/* Nút thao tác nhanh chuyển đổi giữa 2 tab */}
             <div className="flex items-center gap-3">
               {activeTab === 'info' ? (
                 <button
                   type="button"
                   onClick={() => setActiveTab('password')}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 transition-colors flex items-center gap-2"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 transition-colors flex items-center gap-2 shadow-sm"
                 >
                   <Key size={15} />
                   <span>Đổi Mật Khẩu</span>
@@ -212,7 +212,7 @@ export const ProfilePage: FC = () => {
                 <button
                   type="button"
                   onClick={() => setActiveTab('info')}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 transition-colors flex items-center gap-2"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 transition-colors flex items-center gap-2 shadow-sm"
                 >
                   <User size={15} />
                   <span>Xem Hồ Sơ Chi Tiết</span>
@@ -221,9 +221,9 @@ export const ProfilePage: FC = () => {
             </div>
           </div>
 
-          {/* Dải thông số nổi bật (Highlights Bar) */}
+          {/* Dải 4 thông số nổi bật (Highlights Bar) */}
           <div className="mt-6 pt-6 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/70 border border-gray-100">
+            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 border border-gray-100">
               <div className="w-9 h-9 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
                 <Mail size={17} />
               </div>
@@ -233,7 +233,7 @@ export const ProfilePage: FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/70 border border-gray-100">
+            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 border border-gray-100">
               <div className="w-9 h-9 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
                 <Phone size={17} />
               </div>
@@ -243,7 +243,7 @@ export const ProfilePage: FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/70 border border-gray-100">
+            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 border border-gray-100">
               <div className="w-9 h-9 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
                 <Building2 size={17} />
               </div>
@@ -255,7 +255,7 @@ export const ProfilePage: FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/70 border border-gray-100">
+            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 border border-gray-100">
               <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                 <ShieldCheck size={17} />
               </div>
@@ -269,32 +269,32 @@ export const ProfilePage: FC = () => {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          2. TAB NAVIGATION (Thoáng đãng, chuyển tab mượt mà)
+          2. TAB NAVIGATION (Thoáng đãng, segmented pill buttons)
           ───────────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 p-1.5 bg-gray-100/80 rounded-xl w-fit border border-gray-200/60">
+      <div className="inline-flex p-1 rounded-xl bg-gray-200/70 border border-gray-200">
         <button
           type="button"
           onClick={() => setActiveTab('info')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all duration-150 ${
             activeTab === 'info'
-              ? 'bg-white text-gray-900 shadow-xs border border-gray-200/80'
-              : 'text-gray-500 hover:text-gray-800'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
           }`}
         >
-          <User size={15} className={activeTab === 'info' ? 'text-orange-500' : 'text-gray-400'} />
+          <User size={16} className={activeTab === 'info' ? 'text-orange-500' : 'text-gray-400'} />
           <span>Thông Tin Nhân Sự & Vị Trí Công Tác</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('password')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-all duration-150 ${
             activeTab === 'password'
-              ? 'bg-white text-gray-900 shadow-xs border border-gray-200/80'
-              : 'text-gray-500 hover:text-gray-800'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
           }`}
         >
-          <Lock size={15} className={activeTab === 'password' ? 'text-orange-500' : 'text-gray-400'} />
+          <Lock size={16} className={activeTab === 'password' ? 'text-orange-500' : 'text-gray-400'} />
           <span>Bảo Mật & Thiết Lập Mật Khẩu</span>
         </button>
       </div>
@@ -303,9 +303,9 @@ export const ProfilePage: FC = () => {
           3. NỘI DUNG TAB 1: THÔNG TIN NHÂN SỰ & CÔNG TÁC (3 CỘT RỘNG MỞ)
           ───────────────────────────────────────────────────────────── */}
       {activeTab === 'info' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Card 1: Định danh tài khoản */}
-          <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-6 space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
             <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
               <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
                 <User size={17} />
@@ -343,7 +343,7 @@ export const ProfilePage: FC = () => {
           </div>
 
           {/* Card 2: Địa bàn & Vị trí làm việc */}
-          <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-6 space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
             <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
               <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
                 <Building2 size={17} />
@@ -379,7 +379,7 @@ export const ProfilePage: FC = () => {
           </div>
 
           {/* Card 3: Phân quyền & Vai trò */}
-          <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-6 space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
             <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
               <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
                 <ShieldCheck size={17} />
@@ -403,7 +403,7 @@ export const ProfilePage: FC = () => {
                       key={r}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
                         isCurrent
-                          ? 'bg-orange-50 text-orange-700 border-orange-200 shadow-xs'
+                          ? 'bg-orange-50 text-orange-700 border-orange-200 shadow-sm'
                           : 'bg-gray-50 text-gray-600 border-gray-200'
                       }`}
                       title={meta?.description}
@@ -411,7 +411,7 @@ export const ProfilePage: FC = () => {
                       {isCurrent && <span className="w-2 h-2 rounded-full bg-orange-500" />}
                       <span>{meta?.label || r}</span>
                       {isCurrent && (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-orange-200/60 text-orange-800 font-extrabold">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-orange-200 text-orange-800 font-extrabold">
                           Đang dùng
                         </span>
                       )}
@@ -420,7 +420,7 @@ export const ProfilePage: FC = () => {
                 })}
               </div>
 
-              <div className="p-3 rounded-xl bg-gray-50/80 border border-gray-100 text-[11.5px] text-gray-500 leading-relaxed mt-4">
+              <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 text-[11.5px] text-gray-500 leading-relaxed mt-4">
                 <strong>Ghi chú phân quyền:</strong> Bạn có thể chuyển đổi nhanh giữa các vai trò được cấp tại góc trên thanh menu bên trái.
               </div>
             </div>
@@ -432,10 +432,10 @@ export const ProfilePage: FC = () => {
           4. NỘI DUNG TAB 2: BẢO MẬT & ĐỔI MẬT KHẨU (BỐ CỤC THOÁNG ĐÃNG 7-5)
           ───────────────────────────────────────────────────────────── */}
       {activeTab === 'password' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* CỘT TRÁI: FORM ĐỔI MẬT KHẨU (7 CỘT) */}
           <div className="lg:col-span-7">
-            <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-6 sm:p-8">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-8">
               {/* Header của Form */}
               <div className="flex items-start gap-4 mb-6 pb-5 border-b border-gray-100">
                 <div className="w-11 h-11 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600 shrink-0">
@@ -469,7 +469,7 @@ export const ProfilePage: FC = () => {
 
               {/* Thông báo đếm ngược chuyển trang */}
               {result?.type === 'success' && (
-                <div className="mb-5 flex items-center gap-2.5 text-xs text-blue-700 bg-blue-50/80 border border-blue-100 rounded-xl p-3.5">
+                <div className="mb-5 flex items-center gap-2.5 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-xl p-3.5">
                   <RefreshCw size={15} className="animate-spin text-blue-600 shrink-0" />
                   <span>Đang tự động chuyển về trang đăng nhập để áp dụng phiên bảo mật mới…</span>
                 </div>
@@ -577,7 +577,7 @@ export const ProfilePage: FC = () => {
           {/* CỘT PHẢI: QUY CHUẨN AN TOÀN & CHÍNH SÁCH BẢO MẬT (5 CỘT) */}
           <div className="lg:col-span-5 space-y-6">
             {/* Thẻ 1: Quy chuẩn mật khẩu */}
-            <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-6 space-y-3.5">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-3.5">
               <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100">
                 <CheckCircle2 size={18} className="text-orange-600" />
                 <h3 className="text-sm font-bold text-gray-900">Quy Chuẩn Mật Khẩu Bắt Buộc</h3>
@@ -607,7 +607,7 @@ export const ProfilePage: FC = () => {
             </div>
 
             {/* Thẻ 2: Cơ chế thu hồi phiên */}
-            <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-6 space-y-3">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-3">
               <div className="flex items-center gap-2.5 pb-2 border-b border-gray-100">
                 <ShieldAlert size={18} className="text-amber-500" />
                 <h3 className="text-sm font-bold text-gray-900">Cơ Chế Thu Hồi Phiên</h3>
@@ -618,7 +618,7 @@ export const ProfilePage: FC = () => {
             </div>
 
             {/* Thẻ 3: Lưu ý an ninh thông tin */}
-            <div className="bg-amber-50/70 rounded-2xl border border-amber-200/70 p-5 flex items-start gap-3">
+            <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5 flex items-start gap-3">
               <ShieldCheck size={18} className="text-amber-600 shrink-0 mt-0.5" />
               <div className="text-xs text-amber-900 leading-relaxed">
                 <strong>Khuyến nghị an toàn:</strong> Không chia sẻ mật khẩu của tài khoản quản trị cho bất kỳ ai. Nên đổi mật khẩu định kỳ mỗi 90 ngày.
