@@ -93,8 +93,8 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
     location.pathname === '/forbidden'
       ? '403 Truy Cập Bị Từ Chối'
       : location.pathname === '/profile'
-      ? 'Hồ Sơ Cá Nhân'
-      : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
+        ? 'Hồ Sơ Cá Nhân'
+        : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
   const pageSubtitle =
     currentMenu?.description || 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống';
 
@@ -267,87 +267,76 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             </div>
           </div>
 
-          <div className="erp-topbar-right">
-            {/* Trạng thái đồng bộ thời gian + Nút làm mới */}
-            <div className="erp-sync-box">
-              <Icons.Clock size={14} color="#F85606" />
-              <span>Đồng bộ lần cuối: {syncTime}</span>
-              <button
-                type="button"
-                className="erp-sync-refresh-btn"
-                onClick={() => window.location.reload()}
-                title="Làm mới dữ liệu"
-              >
-                <Icons.RotateCcw size={12} />
-                <span>Làm mới</span>
-              </button>
-            </div>
+          {/* Thời gian đồng bộ */}
+          <div className="erp-topbar-sync-info" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6B7280' }}>
+            <Icons.Clock size={14} style={{ color: '#F85606' }} />
+            <span>Đồng bộ lần cuối: {syncTime}</span>
+          </div>
 
-            {/* Dropdown Đổi Vai Trò Tinh Tế (Hỗ trợ demo kiểm thử menu) */}
-            <div className="erp-role-switcher-container">
-              <button
-                type="button"
-                className="erp-role-selector-btn"
-                onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-                id="btn-role-switcher"
-                title="Bấm để đổi vai trò kiểm tra menu"
-              >
-                <span className="erp-role-dot-online" />
-                <span>{currentRoleMeta.label}</span>
-                <Icons.ChevronDown size={14} />
-              </button>
-
-              {isRoleDropdownOpen && (
-                <div className="erp-role-dropdown-menu">
-                  <div className="erp-role-dropdown-header">
-                    Chuyển đổi vai trò hệ thống:
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    {allRoles.map((role) => {
-                      const meta = ROLE_METADATA_MAP[role];
-                      const isSelected = role === currentRole;
-                      return (
-                        <button
-                          key={role}
-                          type="button"
-                          className={`erp-role-option-item ${isSelected ? 'selected' : ''}`}
-                          onClick={async () => {
-                            await switchRole(role);
-                            setIsRoleDropdownOpen(false);
-                          }}
-                        >
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontWeight: 600 }}>{meta.label}</span>
-                            <span style={{ fontSize: '11px', color: '#6B7280' }}>
-                              {meta.sampleLocation}
-                            </span>
-                          </div>
-                          {isSelected && <Icons.Check size={16} color="#F85606" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Khối User Profile Avatar ở Header (như App ETC) */}
-            <div
-              className="erp-header-user-block"
-              onClick={() => navigate('/profile')}
-              title="Xem hồ sơ cá nhân"
+          {/* Dropdown Đổi Vai Trò Tinh Tế (Hỗ trợ demo kiểm thử menu) */}
+          <div className="erp-role-switcher-container">
+            <button
+              type="button"
+              className="erp-role-selector-btn"
+              onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
+              id="btn-role-switcher"
+              title="Bấm để đổi vai trò kiểm tra menu"
             >
-              <div className="erp-header-avatar">
-                {getAvatarInitials(user?.fullName, currentRole)}
+              <span className="erp-role-dot-online" />
+              <span>{currentRoleMeta.label}</span>
+              <Icons.ChevronDown size={14} />
+            </button>
+
+            {isRoleDropdownOpen && (
+              <div className="erp-role-dropdown-menu">
+                <div className="erp-role-dropdown-header">
+                  Chuyển đổi vai trò hệ thống:
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  {allRoles.map((role) => {
+                    const meta = ROLE_METADATA_MAP[role];
+                    const isSelected = role === currentRole;
+                    return (
+                      <button
+                        key={role}
+                        type="button"
+                        className={`erp-role-option-item ${isSelected ? 'selected' : ''}`}
+                        onClick={async () => {
+                          await switchRole(role);
+                          setIsRoleDropdownOpen(false);
+                        }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontWeight: 600 }}>{meta.label}</span>
+                          <span style={{ fontSize: '11px', color: '#6B7280' }}>
+                            {meta.sampleLocation}
+                          </span>
+                        </div>
+                        {isSelected && <Icons.Check size={16} color="#F85606" />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="erp-header-user-info">
-                <span className="erp-header-fullname">
-                  {user?.fullName || 'Người Dùng'}
-                </span>
-                <span className="erp-header-username">
-                  {user?.username || 'user'}
-                </span>
-              </div>
+            )}
+          </div>
+
+          {/* Khối User Profile Avatar ở Header (như App ETC) */}
+          <div
+            className="erp-header-user-block"
+            onClick={() => navigate('/profile')}
+            title="Xem hồ sơ cá nhân"
+          >
+            <div className="erp-header-avatar">
+              {getAvatarInitials(user?.fullName, currentRole)}
+            </div>
+            <div className="erp-header-user-info">
+              <span className="erp-header-fullname">
+                {user?.fullName || 'Người Dùng'}
+              </span>
+              <span className="erp-header-username">
+                {user?.username || 'user'}
+              </span>
             </div>
           </div>
         </header>

@@ -137,7 +137,7 @@ export const UserManagementPage: React.FC = () => {
     loadUsers();
   }, [loadUsers]);
 
-  // Tìm kiếm tức thời khi nhập
+  // Tìm kiếm tức thời khi submit
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(0);
@@ -177,15 +177,17 @@ export const UserManagementPage: React.FC = () => {
       setCreateError('Vui lòng điền đầy đủ Tên tài khoản, Họ tên và Email.');
       return;
     }
-    if (createForm.roles.length === 0) {
-      setCreateError('Vui lòng chọn ít nhất 1 vai trò cho người dùng.');
+
+    // Quy tắc 1: Một người dùng có thể giữ nhiều vai trò, nhưng phải có ít nhất 1 vai trò
+    if (!createForm.roles || createForm.roles.length === 0) {
+      setCreateError('Phải chọn ít nhất một vai trò cho người dùng.');
       return;
     }
 
-    // Kiểm tra quy tắc kho cho thủ kho
+    // Quy tắc 2: Người dùng thuộc vai trò kho phải gắn với ít nhất một kho cụ thể
     const isWhStaff = createForm.roles.some((r) => r === 'ROLE_WAREHOUSE' || r === 'ROLE_WH_MANAGER');
     if (isWhStaff && (!createForm.warehouseIds || createForm.warehouseIds.length === 0)) {
-      setCreateError('Nhân sự thuộc vai trò Kho bắt buộc phải gán ít nhất một kho phụ trách!');
+      setCreateError('Người dùng thuộc vai trò kho (Thủ kho / Quản lý kho) phải được gắn với ít nhất một kho cụ thể!');
       return;
     }
 
@@ -261,16 +263,31 @@ export const UserManagementPage: React.FC = () => {
     if (!editingUser) return;
     setEditError(null);
 
-    if (editAssignmentsForm.roles.length === 0) {
+    // Quy tắc 1: Phải có ít nhất một vai trò
+    if (!editAssignmentsForm.roles || editAssignmentsForm.roles.length === 0) {
       setEditError('Người dùng phải có ít nhất một vai trò!');
       return;
     }
 
+    // Quy tắc 3: Không thể tự thu hồi vai trò quản trị của chính mình
+    const isSelf =
+      currentUser &&
+      (currentUser.id === editingUser.id || currentUser.username === editingUser.username);
+    const wasAdmin = editingUser.roles.includes('ROLE_ADMIN');
+    if (isSelf && wasAdmin && !editAssignmentsForm.roles.includes('ROLE_ADMIN')) {
+      setEditError('Không thể tự thu hồi vai trò Quản trị hệ thống của chính mình!');
+      return;
+    }
+
+    // Quy tắc 2: Người dùng thuộc vai trò kho phải gắn với ít nhất một kho cụ thể
     const isWhStaff = editAssignmentsForm.roles.some(
       (r) => r === 'ROLE_WAREHOUSE' || r === 'ROLE_WH_MANAGER'
     );
-    if (isWhStaff && (!editAssignmentsForm.warehouseIds || editAssignmentsForm.warehouseIds.length === 0)) {
-      setEditError('Nhân sự Kho bắt buộc phải được gán ít nhất một kho hàng!');
+    if (
+      isWhStaff &&
+      (!editAssignmentsForm.warehouseIds || editAssignmentsForm.warehouseIds.length === 0)
+    ) {
+      setEditError('Người dùng thuộc vai trò kho (Thủ kho / Quản lý kho) phải được gắn với ít nhất một kho cụ thể!');
       return;
     }
 
@@ -341,7 +358,7 @@ export const UserManagementPage: React.FC = () => {
     }
   };
 
-  // Avatar helper
+  // Avatar initials
   const getInitials = (name?: string) => {
     if (!name) return 'U';
     const parts = name.trim().split(/\s+/);
@@ -349,59 +366,55 @@ export const UserManagementPage: React.FC = () => {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
-  // Badge màu theo vai trò
-  const getRoleBadgeClass = (role: RoleName) => {
+  // Class badge màu theo vai trò
+  const getRoleBadgeClass = (role: RoleName): string => {
     switch (role) {
       case 'ROLE_ADMIN':
-        return 'bg-purple-50 text-purple-700 border-purple-200';
+        return 'role-badge-admin';
       case 'ROLE_SALES_MANAGER':
-        return 'bg-orange-50 text-orange-700 border-orange-200';
+        return 'role-badge-sales-manager';
       case 'ROLE_SALES_REP':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
+        return 'role-badge-sales-rep';
       case 'ROLE_WH_MANAGER':
+        return 'role-badge-wh-manager';
       case 'ROLE_WAREHOUSE':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
+        return 'role-badge-warehouse';
       case 'ROLE_ACCOUNTANT':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        return 'role-badge-accountant';
       case 'ROLE_CUSTOMER':
-        return 'bg-sky-50 text-sky-700 border-sky-200';
+        return 'role-badge-customer';
       default:
-        return 'bg-slate-100 text-slate-700 border-slate-200';
+        return '';
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Tiêu đề & Nút Tạo tài khoản */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-orange-100 text-orange-600 rounded-lg">
-              <Users size={24} />
-            </span>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              Quản Lý Tài Khoản & Nhân Sự
-            </h1>
+    <div className="user-mgmt-container">
+      {/* 1. Tiêu đề Phân hệ & Nút Tạo tài khoản */}
+      <div className="user-mgmt-header">
+        <div className="user-mgmt-header-left">
+          <div className="user-mgmt-header-icon">
+            <Users size={24} />
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Quản trị danh sách nhân sự, phân quyền vai trò, gán kho, địa bàn và quản lý trạng thái tài khoản
-          </p>
+          <div>
+            <h1 className="user-mgmt-title">Quản Lý Tài Khoản & Nhân Sự</h1>
+            <p className="user-mgmt-subtitle">
+              Quản trị nhân sự, đa vai trò (RBAC), gán kho, địa bàn và kiểm soát trạng thái tài khoản
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="user-mgmt-header-actions">
           <button
             onClick={() => loadUsers()}
             disabled={loading}
             title="Làm mới danh sách"
-            className="p-2 text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg shadow-sm transition-colors"
+            className="user-mgmt-btn-refresh"
           >
-            <RefreshCw size={18} className={loading ? 'animate-spin text-orange-600' : ''} />
+            <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
           </button>
 
-          <button
-            onClick={handleOpenCreateModal}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-medium rounded-lg shadow-sm shadow-orange-500/20 transition-all active:scale-[0.98]"
-          >
+          <button onClick={handleOpenCreateModal} className="user-mgmt-btn-create">
             <Plus size={18} />
             <span>Thêm Tài Khoản Mới</span>
           </button>
@@ -411,74 +424,68 @@ export const UserManagementPage: React.FC = () => {
       {/* Thông báo thông điệp hệ thống */}
       {actionAlert && (
         <div
-          className={`flex items-start gap-3 p-4 rounded-xl border ${
-            actionAlert.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-              : 'bg-red-50 text-red-800 border-red-200'
+          className={`user-mgmt-alert ${
+            actionAlert.type === 'success' ? 'user-mgmt-alert-success' : 'user-mgmt-alert-error'
           }`}
         >
           {actionAlert.type === 'success' ? (
-            <CheckCircle2 size={20} className="text-emerald-600 shrink-0 mt-0.5" />
+            <CheckCircle2 size={18} style={{ color: '#059669', flexShrink: 0, marginTop: 2 }} />
           ) : (
-            <AlertTriangle size={20} className="text-red-600 shrink-0 mt-0.5" />
+            <AlertTriangle size={18} style={{ color: '#DC2626', flexShrink: 0, marginTop: 2 }} />
           )}
-          <div className="flex-1 text-sm font-medium">{actionAlert.message}</div>
+          <div style={{ flex: 1 }}>{actionAlert.message}</div>
           <button
             onClick={() => setActionAlert(null)}
-            className="text-slate-400 hover:text-slate-600 p-1"
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6B7280' }}
           >
             <X size={16} />
           </button>
         </div>
       )}
 
-      {/* Thanh Tìm Kiếm & Bộ Lọc (S1-09) */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-3">
+      {/* 2. Thanh Tìm Kiếm & Bộ Lọc (S1-09) */}
+      <div className="user-mgmt-filter-card">
+        <form onSubmit={handleSearchSubmit} className="user-mgmt-filter-grid">
           {/* Ô Tìm Kiếm theo từ khóa */}
-          <div className="md:col-span-5 relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-              <Search size={18} />
-            </div>
+          <div className="user-mgmt-search-box">
+            <Search size={17} className="user-mgmt-search-icon" />
             <input
               type="text"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               placeholder="Tìm theo tên, tài khoản, số điện thoại..."
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+              className="user-mgmt-search-input"
             />
           </div>
 
           {/* Lọc theo Vai Trò */}
-          <div className="md:col-span-3">
-            <div className="relative">
-              <select
-                value={selectedRole}
-                onChange={(e) => {
-                  setSelectedRole(e.target.value);
-                  setPage(0);
-                }}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
-              >
-                <option value="">Tất cả vai trò</option>
-                {formOptions.roles.map((r) => (
-                  <option key={r} value={r}>
-                    {ROLE_METADATA_MAP[r]?.label || r}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div>
+            <select
+              value={selectedRole}
+              onChange={(e) => {
+                setSelectedRole(e.target.value);
+                setPage(0);
+              }}
+              className="user-mgmt-select"
+            >
+              <option value="">Tất cả vai trò</option>
+              {formOptions.roles.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_METADATA_MAP[r]?.label || r}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Lọc theo Trạng Thái */}
-          <div className="md:col-span-2">
+          <div>
             <select
               value={selectedStatus}
               onChange={(e) => {
                 setSelectedStatus(e.target.value);
                 setPage(0);
               }}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+              className="user-mgmt-select"
             >
               <option value="">Tất cả trạng thái</option>
               <option value="ACTIVE">Đang hoạt động</option>
@@ -486,59 +493,55 @@ export const UserManagementPage: React.FC = () => {
             </select>
           </div>
 
-          {/* Nút Tìm kiếm & Reset */}
-          <div className="md:col-span-2 flex items-center gap-2">
-            <button
-              type="submit"
-              className="flex-1 px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
-            >
-              <Filter size={16} />
+          {/* Nút Lọc & Reset */}
+          <div className="user-mgmt-filter-actions">
+            <button type="submit" className="user-mgmt-btn-filter">
+              <Filter size={15} />
               <span>Lọc</span>
             </button>
-            <button
-              type="button"
-              onClick={handleResetFilters}
-              title="Đặt lại bộ lọc"
-              className="px-3 py-2 border border-slate-200 text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 text-sm font-medium rounded-lg transition-colors"
-            >
+            <button type="button" onClick={handleResetFilters} className="user-mgmt-btn-reset">
               Reset
             </button>
           </div>
         </form>
       </div>
 
-      {/* Bảng Danh Sách Tài Khoản (S1-09: 20 dòng/trang) */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 text-xs font-semibold uppercase tracking-wider">
-                <th className="py-3.5 px-4">Tài Khoản / Nhân Sự</th>
-                <th className="py-3.5 px-4">Thông Tin Liên Hệ</th>
-                <th className="py-3.5 px-4">Vai Trò Phân Quyền</th>
-                <th className="py-3.5 px-4">Kho & Địa Bàn</th>
-                <th className="py-3.5 px-4 text-center">Trạng Thái</th>
-                <th className="py-3.5 px-4 text-right">Thao Tác</th>
+      {/* 3. Bảng Danh Sách Tài Khoản (S1-09: Phân trang 20 dòng / trang) */}
+      <div className="user-mgmt-table-card">
+        <div className="user-mgmt-table-wrapper">
+          <table className="user-mgmt-table">
+            <thead className="user-mgmt-thead">
+              <tr>
+                <th className="user-mgmt-th">Tài Khoản / Nhân Sự</th>
+                <th className="user-mgmt-th">Thông Tin Liên Hệ</th>
+                <th className="user-mgmt-th">Vai Trò Phân Quyền</th>
+                <th className="user-mgmt-th">Kho & Địa Bàn</th>
+                <th className="user-mgmt-th" style={{ textAlign: 'center' }}>
+                  Trạng Thái
+                </th>
+                <th className="user-mgmt-th" style={{ textAlign: 'right' }}>
+                  Thao Tác
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="user-mgmt-tbody">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <RefreshCw size={24} className="animate-spin text-orange-600" />
-                      <span>Đang tải dữ liệu danh sách tài khoản...</span>
+                  <td colSpan={6} style={{ padding: '48px', textAlign: 'center', color: '#6B7280' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                      <RefreshCw size={24} className="animate-spin" style={{ color: '#F85606' }} />
+                      <span>Đang tải danh sách tài khoản...</span>
                     </div>
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Users size={36} className="text-slate-300" />
-                      <span className="font-medium text-slate-700">Không tìm thấy tài khoản nào</span>
-                      <span className="text-xs text-slate-400">
-                        Thử điều chỉnh lại từ khóa tìm kiếm hoặc bỏ chọn các điều kiện lọc
+                  <td colSpan={6} style={{ padding: '48px', textAlign: 'center', color: '#6B7280' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                      <Users size={36} style={{ color: '#CBD5E1' }} />
+                      <span style={{ fontWeight: 700, color: '#374151' }}>Không tìm thấy tài khoản nào</span>
+                      <span style={{ fontSize: 12, color: '#9CA3AF' }}>
+                        Thử điều chỉnh lại từ khóa tìm kiếm hoặc bỏ chọn bộ lọc
                       </span>
                     </div>
                   </td>
@@ -546,59 +549,49 @@ export const UserManagementPage: React.FC = () => {
               ) : (
                 users.map((item) => {
                   const isLocked = item.status === 'LOCKED';
+                  const isCurrentUser = currentUser?.username === item.username;
 
                   return (
-                    <tr
-                      key={item.id}
-                      className={`hover:bg-slate-50/80 transition-colors ${
-                        isLocked ? 'bg-red-50/20' : ''
-                      }`}
-                    >
+                    <tr key={item.id} className={isLocked ? 'row-locked' : ''}>
                       {/* Cột 1: Tên & Username */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white font-bold text-xs shadow-sm shrink-0">
-                            {getInitials(item.fullName)}
-                          </div>
-                          <div>
-                            <div className="font-semibold text-slate-900 flex items-center gap-2">
+                      <td className="user-mgmt-td">
+                        <div className="user-mgmt-user-cell">
+                          <div className="user-mgmt-avatar">{getInitials(item.fullName)}</div>
+                          <div className="user-mgmt-user-info">
+                            <span className="user-mgmt-fullname">
                               {item.fullName}
-                              {currentUser?.username === item.username && (
-                                <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-normal">
-                                  Bạn
-                                </span>
+                              {isCurrentUser && (
+                                <span className="user-mgmt-self-badge">Bạn</span>
                               )}
-                            </div>
-                            <div className="text-xs text-slate-500 font-mono">@{item.username}</div>
+                            </span>
+                            <span className="user-mgmt-username">@{item.username}</span>
                           </div>
                         </div>
                       </td>
 
                       {/* Cột 2: Email & SĐT */}
-                      <td className="py-3 px-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1.5 text-xs text-slate-700">
-                            <Mail size={14} className="text-slate-400 shrink-0" />
+                      <td className="user-mgmt-td">
+                        <div className="user-mgmt-contact-cell">
+                          <div className="user-mgmt-contact-row">
+                            <Mail size={14} style={{ color: '#9CA3AF', flexShrink: 0 }} />
                             <span>{item.email}</span>
                           </div>
                           {item.phone && (
-                            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                              <Phone size={14} className="text-slate-400 shrink-0" />
+                            <div className="user-mgmt-contact-row phone">
+                              <Phone size={14} style={{ color: '#9CA3AF', flexShrink: 0 }} />
                               <span>{item.phone}</span>
                             </div>
                           )}
                         </div>
                       </td>
 
-                      {/* Cột 3: Vai trò */}
-                      <td className="py-3 px-4">
-                        <div className="flex flex-wrap gap-1.5">
+                      {/* Cột 3: Vai trò (Một người dùng có thể giữ nhiều vai trò cùng lúc) */}
+                      <td className="user-mgmt-td">
+                        <div className="user-mgmt-roles-wrap">
                           {item.roles.map((r) => (
                             <span
                               key={r}
-                              className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${getRoleBadgeClass(
-                                r
-                              )}`}
+                              className={`user-mgmt-role-badge ${getRoleBadgeClass(r)}`}
                             >
                               {ROLE_METADATA_MAP[r]?.label || r}
                             </span>
@@ -607,42 +600,40 @@ export const UserManagementPage: React.FC = () => {
                       </td>
 
                       {/* Cột 4: Kho & Địa bàn */}
-                      <td className="py-3 px-4 max-w-xs">
-                        <div className="space-y-1 text-xs">
+                      <td className="user-mgmt-td">
+                        <div className="user-mgmt-location-cell">
                           {item.warehouses && item.warehouses.length > 0 ? (
-                            <div className="flex items-start gap-1 text-slate-700">
-                              <WarehouseIcon size={14} className="text-amber-600 shrink-0 mt-0.5" />
-                              <span className="truncate">
-                                {item.warehouses.map((w) => w.name).join(', ')}
-                              </span>
+                            <div className="user-mgmt-location-row">
+                              <WarehouseIcon size={14} style={{ color: '#D97706', flexShrink: 0 }} />
+                              <span>{item.warehouses.map((w) => w.name).join(', ')}</span>
                             </div>
                           ) : null}
 
                           {item.regions && item.regions.length > 0 ? (
-                            <div className="flex items-start gap-1 text-slate-600">
-                              <MapPin size={14} className="text-blue-500 shrink-0 mt-0.5" />
-                              <span className="truncate">
-                                {item.regions.map((reg) => reg.name).join(', ')}
-                              </span>
+                            <div className="user-mgmt-location-row">
+                              <MapPin size={14} style={{ color: '#2563EB', flexShrink: 0 }} />
+                              <span>{item.regions.map((reg) => reg.name).join(', ')}</span>
                             </div>
                           ) : null}
 
                           {(!item.warehouses || item.warehouses.length === 0) &&
                             (!item.regions || item.regions.length === 0) && (
-                              <span className="text-slate-400 italic">Trụ sở chính & Toàn quốc</span>
+                              <span className="user-mgmt-location-empty">
+                                Trụ sở chính & Toàn quốc
+                              </span>
                             )}
                         </div>
                       </td>
 
                       {/* Cột 5: Trạng thái */}
-                      <td className="py-3 px-4 text-center">
+                      <td className="user-mgmt-td" style={{ textAlign: 'center' }}>
                         {isLocked ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
+                          <span className="user-mgmt-status-badge locked">
                             <Lock size={12} />
                             Đã khóa
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                          <span className="user-mgmt-status-badge active">
                             <CheckCircle2 size={12} />
                             Hoạt động
                           </span>
@@ -650,12 +641,12 @@ export const UserManagementPage: React.FC = () => {
                       </td>
 
                       {/* Cột 6: Thao tác */}
-                      <td className="py-3 px-4 text-right">
-                        <div className="inline-flex items-center gap-1">
+                      <td className="user-mgmt-td">
+                        <div className="user-mgmt-actions">
                           <button
                             onClick={() => handleOpenEditModal(item)}
                             title="Sửa thông tin & Phân quyền"
-                            className="p-1.5 text-slate-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                            className="user-mgmt-action-btn edit"
                           >
                             <Edit size={16} />
                           </button>
@@ -663,14 +654,8 @@ export const UserManagementPage: React.FC = () => {
                           <button
                             onClick={() => handleOpenLockModal(item)}
                             title={isLocked ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
-                            disabled={currentUser?.username === item.username}
-                            className={`p-1.5 rounded-lg transition-colors ${
-                              currentUser?.username === item.username
-                                ? 'text-slate-300 cursor-not-allowed'
-                                : isLocked
-                                ? 'text-emerald-600 hover:bg-emerald-50'
-                                : 'text-red-500 hover:bg-red-50'
-                            }`}
+                            disabled={isCurrentUser}
+                            className={`user-mgmt-action-btn ${isLocked ? 'unlock' : 'lock'}`}
                           >
                             {isLocked ? <Unlock size={16} /> : <Lock size={16} />}
                           </button>
@@ -685,38 +670,40 @@ export const UserManagementPage: React.FC = () => {
         </div>
 
         {/* Phân Trang (S1-09: Mặc định 20 dòng / trang) */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-slate-50/60 border-t border-slate-200 text-xs text-slate-600">
+        <div className="user-mgmt-pagination">
           <div>
             Hiển thị{' '}
-            <span className="font-semibold text-slate-900">
+            <strong style={{ color: '#111827' }}>
               {totalElements === 0 ? 0 : page * size + 1}
-            </span>{' '}
+            </strong>{' '}
             -{' '}
-            <span className="font-semibold text-slate-900">
+            <strong style={{ color: '#111827' }}>
               {Math.min((page + 1) * size, totalElements)}
-            </span>{' '}
-            trên tổng <span className="font-semibold text-slate-900">{totalElements}</span> tài khoản{' '}
-            <span className="text-slate-400 font-normal">(Mặc định 20 dòng/trang)</span>
+            </strong>{' '}
+            trên tổng <strong style={{ color: '#111827' }}>{totalElements}</strong> tài khoản{' '}
+            <span style={{ color: '#9CA3AF', fontWeight: 'normal' }}>
+              (Mặc định 20 dòng/trang)
+            </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0 || loading}
-              className="px-2.5 py-1.5 border border-slate-200 rounded-md bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+              className="user-mgmt-pagination-btn"
             >
               <ChevronLeft size={14} />
               <span>Trước</span>
             </button>
 
-            <span className="px-3 py-1 font-medium text-slate-800">
+            <span style={{ padding: '0 8px', fontWeight: 600, color: '#111827' }}>
               Trang {page + 1} / {totalPages || 1}
             </span>
 
             <button
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1 || loading}
-              className="px-2.5 py-1.5 border border-slate-200 rounded-md bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+              className="user-mgmt-pagination-btn"
             >
               <span>Sau</span>
               <ChevronRight size={14} />
@@ -729,254 +716,271 @@ export const UserManagementPage: React.FC = () => {
       {/* MODAL 1: TẠO TÀI KHOẢN MỚI (S1-08 / S1-09)              */}
       {/* ======================================================== */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-orange-50 to-amber-50">
-              <div className="flex items-center gap-2">
-                <span className="p-2 bg-orange-500 text-white rounded-lg">
-                  <Plus size={20} />
-                </span>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">Tạo Tài Khoản Mới</h3>
-                  <p className="text-xs text-slate-500">
-                    Tài khoản được cấp mật khẩu tạm ngẫu nhiên và gửi qua email kích hoạt
-                  </p>
-                </div>
+        <div className="user-mgmt-modal-overlay">
+          <div className="user-mgmt-modal-dialog">
+            {/* Header */}
+            <div className="user-mgmt-modal-header">
+              <div>
+                <h3 className="user-mgmt-modal-title">Tạo Tài Khoản Mới</h3>
+                <p className="user-mgmt-modal-desc">
+                  Hệ thống tự động cấp mật khẩu tạm ngẫu nhiên và gửi email kích hoạt
+                </p>
               </div>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg"
+                className="user-mgmt-modal-close"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            {/* Modal Body Form */}
-            <form onSubmit={handleCreateSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
-              {/* Thông báo lỗi nếu trùng tài khoản/email/sđt (S1-08) */}
-              {createError && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-medium flex items-start gap-2">
-                  <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
-                  <span>{createError}</span>
-                </div>
-              )}
+            {/* Form */}
+            <form onSubmit={handleCreateSubmit} style={{ display: 'contents' }}>
+              <div className="user-mgmt-modal-body">
+                {/* Báo lỗi trùng username/email/phone (S1-08) */}
+                {createError && (
+                  <div className="user-mgmt-alert user-mgmt-alert-error">
+                    <AlertTriangle size={18} style={{ color: '#DC2626', flexShrink: 0, marginTop: 1 }} />
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{createError}</span>
+                  </div>
+                )}
 
-              {/* Nhắc nhở quy trình mật khẩu tạm */}
-              <div className="p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-xl text-xs flex items-start gap-2">
-                <Mail size={16} className="text-blue-600 shrink-0 mt-0.5" />
-                <div>
-                  <strong>Quy chuẩn S1-08:</strong> Hệ thống sẽ tự động tạo mật khẩu tạm bảo mật và
-                  gửi email kích hoạt tới địa chỉ email của nhân viên. Khi đăng nhập lần đầu, nhân viên
-                  bắt buộc phải đổi mật khẩu mới.
-                </div>
-              </div>
-
-              {/* Thông tin cơ bản */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Tên đăng nhập (Username) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={createForm.username}
-                    onChange={(e) =>
-                      setCreateForm({ ...createForm, username: e.target.value.toLowerCase().trim() })
-                    }
-                    placeholder="ví dụ: tran.minh"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                  <span className="text-[11px] text-slate-400">Từ 3-50 ký tự, không dấu</span>
+                {/* Banner hướng dẫn */}
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 10,
+                    background: '#EFF6FF',
+                    border: '1px solid #BFDBFE',
+                    color: '#1E40AF',
+                    fontSize: 12.5,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 8
+                  }}
+                >
+                  <Mail size={16} style={{ color: '#2563EB', flexShrink: 0, marginTop: 1 }} />
+                  <div>
+                    <strong>Quy chuẩn S1-08:</strong> Sau khi tạo, email chứa mật khẩu tạm sẽ được gửi
+                    tới người dùng. Đăng nhập lần đầu bắt buộc đổi mật khẩu mới.
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Họ và tên đầy đủ <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={createForm.fullName}
-                    onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })}
-                    placeholder="ví dụ: Trần Văn Minh"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  />
+                {/* Thông tin cơ bản */}
+                <div className="user-mgmt-form-grid">
+                  <div className="user-mgmt-form-group">
+                    <label className="user-mgmt-form-label">
+                      Tên đăng nhập (Username) <span style={{ color: '#DC2626' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.username}
+                      onChange={(e) =>
+                        setCreateForm({
+                          ...createForm,
+                          username: e.target.value.toLowerCase().trim()
+                        })
+                      }
+                      placeholder="ví dụ: tran.minh"
+                      className="user-mgmt-form-input"
+                    />
+                  </div>
+
+                  <div className="user-mgmt-form-group">
+                    <label className="user-mgmt-form-label">
+                      Họ và tên đầy đủ <span style={{ color: '#DC2626' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.fullName}
+                      onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })}
+                      placeholder="ví dụ: Trần Văn Minh"
+                      className="user-mgmt-form-input"
+                    />
+                  </div>
+
+                  <div className="user-mgmt-form-group">
+                    <label className="user-mgmt-form-label">
+                      Email nhận mật khẩu tạm <span style={{ color: '#DC2626' }}>*</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={createForm.email}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, email: e.target.value.trim() })
+                      }
+                      placeholder="minh.tran@erp.com"
+                      className="user-mgmt-form-input"
+                    />
+                  </div>
+
+                  <div className="user-mgmt-form-group">
+                    <label className="user-mgmt-form-label">Số điện thoại</label>
+                    <input
+                      type="tel"
+                      value={createForm.phone || ''}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, phone: e.target.value.trim() })
+                      }
+                      placeholder="0912345678"
+                      className="user-mgmt-form-input"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Email nhận mật khẩu tạm <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={createForm.email}
-                    onChange={(e) => setCreateForm({ ...createForm, email: e.target.value.trim() })}
-                    placeholder="minh.tran@erp.com"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Số điện thoại
-                  </label>
-                  <input
-                    type="tel"
-                    value={createForm.phone || ''}
-                    onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value.trim() })}
-                    placeholder="0912345678"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-              </div>
-
-              {/* Chọn vai trò (S1-09) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">
-                  Phân quyền vai trò <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {formOptions.roles.map((r) => {
-                    const isChecked = createForm.roles.includes(r);
-                    return (
-                      <label
-                        key={r}
-                        className={`flex items-start gap-2 p-2.5 rounded-lg border text-xs cursor-pointer transition-colors ${
-                          isChecked
-                            ? 'bg-orange-50/70 border-orange-300 text-orange-950 font-medium'
-                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setCreateForm({ ...createForm, roles: [...createForm.roles, r] });
-                            } else {
-                              setCreateForm({
-                                ...createForm,
-                                roles: createForm.roles.filter((role) => role !== r)
-                              });
-                            }
-                          }}
-                          className="mt-0.5 rounded text-orange-600 focus:ring-orange-500"
-                        />
-                        <div>
-                          <div>{ROLE_METADATA_MAP[r]?.label || r}</div>
-                          <div className="text-[10px] text-slate-500">
-                            {ROLE_METADATA_MAP[r]?.description}
-                          </div>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Gán Kho (Bắt buộc với vai trò Kho) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2 flex items-center justify-between">
-                  <span>Kho hàng phụ trách</span>
-                  {createForm.roles.some((r) => r === 'ROLE_WAREHOUSE' || r === 'ROLE_WH_MANAGER') && (
-                    <span className="text-amber-600 text-[11px] font-normal">
-                      * Bắt buộc ít nhất 1 kho đối với Thủ kho / Quản lý kho
+                {/* Quy tắc 1: Một người dùng có thể giữ nhiều vai trò cùng lúc */}
+                <div className="user-mgmt-form-group">
+                  <label className="user-mgmt-form-label">
+                    Phân quyền vai trò <span style={{ color: '#DC2626' }}>*</span>{' '}
+                    <span style={{ color: '#6B7280', fontWeight: 'normal' }}>
+                      (Có thể chọn nhiều vai trò cùng lúc)
                     </span>
-                  )}
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {formOptions.warehouses.map((wh) => {
-                    const isChecked = createForm.warehouseIds?.includes(wh.id);
-                    return (
-                      <label
-                        key={wh.id}
-                        className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer transition-colors ${
-                          isChecked
-                            ? 'bg-amber-50 border-amber-300 text-amber-900 font-medium'
-                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
+                  </label>
+                  <div className="user-mgmt-checkbox-grid">
+                    {formOptions.roles.map((r) => {
+                      const isSelected = createForm.roles.includes(r);
+                      return (
+                        <label
+                          key={r}
+                          className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setCreateForm({ ...createForm, roles: [...createForm.roles, r] });
+                              } else {
+                                setCreateForm({
+                                  ...createForm,
+                                  roles: createForm.roles.filter((role) => role !== r)
+                                });
+                              }
+                            }}
+                            style={{ marginTop: 2, accentColor: '#F85606' }}
+                          />
+                          <div>
+                            <div style={{ fontWeight: 700 }}>
+                              {ROLE_METADATA_MAP[r]?.label || r}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#6B7280' }}>
+                              {ROLE_METADATA_MAP[r]?.description}
+                            </div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Quy tắc 2: Người dùng thuộc vai trò kho phải gắn với ít nhất một kho cụ thể */}
+                <div className="user-mgmt-form-group">
+                  <label
+                    className="user-mgmt-form-label"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                  >
+                    <span>Kho hàng phụ trách</span>
+                    {createForm.roles.some(
+                      (r) => r === 'ROLE_WAREHOUSE' || r === 'ROLE_WH_MANAGER'
+                    ) && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: '#B45309',
+                          fontWeight: 700,
+                          background: '#FEF3C7',
+                          padding: '2px 8px',
+                          borderRadius: 4
+                        }}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            const cur = createForm.warehouseIds || [];
-                            if (e.target.checked) {
-                              setCreateForm({ ...createForm, warehouseIds: [...cur, wh.id] });
-                            } else {
-                              setCreateForm({
-                                ...createForm,
-                                warehouseIds: cur.filter((id) => id !== wh.id)
-                              });
-                            }
-                          }}
-                          className="rounded text-amber-600 focus:ring-amber-500"
-                        />
-                        <span>{wh.name}</span>
-                      </label>
-                    );
-                  })}
+                        * Bắt buộc chọn ít nhất 1 kho cho vai trò Kho!
+                      </span>
+                    )}
+                  </label>
+                  <div className="user-mgmt-checkbox-grid">
+                    {formOptions.warehouses.map((wh) => {
+                      const isSelected = createForm.warehouseIds?.includes(wh.id);
+                      return (
+                        <label
+                          key={wh.id}
+                          className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              const cur = createForm.warehouseIds || [];
+                              if (e.target.checked) {
+                                setCreateForm({ ...createForm, warehouseIds: [...cur, wh.id] });
+                              } else {
+                                setCreateForm({
+                                  ...createForm,
+                                  warehouseIds: cur.filter((id) => id !== wh.id)
+                                });
+                              }
+                            }}
+                            style={{ accentColor: '#F85606' }}
+                          />
+                          <span style={{ fontSize: 12.5 }}>{wh.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Địa bàn phụ trách */}
+                <div className="user-mgmt-form-group">
+                  <label className="user-mgmt-form-label">Địa bàn phụ trách (Kinh doanh)</label>
+                  <div className="user-mgmt-checkbox-grid">
+                    {formOptions.regions.map((reg) => {
+                      const isSelected = createForm.regionIds?.includes(reg.id);
+                      return (
+                        <label
+                          key={reg.id}
+                          className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              const cur = createForm.regionIds || [];
+                              if (e.target.checked) {
+                                setCreateForm({ ...createForm, regionIds: [...cur, reg.id] });
+                              } else {
+                                setCreateForm({
+                                  ...createForm,
+                                  regionIds: cur.filter((id) => id !== reg.id)
+                                });
+                              }
+                            }}
+                            style={{ accentColor: '#2563EB' }}
+                          />
+                          <span style={{ fontSize: 12.5 }}>{reg.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
-              {/* Gán Địa bàn (Kinh doanh) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">
-                  Địa bàn phụ trách (Nhân viên kinh doanh / Đại lý)
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {formOptions.regions.map((reg) => {
-                    const isChecked = createForm.regionIds?.includes(reg.id);
-                    return (
-                      <label
-                        key={reg.id}
-                        className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer transition-colors ${
-                          isChecked
-                            ? 'bg-blue-50 border-blue-300 text-blue-900 font-medium'
-                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            const cur = createForm.regionIds || [];
-                            if (e.target.checked) {
-                              setCreateForm({ ...createForm, regionIds: [...cur, reg.id] });
-                            } else {
-                              setCreateForm({
-                                ...createForm,
-                                regionIds: cur.filter((id) => id !== reg.id)
-                              });
-                            }
-                          }}
-                          className="rounded text-blue-600 focus:ring-blue-500"
-                        />
-                        <span>{reg.name}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Modal Footer Buttons */}
-              <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
+              {/* Footer */}
+              <div className="user-mgmt-modal-footer">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                  className="user-mgmt-btn-cancel"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
                   disabled={createLoading}
-                  className="flex items-center gap-2 px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-50"
+                  className="user-mgmt-btn-submit"
                 >
-                  {createLoading && <RefreshCw size={16} className="animate-spin" />}
+                  {createLoading && <RefreshCw size={15} className="animate-spin" />}
                   <span>{createLoading ? 'Đang tạo...' : 'Tạo Tài Khoản & Gửi Email'}</span>
                 </button>
               </div>
@@ -989,68 +993,87 @@ export const UserManagementPage: React.FC = () => {
       {/* MODAL 2: SỬA THÔNG TIN & PHÂN QUYỀN (S1-08 / S1-09)      */}
       {/* ======================================================== */}
       {isEditModalOpen && editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div className="user-mgmt-modal-overlay">
+          <div className="user-mgmt-modal-dialog">
+            <div className="user-mgmt-modal-header">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">
+                <h3 className="user-mgmt-modal-title">
                   Cập Nhật Tài Khoản: @{editingUser.username}
                 </h3>
-                <p className="text-xs text-slate-500">{editingUser.fullName}</p>
+                <p className="user-mgmt-modal-desc">{editingUser.fullName}</p>
               </div>
               <button
                 onClick={() => setIsEditModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg"
+                className="user-mgmt-modal-close"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-slate-200 bg-slate-50/50 px-6 pt-2">
+            <div
+              style={{
+                display: 'flex',
+                background: '#F9FAFB',
+                borderBottom: '1px solid #E5E7EB',
+                padding: '0 24px'
+              }}
+            >
               <button
+                type="button"
                 onClick={() => {
                   setEditTab('info');
                   setEditError(null);
                 }}
-                className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all ${
-                  editTab === 'info'
-                    ? 'border-orange-600 text-orange-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-900'
-                }`}
+                style={{
+                  padding: '10px 16px',
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  border: 'none',
+                  background: 'transparent',
+                  borderBottom: editTab === 'info' ? '2px solid #F85606' : '2px solid transparent',
+                  color: editTab === 'info' ? '#F85606' : '#6B7280',
+                  cursor: 'pointer'
+                }}
               >
                 1. Thông tin cá nhân (S1-08)
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setEditTab('assignments');
                   setEditError(null);
                 }}
-                className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all ${
-                  editTab === 'assignments'
-                    ? 'border-orange-600 text-orange-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-900'
-                }`}
+                style={{
+                  padding: '10px 16px',
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  border: 'none',
+                  background: 'transparent',
+                  borderBottom:
+                    editTab === 'assignments' ? '2px solid #F85606' : '2px solid transparent',
+                  color: editTab === 'assignments' ? '#F85606' : '#6B7280',
+                  cursor: 'pointer'
+                }}
               >
                 2. Phân quyền & Kho / Địa bàn (S1-09)
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1">
+            {/* Tab Body */}
+            <div className="user-mgmt-modal-body">
               {editError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-medium flex items-start gap-2">
-                  <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
-                  <span>{editError}</span>
+                <div className="user-mgmt-alert user-mgmt-alert-error">
+                  <AlertTriangle size={18} style={{ color: '#DC2626', flexShrink: 0, marginTop: 1 }} />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{editError}</span>
                 </div>
               )}
 
-              {/* Tab 1: Thông tin cơ bản */}
+              {/* Tab 1: Sửa thông tin cơ bản */}
               {editTab === 'info' && (
-                <form onSubmit={handleUpdateInfoSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Họ và tên
-                    </label>
+                <form onSubmit={handleUpdateInfoSubmit} style={{ display: 'contents' }}>
+                  <div className="user-mgmt-form-group">
+                    <label className="user-mgmt-form-label">Họ và tên</label>
                     <input
                       type="text"
                       required
@@ -1058,12 +1081,12 @@ export const UserManagementPage: React.FC = () => {
                       onChange={(e) =>
                         setEditInfoForm({ ...editInfoForm, fullName: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-orange-500"
+                      className="user-mgmt-form-input"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+                  <div className="user-mgmt-form-group">
+                    <label className="user-mgmt-form-label">Email liên hệ</label>
                     <input
                       type="email"
                       required
@@ -1071,38 +1094,36 @@ export const UserManagementPage: React.FC = () => {
                       onChange={(e) =>
                         setEditInfoForm({ ...editInfoForm, email: e.target.value.trim() })
                       }
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-orange-500"
+                      className="user-mgmt-form-input"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Số điện thoại
-                    </label>
+                  <div className="user-mgmt-form-group">
+                    <label className="user-mgmt-form-label">Số điện thoại</label>
                     <input
                       type="tel"
                       value={editInfoForm.phone || ''}
                       onChange={(e) =>
                         setEditInfoForm({ ...editInfoForm, phone: e.target.value.trim() })
                       }
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-orange-500"
+                      className="user-mgmt-form-input"
                     />
                   </div>
 
-                  <div className="pt-4 flex items-center justify-end gap-3">
+                  <div className="user-mgmt-modal-footer" style={{ margin: '16px -24px -22px', borderBottomLeftRadius: 18, borderBottomRightRadius: 18 }}>
                     <button
                       type="button"
                       onClick={() => setIsEditModalOpen(false)}
-                      className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg"
+                      className="user-mgmt-btn-cancel"
                     >
                       Đóng
                     </button>
                     <button
                       type="submit"
                       disabled={editLoading}
-                      className="flex items-center gap-2 px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-lg shadow-sm"
+                      className="user-mgmt-btn-submit"
                     >
-                      {editLoading && <RefreshCw size={16} className="animate-spin" />}
+                      {editLoading && <RefreshCw size={15} className="animate-spin" />}
                       <span>Lưu thông tin</span>
                     </button>
                   </div>
@@ -1111,26 +1132,42 @@ export const UserManagementPage: React.FC = () => {
 
               {/* Tab 2: Phân quyền & Kho / Địa bàn */}
               {editTab === 'assignments' && (
-                <form onSubmit={handleUpdateAssignmentsSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-2">
-                      Vai trò người dùng
+                <form onSubmit={handleUpdateAssignmentsSubmit} style={{ display: 'contents' }}>
+                  {/* Quy tắc 1 & 3: Đa vai trò + Không thể tự thu hồi vai trò admin của chính mình */}
+                  <div className="user-mgmt-form-group">
+                    <label className="user-mgmt-form-label">
+                      Vai trò người dùng{' '}
+                      <span style={{ color: '#6B7280', fontWeight: 'normal' }}>
+                        (Một người dùng có thể giữ nhiều vai trò cùng lúc)
+                      </span>
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+
+                    <div className="user-mgmt-checkbox-grid">
                       {formOptions.roles.map((r) => {
-                        const isChecked = editAssignmentsForm.roles.includes(r);
+                        const isSelected = editAssignmentsForm.roles.includes(r);
+                        const isSelf = Boolean(
+                          currentUser &&
+                          (currentUser.id === editingUser.id ||
+                            currentUser.username === editingUser.username)
+                        );
+                        const isLockedAdmin = isSelf && r === 'ROLE_ADMIN';
+
                         return (
                           <label
                             key={r}
-                            className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer ${
-                              isChecked
-                                ? 'bg-orange-50 border-orange-300 text-orange-950 font-medium'
-                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                            }`}
+                            className={`user-mgmt-checkbox-card ${
+                              isSelected ? 'selected' : ''
+                            } ${isLockedAdmin ? 'disabled' : ''}`}
+                            title={
+                              isLockedAdmin
+                                ? 'Không thể tự thu hồi vai trò Quản trị hệ thống của chính mình!'
+                                : undefined
+                            }
                           >
                             <input
                               type="checkbox"
-                              checked={isChecked}
+                              checked={isSelected}
+                              disabled={isLockedAdmin}
                               onChange={(e) => {
                                 if (e.target.checked) {
                                   setEditAssignmentsForm({
@@ -1140,39 +1177,84 @@ export const UserManagementPage: React.FC = () => {
                                 } else {
                                   setEditAssignmentsForm({
                                     ...editAssignmentsForm,
-                                    roles: editAssignmentsForm.roles.filter((item) => item !== r)
+                                    roles: editAssignmentsForm.roles.filter((role) => role !== r)
                                   });
                                 }
                               }}
-                              className="rounded text-orange-600 focus:ring-orange-500"
+                              style={{ marginTop: 2, accentColor: '#F85606' }}
                             />
-                            <span>{ROLE_METADATA_MAP[r]?.label || r}</span>
+                            <div>
+                              <div
+                                style={{
+                                  fontWeight: 700,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 6
+                                }}
+                              >
+                                {ROLE_METADATA_MAP[r]?.label || r}
+                                {isLockedAdmin && (
+                                  <span
+                                    style={{
+                                      fontSize: 10,
+                                      color: '#7E22CE',
+                                      background: '#F3E8FF',
+                                      padding: '1px 6px',
+                                      borderRadius: 4,
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 3
+                                    }}
+                                  >
+                                    <Lock size={10} /> Không thể tự thu hồi
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: 11, color: '#6B7280' }}>
+                                {ROLE_METADATA_MAP[r]?.description}
+                              </div>
+                            </div>
                           </label>
                         );
                       })}
                     </div>
                   </div>
 
-                  {/* Kho phụ trách */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-2">
-                      Kho hàng phụ trách
+                  {/* Quy tắc 2: Người dùng thuộc vai trò kho phải gắn với ít nhất một kho cụ thể */}
+                  <div className="user-mgmt-form-group">
+                    <label
+                      className="user-mgmt-form-label"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                    >
+                      <span>Kho hàng phụ trách</span>
+                      {editAssignmentsForm.roles.some(
+                        (r) => r === 'ROLE_WAREHOUSE' || r === 'ROLE_WH_MANAGER'
+                      ) && (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: '#B45309',
+                            fontWeight: 700,
+                            background: '#FEF3C7',
+                            padding: '2px 8px',
+                            borderRadius: 4
+                          }}
+                        >
+                          * Bắt buộc gắn ít nhất 1 kho cho nhân sự Kho!
+                        </span>
+                      )}
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="user-mgmt-checkbox-grid">
                       {formOptions.warehouses.map((wh) => {
-                        const isChecked = editAssignmentsForm.warehouseIds?.includes(wh.id);
+                        const isSelected = editAssignmentsForm.warehouseIds?.includes(wh.id);
                         return (
                           <label
                             key={wh.id}
-                            className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer ${
-                              isChecked
-                                ? 'bg-amber-50 border-amber-300 text-amber-900 font-medium'
-                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                            }`}
+                            className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
                           >
                             <input
                               type="checkbox"
-                              checked={isChecked}
+                              checked={isSelected}
                               onChange={(e) => {
                                 const cur = editAssignmentsForm.warehouseIds || [];
                                 if (e.target.checked) {
@@ -1187,35 +1269,29 @@ export const UserManagementPage: React.FC = () => {
                                   });
                                 }
                               }}
-                              className="rounded text-amber-600 focus:ring-amber-500"
+                              style={{ accentColor: '#F85606' }}
                             />
-                            <span>{wh.name}</span>
+                            <span style={{ fontSize: 12.5 }}>{wh.name}</span>
                           </label>
                         );
                       })}
                     </div>
                   </div>
 
-                  {/* Địa bàn phụ trách */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-2">
-                      Địa bàn phụ trách
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {/* Địa bàn */}
+                  <div className="user-mgmt-form-group">
+                    <label className="user-mgmt-form-label">Địa bàn phụ trách</label>
+                    <div className="user-mgmt-checkbox-grid">
                       {formOptions.regions.map((reg) => {
-                        const isChecked = editAssignmentsForm.regionIds?.includes(reg.id);
+                        const isSelected = editAssignmentsForm.regionIds?.includes(reg.id);
                         return (
                           <label
                             key={reg.id}
-                            className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer ${
-                              isChecked
-                                ? 'bg-blue-50 border-blue-300 text-blue-900 font-medium'
-                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                            }`}
+                            className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
                           >
                             <input
                               type="checkbox"
-                              checked={isChecked}
+                              checked={isSelected}
                               onChange={(e) => {
                                 const cur = editAssignmentsForm.regionIds || [];
                                 if (e.target.checked) {
@@ -1230,29 +1306,29 @@ export const UserManagementPage: React.FC = () => {
                                   });
                                 }
                               }}
-                              className="rounded text-blue-600 focus:ring-blue-500"
+                              style={{ accentColor: '#2563EB' }}
                             />
-                            <span>{reg.name}</span>
+                            <span style={{ fontSize: 12.5 }}>{reg.name}</span>
                           </label>
                         );
                       })}
                     </div>
                   </div>
 
-                  <div className="pt-4 flex items-center justify-end gap-3">
+                  <div className="user-mgmt-modal-footer" style={{ margin: '16px -24px -22px', borderBottomLeftRadius: 18, borderBottomRightRadius: 18 }}>
                     <button
                       type="button"
                       onClick={() => setIsEditModalOpen(false)}
-                      className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg"
+                      className="user-mgmt-btn-cancel"
                     >
                       Đóng
                     </button>
                     <button
                       type="submit"
                       disabled={editLoading}
-                      className="flex items-center gap-2 px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-lg shadow-sm"
+                      className="user-mgmt-btn-submit"
                     >
-                      {editLoading && <RefreshCw size={16} className="animate-spin" />}
+                      {editLoading && <RefreshCw size={15} className="animate-spin" />}
                       <span>Lưu phân quyền</span>
                     </button>
                   </div>
@@ -1267,57 +1343,72 @@ export const UserManagementPage: React.FC = () => {
       {/* MODAL 3: XÁC NHẬN KHÓA / MỞ KHÓA TÀI KHOẢN (S1-10)       */}
       {/* ======================================================== */}
       {lockTargetUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <span
-                className={`p-3 rounded-full ${
-                  lockActionType === 'LOCK' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'
-                }`}
+        <div className="user-mgmt-modal-overlay">
+          <div className="user-mgmt-modal-dialog" style={{ maxWidth: 440 }}>
+            <div
+              style={{
+                padding: '24px 24px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14
+              }}
+            >
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 14,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: lockActionType === 'LOCK' ? '#FEF2F2' : '#ECFDF5',
+                  color: lockActionType === 'LOCK' ? '#DC2626' : '#059669',
+                  flexShrink: 0
+                }}
               >
                 {lockActionType === 'LOCK' ? <Lock size={24} /> : <Unlock size={24} />}
-              </span>
+              </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">
+                <h3 className="user-mgmt-modal-title" style={{ fontSize: 16 }}>
                   {lockActionType === 'LOCK' ? 'Khóa Tài Khoản Người Dùng' : 'Mở Khóa Tài Khoản'}
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="user-mgmt-modal-desc">
                   Tài khoản: <strong>@{lockTargetUser.username}</strong> ({lockTargetUser.fullName})
                 </p>
               </div>
             </div>
 
-            {lockActionType === 'LOCK' ? (
-              <div className="space-y-3">
-                <p className="text-xs text-slate-600">
-                  Khi bị khóa, người dùng sẽ bị từ chối đăng nhập vào hệ thống ngay lập tức và các phiên
-                  làm việc hiện tại sẽ bị thu hồi.
+            <div style={{ padding: '0 24px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {lockActionType === 'LOCK' ? (
+                <>
+                  <p style={{ fontSize: 12.5, color: '#4B5563', lineHeight: 1.5 }}>
+                    Khi bị khóa, tài khoản này sẽ bị thu hồi phiên làm việc và từ chối đăng nhập ngay
+                    lập tức.
+                  </p>
+                  <div className="user-mgmt-form-group">
+                    <label className="user-mgmt-form-label">Lý do khóa tài khoản:</label>
+                    <input
+                      type="text"
+                      value={lockReason}
+                      onChange={(e) => setLockReason(e.target.value)}
+                      placeholder="ví dụ: Nghỉ việc, vi phạm quy định bảo mật..."
+                      className="user-mgmt-form-input"
+                    />
+                  </div>
+                </>
+              ) : (
+                <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.5 }}>
+                  Bạn có chắc chắn muốn mở khóa cho tài khoản này? Người dùng sẽ có thể đăng nhập bình
+                  thường trở lại vào hệ thống.
                 </p>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Lý do khóa tài khoản:
-                  </label>
-                  <input
-                    type="text"
-                    value={lockReason}
-                    onChange={(e) => setLockReason(e.target.value)}
-                    placeholder="ví dụ: Nghỉ việc, kiểm tra bảo mật..."
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  />
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-slate-600">
-                Bạn có chắc chắn muốn mở khóa cho tài khoản này? Người dùng sẽ có thể đăng nhập bình
-                thường trở lại.
-              </p>
-            )}
+              )}
+            </div>
 
-            <div className="pt-2 flex items-center justify-end gap-3">
+            <div className="user-mgmt-modal-footer">
               <button
                 type="button"
                 onClick={() => setLockTargetUser(null)}
-                className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg"
+                className="user-mgmt-btn-cancel"
               >
                 Hủy bỏ
               </button>
@@ -1325,13 +1416,15 @@ export const UserManagementPage: React.FC = () => {
                 type="button"
                 onClick={handleConfirmLockToggle}
                 disabled={lockLoading}
-                className={`flex items-center gap-2 px-5 py-2 text-white text-sm font-semibold rounded-lg shadow-sm transition-all ${
-                  lockActionType === 'LOCK'
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-emerald-600 hover:bg-emerald-700'
-                }`}
+                className="user-mgmt-btn-submit"
+                style={{
+                  background:
+                    lockActionType === 'LOCK'
+                      ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
+                      : 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                }}
               >
-                {lockLoading && <RefreshCw size={16} className="animate-spin" />}
+                {lockLoading && <RefreshCw size={15} className="animate-spin" />}
                 <span>
                   {lockLoading
                     ? 'Đang xử lý...'
@@ -1347,4 +1440,5 @@ export const UserManagementPage: React.FC = () => {
     </div>
   );
 };
+
 export default UserManagementPage;
