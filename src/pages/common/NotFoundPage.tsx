@@ -1,62 +1,133 @@
 import React from 'react';
-import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from '../../routes/Router';
-import { ROLE_METADATA_MAP } from '../../types/user';
-import { Icons } from '../../components/common/Icons';
+import { AlertTriangle, Home, ArrowLeft } from '../../components/common/Icons';
 
 export const NotFoundPage: React.FC = () => {
-  const { currentRole } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const currentRoleMeta = ROLE_METADATA_MAP[currentRole];
-  const myHomePath = currentRoleMeta?.defaultPath || '/dashboard';
-
   return (
-    <div className="erp-error-container">
-      <div className="erp-error-card">
-        {/* Biểu tượng tìm kiếm không thấy */}
-        <div className="erp-error-icon-wrapper not-found">
-          <Icons.AlertTriangle size={48} className="text-warning" />
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '32px 16px',
+        minHeight: 'calc(100vh - 120px)'
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '540px',
+          background: '#FFFFFF',
+          borderRadius: '20px',
+          border: '1px solid #E5E7EB',
+          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.06)',
+          padding: '40px 36px',
+          textAlign: 'center'
+        }}
+      >
+        {/* Biểu tượng 404 */}
+        <div
+          style={{
+            width: '72px',
+            height: '72px',
+            borderRadius: '20px',
+            background: '#FFFBEB',
+            color: '#D97706',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '20px',
+            border: '1px solid #FDE68A'
+          }}
+        >
+          <AlertTriangle size={38} />
         </div>
 
         {/* Mã lỗi & Tiêu đề */}
-        <div className="erp-error-badge not-found">LỖI 404 • KHÔNG TÌM THẤY TRANG</div>
-        <h1 className="erp-error-title">Truy cập nhầm chỗ hoặc đường dẫn không tồn tại</h1>
-
-        {/* Mô tả giải thích */}
-        <p className="erp-error-desc">
-          Bạn vừa truy cập đường dẫn <code className="erp-code-pill">{location.pathname}</code>.
-          Hệ thống ERP Sales & Inventory không tìm thấy tính năng nào khớp với địa chỉ này.
-        </p>
-
-        <div className="erp-help-note">
-          <p>
-            Vui lòng kiểm tra lại chính tả đường link hoặc sử dụng thanh menu điều hướng bên trái
-            để truy cập đúng các chức năng được cấp phép cho vai trò <strong>{currentRoleMeta?.label}</strong>.
-          </p>
+        <div
+          style={{
+            display: 'inline-block',
+            padding: '4px 12px',
+            borderRadius: '9999px',
+            background: '#FFF5F1',
+            color: '#F85606',
+            fontSize: '12px',
+            fontWeight: 700,
+            letterSpacing: '0.6px',
+            marginBottom: '12px'
+          }}
+        >
+          MÃ LỖI 404 • NOT FOUND
         </div>
 
-        {/* HÀNH ĐỘNG GỢI Ý ĐỂ QUAY LẠI LUỒNG LÀM VIỆC (Acceptance Criteria S1-07) */}
-        <div className="erp-action-group">
+        <h1
+          style={{
+            fontSize: '22px',
+            fontWeight: 800,
+            color: '#111827',
+            marginBottom: '10px'
+          }}
+        >
+          Không Tìm Thấy Trang
+        </h1>
+
+        <p
+          style={{
+            fontSize: '14px',
+            color: '#6B7280',
+            lineHeight: 1.6,
+            marginBottom: '24px'
+          }}
+        >
+          Đường dẫn <strong style={{ color: '#111827', wordBreak: 'break-all' }}>{location.pathname}</strong>{' '}
+          không tồn tại hoặc đã được di chuyển trong hệ thống ERP.
+        </p>
+
+        {/* Nút hành động quay lại luồng làm việc (Story S1-07) */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <button
             type="button"
-            className="erp-btn erp-btn-primary"
-            onClick={() => navigate(myHomePath)}
-            id="btn-notfound-my-home"
+            onClick={() => navigate('/dashboard')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 22px',
+              borderRadius: '9999px',
+              background: 'linear-gradient(135deg, #FF6A00 0%, #EE4D2D 100%)',
+              color: '#FFFFFF',
+              fontSize: '14px',
+              fontWeight: 600,
+              boxShadow: '0 4px 14px rgba(238, 77, 45, 0.3)',
+              cursor: 'pointer'
+            }}
           >
-            <Icons.Home size={18} />
-            <span>Về bàn làm việc chính ({currentRoleMeta?.label})</span>
+            <Home size={16} />
+            <span>Về Bàn Làm Việc</span>
           </button>
 
           <button
             type="button"
-            className="erp-btn erp-btn-secondary"
             onClick={() => navigate(-1)}
-            id="btn-notfound-back"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 20px',
+              borderRadius: '9999px',
+              background: '#FFFFFF',
+              border: '1px solid #E5E7EB',
+              color: '#374151',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
           >
-            <Icons.ArrowLeft size={18} />
-            <span>Quay lại trang trước</span>
+            <ArrowLeft size={16} />
+            <span>Quay Lại Trang Trước</span>
           </button>
         </div>
       </div>

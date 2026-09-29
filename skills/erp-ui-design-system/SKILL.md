@@ -1,63 +1,59 @@
 ---
 name: erp-ui-design-system
-description: Quy chuẩn thiết kế giao diện ERP Sales & Inventory theo tone màu chủ đạo Xanh lá - Trắng (Fresh Emerald & Crisp White), chuẩn Responsive 360px, Data Table, Status Badges và Form Controls.
+description: Quy chuẩn thiết kế giao diện ERP Sales & Inventory theo phong cách hiện đại tựa App ETC, tone màu chủ đạo Cam Lazada - Trắng (Lazada Vibrant Orange & Crisp White), chuẩn Responsive 360px, Menu Pill, Stat Cards, Data Table và Form Controls.
 ---
 
 # ERP UI Design System Skill
 
-## 1. Nguyên Tắc Thiết Kế Giao Diện & Bảng Màu Chủ Đạo (Theme Green & White)
-Hệ thống sử dụng ngôn ngữ thiết kế hiện đại, thân thiện, lấy tone màu **Xanh lá tươi mát kết hợp Trắng tinh tế (Fresh Emerald & Crisp White)** làm nhận diện thương hiệu cốt lõi, điểm xuyết màu vàng ấm (Warm Amber) cho các thành phần tạo điểm nhấn.
+## 1. Nguyên Tắc Thiết Kế Giao Diện & Bảng Màu Chủ Đạo (Lazada Orange & Crisp White)
+Hệ thống sử dụng ngôn ngữ thiết kế hiện đại, chuyên nghiệp theo cấu trúc tương tự **App ETC**, kết hợp nhận diện màu sắc **Cam Lazada rực rỡ và Trắng sạch sẽ (Lazada Vibrant Orange & Crisp White)**.
 
 ### Bảng Mã Màu Chủ Đạo (Brand Color Palette)
-- **Primary Green (Xanh lá chủ đạo):**
-  - `Primary Main`: `#059669` (Emerald 600) — Màu thương hiệu chính cho nút bấm, icon, điểm nhấn active.
-  - `Primary Light / Hover`: `#10b981` (Emerald 500) — Trạng thái hover, badge nổi bật.
-  - `Primary Dark`: `#047857` (Emerald 700) — Tiêu đề, viền đậm, header bảng.
-  - `Primary Surface / Soft`: `#ecfdf5` (Emerald 50) — Nền thẻ active, pill background, callout.
-  - `Primary Border`: `#a7f3d0` (Emerald 200) — Đường viền nhẹ nhàng.
-- **Crisp White & Neutral (Trắng & Nền sáng):**
-  - `Surface White`: `#ffffff` — Nền thẻ card chính, modal, ô nhập liệu.
-  - `App Background`: `#f8fafc` hoặc `#f0fdf4` — Nền tổng thể ứng dụng dịu mắt.
-  - `Text Main`: `#0f172a` (Slate 900) — Chữ tiêu đề và nội dung chính độ tương phản cao.
-  - `Text Muted`: `#475569` (Slate 600) — Chữ mô tả phụ, nhãn hướng dẫn.
-- **Accent Yellow (Vàng cam ấm điểm xuyết):**
-  - `Accent Gold`: `#f59e0b` (Amber 500) / `#fbbf24` (Amber 400) — Dành cho nút phụ nổi bật, icon đánh giá, badge đặc biệt.
+- **Primary Orange (Cam Lazada chủ đạo):**
+  - `Primary Main`: `#F85606` (hoặc `#FF6000` / `#EE4D2D`) — Nút bấm chính, icon điểm nhấn, menu active gradient.
+  - `Primary Gradient`: `linear-gradient(135deg, #FF6A00 0%, #EE4D2D 100%)` — Nút Đăng nhập, Menu Pill khi Active.
+  - `Primary Hover`: `#E04800` — Trạng thái tương tác nút bấm.
+  - `Primary Surface / Soft`: `#FFF2EE` — Nền badge, callout, highlight nhẹ.
+  - `Primary Border`: `#FFD8CC` — Đường viền nhấn cam mềm mại.
+- **Crisp White & Neutral (Trắng & Nền sạch):**
+  - `Surface White`: `#ffffff` — Nền sidebar, nền thẻ stat card, form đăng nhập, ô input.
+  - `App Background`: `#F6F7F9` — Nền tổng thể ứng dụng hiện đại, tương phản hoàn hảo với card trắng.
+  - `Border Subtle`: `#E5E7EB` — Viền xám mỏng nhẹ nhàng ngăn cách các khối.
+  - `Text Main`: `#111827` — Tiêu đề, số liệu chính (độ đậm cao).
+  - `Text Muted`: `#6B7280` — Nhãn in hoa nhỏ, mô tả phụ, đường dẫn breadcrumb.
+- **Status Colors:**
+  - `Success`: `#10B981` (Xanh lá) — Chấm online, hoàn thành, tồn khả dụng an toàn.
+  - `Warning`: `#F59E0B` (Vàng hổ phách) — Chờ duyệt, cận hạn 30 ngày.
+  - `Danger`: `#EF4444` (Đỏ) — Quá hạn nợ, nút đăng xuất, lỗi 403.
+  - `Info`: `#0284C7` (Xanh dương) — Đơn mới, xuất kho.
 
-### Phong Cách Thị Giác (Visual Aesthetics)
-- **Bo góc mềm mại (Rounded Corners):** Các card, container và nút bấm sử dụng bo góc từ `12px` đến `24px`, mang lại cảm giác thân thiện, hiện đại.
-- **Đổ bóng êm dịu (Soft Elevation):** Sử dụng bóng mờ màu xanh ngọc nhẹ (`0 10px 25px -5px rgba(5, 150, 105, 0.15)`), tránh bóng xám gắt.
-- **Khối cong chuyển tiếp:** Kết hợp các mảng màu xanh lá và trắng dạng sóng/khối bo cong mượt mà ở các banner và khung header.
-
----
-
-## 2. Quy Chuẩn Màu Sắc Trạng Thái (Status Badges)
-Mọi trạng thái đơn hàng, kho hoặc công nợ phải tuân thủ chuẩn màu:
-- **Xanh lá cây (Success / Hoàn thành / Active):** Đã duyệt, Đã xuất kho, Hoạt động (`bg-emerald-100 text-emerald-800 border-emerald-200`).
-- **Vàng cam (Warning / Đang xử lý / Pending):** Chờ duyệt, Đang vận chuyển, Sắp hết hạn (`bg-amber-100 text-amber-800 border-amber-200`).
-- **Đỏ hồng (Danger / Lỗi / Cancelled):** Đã hủy đơn, Bị khóa tài khoản, Quá hạn nợ (`bg-rose-100 text-rose-800 border-rose-200`).
-- **Xanh dương ngọc (Info / Mới):** Đơn hàng mới, Phiếu tạm (`bg-teal-100 text-teal-800 border-teal-200`).
-- **Xám bạc (Neutral / Lưu trữ):** Bản nháp, Đã đóng (`bg-slate-100 text-slate-800 border-slate-200`).
-
----
-
-## 3. Quy Chuẩn Responsive Mobile 360px
-Mọi màn hình (Bàn làm việc, Tạo đơn, Đăng nhập, Báo lỗi) bắt buộc:
-1. **Touch Target:** Mọi nút bấm, link menu đạt kích thước tối thiểu **44px x 44px**.
-2. **Không tràn màn hình:** Tuyệt đối không xuất hiện thanh cuộn ngang (`overflow-x: hidden`).
-3. **Off-canvas Drawer:** Sidebar trên mobile ẩn đi và bật ra dạng ngăn kéo trượt êm từ cạnh trái khi bấm nút Hamburger, có backdrop mờ che nền.
-
----
-
-## 4. Cấu Trúc Bảng Dữ Liệu Chuẩn (Data Table Component)
-Một bảng quản lý nghiệp vụ ERP chuẩn gồm 4 khối:
-1. **Toolbar trên cùng:** Ô tìm kiếm có icon, dropdown bộ lọc trạng thái, nút hành động chính màu Xanh lá (`#059669`).
-2. **Table Header:** Nền xanh lá nhạt (`#ecfdf5`) hoặc xám nhạt (`#f8fafc`), chữ đậm rõ nét.
-3. **Table Body:** Hàng xen kẽ màu nền trắng - xanh nhạt dịu mắt, hover chuyển màu mượt mà.
-4. **Pagination Bar:** Hiển thị số bản ghi và các nút chuyển trang dạng pill tròn.
+### Cấu Trúc Giao Diện (Layout Hierarchy) theo chuẩn App ETC
+1. **Sidebar bên trái (Nền trắng sang trọng):**
+   - Logo thương hiệu ở trên cùng.
+   - Thẻ `VAI TRÒ HỆ THỐNG`: Tiêu đề in hoa nhỏ, tên vai trò nổi bật kèm chấm tròn online xanh/cam.
+   - Menu điều hướng dạng **Pill bo tròn**:
+     - Khi active: Nền gradient cam Lazada, chữ trắng, icon trắng, shadow nhẹ.
+     - Khi bình thường: Chữ xám đậm, icon xám, hover êm dịu.
+   - Nút `[Đăng Xuất]` nằm cố định góc dưới cùng bên trái với viền đỏ cam nhạt.
+2. **Header bên trên:**
+   - Icon thu phóng sidebar.
+   - Tiêu đề trang + Dòng mô tả nhỏ hoạt động bên dưới.
+   - Bên phải: Đồng hồ đồng bộ + Nút Làm mới, Avatar viết tắt 2 chữ cái (`AD`, `TK`, `BH`) kèm tên đầy đủ và username.
+3. **Khu vực làm việc (Content Area):**
+   - Hàng Thẻ Thống Kê (Stat Cards) nền trắng, số liệu to bản, icon trong badge bo góc.
+   - Khu vực tiến độ đơn hàng với thanh progress bar thanh lịch.
+   - Biểu đồ tròn (Donut chart) đo lường tỷ lệ hoàn thành.
+   - Tuyệt đối không hiển thị các khối "kiểm thử" thô sơ trên giao diện chính thức.
+4. **Trang Đăng Nhập (Login Page):**
+   - Centered Card bo góc 20px, shadow mềm sâu.
+   - Label in hoa: `TÊN ĐĂNG NHẬP`, `MẬT KHẨU`.
+   - Input có icon bên trái, icon mắt ẩn hiện mật khẩu bên phải.
+   - Nút Submit gradient cam Lazada có vòng xoay loading spinner.
+   - Dòng hỗ trợ: "Quên mật khẩu? Vui lòng liên hệ Quản trị viên để được hỗ trợ".
 
 ---
 
-## 5. Form Validation & Nút Bấm
-- Sử dụng **React Hook Form** / State kiểm soát dữ liệu:
-  - Hiển thị thông báo lỗi màu đỏ ngay dưới ô input vi phạm.
-  - Vô hiệu hóa (disable) nút Submit khi đang gửi dữ liệu (`isSubmitting = true`) kèm icon xoay spinner để chống click đúp.
+## 2. Quy Chuẩn Responsive Mobile 360px
+1. **Touch Target:** Chiều cao tối thiểu của nút bấm và menu items là **44px**.
+2. **Mobile Drawer:** Sidebar tự động chuyển thành ngăn kéo trượt mượt mà có backdrop che mờ trên màn hình <= 768px.
+3. **Không vỡ khung:** Tất cả các bảng, cards tự động wrap hoặc scroll ngang an toàn mà không làm tràn viewport.

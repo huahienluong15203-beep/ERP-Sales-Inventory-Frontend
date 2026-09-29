@@ -1,81 +1,83 @@
 /* ==========================================================================
    ERP SALES & INVENTORY - DESIGN SYSTEM & CORE FOUNDATION
-   Tone chủ đạo: Xanh lá tươi mát & Trắng sạch sẽ (Fresh Emerald & Crisp White)
-   Tuân thủ quy chuẩn skills/erp-ui-design-system/SKILL.md
+   Tone chủ đạo: Cam Lazada rực rỡ & Trắng sạch sẽ (Lazada Orange & Crisp White)
+   Lấy cảm hứng cấu trúc từ App ETC (Header, Sidebar trắng với menu pill, Card sạch)
    Hỗ trợ tối ưu từ màn hình di động 360px đến Desktop 4K
    ========================================================================== */
 
 :root {
-  /* Bảng màu thương hiệu chính: Xanh lá cây (Emerald Green) */
-  --erp-primary: #059669;
-  --erp-primary-hover: #047857;
-  --erp-primary-light: #ecfdf5;
-  --erp-primary-subtle: #d1fae5;
-  --erp-primary-dark: #064e3b;
-  --erp-primary-gradient: linear-gradient(135deg, #059669 0%, #10b981 100%);
-  --erp-primary-glow: rgba(5, 150, 105, 0.25);
+  /* Bảng màu thương hiệu chính: Cam Lazada (Lazada Vibrant Orange) */
+  --erp-primary: #F85606;
+  --erp-primary-hover: #E04800;
+  --erp-primary-light: #FFF2EE;
+  --erp-primary-subtle: #FFE4DC;
+  --erp-primary-dark: #C93B00;
+  --erp-primary-gradient: linear-gradient(135deg, #FF6A00 0%, #EE4D2D 100%);
+  --erp-primary-glow: rgba(248, 86, 6, 0.28);
 
-  /* Màu vàng cam ấm điểm xuyết (Warm Amber) tương tự mẫu thiết kế */
-  --erp-accent-amber: #f59e0b;
-  --erp-accent-amber-hover: #d97706;
-  --erp-accent-amber-light: #fef3c7;
-  --erp-accent-amber-text: #92400e;
+  /* Màu bổ trợ & Accent */
+  --erp-accent-teal: #0D9488;
+  --erp-accent-blue: #2563EB;
+  --erp-accent-amber: #F59E0B;
 
   /* Màu trạng thái nghiệp vụ chuẩn ERP */
-  --erp-success: #059669;
-  --erp-success-bg: #ecfdf5;
-  --erp-success-text: #065f46;
+  --erp-success: #10B981;
+  --erp-success-bg: #ECFDF5;
+  --erp-success-text: #065F46;
 
-  --erp-warning: #d97706;
-  --erp-warning-bg: #fffbeb;
-  --erp-warning-text: #92400e;
+  --erp-warning: #F59E0B;
+  --erp-warning-bg: #FFFBEB;
+  --erp-warning-text: #92400E;
 
-  --erp-danger: #dc2626;
-  --erp-danger-bg: #fef2f2;
-  --erp-danger-text: #991b1b;
+  --erp-danger: #EF4444;
+  --erp-danger-bg: #FEF2F2;
+  --erp-danger-text: #B91C1C;
 
-  --erp-info: #0284c7;
-  --erp-info-bg: #f0f9ff;
+  --erp-info: #0284C7;
+  --erp-info-bg: #F0F9FF;
   --erp-info-text: #075985;
 
-  /* Màu trung tính & Nền ứng dụng (Trắng & Xanh ngọc siêu nhẹ) */
-  --erp-bg-app: #f4fbf7;
-  --erp-bg-surface: #ffffff;
-  --erp-bg-sidebar: #064e3b;
-  --erp-bg-sidebar-hover: #065f46;
-  --erp-bg-sidebar-active: #047857;
+  /* Màu nền ứng dụng: Nền xám nhạt hiện đại & Card Trắng sạch sẽ */
+  --erp-bg-app: #F5F6F8;
+  --erp-bg-surface: #FFFFFF;
+  --erp-bg-sidebar: #FFFFFF;
+  --erp-bg-sidebar-hover: #FFF5F1;
+  --erp-bg-sidebar-active: #F85606;
 
-  --erp-text-main: #0f172a;
-  --erp-text-muted: #475569;
-  --erp-text-light: #94a3b8;
-  --erp-text-white: #ffffff;
+  /* Màu chữ */
+  --erp-text-main: #111827;
+  --erp-text-muted: #6B7280;
+  --erp-text-light: #9CA3AF;
+  --erp-text-white: #FFFFFF;
 
-  --erp-border: #e2e8f0;
-  --erp-border-mint: #d1fae5;
-  --erp-border-subtle: #f0fdf4;
-  --erp-border-sidebar: #047857;
+  /* Đường viền */
+  --erp-border: #E5E7EB;
+  --erp-border-orange: #FFD8CC;
+  --erp-border-subtle: #F3F4F6;
+  --erp-border-sidebar: #E5E7EB;
 
   /* Kích thước layout & Breakpoints */
-  --erp-sidebar-width: 280px;
-  --erp-topbar-height: 64px;
+  --erp-sidebar-width: 270px;
+  --erp-topbar-height: 68px;
 
   /* Typography */
   --erp-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --erp-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, monospace;
 
-  /* Bo góc mềm mại (Soft Curvature) như trong hình mẫu */
+  /* Bo góc mềm mại theo chuẩn hiện đại */
+  --erp-radius-xs: 6px;
   --erp-radius-sm: 8px;
   --erp-radius-md: 12px;
-  --erp-radius-lg: 18px;
-  --erp-radius-xl: 24px;
+  --erp-radius-lg: 16px;
+  --erp-radius-xl: 20px;
   --erp-radius-full: 9999px;
 
-  /* Shadows êm dịu ánh xanh */
-  --erp-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-  --erp-shadow-md: 0 4px 12px -1px rgba(5, 150, 105, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
-  --erp-shadow-lg: 0 12px 24px -4px rgba(5, 150, 105, 0.12), 0 4px 8px -2px rgba(0, 0, 0, 0.04);
-  --erp-shadow-green: 0 8px 20px rgba(5, 150, 105, 0.22);
-  --erp-shadow-drawer: 0 25px 50px -12px rgba(6, 78, 59, 0.4);
+  /* Shadows êm dịu */
+  --erp-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --erp-shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --erp-shadow-lg: 0 10px 24px -4px rgba(0, 0, 0, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.04);
+  --erp-shadow-orange: 0 6px 18px rgba(238, 77, 45, 0.28);
+  --erp-shadow-drawer: 0 20px 40px -10px rgba(0, 0, 0, 0.25);
 }
 
 *,
@@ -93,7 +95,7 @@ body {
   background-color: var(--erp-bg-app);
   color: var(--erp-text-main);
   font-family: var(--erp-font-sans);
-  font-size: 15px;
+  font-size: 14.5px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -101,29 +103,12 @@ body {
 }
 
 #root {
-  width: 100%;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: none;
-}
-
-ul, ol {
-  list-style: none;
-}
-
-/* Scrollbar tinh chỉnh sắc xanh ngọc */
+/* Scrollbar thanh lịch */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -134,10 +119,60 @@ ul, ol {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #a7f3d0;
-  border-radius: 4px;
+  background: #D1D5DB;
+  border-radius: var(--erp-radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6ee7b7;
+  background: #9CA3AF;
+}
+
+/* Button & Link reset */
+button {
+  font-family: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  outline: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  outline: none;
+}
+
+/* Utility Animations */
+@keyframes erpSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.erp-spinner {
+  animation: erpSpin 0.9s linear infinite;
+}
+
+@keyframes erpFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.erp-fade-in {
+  animation: erpFadeIn 0.25s ease-out forwards;
 }

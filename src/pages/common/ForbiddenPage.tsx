@@ -1,9 +1,17 @@
 import type { FC } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from '../../routes/Router';
-import { ROLE_METADATA_MAP, type RoleName } from '../../types/user';
+import { ROLE_METADATA_MAP } from '../../types/user';
+import type { RoleName } from '../../types/user';
 import { getAllowedRolesForPath } from '../../services/menuConfig';
-import { Icons } from '../../components/common/Icons';
+import {
+  ShieldAlert,
+  Home,
+  ArrowLeft,
+  User,
+  MapPin,
+  Lock
+} from '../../components/common/Icons';
 
 interface ForbiddenPageProps {
   attemptedPath?: string;
@@ -11,7 +19,7 @@ interface ForbiddenPageProps {
 }
 
 export const ForbiddenPage: FC<ForbiddenPageProps> = ({ attemptedPath, requiredRoles }) => {
-  const { user, currentRole, switchRole } = useAuth();
+  const { user, currentRole } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -19,104 +27,218 @@ export const ForbiddenPage: FC<ForbiddenPageProps> = ({ attemptedPath, requiredR
   const currentRoleMeta = ROLE_METADATA_MAP[currentRole];
   const allowedRoles = requiredRoles || getAllowedRolesForPath(currentPath);
 
-  // Đường dẫn mặc định an toàn cho vai trò hiện tại
-  const myHomePath = currentRoleMeta?.defaultPath || '/dashboard';
-
   return (
-    <div className="erp-error-container">
-      <div className="erp-error-card">
-        {/* Biểu tượng cảnh báo phân quyền */}
-        <div className="erp-error-icon-wrapper forbidden">
-          <Icons.ShieldAlert size={48} className="text-danger" />
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '32px 16px',
+        minHeight: 'calc(100vh - 120px)'
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '580px',
+          background: '#FFFFFF',
+          borderRadius: '20px',
+          border: '1px solid #E5E7EB',
+          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.06)',
+          padding: '40px 36px',
+          textAlign: 'center'
+        }}
+      >
+        {/* Biểu tượng Shield Alert */}
+        <div
+          style={{
+            width: '72px',
+            height: '72px',
+            borderRadius: '20px',
+            background: '#FEF2F2',
+            color: '#EF4444',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '20px',
+            border: '1px solid #FEE2E2'
+          }}
+        >
+          <ShieldAlert size={38} />
         </div>
 
-        {/* Mã lỗi & Tiêu đề chính */}
-        <div className="erp-error-badge forbidden">LỖI 403 • FORBIDDEN</div>
-        <h1 className="erp-error-title">Không đủ quyền truy cập chức năng này</h1>
+        {/* Mã lỗi & Tiêu đề */}
+        <div
+          style={{
+            display: 'inline-block',
+            padding: '4px 12px',
+            borderRadius: '9999px',
+            background: '#FFF5F1',
+            color: '#F85606',
+            fontSize: '12px',
+            fontWeight: 700,
+            letterSpacing: '0.6px',
+            marginBottom: '12px'
+          }}
+        >
+          MÃ LỖI 403 • FORBIDDEN
+        </div>
 
-        {/* Mô tả giải thích chi tiết */}
-        <p className="erp-error-desc">
-          Bạn đang cố gắng truy cập đường dẫn <code className="erp-code-pill">{currentPath}</code>.
-          Hệ thống bảo mật RBAC phát hiện tài khoản hiện tại không có quyền thực hiện nghiệp vụ này.
+        <h1
+          style={{
+            fontSize: '22px',
+            fontWeight: 800,
+            color: '#111827',
+            marginBottom: '10px'
+          }}
+        >
+          Từ Chối Quyền Truy Cập
+        </h1>
+
+        <p
+          style={{
+            fontSize: '14px',
+            color: '#6B7280',
+            lineHeight: 1.6,
+            marginBottom: '24px'
+          }}
+        >
+          Tài khoản của bạn hiện không có thẩm quyền truy cập phân hệ{' '}
+          <strong style={{ color: '#111827', wordBreak: 'break-all' }}>
+            {currentPath}
+          </strong>
+          . Vui lòng liên hệ Quản trị viên nếu bạn cần cấp quyền cho nghiệp vụ này.
         </p>
 
-        {/* Bảng so sánh quyền hạn hiện tại vs quyền cần thiết */}
-        <div className="erp-permission-box">
-          <div className="erp-permission-row">
-            <span className="erp-permission-label">Tài khoản & Vai trò hiện tại:</span>
-            <div className="erp-role-tag" style={{ backgroundColor: currentRoleMeta.badgeBg, color: currentRoleMeta.badgeColor }}>
-              <span className="erp-role-tag-dot" style={{ backgroundColor: currentRoleMeta.badgeColor }}></span>
-              <strong>{user?.fullName || currentRoleMeta.label}</strong> ({currentRoleMeta.label})
-            </div>
+        {/* Chi tiết tài khoản & Vai trò hiện tại */}
+        <div
+          style={{
+            background: '#F9FAFB',
+            borderRadius: '14px',
+            border: '1px solid #E5E7EB',
+            padding: '16px 20px',
+            textAlign: 'left',
+            fontSize: '13px',
+            marginBottom: '28px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ color: '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <User size={15} />
+              <span>Tài khoản hiện tại:</span>
+            </span>
+            <strong style={{ color: '#111827' }}>{user?.fullName}</strong>
           </div>
 
-          <div className="erp-permission-row">
-            <span className="erp-permission-label">Khu vực / Kho đang làm việc:</span>
-            <span className="erp-permission-val">{user?.warehouse || user?.workLocation || 'Chưa thiết lập'}</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ color: '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Lock size={15} />
+              <span>Vai trò hiệu lực:</span>
+            </span>
+            <span
+              style={{
+                background: currentRoleMeta.badgeBg,
+                color: currentRoleMeta.badgeColor,
+                padding: '2px 10px',
+                borderRadius: '9999px',
+                fontWeight: 600,
+                fontSize: '12px'
+              }}
+            >
+              {currentRoleMeta.label}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ color: '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <MapPin size={15} />
+              <span>Kho / Địa bàn:</span>
+            </span>
+            <span style={{ color: '#374151', fontWeight: 500 }}>
+              {user?.warehouse || user?.workLocation || 'Trụ sở chính'}
+            </span>
           </div>
 
           {allowedRoles.length > 0 && (
-            <div className="erp-permission-row">
-              <span className="erp-permission-label">Các vai trò được phép truy cập:</span>
-              <div className="erp-allowed-roles-list">
-                {allowedRoles.map((r) => {
-                  const meta = ROLE_METADATA_MAP[r];
-                  return (
-                    <span key={r} className="erp-allowed-pill" title={meta.description}>
-                      {meta.label}
-                    </span>
-                  );
-                })}
+            <div
+              style={{
+                borderTop: '1px solid #E5E7EB',
+                paddingTop: '10px',
+                marginTop: '4px'
+              }}
+            >
+              <div style={{ color: '#6B7280', marginBottom: '6px', fontSize: '12px' }}>
+                Các vai trò được phép truy cập:
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {allowedRoles.map((r) => (
+                  <span
+                    key={r}
+                    style={{
+                      background: '#FFFFFF',
+                      border: '1px solid #E5E7EB',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      fontSize: '11.5px',
+                      color: '#4B5563',
+                      fontWeight: 500
+                    }}
+                  >
+                    {ROLE_METADATA_MAP[r]?.label}
+                  </span>
+                ))}
               </div>
             </div>
           )}
         </div>
 
-        {/* HÀNH ĐỘNG GỢI Ý ĐỂ QUAY LẠI LUỒNG LÀM VIỆC (Acceptance Criteria S1-07) */}
-        <div className="erp-action-group">
+        {/* Nút hành động quay lại luồng làm việc (Story S1-07) */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <button
             type="button"
-            className="erp-btn erp-btn-primary"
-            onClick={() => navigate(myHomePath)}
-            id="btn-return-my-home"
+            onClick={() => navigate('/dashboard')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 22px',
+              borderRadius: '9999px',
+              background: 'linear-gradient(135deg, #FF6A00 0%, #EE4D2D 100%)',
+              color: '#FFFFFF',
+              fontSize: '14px',
+              fontWeight: 600,
+              boxShadow: '0 4px 14px rgba(238, 77, 45, 0.3)',
+              cursor: 'pointer'
+            }}
           >
-            <Icons.Home size={18} />
-            <span>Về trang chủ của tôi ({currentRoleMeta.label})</span>
+            <Home size={16} />
+            <span>Về Bàn Làm Việc</span>
           </button>
 
           <button
             type="button"
-            className="erp-btn erp-btn-secondary"
             onClick={() => navigate(-1)}
-            id="btn-go-back"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 20px',
+              borderRadius: '9999px',
+              background: '#FFFFFF',
+              border: '1px solid #E5E7EB',
+              color: '#374151',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
           >
-            <Icons.ArrowLeft size={18} />
-            <span>Quay lại trang trước</span>
+            <ArrowLeft size={16} />
+            <span>Quay Lại Trang Trước</span>
           </button>
         </div>
-
-        {/* Trợ giúp kiểm thử nhanh cho giảng viên / người chấm */}
-        {allowedRoles.length > 0 && (
-          <div className="erp-test-helper">
-            <span className="erp-test-helper-title">💡 Dành cho giảng viên / Người chấm kiểm thử phân quyền:</span>
-            <div className="erp-test-helper-btns">
-              {allowedRoles.map((targetRole) => (
-                <button
-                  key={targetRole}
-                  type="button"
-                  className="erp-btn erp-btn-sm erp-btn-outline"
-                  onClick={async () => {
-                    await switchRole(targetRole);
-                    navigate(currentPath);
-                  }}
-                >
-                  <Icons.RefreshCw size={14} />
-                  <span>Đổi sang {ROLE_METADATA_MAP[targetRole].label} để vào ngay</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
