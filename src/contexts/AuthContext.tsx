@@ -126,10 +126,11 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
 
   /**
-   * Kiểm tra quyền truy cập đường dẫn dựa trên vai trò hiện tại
+   * Kiểm tra quyền truy cập đường dẫn dựa trên các vai trò người dùng được cấp
    */
   const hasPermission = (path: string): boolean => {
-    return checkPathPermission(path, currentRole);
+    const userRoles = user?.roles && user.roles.length > 0 ? user.roles : [currentRole];
+    return checkPathPermission(path, userRoles);
   };
 
   const refreshContext = async () => {

@@ -37,7 +37,7 @@ import {
 } from '../../components/common/Icons';
 
 export const UserManagementPage: React.FC = () => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, refreshContext } = useAuth();
 
   // Danh sách người dùng & phân trang
   const [users, setUsers] = useState<AdminUserItem[]>([]);
@@ -232,14 +232,19 @@ export const UserManagementPage: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  // Submit lưu thông tin cơ bản (S1-08)
+  // Submit lưu thông tin cơ bản
   const handleUpdateInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
     setEditError(null);
     setEditLoading(true);
     try {
-      const res = await updateAdminUser(editingUser.id, editInfoForm);
+      const payload: UpdateAdminUserPayload = {
+        fullName: editInfoForm.fullName.trim(),
+        email: editInfoForm.email.trim(),
+        phone: editInfoForm.phone ? editInfoForm.phone.trim() : ''
+      };
+      const res = await updateAdminUser(editingUser.id, payload);
       if (res.success) {
         setIsEditModalOpen(false);
         setActionAlert({
@@ -247,6 +252,9 @@ export const UserManagementPage: React.FC = () => {
           message: 'Cập nhật thông tin tài khoản thành công!'
         });
         loadUsers();
+        if (currentUser && (currentUser.id === editingUser.id || currentUser.username === editingUser.username)) {
+          refreshContext();
+        }
       } else {
         setEditError(res.message);
       }
@@ -301,6 +309,9 @@ export const UserManagementPage: React.FC = () => {
           message: 'Cập nhật phân quyền, kho và địa bàn thành công!'
         });
         loadUsers();
+        if (currentUser && (currentUser.id === editingUser.id || currentUser.username === editingUser.username)) {
+          refreshContext();
+        }
       } else {
         setEditError(res.message);
       }
@@ -826,7 +837,7 @@ export const UserManagementPage: React.FC = () => {
                 >
                   <Mail size={16} style={{ color: '#2563EB', flexShrink: 0, marginTop: 1 }} />
                   <div>
-                    <strong>Quy chuẩn S1-08:</strong> Sau khi tạo, email chứa mật khẩu tạm sẽ được gửi
+                    <strong>Lưu ý:</strong> Sau khi tạo, email chứa mật khẩu tạm sẽ được gửi
                     tới người dùng. Đăng nhập lần đầu bắt buộc đổi mật khẩu mới.
                   </div>
                 </div>
@@ -1101,7 +1112,7 @@ export const UserManagementPage: React.FC = () => {
                   cursor: 'pointer'
                 }}
               >
-                1. Thông tin cá nhân (S1-08)
+                1. Thông tin cá nhân
               </button>
               <button
                 type="button"
@@ -1121,7 +1132,7 @@ export const UserManagementPage: React.FC = () => {
                   cursor: 'pointer'
                 }}
               >
-                2. Phân quyền & Kho / Địa bàn (S1-09)
+                2. Phân quyền & Kho / Địa bàn
               </button>
             </div>
 

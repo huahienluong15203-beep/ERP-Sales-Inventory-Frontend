@@ -19,8 +19,11 @@ export const DashboardPage: React.FC = () => {
   const { user, currentRole } = useAuth();
   const navigate = useNavigate();
 
-  // Story S1-05: Giá vốn và biên lợi nhuận chỉ lộ ra với vai trò Quản lý kinh doanh (ROLE_SALES_MANAGER) và Quản trị viên
-  const canViewCostAndMargin = currentRole === 'ROLE_SALES_MANAGER' || currentRole === 'ROLE_ADMIN';
+  // Giá vốn và biên lợi nhuận chỉ lộ ra với vai trò Quản lý kinh doanh (ROLE_SALES_MANAGER) và Quản trị viên
+  const canViewCostAndMargin =
+    currentRole === 'ROLE_SALES_MANAGER' ||
+    currentRole === 'ROLE_ADMIN' ||
+    Boolean(user?.roles?.some((r) => r === 'ROLE_SALES_MANAGER' || r === 'ROLE_ADMIN'));
 
   // Danh sách các đơn hàng gần đây với thanh tiến độ (theo chuẩn App ETC)
   const recentOrders = [
@@ -259,143 +262,122 @@ export const DashboardPage: React.FC = () => {
               </div>
             ))}
           </div>
-
-          <div
-            style={{
-              marginTop: '16px',
-              padding: '12px 16px',
-              borderRadius: '12px',
-              background: '#F9FAFB',
-              border: '1px solid #E5E7EB',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '13px',
-              color: '#4B5563'
-            }}
-          >
-            <span>
-              Người dùng hiện tại: <strong>{user?.fullName || 'Người dùng hệ thống'}</strong> (
-              <em>{user?.warehouse || user?.workLocation || 'Trụ sở chính'}</em>)
-            </span>
-            <span style={{ color: '#10B981', fontWeight: 600 }}>● Hệ Thống Đồng Bộ</span>
-          </div>
         </div>
 
         {/* Cột Phải: Tỷ Lệ Hoàn Thành Chỉ Tiêu & Tồn Kho */}
-        <div className="erp-card">
-          <div className="erp-card-header">
-            <div>
-              <h2 className="erp-card-title">Tỷ Lệ Đạt Kế Hoạch</h2>
-              <p className="erp-card-subtitle">Đánh giá tiến độ hoàn thành tháng 09/2026</p>
+          <div className="erp-card">
+            <div className="erp-card-header">
+              <div>
+                <h2 className="erp-card-title">Tỷ Lệ Đạt Kế Hoạch</h2>
+                <p className="erp-card-subtitle">Đánh giá tiến độ hoàn thành tháng 09/2026</p>
+              </div>
             </div>
-          </div>
 
-          <div className="erp-donut-container">
-            <div style={{ position: 'relative', width: '150px', height: '150px' }}>
-              <svg width="150" height="150" viewBox="0 0 100 100">
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
-                  fill="transparent"
-                  stroke="#F3F4F6"
-                  strokeWidth="10"
-                />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
-                  fill="transparent"
-                  stroke="url(#lazadaGradient)"
-                  strokeWidth="10"
-                  strokeDasharray="251.2"
-                  strokeDashoffset="25.12"
-                  strokeLinecap="round"
-                  transform="rotate(-90 50 50)"
-                />
-                <defs>
-                  <linearGradient id="lazadaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#FF6A00" />
-                    <stop offset="100%" stopColor="#EE4D2D" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <span
+            <div className="erp-donut-container">
+              <div style={{ position: 'relative', width: '150px', height: '150px' }}>
+                <svg width="150" height="150" viewBox="0 0 100 100">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="transparent"
+                    stroke="#F3F4F6"
+                    strokeWidth="10"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="transparent"
+                    stroke="url(#lazadaGradient)"
+                    strokeWidth="10"
+                    strokeDasharray="251.2"
+                    strokeDashoffset="25.12"
+                    strokeLinecap="round"
+                    transform="rotate(-90 50 50)"
+                  />
+                  <defs>
+                    <linearGradient id="lazadaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#FF6A00" />
+                      <stop offset="100%" stopColor="#EE4D2D" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div
                   style={{
-                    fontSize: '24px',
-                    fontWeight: 800,
-                    color: '#111827',
-                    lineHeight: 1
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
-                  92%
-                </span>
-                <span style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
-                  Đạt Chỉ Tiêu
-                </span>
-              </div>
-            </div>
-
-            <div
-              style={{
-                fontSize: '12px',
-                color: '#6B7280',
-                marginTop: '12px',
-                textAlign: 'center'
-              }}
-            >
-              Đạt 118/128 đơn hàng kế hoạch đã đề ra
-            </div>
-
-            {/* Legend Danh Sách Đạt Yêu Cầu */}
-            <div className="erp-donut-legend-list">
-              <div
-                className="erp-donut-legend-item"
-                style={{ background: '#ECFDF5', color: '#065F46' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CheckCircle2 size={16} />
-                  <span>ĐẠT YÊU CẦU:</span>
+                  <span
+                    style={{
+                      fontSize: '24px',
+                      fontWeight: 800,
+                      color: '#111827',
+                      lineHeight: 1
+                    }}
+                  >
+                    92%
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
+                    Đạt Chỉ Tiêu
+                  </span>
                 </div>
-                <span>118 đơn</span>
               </div>
 
               <div
-                className="erp-donut-legend-item"
-                style={{ background: '#FFFBEB', color: '#92400E' }}
+                style={{
+                  fontSize: '12px',
+                  color: '#6B7280',
+                  marginTop: '12px',
+                  textAlign: 'center'
+                }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Clock size={16} />
-                  <span>ĐANG CHỜ DUYỆT:</span>
-                </div>
-                <span>8 đơn</span>
+                Đạt 118/128 đơn hàng kế hoạch đã đề ra
               </div>
 
-              <div
-                className="erp-donut-legend-item"
-                style={{ background: '#FEF2F2', color: '#B91C1C' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <AlertCircle size={16} />
-                  <span>CẦN XỬ LÝ GẤP:</span>
+              {/* Legend Danh Sách Đạt Yêu Cầu */}
+              <div className="erp-donut-legend-list">
+                <div
+                  className="erp-donut-legend-item"
+                  style={{ background: '#ECFDF5', color: '#065F46' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle2 size={16} />
+                    <span>ĐẠT YÊU CẦU:</span>
+                  </div>
+                  <span>118 đơn</span>
                 </div>
-                <span>2 đơn</span>
+
+                <div
+                  className="erp-donut-legend-item"
+                  style={{ background: '#FFFBEB', color: '#92400E' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Clock size={16} />
+                    <span>ĐANG CHỜ DUYỆT:</span>
+                  </div>
+                  <span>8 đơn</span>
+                </div>
+
+                <div
+                  className="erp-donut-legend-item"
+                  style={{ background: '#FEF2F2', color: '#B91C1C' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <AlertCircle size={16} />
+                    <span>CẦN XỬ LÝ GẤP:</span>
+                  </div>
+                  <span>2 đơn</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 };

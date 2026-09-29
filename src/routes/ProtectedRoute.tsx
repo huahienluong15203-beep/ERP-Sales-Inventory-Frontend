@@ -15,7 +15,7 @@ interface ProtectedRouteProps {
  * Nếu không đủ quyền -> Hiển thị ngay ForbiddenPage trong giao diện dùng chung (S1-07)
  */
 export const ProtectedRoute: FC<ProtectedRouteProps> = ({ allowedRoles, children }) => {
-  const { currentRole, isLoading } = useAuth();
+  const { user, currentRole, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -29,7 +29,8 @@ export const ProtectedRoute: FC<ProtectedRouteProps> = ({ allowedRoles, children
 
   // Nếu route có yêu cầu danh sách vai trò cho phép
   if (allowedRoles && allowedRoles.length > 0) {
-    const hasAccess = allowedRoles.includes(currentRole);
+    const userRoles: RoleName[] = user?.roles && user.roles.length > 0 ? user.roles : [currentRole];
+    const hasAccess = allowedRoles.some((r) => userRoles.includes(r)) || allowedRoles.includes(currentRole);
     if (!hasAccess) {
       // Hiển thị trực tiếp trang báo lỗi 403 bên trong MainLayout
       return <ForbiddenPage attemptedPath={location.pathname} requiredRoles={allowedRoles} />;

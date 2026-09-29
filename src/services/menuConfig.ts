@@ -55,25 +55,33 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
 /**
  * Hàm lọc danh sách menu theo vai trò người dùng (Tiêu chuẩn S1-06)
  * "Mục menu không thuộc quyền thì không hiển thị"
+ * Hỗ trợ một hoặc nhiều vai trò cùng lúc
  */
-export function getAuthorizedMenus(role: RoleName): MenuItem[] {
-  return ALL_SYSTEM_MENUS.filter((item) => item.allowedRoles.includes(role)).map(
-    ({ allowedRoles: _allowedRoles, ...menuItem }) => menuItem
-  );
+export function getAuthorizedMenus(roles: RoleName | RoleName[]): MenuItem[] {
+  const roleList = Array.isArray(roles) ? roles : [roles];
+  return ALL_SYSTEM_MENUS.filter((item) =>
+    item.allowedRoles.some((r) => roleList.includes(r))
+  ).map(({ allowedRoles: _allowedRoles, ...menuItem }) => menuItem);
 }
 
 /**
- * Kiểm tra xem một vai trò có quyền truy cập vào một đường dẫn hay không
+ * Kiểm tra xem người dùng (với 1 hoặc nhiều vai trò) có quyền truy cập vào một đường dẫn hay không
  */
-export function checkPathPermission(path: string, role: RoleName): boolean {
+export function checkPathPermission(path: string, roles: RoleName | RoleName[]): boolean {
+  const roleList = Array.isArray(roles) ? roles : [roles];
   const cleanPath = path.split('?')[0].replace(/\/+$/, '') || '/';
   
   if (cleanPath === '/' || cleanPath === '/dashboard' || cleanPath === '/profile') {
     return true;
   }
 
-  if (cleanPath === '/admin/users' || cleanPath.startsWith('/admin/users/')) {
-    return role === 'ROLE_ADMIN';
+  if (
+    cleanPath === '/admin/users' ||
+    cleanPath === '/users' ||
+    cleanPath.startsWith('/admin/users/') ||
+    cleanPath.startsWith('/users/')
+  ) {
+    return roleList.includes('ROLE_ADMIN');
   }
 
   const targetMenu = ALL_SYSTEM_MENUS.find((item) => {
@@ -85,7 +93,7 @@ export function checkPathPermission(path: string, role: RoleName): boolean {
     return false;
   }
 
-  return targetMenu.allowedRoles.includes(role);
+  return targetMenu.allowedRoles.some((r) => roleList.includes(r));
 }
 
 /**

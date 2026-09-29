@@ -17,13 +17,10 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
   // Trạng thái mở/đóng Sidebar trên Mobile (tối ưu hóa màn hình 360px)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
-  // Trạng thái mở Dropdown chuyển nhanh vai trò
-  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState<boolean>(false);
 
   // Đóng Mobile Drawer khi đổi route
   useEffect(() => {
     setIsMobileMenuOpen(false);
-    setIsRoleDropdownOpen(false);
   }, [location.pathname]);
 
   // Ngăn cuộn trang body khi Drawer mobile mở trên màn hình 360px
@@ -62,16 +59,6 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
     }
     groupedMenus[epic].push(item);
   });
-
-  const allRoles: RoleName[] = [
-    'ROLE_ADMIN',
-    'ROLE_SALES_REP',
-    'ROLE_SALES_MANAGER',
-    'ROLE_WAREHOUSE',
-    'ROLE_WH_MANAGER',
-    'ROLE_ACCOUNTANT',
-    'ROLE_CUSTOMER'
-  ];
 
   // Lấy tiêu đề và mô tả của trang hiện tại cho Header
   const currentMenu = menus.find((m) => m.path === location.pathname);
@@ -121,10 +108,37 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
         {/* Khối Thẻ VAI TRÒ HỆ THỐNG (Chuẩn App ETC) */}
         <div className="erp-sidebar-role-badge">
-          <div className="erp-sidebar-role-title">VAI TRÒ HỆ THỐNG</div>
-          <div className="erp-sidebar-role-name">
-            <span className="erp-role-dot-online" />
-            <span>{currentRoleMeta.label}</span>
+          <div className="erp-sidebar-role-title flex items-center justify-between">
+            <span>VAI TRÒ HỆ THỐNG</span>
+            {user?.roles && user.roles.length > 1 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold">
+                {user.roles.length} vai trò
+              </span>
+            )}
+          </div>
+          <div className="erp-sidebar-role-name flex items-center justify-between">
+            <div className="flex items-center gap-1.5 overflow-hidden">
+              <span className="erp-role-dot-online flex-shrink-0" />
+              {user?.roles && user.roles.length > 1 ? (
+                <select
+                  value={currentRole}
+                  onChange={(e) => switchRole(e.target.value as RoleName)}
+                  className="bg-transparent font-bold text-gray-800 text-xs cursor-pointer border-none outline-none focus:ring-0 p-0 max-w-[170px]"
+                  title="Chuyển đổi vai trò làm việc"
+                >
+                  {user.roles.map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_METADATA_MAP[r]?.label || r}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span>{currentRoleMeta.label}</span>
+              )}
+            </div>
+            {user?.roles && user.roles.length > 1 && (
+              <Icons.ChevronDown size={14} className="text-gray-400 pointer-events-none" />
+            )}
           </div>
           <div
             style={{

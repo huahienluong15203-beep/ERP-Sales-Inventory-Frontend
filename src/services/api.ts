@@ -94,7 +94,21 @@ export async function loginUser(usernameInput: string, passwordInput: string): P
       }
 
       const backendRoles: string[] = data.roles || ['ROLE_ADMIN'];
-      const primaryRole = (backendRoles[0] as RoleName) || 'ROLE_ADMIN';
+      const rolePriority: RoleName[] = [
+        'ROLE_ADMIN',
+        'ROLE_SALES_MANAGER',
+        'ROLE_WH_MANAGER',
+        'ROLE_ACCOUNTANT',
+        'ROLE_WAREHOUSE',
+        'ROLE_SALES_REP',
+        'ROLE_CUSTOMER'
+      ];
+      const sortedRoles = [...backendRoles].sort((a, b) => {
+        const ia = rolePriority.indexOf(a as RoleName);
+        const ib = rolePriority.indexOf(b as RoleName);
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      });
+      const primaryRole = (sortedRoles[0] as RoleName) || 'ROLE_ADMIN';
 
       const userProfile: UserProfile = {
         id: data.id || 1,
@@ -102,7 +116,7 @@ export async function loginUser(usernameInput: string, passwordInput: string): P
         fullName: data.fullName || getSampleFullName(primaryRole),
         email: data.email || `${username}@erp.com`,
         role: primaryRole,
-        roles: backendRoles as RoleName[],
+        roles: sortedRoles as RoleName[],
         warehouse: getSampleWarehouse(primaryRole),
         workLocation: ROLE_METADATA_MAP[primaryRole]?.sampleLocation || 'Văn phòng điều hành',
         mustChangePassword: !!data.mustChangePassword
@@ -344,13 +358,14 @@ export async function fetchUserNavigationContext(role: RoleName): Promise<UserCo
 
     if (response.ok) {
       const data = await response.json();
+      const userRoles: RoleName[] = (data.user?.roles as RoleName[]) || [role];
       return {
         user: {
           ...data.user,
           role: role,
-          roles: data.user.roles || [role]
+          roles: userRoles
         },
-        menus: getAuthorizedMenus(role)
+        menus: getAuthorizedMenus(userRoles)
       };
     }
   } catch {
