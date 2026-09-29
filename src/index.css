@@ -86,8 +86,6 @@
 *::before,
 *::after {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 html,
@@ -132,10 +130,7 @@ body {
 /* Button & Link reset */
 button {
   font-family: inherit;
-  border: none;
-  background: none;
   cursor: pointer;
-  outline: none;
 }
 
 a {
@@ -147,7 +142,6 @@ input,
 select,
 textarea {
   font-family: inherit;
-  outline: none;
 }
 
 /* Utility Animations */
