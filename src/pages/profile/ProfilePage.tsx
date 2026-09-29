@@ -74,10 +74,10 @@ function getStrength(pwd: string): StrengthLevel {
 }
 
 const STRENGTH_CONFIG: Record<StrengthLevel, { label: string; color: string; bars: number }> = {
-  empty:  { label: '',          color: 'bg-gray-200',   bars: 0 },
-  weak:   { label: 'Yếu',       color: 'bg-red-500',    bars: 1 },
-  medium: { label: 'Trung bình', color: 'bg-amber-500',  bars: 2 },
-  strong: { label: 'Rất mạnh',  color: 'bg-emerald-500', bars: 3 },
+  empty: { label: '', color: 'bg-gray-200', bars: 0 },
+  weak: { label: 'Yếu', color: 'bg-red-500', bars: 1 },
+  medium: { label: 'Trung bình', color: 'bg-amber-500', bars: 2 },
+  strong: { label: 'Rất mạnh', color: 'bg-emerald-500', bars: 3 },
 };
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -264,11 +264,10 @@ export const ProfilePage: FC = () => {
                   return (
                     <span
                       key={r}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold border ${
-                        isCurrent
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold border ${isCurrent
                           ? 'bg-orange-50 text-orange-700 border-orange-200'
                           : 'bg-gray-50 text-gray-600 border-gray-200'
-                      }`}
+                        }`}
                       title={meta?.description}
                     >
                       {isCurrent && <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />}
@@ -278,9 +277,7 @@ export const ProfilePage: FC = () => {
                   );
                 })}
               </div>
-              <p className="text-[10px] text-gray-400">
-                Đổi vai trò làm việc nhanh tại menu trên cùng bên trái.
-              </p>
+
             </div>
           </div>
         </div>
@@ -306,11 +303,10 @@ export const ProfilePage: FC = () => {
             {/* Thông báo kết quả nếu có */}
             {result && (
               <div
-                className={`flex items-start gap-2 rounded-lg p-2 text-xs font-medium border ${
-                  result.type === 'success'
+                className={`flex items-start gap-2 rounded-lg p-2 text-xs font-medium border ${result.type === 'success'
                     ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                     : 'bg-red-50 text-red-700 border-red-200'
-                }`}
+                  }`}
               >
                 {result.type === 'success' ? (
                   <CheckCircle2 size={14} className="text-emerald-600 shrink-0 mt-0.5" />
@@ -357,9 +353,8 @@ export const ProfilePage: FC = () => {
                         {[1, 2, 3].map((bar) => (
                           <div
                             key={bar}
-                            className={`h-1 flex-1 rounded-full transition-colors duration-200 ${
-                              strengthCfg.bars >= bar ? strengthCfg.color : 'bg-gray-100'
-                            }`}
+                            className={`h-1 flex-1 rounded-full transition-colors duration-200 ${strengthCfg.bars >= bar ? strengthCfg.color : 'bg-gray-100'
+                              }`}
                           />
                         ))}
                       </div>
@@ -367,13 +362,12 @@ export const ProfilePage: FC = () => {
                         <div className="flex justify-between items-center text-[10px]">
                           <span className="text-gray-400">Độ phức tạp:</span>
                           <span
-                            className={`font-bold ${
-                              strength === 'weak'
+                            className={`font-bold ${strength === 'weak'
                                 ? 'text-red-500'
                                 : strength === 'medium'
-                                ? 'text-amber-500'
-                                : 'text-emerald-600'
-                            }`}
+                                  ? 'text-amber-500'
+                                  : 'text-emerald-600'
+                              }`}
                           >
                             {strengthCfg.label}
                           </span>
