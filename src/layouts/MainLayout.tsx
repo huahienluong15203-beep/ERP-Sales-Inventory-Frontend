@@ -86,10 +86,8 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
       <aside className={`erp-sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
         {/* Header của Sidebar */}
         <div className="erp-sidebar-header">
-          <div className="erp-logo-brand" onClick={() => navigate('/dashboard')}>
-            <div className="erp-logo-icon">
-              <img src="/logo-cube.png" alt="ERP Logo" style={{ width: '44px', height: 'auto', display: 'block' }} />
-            </div>
+          <div className="erp-logo-brand" onClick={() => navigate('/dashboard')} title="Về bảng điều khiển">
+            <img src="/logo-cube.png" alt="ERP Logo" className="erp-logo-img" />
             <div className="erp-logo-text">
               <span className="erp-brand-title">ERP SALES & INVENTORY</span>
               <span className="erp-brand-sub">Bán Hàng & Quản Trị Kho</span>

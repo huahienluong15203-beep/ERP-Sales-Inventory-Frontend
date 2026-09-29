@@ -54,17 +54,21 @@
   opacity: 0.88;
 }
 
-.erp-logo-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  background: var(--erp-primary-gradient);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  box-shadow: 0 4px 14px rgba(238, 77, 45, 0.35);
+.erp-logo-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
   flex-shrink: 0;
+  display: block;
+  background: transparent !important;
+}
+
+.erp-logo-icon {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  width: auto !important;
+  height: auto !important;
 }
 
 .erp-logo-text {
