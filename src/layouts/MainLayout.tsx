@@ -100,8 +100,8 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
         {/* Header của Sidebar */}
         <div className="erp-sidebar-header">
           <div className="erp-logo-brand" onClick={() => navigate('/dashboard')}>
-            <div className="erp-logo-icon" style={{ background: 'transparent', boxShadow: 'none', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <img src="/logo-cube.png" alt="ERP Logo" style={{ width: '34px', height: 'auto', display: 'block' }} />
+            <div className="erp-logo-icon">
+              <img src="/logo-cube.png" alt="ERP Logo" style={{ width: '44px', height: 'auto', display: 'block' }} />
             </div>
             <div className="erp-logo-text">
               <span className="erp-brand-title">ERP SALES & INVENTORY</span>

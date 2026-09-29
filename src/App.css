@@ -36,7 +36,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 18px;
   border-bottom: 1px solid var(--erp-border-sidebar);
   background: #FFFFFF;
 }
@@ -44,40 +44,47 @@
 .erp-logo-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 11px;
   cursor: pointer;
   user-select: none;
+  transition: opacity 0.15s;
+}
+
+.erp-logo-brand:hover {
+  opacity: 0.88;
 }
 
 .erp-logo-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--erp-radius-md);
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
   background: var(--erp-primary-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  box-shadow: 0 4px 12px rgba(238, 77, 45, 0.3);
+  box-shadow: 0 4px 14px rgba(238, 77, 45, 0.35);
+  flex-shrink: 0;
 }
 
 .erp-logo-text {
   display: flex;
   flex-direction: column;
+  gap: 1px;
 }
 
 .erp-brand-title {
   font-weight: 800;
-  font-size: 15px;
-  letter-spacing: 0.3px;
+  font-size: 13.5px;
+  letter-spacing: 0.2px;
   color: #111827;
   line-height: 1.2;
 }
 
 .erp-brand-sub {
-  font-size: 11px;
+  font-size: 10.5px;
   color: #F85606;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.1px;
   font-weight: 600;
 }
 
@@ -327,23 +334,31 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-left: 12px;
-  border-left: 1px solid #E5E7EB;
+  padding: 6px 10px 6px 16px;
+  border-left: 1px solid #F0F0F0;
   cursor: pointer;
+  border-radius: 12px;
+  transition: background 0.18s;
+}
+
+.erp-header-user-block:hover {
+  background: #FFF5F1;
 }
 
 .erp-header-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #0D9488 0%, #059669 100%);
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #FF6A00 0%, #EE4D2D 100%);
   color: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 14px;
-  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.25);
+  letter-spacing: 0.5px;
+  box-shadow: 0 3px 10px rgba(238, 77, 45, 0.32);
+  flex-shrink: 0;
 }
 
 .erp-header-user-info {
@@ -352,15 +367,20 @@
 }
 
 .erp-header-fullname {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 700;
   color: #111827;
-  line-height: 1.2;
+  line-height: 1.25;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .erp-header-username {
-  font-size: 11.5px;
-  color: #6B7280;
+  font-size: 11px;
+  color: #9CA3AF;
+  font-weight: 500;
 }
 
 /* 4. PAGE CONTENT */

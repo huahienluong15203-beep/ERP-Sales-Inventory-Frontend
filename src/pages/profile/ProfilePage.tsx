@@ -207,17 +207,17 @@ export const ProfilePage: FC = () => {
 
           {/* Thông tin chi tiết */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">
-              Chi tiết công tác
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
+              Thông tin công tác
             </h2>
-            <div className="space-y-3">
+            <div className="space-y-0">
               {[
-                { label: 'Vai trò', value: `${roleMeta.label} (${currentRole})`, color: roleMeta.badgeColor },
+                { label: 'Vai trò', value: roleMeta.label, color: roleMeta.badgeColor },
                 { label: 'Kho / Địa bàn', value: user?.warehouse || user?.workLocation || 'Toàn quốc' },
                 { label: 'Nơi làm việc', value: user?.workLocation || roleMeta.sampleLocation },
-                { label: 'Trạng thái', value: 'Hoạt động (ACTIVE)', green: true },
+                { label: 'Trạng thái', value: 'Đang hoạt động', green: true },
               ].map((row) => (
-                <div key={row.label} className="flex justify-between items-start gap-2 text-sm py-2 border-b border-gray-50 last:border-0">
+                <div key={row.label} className="flex justify-between items-start gap-2 text-sm py-2.5 border-b border-gray-50 last:border-0">
                   <span className="text-gray-500 shrink-0">{row.label}</span>
                   <span
                     className="font-semibold text-right"
