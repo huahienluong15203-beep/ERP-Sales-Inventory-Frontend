@@ -35,7 +35,12 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
     };
   }, [isMobileMenuOpen]);
 
-  const currentRoleMeta = ROLE_METADATA_MAP[currentRole];
+  // Đảm bảo vai trò hiển thị luôn là vai trò hợp lệ thuộc user.roles
+  const effectiveRole =
+    user?.roles && user.roles.length > 0 && !user.roles.includes(currentRole)
+      ? user.roles[0]
+      : currentRole;
+  const currentRoleMeta = ROLE_METADATA_MAP[effectiveRole] || ROLE_METADATA_MAP['ROLE_ADMIN'];
 
   // Lấy 2 chữ cái đầu viết tắt cho Avatar (chuẩn App ETC)
   const getAvatarInitials = (name?: string, roleStr?: string): string => {
@@ -121,7 +126,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
               {user?.roles && user.roles.length > 1 ? (
                 <select
-                  value={currentRole}
+                  value={effectiveRole}
                   onChange={(e) => switchRole(e.target.value as RoleName)}
                   className="bg-transparent font-bold text-gray-800 text-xs cursor-pointer border-none outline-none focus:ring-0 p-0 max-w-[170px]"
                   title="Chuyển đổi vai trò làm việc"

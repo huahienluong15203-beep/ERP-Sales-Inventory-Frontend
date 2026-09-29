@@ -22,19 +22,30 @@ const STORAGE_ROLE_KEY = 'erp_active_role';
 const STORAGE_TOKEN_KEY = 'accessToken';
 const STORAGE_USER_KEY = 'erp_user_profile';
 
+const ROLE_PRIORITY: RoleName[] = [
+  'ROLE_ADMIN',
+  'ROLE_SALES_MANAGER',
+  'ROLE_WH_MANAGER',
+  'ROLE_ACCOUNTANT',
+  'ROLE_WAREHOUSE',
+  'ROLE_SALES_REP',
+  'ROLE_CUSTOMER'
+];
+
+function getHighestPriorityRole(roles: RoleName[]): RoleName {
+  if (!roles || roles.length === 0) return 'ROLE_ADMIN';
+  const sorted = roles.slice().sort((a, b) => {
+    const ia = ROLE_PRIORITY.indexOf(a);
+    const ib = ROLE_PRIORITY.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+  return sorted[0];
+}
+
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [currentRole, setCurrentRole] = useState<RoleName>(() => {
     const savedRole = localStorage.getItem(STORAGE_ROLE_KEY) as RoleName;
-    const validRoles: RoleName[] = [
-      'ROLE_ADMIN',
-      'ROLE_SALES_REP',
-      'ROLE_SALES_MANAGER',
-      'ROLE_WAREHOUSE',
-      'ROLE_WH_MANAGER',
-      'ROLE_ACCOUNTANT',
-      'ROLE_CUSTOMER'
-    ];
-    return validRoles.includes(savedRole) ? savedRole : 'ROLE_ADMIN';
+    return ROLE_PRIORITY.includes(savedRole) ? savedRole : 'ROLE_ADMIN';
   });
 
   const [user, setUser] = useState<UserProfile | null>(() => {
@@ -60,6 +71,16 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     try {
       const data = await fetchUserNavigationContext(role);
       if (data.user) {
+        const availableRoles = (data.user.roles as RoleName[]) || [];
+        // Nếu vai trò hiện tại đã bị gỡ/không còn trong danh sách roles của user, tự động chuyển về vai trò cao nhất
+        let activeRole = role;
+        if (availableRoles.length > 0 && !availableRoles.includes(role)) {
+          activeRole = getHighestPriorityRole(availableRoles);
+          setCurrentRole(activeRole);
+          localStorage.setItem(STORAGE_ROLE_KEY, activeRole);
+          data.user.role = activeRole;
+        }
+
         setUser((prev) => {
           const merged = { ...prev, ...data.user };
           localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(merged));

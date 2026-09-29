@@ -178,6 +178,12 @@ export const UserManagementPage: React.FC = () => {
       return;
     }
 
+    // Kiểm tra định dạng số điện thoại nếu người dùng có nhập
+    if (createForm.phone && !/^(0|\+84)(3|5|7|8|9)\d{8}$/.test(createForm.phone.trim())) {
+      setCreateError('Số điện thoại không hợp lệ! Vui lòng nhập số điện thoại gồm 10 chữ số (đầu 03, 05, 07, 08, 09) hoặc để trống.');
+      return;
+    }
+
     // Quy tắc 1: Một người dùng có thể giữ nhiều vai trò, nhưng phải có ít nhất 1 vai trò
     if (!createForm.roles || createForm.roles.length === 0) {
       setCreateError('Phải chọn ít nhất một vai trò cho người dùng.');
@@ -239,6 +245,11 @@ export const UserManagementPage: React.FC = () => {
     setEditError(null);
     setEditLoading(true);
     try {
+      if (editInfoForm.phone && !/^(0|\+84)(3|5|7|8|9)\d{8}$/.test(editInfoForm.phone.trim())) {
+        setEditError('Số điện thoại không hợp lệ! Vui lòng nhập số điện thoại gồm 10 chữ số (đầu 03, 05, 07, 08, 09) hoặc để trống.');
+        setEditLoading(false);
+        return;
+      }
       const payload: UpdateAdminUserPayload = {
         fullName: editInfoForm.fullName.trim(),
         email: editInfoForm.email.trim(),
@@ -894,14 +905,16 @@ export const UserManagementPage: React.FC = () => {
                   </div>
 
                   <div className="user-mgmt-form-group">
-                    <label className="user-mgmt-form-label">Số điện thoại</label>
+                    <label className="user-mgmt-form-label">
+                      Số điện thoại <span style={{ color: '#6B7280', fontSize: '11px', fontWeight: 'normal' }}>(10 số: 03/05/07/08/09 hoặc để trống)</span>
+                    </label>
                     <input
                       type="tel"
                       value={createForm.phone || ''}
                       onChange={(e) =>
                         setCreateForm({ ...createForm, phone: e.target.value.trim() })
                       }
-                      placeholder="0912345678"
+                      placeholder="Ví dụ: 0912345678"
                       className="user-mgmt-form-input"
                     />
                   </div>

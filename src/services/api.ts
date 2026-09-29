@@ -359,10 +359,11 @@ export async function fetchUserNavigationContext(role: RoleName): Promise<UserCo
     if (response.ok) {
       const data = await response.json();
       const userRoles: RoleName[] = (data.user?.roles as RoleName[]) || [role];
+      const validRole = userRoles.includes(role) ? role : (userRoles[0] || role);
       return {
         user: {
           ...data.user,
-          role: role,
+          role: validRole,
           roles: userRoles
         },
         menus: getAuthorizedMenus(userRoles)
@@ -585,8 +586,20 @@ export async function fetchAdminFormOptions(): Promise<AdminFormOptions> {
   };
 }
 
+function extractApiError(data: any, fallback: string): string {
+  if (!data) return fallback;
+  let msg = data.message || fallback;
+  if (data.details && typeof data.details === 'object') {
+    const detailList = Object.values(data.details).filter(Boolean).join(', ');
+    if (detailList) {
+      msg = `${msg}: ${detailList}`;
+    }
+  }
+  return msg;
+}
+
 /**
- * Tạo tài khoản mới (S1-08) - Trả thông báo cụ thể nếu tài khoản, email, số điện thoại bị trùng
+ * Tạo tài khoản mới (S1-08) - Trả thông báo cụ thể nếu tài khoản, email, số điện thoại bị trùng hoặc không hợp lệ
  */
 export async function createAdminUser(
   payload: CreateAdminUserPayload
@@ -614,7 +627,7 @@ export async function createAdminUser(
     } else {
       return {
         success: false,
-        message: data?.message || 'Không thể tạo tài khoản. Vui lòng kiểm tra lại thông tin nhập!'
+        message: extractApiError(data, 'Không thể tạo tài khoản. Vui lòng kiểm tra lại thông tin nhập!')
       };
     }
   } catch {
@@ -653,7 +666,7 @@ export async function updateAdminUser(
     } else {
       return {
         success: false,
-        message: data?.message || 'Cập nhật thông tin thất bại.'
+        message: extractApiError(data, 'Cập nhật thông tin thất bại.')
       };
     }
   } catch {
@@ -692,7 +705,7 @@ export async function updateAdminAssignments(
     } else {
       return {
         success: false,
-        message: data?.message || 'Cập nhật phân quyền thất bại.'
+        message: extractApiError(data, 'Cập nhật phân quyền thất bại.')
       };
     }
   } catch {
