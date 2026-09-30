@@ -356,7 +356,7 @@ export const UserManagementPage: React.FC = () => {
   // Mở modal Khóa / Mở Khóa (S1-10)
   const handleOpenLockModal = (target: AdminUserItem) => {
     if (currentUser && currentUser.username === target.username) {
-      alert('Không thể khóa chính tài khoản của bạn đang đăng nhập!');
+      setActionAlert({ type: 'error', message: 'Bạn không thể tự khóa chính tài khoản đang đăng nhập của mình!' });
       return;
     }
     setLockTargetUser(target);
@@ -629,24 +629,7 @@ export const UserManagementPage: React.FC = () => {
                               )}
                             </span>
                             <span className="user-mgmt-username">@{item.username}</span>
-                            {isLocked && (item.handoverRequired || item.roles.includes('ROLE_SALES_REP') || item.roles.includes('ROLE_SALES_MANAGER')) && (
-                              <span style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                padding: '2px 8px',
-                                borderRadius: 4,
-                                fontSize: 11,
-                                fontWeight: 700,
-                                background: '#FEF3C7',
-                                color: '#92400E',
-                                border: '1px solid #FDE68A',
-                                marginTop: 4,
-                                width: 'fit-content'
-                              }}>
-                                ⚠️ Cần bàn giao đại lý
-                              </span>
-                            )}
+
                           </div>
                         </div>
                       </td>

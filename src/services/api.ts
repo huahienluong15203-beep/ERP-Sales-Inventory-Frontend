@@ -208,7 +208,42 @@ export async function loginUser(usernameInput: string, passwordInput: string): P
 }
 
 /**
- * Đăng xuất khỏi hệ thống
+ * Xử lý khi phiên làm việc bị thu hồi do tài khoản đăng nhập ở nơi khác (Single Active Session)
+ */
+export function handleSessionExpired(customMessage?: string) {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('erp_user_profile');
+  localStorage.removeItem('erp_active_role');
+  const message =
+    customMessage ||
+    'Phiên làm việc của bạn đã hết hạn do tài khoản đã được đăng nhập ở một thiết bị hoặc phiên làm việc khác. Vui lòng đăng nhập lại!';
+  window.dispatchEvent(new CustomEvent('erp-session-expired', { detail: { message } }));
+}
+
+/**
+ * Hàm gọi API xác thực có kèm Access Token và tự động phát hiện 401 (Phiên bị huỷ/hết hạn)
+ */
+export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = localStorage.getItem('accessToken');
+  const headers = new Headers(options.headers || {});
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  const response = await fetch(url, { ...options, headers });
+  if (response.status === 401) {
+    const data = await response.clone().json().catch(() => null);
+    handleSessionExpired(data?.message);
+    throw new Error(data?.message || 'SESSION_EXPIRED');
+  }
+  return response;
+}
+
+/**
+ * Đăng xuất khỏi hệ thống (Vô hiệu hoá phiên hiện tại trên backend)
  */
 export async function logoutUser(): Promise<void> {
   try {
@@ -223,6 +258,7 @@ export async function logoutUser(): Promise<void> {
     }
   } finally {
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('erp_user_profile');
     localStorage.removeItem('erp_active_role');
   }
 }
@@ -304,12 +340,8 @@ export async function changePasswordApi(
       return { success: false, message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!' };
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+    const response = await authFetch(`${API_BASE_URL}/api/auth/change-password`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
       body: JSON.stringify({ currentPassword, newPassword, confirmPassword })
     });
     const data = await response.json().catch(() => null);
@@ -324,10 +356,10 @@ export async function changePasswordApi(
         message: data?.message || 'Đổi mật khẩu không thành công. Vui lòng kiểm tra lại mật khẩu hiện tại.'
       };
     }
-  } catch {
+  } catch (err: any) {
     return {
       success: false,
-      message: 'Không thể kết nối tới máy chủ backend. Vui lòng thử lại sau!'
+      message: err?.message || 'Không thể kết nối tới máy chủ backend. Vui lòng thử lại sau!'
     };
   }
 }
@@ -336,21 +368,17 @@ export async function changePasswordApi(
  * Service kết nối API Backend phục vụ Story S1-06 (Navigation Context)
  */
 export async function fetchUserNavigationContext(role: RoleName): Promise<UserContextResponse> {
+  const token = localStorage.getItem('accessToken');
+  if (!token) {
+    throw new Error('NO_TOKEN');
+  }
+
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-    const token = localStorage.getItem('accessToken');
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}/api/v1/navigation/user-context?role=${role}`, {
+    const response = await authFetch(`${API_BASE_URL}/api/v1/navigation/user-context?role=${role}`, {
       method: 'GET',
-      headers,
       signal: controller.signal
     });
 
@@ -369,7 +397,10 @@ export async function fetchUserNavigationContext(role: RoleName): Promise<UserCo
         menus: getAuthorizedMenus(userRoles)
       };
     }
-  } catch {
+  } catch (err: any) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+      throw err;
+    }
     // Backend offline -> Fallback dữ liệu chuẩn
   }
 
@@ -518,19 +549,17 @@ export async function fetchAdminUsers(params: {
   query.set('size', String(params.size ?? 20));
 
   try {
-    const token = localStorage.getItem('accessToken');
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const res = await fetch(`${API_BASE_URL}/api/admin/users?${query.toString()}`, {
-      method: 'GET',
-      headers
+    const res = await authFetch(`${API_BASE_URL}/api/admin/users?${query.toString()}`, {
+      method: 'GET'
     });
 
     if (res.ok) {
       return await res.json();
     }
-  } catch {
+  } catch (err: any) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+      throw err;
+    }
     // Fallback if backend offline
   }
 
@@ -543,19 +572,17 @@ export async function fetchAdminUsers(params: {
  */
 export async function fetchAdminFormOptions(): Promise<AdminFormOptions> {
   try {
-    const token = localStorage.getItem('accessToken');
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const res = await fetch(`${API_BASE_URL}/api/admin/users/form-options`, {
-      method: 'GET',
-      headers
+    const res = await authFetch(`${API_BASE_URL}/api/admin/users/form-options`, {
+      method: 'GET'
     });
 
     if (res.ok) {
       return await res.json();
     }
-  } catch {
+  } catch (err: any) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+      throw err;
+    }
     // Fallback
   }
 
@@ -605,13 +632,8 @@ export async function createAdminUser(
   payload: CreateAdminUserPayload
 ): Promise<CreateAdminUserResult> {
   try {
-    const token = localStorage.getItem('accessToken');
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const res = await fetch(`${API_BASE_URL}/api/admin/users`, {
+    const res = await authFetch(`${API_BASE_URL}/api/admin/users`, {
       method: 'POST',
-      headers,
       body: JSON.stringify(payload)
     });
 
@@ -630,7 +652,10 @@ export async function createAdminUser(
         message: extractApiError(data, 'Không thể tạo tài khoản. Vui lòng kiểm tra lại thông tin nhập!')
       };
     }
-  } catch {
+  } catch (err: any) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+      throw err;
+    }
     return {
       success: false,
       message: 'Không thể kết nối máy chủ backend. Vui lòng thử lại sau!'
@@ -646,13 +671,8 @@ export async function updateAdminUser(
   payload: UpdateAdminUserPayload
 ): Promise<{ success: boolean; message: string; user?: AdminUserItem }> {
   try {
-    const token = localStorage.getItem('accessToken');
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}`, {
+    const res = await authFetch(`${API_BASE_URL}/api/admin/users/${id}`, {
       method: 'PUT',
-      headers,
       body: JSON.stringify(payload)
     });
 
@@ -669,7 +689,10 @@ export async function updateAdminUser(
         message: extractApiError(data, 'Cập nhật thông tin thất bại.')
       };
     }
-  } catch {
+  } catch (err: any) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+      throw err;
+    }
     return {
       success: false,
       message: 'Không thể kết nối máy chủ backend.'
@@ -685,13 +708,8 @@ export async function updateAdminAssignments(
   payload: UpdateAssignmentsPayload
 ): Promise<{ success: boolean; message: string; user?: AdminUserItem }> {
   try {
-    const token = localStorage.getItem('accessToken');
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}/assignments`, {
+    const res = await authFetch(`${API_BASE_URL}/api/admin/users/${id}/assignments`, {
       method: 'PUT',
-      headers,
       body: JSON.stringify(payload)
     });
 
@@ -708,7 +726,10 @@ export async function updateAdminAssignments(
         message: extractApiError(data, 'Cập nhật phân quyền thất bại.')
       };
     }
-  } catch {
+  } catch (err: any) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+      throw err;
+    }
     return {
       success: false,
       message: 'Không thể kết nối máy chủ backend.'
@@ -724,13 +745,8 @@ export async function lockAdminUser(
   reason?: string
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const token = localStorage.getItem('accessToken');
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}/lock`, {
+    const res = await authFetch(`${API_BASE_URL}/api/admin/users/${id}/lock`, {
       method: 'PATCH',
-      headers,
       body: JSON.stringify({ reason: reason || 'Quản trị viên khóa thủ công' })
     });
 
@@ -740,7 +756,10 @@ export async function lockAdminUser(
     } else {
       return { success: false, message: data?.message || 'Không thể khóa tài khoản.' };
     }
-  } catch {
+  } catch (err: any) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+      throw err;
+    }
     return { success: false, message: 'Lỗi kết nối máy chủ.' };
   }
 }
@@ -752,13 +771,8 @@ export async function unlockAdminUser(
   id: number
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const token = localStorage.getItem('accessToken');
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}/unlock`, {
-      method: 'PATCH',
-      headers
+    const res = await authFetch(`${API_BASE_URL}/api/admin/users/${id}/unlock`, {
+      method: 'PATCH'
     });
 
     const data = await res.json().catch(() => null);
@@ -767,7 +781,10 @@ export async function unlockAdminUser(
     } else {
       return { success: false, message: data?.message || 'Không thể mở khóa tài khoản.' };
     }
-  } catch {
+  } catch (err: any) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+      throw err;
+    }
     return { success: false, message: 'Lỗi kết nối máy chủ.' };
   }
 }

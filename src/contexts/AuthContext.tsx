@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type FC, t
 import type { RoleName, UserProfile, MenuItem } from '../types/user';
 import { fetchUserNavigationContext, loginUser, logoutUser } from '../services/api';
 import { checkPathPermission } from '../services/menuConfig';
+import { SessionExpiredModal } from '../components/common/SessionExpiredModal';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -66,8 +67,17 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return !!localStorage.getItem(STORAGE_TOKEN_KEY);
   });
+  const [sessionExpiredData, setSessionExpiredData] = useState<{ message: string } | null>(null);
 
   const loadUserContext = useCallback(async (role: RoleName) => {
+    const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+    if (!token) {
+      setIsAuthenticated(false);
+      setUser(null);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const data = await fetchUserNavigationContext(role);
@@ -89,8 +99,13 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         });
       }
       setMenus(data.menus);
-    } catch (err) {
-      console.error('Lỗi khi tải ngữ cảnh phân quyền người dùng:', err);
+    } catch (err: any) {
+      if (err?.message === 'SESSION_EXPIRED' || err?.message === 'NO_TOKEN' || err?.message?.includes('Phiên làm việc')) {
+        setIsAuthenticated(false);
+        setUser(null);
+      } else {
+        console.error('Lỗi khi tải ngữ cảnh phân quyền người dùng:', err);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -98,6 +113,55 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     loadUserContext(currentRole);
+  }, [currentRole, loadUserContext]);
+
+  // Lắng nghe sự kiện đa tab và sự kiện phiên bị thu hồi do đăng nhập ở thiết bị/cửa sổ khác (Single Active Session)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_TOKEN_KEY) {
+        if (!e.newValue) {
+          setIsAuthenticated(false);
+          setUser(null);
+        } else {
+          setIsAuthenticated(true);
+          const savedUser = localStorage.getItem(STORAGE_USER_KEY);
+          if (savedUser) {
+            try { setUser(JSON.parse(savedUser)); } catch {}
+          }
+          const savedRole = localStorage.getItem(STORAGE_ROLE_KEY) as RoleName;
+          if (savedRole && ROLE_PRIORITY.includes(savedRole)) {
+            setCurrentRole(savedRole);
+          }
+        }
+      }
+    };
+
+    const handleSessionExpired = (e: Event) => {
+      const customEvent = e as CustomEvent<{ message: string }>;
+      const msg =
+        customEvent.detail?.message ||
+        'Phiên làm việc của bạn đã hết hạn do tài khoản đã được đăng nhập ở một thiết bị hoặc phiên làm việc khác.';
+      setIsAuthenticated(false);
+      setUser(null);
+      setSessionExpiredData({ message: msg });
+    };
+
+    const handleFocus = () => {
+      const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+      if (token) {
+        loadUserContext(currentRole);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('erp-session-expired', handleSessionExpired);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('erp-session-expired', handleSessionExpired);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [currentRole, loadUserContext]);
 
   /**
@@ -188,6 +252,15 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       }}
     >
       {children}
+      {sessionExpiredData && (
+        <SessionExpiredModal
+          message={sessionExpiredData.message}
+          onConfirm={() => {
+            setSessionExpiredData(null);
+            window.location.href = '/login';
+          }}
+        />
+      )}
     </AuthContext.Provider>
   );
 };
