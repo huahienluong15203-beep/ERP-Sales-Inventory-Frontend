@@ -629,24 +629,7 @@ export const UserManagementPage: React.FC = () => {
                               )}
                             </span>
                             <span className="user-mgmt-username">@{item.username}</span>
-                            {isLocked && (item.handoverRequired || item.roles.includes('ROLE_SALES_REP') || item.roles.includes('ROLE_SALES_MANAGER')) && (
-                              <span style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                padding: '2px 8px',
-                                borderRadius: 4,
-                                fontSize: 11,
-                                fontWeight: 700,
-                                background: '#FEF3C7',
-                                color: '#92400E',
-                                border: '1px solid #FDE68A',
-                                marginTop: 4,
-                                width: 'fit-content'
-                              }}>
-                                ⚠️ Cần bàn giao đại lý
-                              </span>
-                            )}
+
                           </div>
                         </div>
                       </td>
