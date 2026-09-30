@@ -235,7 +235,7 @@ export const LoginPage: React.FC = () => {
               color: '#64748B'
             }}
           >
-            <Sparkles size={13} color="#F97316" />
+
             <span>Hệ Thống Bán Hàng & Quản Trị Kho</span>
           </div>
         </div>
@@ -585,7 +585,7 @@ export const LoginPage: React.FC = () => {
                       type="email"
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
-                      placeholder="Nhập email của bạn (vd: okluon123pk@gmail.com)..."
+                      placeholder="Nhập email của bạn (vd: example@gmail.com)..."
                       disabled={isSubmitting}
                       style={{
                         width: '100%',
