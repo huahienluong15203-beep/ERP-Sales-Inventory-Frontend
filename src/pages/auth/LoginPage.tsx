@@ -235,7 +235,7 @@ export const LoginPage: React.FC = () => {
               color: '#64748B'
             }}
           >
-            <Sparkles size={13} color="#F97316" />
+
             <span>Hệ Thống Bán Hàng & Quản Trị Kho</span>
           </div>
         </div>
