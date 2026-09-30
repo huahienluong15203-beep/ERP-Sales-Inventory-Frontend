@@ -134,7 +134,7 @@ export const LoginPage: React.FC = () => {
       const res = await sendForgotPasswordEmail(email);
       if (res.success) {
         setForgotSuccessMessage(res.message);
-        setForgotCooldown(60);
+        setForgotCooldown(res.cooldownSeconds ?? 60);
       } else {
         setErrorMessage(res.message);
         if (res.retryAfterSeconds) {
@@ -679,6 +679,7 @@ export const LoginPage: React.FC = () => {
                 <div style={{ textAlign: 'center' }}>
                   <button
                     type="button"
+                    disabled={isSubmitting}
                     onClick={() => {
                       setViewMode('login');
                       setErrorMessage(null);

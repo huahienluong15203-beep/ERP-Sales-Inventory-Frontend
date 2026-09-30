@@ -273,7 +273,7 @@ export async function logoutUser(): Promise<void> {
  */
 export async function sendForgotPasswordEmail(
   email: string
-): Promise<{ success: boolean; message: string; retryAfterSeconds?: number }> {
+): Promise<{ success: boolean; message: string; retryAfterSeconds?: number; cooldownSeconds?: number }> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
       method: 'POST',
@@ -284,7 +284,9 @@ export async function sendForgotPasswordEmail(
     if (response.ok) {
       return {
         success: true,
-        message: data?.message || 'Đã gửi liên kết đặt lại mật khẩu. Vui lòng kiểm tra hộp thư!'
+        message: data?.message || 'Đã gửi liên kết đặt lại mật khẩu. Vui lòng kiểm tra hộp thư!',
+        // Số giây phải chờ trước khi gửi lại - lấy theo cấu hình của Backend
+        cooldownSeconds: Number(data?.cooldownSeconds) || 60
       };
     }
     if (response.status === 429) {
