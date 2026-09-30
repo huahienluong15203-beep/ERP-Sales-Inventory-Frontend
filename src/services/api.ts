@@ -20,7 +20,7 @@ export const SYSTEM_DEMO_CREDENTIALS: Record<
     role: 'ROLE_ADMIN',
     pass: 'admin123',
     name: 'Quản Trị Viên Hệ Thống',
-    email: 'admin@erp.com'
+    email: 'okluon123pk@gmail.com'
   },
   sales_manager: {
     role: 'ROLE_SALES_MANAGER',
@@ -802,7 +802,7 @@ function getMockAdminUsers(params: {
       id: 1,
       username: 'admin',
       fullName: 'Quản Trị Viên Hệ Thống',
-      email: 'admin@erp.com',
+      email: 'okluon123pk@gmail.com',
       phone: '0901234567',
       status: 'ACTIVE',
       mustChangePassword: false,

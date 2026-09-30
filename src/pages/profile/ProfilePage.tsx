@@ -212,7 +212,7 @@ export const ProfilePage: FC = () => {
                   </div>
                   <div className="flex flex-col min-w-0 flex-1">
                     <span className="text-[10px] font-medium text-gray-400">Hòm thư điện tử</span>
-                    <span className="text-xs font-semibold text-gray-800 truncate">{user?.email || 'admin@erp.com'}</span>
+                    <span className="text-xs font-semibold text-gray-800 truncate">{user?.email || 'okluon123pk@gmail.com'}</span>
                   </div>
                 </div>
 
