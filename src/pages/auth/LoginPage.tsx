@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
-import { SYSTEM_DEMO_CREDENTIALS, sendForgotPasswordEmail, changePasswordApi } from '../../services/api';
+import { sendForgotPasswordEmail, changePasswordApi } from '../../services/api';
 import {
   User,
   Lock,
   Eye,
   EyeOff,
   AlertCircle,
-  HelpCircle,
   Mail,
   Key,
   CheckCircle2,
@@ -27,8 +26,8 @@ export const LoginPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<AuthViewMode>('login');
 
   // Form đăng nhập
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -45,7 +44,6 @@ export const LoginPage: React.FC = () => {
   // Trạng thái chung
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showDemoDrawer, setShowDemoDrawer] = useState(false);
 
   // Nếu đã đăng nhập và không phải đang đổi mật khẩu thì vào dashboard
   useEffect(() => {
@@ -159,12 +157,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleSelectDemoAccount = (uname: string, pass: string) => {
-    setUsername(uname);
-    setPassword(pass);
-    setShowDemoDrawer(false);
-    setErrorMessage(null);
-  };
 
   return (
     <div
@@ -683,90 +675,6 @@ export const LoginPage: React.FC = () => {
           </div>
         )}
 
-        {/* Nút Xem Danh Sách Tài Khoản Mẫu (Hỗ trợ chấm điểm / test nhanh) */}
-        {viewMode === 'login' && (
-          <div style={{ marginTop: '22px', textAlign: 'center' }}>
-            <button
-              type="button"
-              onClick={() => setShowDemoDrawer(!showDemoDrawer)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '12px',
-                color: '#64748B',
-                cursor: 'pointer',
-                padding: '4px 10px',
-                borderRadius: '8px',
-                background: 'transparent',
-                border: 'none',
-                transition: 'color 0.2s'
-              }}
-            >
-              <HelpCircle size={14} />
-              <span>{showDemoDrawer ? 'Ẩn danh sách tài khoản mẫu' : 'Xem danh sách tài khoản mẫu'}</span>
-            </button>
-
-            {showDemoDrawer && (
-              <div
-                style={{
-                  marginTop: '12px',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  background: '#F8FAFC',
-                  border: '1px solid #E2E8F0',
-                  textAlign: 'left',
-                  fontSize: '12px',
-                  animation: 'fadeIn 0.2s ease'
-                }}
-              >
-                <div style={{ fontWeight: 600, marginBottom: '8px', color: '#334155' }}>
-                  Bấm vào vai trò để tự động điền:
-                </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-                    gap: '6px'
-                  }}
-                >
-                  {Object.entries(SYSTEM_DEMO_CREDENTIALS).map(([key, acc]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => handleSelectDemoAccount(key, acc.pass)}
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: '6px',
-                        background: '#FFFFFF',
-                        border: '1px solid #E2E8F0',
-                        color: '#1E293B',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        transition: 'all 0.15s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#F97316';
-                        e.currentTarget.style.background = '#FFF7ED';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = '#E2E8F0';
-                        e.currentTarget.style.background = '#FFFFFF';
-                      }}
-                    >
-                      <span style={{ fontWeight: 600 }}>{acc.name}</span>
-                      <span style={{ fontSize: '11px', color: '#F97316' }}>
-                        {key} / {acc.pass}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* ======================= MODAL: BẮT BUỘC ĐỔI MẬT KHẨU LẦN ĐẦU (S1-04 & S1-08) ======================= */}
