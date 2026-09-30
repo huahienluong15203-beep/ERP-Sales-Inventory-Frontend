@@ -234,10 +234,15 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
   }
 
   const response = await fetch(url, { ...options, headers });
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403) {
     const data = await response.clone().json().catch(() => null);
-    handleSessionExpired(data?.message);
-    throw new Error(data?.message || 'SESSION_EXPIRED');
+    const message =
+      data?.message ||
+      (response.status === 403
+        ? 'Bạn không có quyền truy cập hoặc tài khoản đã bị khóa!'
+        : 'Phiên làm việc của bạn đã hết hạn. Vui lòng đăng nhập lại!');
+    handleSessionExpired(message);
+    throw new Error(message);
   }
   return response;
 }
@@ -398,10 +403,10 @@ export async function fetchUserNavigationContext(role: RoleName): Promise<UserCo
       };
     }
   } catch (err: any) {
-    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+    if (!token.startsWith('jwt-mock-') || err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc') || err?.message?.includes('khoá')) {
       throw err;
     }
-    // Backend offline -> Fallback dữ liệu chuẩn
+    // Chỉ fallback dữ liệu mẫu nếu là tài khoản demo mock hoàn toàn offline (jwt-mock-)
   }
 
   const metadata = ROLE_METADATA_MAP[role];
