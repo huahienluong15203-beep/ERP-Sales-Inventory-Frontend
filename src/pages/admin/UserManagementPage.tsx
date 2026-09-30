@@ -356,7 +356,7 @@ export const UserManagementPage: React.FC = () => {
   // Mở modal Khóa / Mở Khóa (S1-10)
   const handleOpenLockModal = (target: AdminUserItem) => {
     if (currentUser && currentUser.username === target.username) {
-      alert('Không thể khóa chính tài khoản của bạn đang đăng nhập!');
+      setActionAlert({ type: 'error', message: 'Bạn không thể tự khóa chính tài khoản đang đăng nhập của mình!' });
       return;
     }
     setLockTargetUser(target);

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type FC, t
 import type { RoleName, UserProfile, MenuItem } from '../types/user';
 import { fetchUserNavigationContext, loginUser, logoutUser } from '../services/api';
 import { checkPathPermission } from '../services/menuConfig';
+import { SessionExpiredModal } from '../components/common/SessionExpiredModal';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -66,6 +67,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return !!localStorage.getItem(STORAGE_TOKEN_KEY);
   });
+  const [sessionExpiredData, setSessionExpiredData] = useState<{ message: string } | null>(null);
 
   const loadUserContext = useCallback(async (role: RoleName) => {
     const token = localStorage.getItem(STORAGE_TOKEN_KEY);
@@ -138,11 +140,10 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       const customEvent = e as CustomEvent<{ message: string }>;
       const msg =
         customEvent.detail?.message ||
-        'Phiên làm việc của bạn đã hết hạn do tài khoản đã được đăng nhập ở một thiết bị hoặc phiên làm việc khác. Vui lòng đăng nhập lại!';
+        'Phiên làm việc của bạn đã hết hạn do tài khoản đã được đăng nhập ở một thiết bị hoặc phiên làm việc khác.';
       setIsAuthenticated(false);
       setUser(null);
-      alert(msg);
-      window.location.href = '/login';
+      setSessionExpiredData({ message: msg });
     };
 
     const handleFocus = () => {
@@ -251,6 +252,15 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       }}
     >
       {children}
+      {sessionExpiredData && (
+        <SessionExpiredModal
+          message={sessionExpiredData.message}
+          onConfirm={() => {
+            setSessionExpiredData(null);
+            window.location.href = '/login';
+          }}
+        />
+      )}
     </AuthContext.Provider>
   );
 };
