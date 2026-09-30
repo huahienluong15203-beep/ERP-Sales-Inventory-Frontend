@@ -585,7 +585,7 @@ export const LoginPage: React.FC = () => {
                       type="email"
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
-                      placeholder="Nhập email của bạn (vd: okluon123pk@gmail.com)..."
+                      placeholder="Nhập email của bạn (vd: example@gmail.com)..."
                       disabled={isSubmitting}
                       style={{
                         width: '100%',
