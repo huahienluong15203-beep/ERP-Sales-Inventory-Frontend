@@ -100,9 +100,12 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       }
       setMenus(data.menus);
     } catch (err: any) {
-      if (err?.message === 'SESSION_EXPIRED' || err?.message === 'NO_TOKEN' || err?.message?.includes('Phiên làm việc')) {
+      if (err?.message === 'SESSION_EXPIRED' || err?.message === 'NO_TOKEN' || err?.message?.includes('Phiên làm việc') || err?.message?.includes('khoá') || err?.message?.includes('401') || err?.message?.includes('403')) {
         setIsAuthenticated(false);
         setUser(null);
+        localStorage.removeItem(STORAGE_TOKEN_KEY);
+        localStorage.removeItem(STORAGE_USER_KEY);
+        localStorage.removeItem(STORAGE_ROLE_KEY);
       } else {
         console.error('Lỗi khi tải ngữ cảnh phân quyền người dùng:', err);
       }
