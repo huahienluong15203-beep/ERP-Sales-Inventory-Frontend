@@ -6,6 +6,7 @@ import { ROLE_METADATA_MAP } from '../types/user';
 import type { RoleName } from '../types/user';
 import { Icons, DynamicIcon } from '../components/common/Icons';
 import { changePasswordApi } from '../services/api';
+import { LogoutConfirmModal } from '../components/common/LogoutConfirmModal';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -18,6 +19,21 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
   // Trạng thái mở/đóng Sidebar trên Mobile (tối ưu hóa màn hình 360px)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+
+  // Hộp xác nhận đăng xuất
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
+  const [loggingOut, setLoggingOut] = useState<boolean>(false);
+
+  const handleConfirmLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setLoggingOut(false);
+      setShowLogoutConfirm(false);
+      navigate('/login');
+    }
+  };
 
   // Đóng Mobile Drawer khi đổi route
   useEffect(() => {
@@ -263,10 +279,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
           <button
             type="button"
             className="erp-sidebar-logout-btn"
-            onClick={async () => {
-              await logout();
-              navigate('/login');
-            }}
+            onClick={() => setShowLogoutConfirm(true)}
             title="Đăng xuất khỏi hệ thống"
           >
             <Icons.LogOut size={16} />
@@ -464,7 +477,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
                 </button>
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={() => setShowLogoutConfirm(true)}
                   className="w-full py-2 text-center text-xs text-slate-400 hover:text-slate-600 transition-colors font-medium cursor-pointer"
                 >
                   Đăng xuất tài khoản
@@ -474,6 +487,14 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
           </div>
         </div>
       )}
+
+      {/* 4. HỘP XÁC NHẬN ĐĂNG XUẤT */}
+      <LogoutConfirmModal
+        open={showLogoutConfirm}
+        loading={loggingOut}
+        onConfirm={handleConfirmLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </div>
   );
 };
