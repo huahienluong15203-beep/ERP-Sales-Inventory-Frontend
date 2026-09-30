@@ -14,8 +14,7 @@ import {
   Key,
   CheckCircle2,
   ArrowLeft,
-  ShieldCheck,
-  Sparkles
+  ShieldCheck
 } from '../../components/common/Icons';
 
 type AuthViewMode = 'login' | 'forgot_password';
