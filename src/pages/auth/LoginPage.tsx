@@ -18,6 +18,14 @@ import {
 
 type AuthViewMode = 'login' | 'forgot_password';
 
+/** Hiển thị thời gian chờ: "45 giây" hoặc "4:59" (phút:giây) khi từ 1 phút trở lên. */
+function formatCooldown(seconds: number): string {
+  if (seconds < 60) return `${seconds} GIÂY`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 export const LoginPage: React.FC = () => {
   const { login, isAuthenticated, user, clearMustChangePassword } = useAuth();
   const navigate = useNavigate();
@@ -34,6 +42,8 @@ export const LoginPage: React.FC = () => {
   // Form quên mật khẩu
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSuccessMessage, setForgotSuccessMessage] = useState<string | null>(null);
+  // Số giây còn phải đợi trước khi được gửi lại email (chống spam)
+  const [forgotCooldown, setForgotCooldown] = useState(0);
 
   // Modal bắt buộc đổi mật khẩu lần đầu (S1-04 + S1-08)
   const [showForceChangeModal, setShowForceChangeModal] = useState(false);
@@ -44,6 +54,13 @@ export const LoginPage: React.FC = () => {
   // Trạng thái chung
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Đếm ngược thời gian chờ gửi lại email quên mật khẩu
+  useEffect(() => {
+    if (forgotCooldown <= 0) return;
+    const timer = setTimeout(() => setForgotCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [forgotCooldown]);
 
   // Nếu đã đăng nhập và không phải đang đổi mật khẩu thì vào dashboard
   useEffect(() => {
@@ -100,8 +117,15 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
-    if (!email.includes('@') || !email.includes('.')) {
-      setErrorMessage('Địa chỉ email không đúng định dạng!');
+    // Kiểm tra định dạng: ten@tenmien.duoi (vd: nguyenvana@gmail.com)
+    const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/;
+    if (!EMAIL_REGEX.test(email)) {
+      setErrorMessage('Email không đúng định dạng (ví dụ đúng: nguyenvana@gmail.com). Vui lòng kiểm tra lại!');
+      return;
+    }
+
+    if (forgotCooldown > 0) {
+      setErrorMessage(`Vui lòng đợi ${formatCooldown(forgotCooldown).toLowerCase()} trước khi gửi lại.`);
       return;
     }
 
@@ -110,8 +134,12 @@ export const LoginPage: React.FC = () => {
       const res = await sendForgotPasswordEmail(email);
       if (res.success) {
         setForgotSuccessMessage(res.message);
+        setForgotCooldown(60);
       } else {
         setErrorMessage(res.message);
+        if (res.retryAfterSeconds) {
+          setForgotCooldown(res.retryAfterSeconds);
+        }
       }
     } catch {
       setErrorMessage('Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra lại dịch vụ!');
@@ -608,7 +636,7 @@ export const LoginPage: React.FC = () => {
 
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || forgotCooldown > 0}
                   style={{
                     width: '100%',
                     height: '46px',
@@ -623,9 +651,9 @@ export const LoginPage: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '10px',
-                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    cursor: isSubmitting || forgotCooldown > 0 ? 'not-allowed' : 'pointer',
                     border: 'none',
-                    opacity: isSubmitting ? 0.8 : 1,
+                    opacity: isSubmitting || forgotCooldown > 0 ? 0.6 : 1,
                     transition: 'all 0.2s ease',
                     marginBottom: '16px'
                   }}
@@ -642,7 +670,9 @@ export const LoginPage: React.FC = () => {
                       }}
                     />
                   ) : (
-                    <span>GỬI LIÊN KẾT ĐẶT LẠI</span>
+                    <span>
+                      {forgotCooldown > 0 ? `GỬI LẠI SAU ${formatCooldown(forgotCooldown)}` : 'GỬI LIÊN KẾT ĐẶT LẠI'}
+                    </span>
                   )}
                 </button>
 

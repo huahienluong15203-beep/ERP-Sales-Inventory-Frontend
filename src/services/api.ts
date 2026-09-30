@@ -271,7 +271,9 @@ export async function logoutUser(): Promise<void> {
 /**
  * S1-03: Gửi email yêu cầu đặt lại mật khẩu (hiệu lực 30 phút)
  */
-export async function sendForgotPasswordEmail(email: string): Promise<{ success: boolean; message: string }> {
+export async function sendForgotPasswordEmail(
+  email: string
+): Promise<{ success: boolean; message: string; retryAfterSeconds?: number }> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
       method: 'POST',
@@ -282,14 +284,23 @@ export async function sendForgotPasswordEmail(email: string): Promise<{ success:
     if (response.ok) {
       return {
         success: true,
-        message: data?.message || 'Nếu email của bạn tồn tại trong hệ thống, chúng tôi đã gửi liên kết đặt lại mật khẩu. Vui lòng kiểm tra hộp thư!'
-      };
-    } else {
-      return {
-        success: false,
-        message: data?.message || 'Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau.'
+        message: data?.message || 'Đã gửi liên kết đặt lại mật khẩu. Vui lòng kiểm tra hộp thư!'
       };
     }
+    if (response.status === 429) {
+      // Gửi quá nhanh -> Backend báo số giây phải đợi để hiển thị đếm ngược
+      const headerWait = Number(response.headers.get('Retry-After'));
+      const retryAfterSeconds = Number(data?.retryAfterSeconds) || headerWait || 60;
+      return {
+        success: false,
+        message: data?.message || 'Bạn thao tác quá nhanh. Vui lòng đợi rồi thử lại!',
+        retryAfterSeconds
+      };
+    }
+    return {
+      success: false,
+      message: data?.message || 'Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau.'
+    };
   } catch {
     return {
       success: false,
