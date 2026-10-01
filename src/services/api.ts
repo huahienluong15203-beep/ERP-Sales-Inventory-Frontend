@@ -944,3 +944,211 @@ function getMockAdminUsers(params: {
     totalPages
   };
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   S2-02: API HỒ SƠ CÁ NHÂN (XEM & CẬP NHẬT HỌ TÊN, SỐ ĐIỆN THOẠI)
+   ────────────────────────────────────────────────────────────────────────── */
+
+export interface PersonalProfileData {
+  id: number;
+  username: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  status: string;
+  roles: RoleName[];
+  warehouses: Array<{ id: number; code: string; name: string }>;
+  regions: Array<{ id: number; code: string; name: string }>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export async function fetchPersonalProfileApi(): Promise<PersonalProfileData | null> {
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/v1/profile`, {
+      method: 'GET'
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err: any) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+      throw err;
+    }
+  }
+  return null;
+}
+
+export async function updatePersonalProfileApi(payload: {
+  fullName: string;
+  phone?: string;
+}): Promise<{ success: boolean; message: string; data?: PersonalProfileData }> {
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/v1/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        success: true,
+        message: 'Cập nhật hồ sơ cá nhân thành công!',
+        data
+      };
+    } else {
+      const err = await res.json().catch(() => null);
+      return {
+        success: false,
+        message: err?.message || 'Không thể cập nhật hồ sơ. Vui lòng kiểm tra lại thông tin!'
+      };
+    }
+  } catch (err: any) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+      throw err;
+    }
+    return {
+      success: false,
+      message: 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau!'
+    };
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   SCRUM-18 (S2-01): API NHẬP DANH SÁCH NGƯỜI DÙNG HÀNG LOẠT TỪ EXCEL
+   ────────────────────────────────────────────────────────────────────────── */
+
+export interface UserImportRowDto {
+  rowNumber: number;
+  username: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  roles: string[];
+  warehouseCodes: string[];
+  regionCodes: string[];
+  valid: boolean;
+  errors: string[];
+}
+
+export interface UserImportPreviewResponse {
+  fileName: string;
+  totalRows: number;
+  validRowsCount: number;
+  invalidRowsCount: number;
+  rows: UserImportRowDto[];
+}
+
+export interface UserImportSummaryResponse {
+  totalProcessed: number;
+  successCount: number;
+  failedCount: number;
+  createdUsers: Array<{
+    id: number;
+    username: string;
+    fullName: string;
+    email: string;
+    phone?: string;
+    roles: string[];
+  }>;
+  failedRows: Array<{
+    rowNumber: number;
+    username: string;
+    email: string;
+    reasons: string[];
+  }>;
+}
+
+/** Tải tệp mẫu Excel nhập người dùng */
+export async function downloadUserImportTemplateApi(): Promise<{ success: boolean; message?: string }> {
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/admin/users/import/template`, {
+      method: 'GET'
+    });
+
+    if (res.ok) {
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Mau_Nhap_Nguoi_Dung_ERP.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      return { success: true };
+    } else {
+      return { success: false, message: 'Lỗi tải tệp mẫu từ máy chủ.' };
+    }
+  } catch (err: any) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+      throw err;
+    }
+    return { success: false, message: 'Không thể kết nối máy chủ.' };
+  }
+}
+
+/** Xem trước và kiểm tra hợp lệ từng dòng từ tệp Excel */
+export async function previewUserImportApi(
+  file: File
+): Promise<{ success: boolean; message?: string; data?: UserImportPreviewResponse }> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/admin/users/import/preview`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, data };
+    } else {
+      const err = await res.json().catch(() => null);
+      return {
+        success: false,
+        message: err?.message || 'Không thể kiểm tra tệp Excel. Vui lòng kiểm tra lại định dạng tệp!'
+      };
+    }
+  } catch (err: any) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+      throw err;
+    }
+    return { success: false, message: 'Lỗi kết nối máy chủ.' };
+  }
+}
+
+/** Thực thi nhập danh sách người dùng (dòng lỗi bỏ qua, dòng hợp lệ vẫn nhập) */
+export async function executeUserImportApi(
+  file: File
+): Promise<{ success: boolean; message?: string; data?: UserImportSummaryResponse }> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/admin/users/import/execute`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, data };
+    } else {
+      const err = await res.json().catch(() => null);
+      return {
+        success: false,
+        message: err?.message || 'Không thể thực thi nhập dữ liệu. Vui lòng thử lại sau!'
+      };
+    }
+  } catch (err: any) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+      throw err;
+    }
+    return { success: false, message: 'Lỗi kết nối máy chủ.' };
+  }
+}

@@ -34,8 +34,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  Info
+  Info,
+  FileSpreadsheet
 } from '../../components/common/Icons';
+import { UserImportModal } from './UserImportModal';
 
 /**
  * Kiểm tra số điện thoại Việt Nam: để trống HOẶC đủ 10 số, bắt đầu bằng 03/05/07/08/09.
@@ -86,6 +88,8 @@ export const UserManagementPage: React.FC = () => {
 
   // Modal Thêm Tài Khoản (S1-08)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  // Modal Nhập Tài Khoản Hàng Loạt Từ Excel (S2-01 / SCRUM-18)
+  const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
   const [createLoading, setCreateLoading] = useState<boolean>(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createForm, setCreateForm] = useState<CreateAdminUserPayload>({
@@ -488,6 +492,20 @@ export const UserManagementPage: React.FC = () => {
             className="user-mgmt-btn-refresh"
           >
             <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
+          </button>
+
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="user-mgmt-btn-create"
+            style={{
+              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+              color: '#ffffff',
+              boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)'
+            }}
+            title="Nhập danh sách người dùng hàng loạt từ tệp Excel (SCRUM-18 / S2-01)"
+          >
+            <FileSpreadsheet size={18} />
+            <span>Nhập Từ Excel</span>
           </button>
 
           <button onClick={handleOpenCreateModal} className="user-mgmt-btn-create">
@@ -1689,6 +1707,19 @@ export const UserManagementPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal Nhập Người Dùng Hàng Loạt Từ Excel (SCRUM-18 / S2-01) */}
+      <UserImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => {
+          loadUsers();
+          setActionAlert({
+            type: 'success',
+            message: 'Đã hoàn tất nhập danh sách người dùng từ tệp Excel!'
+          });
+        }}
+      />
     </div>
   );
 };
