@@ -24,6 +24,8 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
   const [loggingOut, setLoggingOut] = useState<boolean>(false);
 
+
+
   const handleConfirmLogout = async () => {
     setLoggingOut(true);
     try {
@@ -495,6 +497,8 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
         onConfirm={handleConfirmLogout}
         onCancel={() => setShowLogoutConfirm(false)}
       />
+
+
     </div>
   );
 };

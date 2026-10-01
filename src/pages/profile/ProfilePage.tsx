@@ -1,7 +1,7 @@
-import { useState, type FC } from 'react';
+import { useState, type FC, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ROLE_METADATA_MAP } from '../../types/user';
-import { changePasswordApi } from '../../services/api';
+import { changePasswordApi, updatePersonalProfileApi } from '../../services/api';
 import {
   Mail,
   Phone,
@@ -14,7 +14,9 @@ import {
   ShieldCheck,
   Eye,
   EyeOff,
-  RefreshCw
+  RefreshCw,
+  Edit,
+  X
 } from '../../components/common/Icons';
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -87,10 +89,77 @@ const STRENGTH_CONFIG: Record<StrengthLevel, { label: string; color: string; bar
    - Dữ liệu kho/địa bàn mặc định là "Chưa có"
    ──────────────────────────────────────────────────────────────────────── */
 export const ProfilePage: FC = () => {
-  const { user, currentRole, logout } = useAuth();
+  const { user, currentRole, logout, refreshContext, showToast } = useAuth();
   const roleMeta = ROLE_METADATA_MAP[currentRole] ?? ROLE_METADATA_MAP['ROLE_ADMIN'];
 
-  /* ── Form state ── */
+  /* ── S2-02: State Chỉnh sửa hồ sơ cá nhân ── */
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editFullName, setEditFullName] = useState(user?.fullName || '');
+  const [editPhone, setEditPhone] = useState(user?.phone || '');
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileResult, setProfileResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      setEditFullName(user.fullName || '');
+      setEditPhone(user.phone || '');
+    }
+  }, [user]);
+
+  function getPhoneError(val: string): string | null {
+    const p = val.trim();
+    if (!p) return null;
+    if (!/^\d+$/.test(p)) return 'Số điện thoại chỉ được chứa chữ số.';
+    if (p.length !== 10) return `Số điện thoại phải đủ 10 số (hiện có ${p.length} số).`;
+    if (!/^0(3|5|7|8|9)\d{8}$/.test(p)) return 'Đầu số không hợp lệ (phải bắt đầu bằng 03, 05, 07, 08 hoặc 09).';
+    return null;
+  }
+
+  async function handleSaveProfile(e: React.FormEvent) {
+    e.preventDefault();
+    setProfileResult(null);
+
+    const trimmedName = editFullName.trim();
+    if (!trimmedName) {
+      setProfileResult({ type: 'error', message: 'Họ và tên không được để trống.' });
+      return;
+    }
+    if (trimmedName.length < 2 || trimmedName.length > 100) {
+      setProfileResult({ type: 'error', message: 'Họ và tên phải từ 2 đến 100 ký tự.' });
+      return;
+    }
+
+    const phoneErr = getPhoneError(editPhone);
+    if (phoneErr) {
+      setProfileResult({ type: 'error', message: phoneErr });
+      return;
+    }
+
+    setProfileLoading(true);
+    try {
+      const res = await updatePersonalProfileApi({
+        fullName: trimmedName,
+        phone: editPhone.trim() || undefined
+      });
+
+      if (res.success) {
+        setIsEditingProfile(false);
+        setProfileResult(null);
+        await refreshContext();
+        showToast(
+          'Cập nhật hồ sơ thành công!'
+        );
+      } else {
+        setProfileResult({ type: 'error', message: res.message });
+      }
+    } catch {
+      setProfileResult({ type: 'error', message: 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau!' });
+    } finally {
+      setProfileLoading(false);
+    }
+  }
+
+  /* ── Form state đổi mật khẩu ── */
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -126,11 +195,14 @@ export const ProfilePage: FC = () => {
     try {
       const res = await changePasswordApi(currentPassword, newPassword, confirmPassword);
       if (res.success) {
-        setResult({ type: 'success', message: res.message });
+        setResult(null);
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
-        // Thu hồi phiên đăng nhập sau 2.5s và chuyển về login
+        showToast(
+          'Đổi mật khẩu thành công!',
+          'Mật khẩu của bạn đã được thay đổi. Đang đăng xuất sau 2.5s...'
+        );
         setTimeout(() => logout(), 2500);
       } else {
         setResult({ type: 'error', message: res.message });
@@ -199,57 +271,199 @@ export const ProfilePage: FC = () => {
               </div>
             </div>
 
-            {/* 2. Chi tiết liên hệ & công tác */}
+            {/* 2. Chi tiết liên hệ & công tác (S2-02: Xem & Sửa hồ sơ cá nhân) */}
             <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                Thông tin công tác & liên hệ
-              </span>
-
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-2.5 p-2 rounded-xl bg-gray-50/80 border border-gray-100">
-                  <div className="w-7 h-7 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-                    <Mail size={14} />
-                  </div>
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="text-[10px] font-medium text-gray-400">Hòm thư điện tử</span>
-                    <span className="text-xs font-semibold text-gray-800 truncate">{user?.email || 'okluon123pk@gmail.com'}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5 p-2 rounded-xl bg-gray-50/80 border border-gray-100">
-                  <div className="w-7 h-7 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-                    <Phone size={14} />
-                  </div>
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="text-[10px] font-medium text-gray-400">Số điện thoại</span>
-                    <span className="text-xs font-semibold text-gray-800">{user?.phone || '0988776655'}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5 p-2 rounded-xl bg-gray-50/80 border border-gray-100">
-                  <div className="w-7 h-7 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-                    <Building2 size={14} />
-                  </div>
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="text-[10px] font-medium text-gray-400">Kho hàng trực thuộc</span>
-                    <span className="text-xs font-semibold text-gray-800 truncate" title={warehouseDisplay}>
-                      {warehouseDisplay}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5 p-2 rounded-xl bg-gray-50/80 border border-gray-100">
-                  <div className="w-7 h-7 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-                    <MapPin size={14} />
-                  </div>
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="text-[10px] font-medium text-gray-400">Địa bàn làm việc</span>
-                    <span className="text-xs font-semibold text-gray-800 truncate" title={locationDisplay}>
-                      {locationDisplay}
-                    </span>
-                  </div>
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Thông tin công tác & liên hệ
+                </span>
+                {!isEditingProfile && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileResult(null);
+                      setIsEditingProfile(true);
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 transition cursor-pointer"
+                  >
+                    <Edit size={12} />
+                    <span>Chỉnh sửa</span>
+                  </button>
+                )}
               </div>
+
+              {/* Thông báo lỗi cập nhật hồ sơ nếu có */}
+              {profileResult && profileResult.type === 'error' && (
+                <div className="flex items-start gap-1.5 p-2 rounded-xl text-[11px] font-medium border bg-red-50 text-red-700 border-red-200">
+                  <AlertCircle size={13} className="text-red-600 shrink-0 mt-0.5" />
+                  <span className="flex-1">{profileResult.message}</span>
+                  <button
+                    type="button"
+                    onClick={() => setProfileResult(null)}
+                    className="text-gray-400 hover:text-gray-600 p-0.5"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+
+              {/* Chế độ CHỈNH SỬA (S2-02) */}
+              {isEditingProfile ? (
+                <form onSubmit={handleSaveProfile} className="flex flex-col gap-2 p-2.5 rounded-xl bg-orange-50/40 border border-orange-100">
+                  {/* Họ tên */}
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-[10.5px] font-bold text-gray-700">
+                      Họ và tên <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editFullName}
+                      onChange={(e) => setEditFullName(e.target.value)}
+                      placeholder="Nhập họ và tên"
+                      className="w-full px-2.5 py-1.5 bg-white border border-gray-300 rounded-lg text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition"
+                      disabled={profileLoading}
+                    />
+                  </div>
+
+                  {/* Số điện thoại */}
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-[10.5px] font-bold text-gray-700">
+                      Số điện thoại liên hệ (Việt Nam)
+                    </label>
+                    <input
+                      type="text"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      placeholder="Ví dụ: 0987654321"
+                      className={`w-full px-2.5 py-1.5 bg-white border rounded-lg text-xs text-gray-900 focus:outline-none focus:ring-2 transition ${getPhoneError(editPhone)
+                          ? 'border-red-400 focus:ring-red-400/20 focus:border-red-500'
+                          : 'border-gray-300 focus:ring-orange-500/20 focus:border-orange-500'
+                        }`}
+                      disabled={profileLoading}
+                    />
+                    {getPhoneError(editPhone) && (
+                      <span className="text-[10px] text-red-600 font-medium">
+                        {getPhoneError(editPhone)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Các trường cấm sửa (Read-only có icon Lock) */}
+                  <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-orange-200/50">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9.5px] font-medium text-gray-400 flex items-center gap-1">
+                        <Lock size={10} className="text-gray-400" /> Tài khoản (Cố định)
+                      </span>
+                      <span className="text-[11px] font-mono font-medium text-gray-500 bg-gray-100/80 px-2 py-1 rounded border border-gray-200 truncate">
+                        {user?.username}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9.5px] font-medium text-gray-400 flex items-center gap-1">
+                        <Lock size={10} className="text-gray-400" /> Email (Cố định)
+                      </span>
+                      <span className="text-[11px] font-medium text-gray-500 bg-gray-100/80 px-2 py-1 rounded border border-gray-200 truncate" title={user?.email}>
+                        {user?.email}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9.5px] font-medium text-gray-400 flex items-center gap-1">
+                        <Lock size={10} className="text-gray-400" /> Kho trực thuộc
+                      </span>
+                      <span className="text-[11px] font-medium text-gray-500 bg-gray-100/80 px-2 py-1 rounded border border-gray-200 truncate" title={warehouseDisplay}>
+                        {warehouseDisplay}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9.5px] font-medium text-gray-400 flex items-center gap-1">
+                        <Lock size={10} className="text-gray-400" /> Địa bàn
+                      </span>
+                      <span className="text-[11px] font-medium text-gray-500 bg-gray-100/80 px-2 py-1 rounded border border-gray-200 truncate" title={locationDisplay}>
+                        {locationDisplay}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] text-amber-700 bg-amber-50/80 p-1.5 rounded-lg border border-amber-200/60 leading-tight">
+                    Tên đăng nhập, email, vai trò và kho do Quản trị viên chỉ định theo phân quyền an toàn, không thể tự sửa.
+                  </div>
+
+                  {/* Nút hành động */}
+                  <div className="flex items-center justify-end gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      disabled={profileLoading}
+                      onClick={() => {
+                        setIsEditingProfile(false);
+                        setEditFullName(user?.fullName || '');
+                        setEditPhone(user?.phone || '');
+                        setProfileResult(null);
+                      }}
+                      className="px-2.5 py-1 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition cursor-pointer"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={profileLoading || !!getPhoneError(editPhone)}
+                      className="px-3 py-1 text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 rounded-lg shadow-sm transition disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                    >
+                      {profileLoading && <RefreshCw size={11} className="animate-spin text-white" />}
+                      <span>{profileLoading ? 'Đang lưu…' : 'Lưu Thay Đổi'}</span>
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* Chế độ XEM THÔNG THƯỜNG */
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2.5 p-2 rounded-xl bg-gray-50/80 border border-gray-100">
+                    <div className="w-7 h-7 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                      <Mail size={14} />
+                    </div>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-[10px] font-medium text-gray-400">Hòm thư điện tử (Cố định)</span>
+                      <span className="text-xs font-semibold text-gray-800 truncate">{user?.email || 'okluon123pk@gmail.com'}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 p-2 rounded-xl bg-gray-50/80 border border-gray-100">
+                    <div className="w-7 h-7 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                      <Phone size={14} />
+                    </div>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-[10px] font-medium text-gray-400">Số điện thoại liên hệ</span>
+                      <span className="text-xs font-semibold text-gray-800">{user?.phone || 'Chưa cập nhật'}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 p-2 rounded-xl bg-gray-50/80 border border-gray-100">
+                    <div className="w-7 h-7 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                      <Building2 size={14} />
+                    </div>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-[10px] font-medium text-gray-400">Kho hàng trực thuộc (Cố định)</span>
+                      <span className="text-xs font-semibold text-gray-800 truncate" title={warehouseDisplay}>
+                        {warehouseDisplay}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 p-2 rounded-xl bg-gray-50/80 border border-gray-100">
+                    <div className="w-7 h-7 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                      <MapPin size={14} />
+                    </div>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-[10px] font-medium text-gray-400">Địa bàn làm việc (Cố định)</span>
+                      <span className="text-xs font-semibold text-gray-800 truncate" title={locationDisplay}>
+                        {locationDisplay}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 3. Vai trò */}
@@ -300,28 +514,11 @@ export const ProfilePage: FC = () => {
               </div>
             </div>
 
-            {/* Thông báo kết quả nếu có */}
-            {result && (
-              <div
-                className={`flex items-start gap-2 rounded-lg p-2 text-xs font-medium border ${result.type === 'success'
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                  : 'bg-red-50 text-red-700 border-red-200'
-                  }`}
-              >
-                {result.type === 'success' ? (
-                  <CheckCircle2 size={14} className="text-emerald-600 shrink-0 mt-0.5" />
-                ) : (
-                  <AlertCircle size={14} className="text-red-600 shrink-0 mt-0.5" />
-                )}
+            {/* Thông báo lỗi nếu có */}
+            {result && result.type === 'error' && (
+              <div className="flex items-start gap-2 rounded-lg p-2 text-xs font-medium border bg-red-50 text-red-700 border-red-200">
+                <AlertCircle size={14} className="text-red-600 shrink-0 mt-0.5" />
                 <span>{result.message}</span>
-              </div>
-            )}
-
-            {/* Thông báo chuyển trang */}
-            {result?.type === 'success' && (
-              <div className="flex items-center gap-1.5 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg p-2">
-                <RefreshCw size={12} className="animate-spin text-blue-600 shrink-0" />
-                <span>Đang chuyển về trang đăng nhập để áp dụng phiên bảo mật mới…</span>
               </div>
             )}
 

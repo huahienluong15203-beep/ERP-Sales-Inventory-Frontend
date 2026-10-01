@@ -53,6 +53,7 @@ export const LoginPage: React.FC = () => {
 
   // Trạng thái chung
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loginSuccessMessage, setLoginSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Đếm ngược thời gian chờ gửi lại email quên mật khẩu
@@ -64,15 +65,16 @@ export const LoginPage: React.FC = () => {
 
   // Nếu đã đăng nhập và không phải đang đổi mật khẩu thì vào dashboard
   useEffect(() => {
-    if (isAuthenticated && !user?.mustChangePassword && !showForceChangeModal) {
+    if (isAuthenticated && !user?.mustChangePassword && !showForceChangeModal && !loginSuccessMessage) {
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, user?.mustChangePassword, showForceChangeModal, navigate]);
+  }, [isAuthenticated, user?.mustChangePassword, showForceChangeModal, loginSuccessMessage, navigate]);
 
   // Xử lý Đăng Nhập (S1-01)
   const handleLoginSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setLoginSuccessMessage(null);
 
     const cleanUsername = username.trim();
     if (!cleanUsername) {
@@ -93,7 +95,10 @@ export const LoginPage: React.FC = () => {
         if (result.user?.mustChangePassword) {
           setShowForceChangeModal(true);
         } else {
-          navigate('/dashboard', { replace: true });
+          setLoginSuccessMessage('Đăng nhập thành công! Đang chuyển hướng vào hệ thống...');
+          setTimeout(() => {
+            navigate('/dashboard', { replace: true });
+          }, 350);
         }
       } else {
         setErrorMessage(result.message || 'Tài khoản hoặc mật khẩu không chính xác!');
@@ -279,6 +284,30 @@ export const LoginPage: React.FC = () => {
           >
             <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
             <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {/* Thông báo đăng nhập thành công */}
+        {loginSuccessMessage && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '12px 14px',
+              borderRadius: '12px',
+              background: '#ECFDF5',
+              border: '1px solid #A7F3D0',
+              color: '#059669',
+              fontSize: '13px',
+              fontWeight: 600,
+              marginBottom: '20px',
+              lineHeight: 1.45,
+              animation: 'erpFadeIn 0.25s ease'
+            }}
+          >
+            <CheckCircle2 size={18} style={{ flexShrink: 0, color: '#10B981' }} />
+            <span>{loginSuccessMessage}</span>
           </div>
         )}
 
