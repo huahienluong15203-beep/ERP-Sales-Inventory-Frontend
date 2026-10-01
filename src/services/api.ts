@@ -1062,10 +1062,25 @@ export interface UserImportSummaryResponse {
   }>;
 }
 
+/**
+ * Helper gọi API không tự động hủy phiên đăng nhập nếu gặp lỗi hoặc token chưa khớp
+ */
+async function importSafeFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = localStorage.getItem('accessToken');
+  const headers = new Headers(options.headers || {});
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
+  return fetch(url, { ...options, headers });
+}
+
 /** Tải tệp mẫu Excel nhập người dùng */
 export async function downloadUserImportTemplateApi(): Promise<{ success: boolean; message?: string }> {
   try {
-    const res = await authFetch(`${API_BASE_URL}/api/admin/users/import/template`, {
+    const res = await importSafeFetch(`${API_BASE_URL}/api/admin/users/import/template`, {
       method: 'GET'
     });
 
@@ -1083,10 +1098,7 @@ export async function downloadUserImportTemplateApi(): Promise<{ success: boolea
     } else {
       return { success: false, message: 'Lỗi tải tệp mẫu từ máy chủ.' };
     }
-  } catch (err: any) {
-    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
-      throw err;
-    }
+  } catch {
     return { success: false, message: 'Không thể kết nối máy chủ.' };
   }
 }
@@ -1099,7 +1111,7 @@ export async function previewUserImportApi(
   formData.append('file', file);
 
   try {
-    const res = await authFetch(`${API_BASE_URL}/api/admin/users/import/preview`, {
+    const res = await importSafeFetch(`${API_BASE_URL}/api/admin/users/import/preview`, {
       method: 'POST',
       body: formData
     });
@@ -1114,10 +1126,7 @@ export async function previewUserImportApi(
         message: err?.message || 'Không thể kiểm tra tệp Excel. Vui lòng kiểm tra lại định dạng tệp!'
       };
     }
-  } catch (err: any) {
-    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
-      throw err;
-    }
+  } catch {
     return { success: false, message: 'Lỗi kết nối máy chủ.' };
   }
 }
@@ -1130,7 +1139,7 @@ export async function executeUserImportApi(
   formData.append('file', file);
 
   try {
-    const res = await authFetch(`${API_BASE_URL}/api/admin/users/import/execute`, {
+    const res = await importSafeFetch(`${API_BASE_URL}/api/admin/users/import/execute`, {
       method: 'POST',
       body: formData
     });
@@ -1145,10 +1154,8 @@ export async function executeUserImportApi(
         message: err?.message || 'Không thể thực thi nhập dữ liệu. Vui lòng thử lại sau!'
       };
     }
-  } catch (err: any) {
-    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
-      throw err;
-    }
+  } catch {
     return { success: false, message: 'Lỗi kết nối máy chủ.' };
   }
 }
+

@@ -58,7 +58,7 @@ function sanitizePhoneInput(raw: string): string {
 }
 
 export const UserManagementPage: React.FC = () => {
-  const { user: currentUser, refreshContext } = useAuth();
+  const { user: currentUser, refreshContext, showToast } = useAuth();
 
   // Danh sách người dùng & phân trang
   const [users, setUsers] = useState<AdminUserItem[]>([]);
@@ -233,12 +233,10 @@ export const UserManagementPage: React.FC = () => {
       const result = await createAdminUser(sanitizedPayload);
       if (result.success) {
         setIsCreateModalOpen(false);
-        setActionAlert({
-          type: 'success',
-          message:
-            result.message ||
-            'Tạo tài khoản thành công! Mật khẩu tạm và email kích hoạt đã được gửi tới nhân viên.'
-        });
+        showToast(
+          'Tạo tài khoản thành công!',
+          result.message || 'Mật khẩu tạm và email kích hoạt đã được gửi tới nhân viên.'
+        );
         setPage(0);
         loadUsers();
       } else {
@@ -292,10 +290,10 @@ export const UserManagementPage: React.FC = () => {
       const res = await updateAdminUser(editingUser.id, payload);
       if (res.success) {
         setIsEditModalOpen(false);
-        setActionAlert({
-          type: 'success',
-          message: 'Cập nhật thông tin tài khoản thành công!'
-        });
+        showToast(
+          'Cập nhật thành công!',
+          'Thông tin tài khoản người dùng đã được lưu lại.'
+        );
         loadUsers();
         if (currentUser && (currentUser.id === editingUser.id || currentUser.username === editingUser.username)) {
           refreshContext();
@@ -359,10 +357,10 @@ export const UserManagementPage: React.FC = () => {
       const res = await updateAdminAssignments(editingUser.id, sanitizedPayload);
       if (res.success) {
         setIsEditModalOpen(false);
-        setActionAlert({
-          type: 'success',
-          message: 'Cập nhật phân quyền, kho và địa bàn thành công!'
-        });
+        showToast(
+          'Phân quyền thành công!',
+          'Phân quyền vai trò, kho và địa bàn đã được cập nhật.'
+        );
         loadUsers();
         if (currentUser && (currentUser.id === editingUser.id || currentUser.username === editingUser.username)) {
           refreshContext();
@@ -409,11 +407,11 @@ export const UserManagementPage: React.FC = () => {
         const res = await lockAdminUser(lockTargetUser.id, lockReason.trim());
         if (res.success) {
           const isSales = lockTargetUser.roles.includes('ROLE_SALES_REP') || lockTargetUser.roles.includes('ROLE_SALES_MANAGER');
-          setActionAlert({
-            type: 'success',
-            message: `Đã khóa tài khoản [${lockTargetUser.username}] và thu hồi phiên làm việc thành công.${isSales ? ' (Lưu ý: Các đại lý do nhân sự này phụ trách đã được gắn cảnh báo Cần bàn giao)' : ''
-              }`
-          });
+          showToast(
+            'Đã khóa tài khoản!',
+            `Tài khoản [${lockTargetUser.username}] đã bị khóa và thu hồi phiên.${isSales ? ' (Cần bàn giao đại lý)' : ''}`,
+            'error'
+          );
           loadUsers();
         } else {
           setActionAlert({ type: 'error', message: res.message });
@@ -421,10 +419,10 @@ export const UserManagementPage: React.FC = () => {
       } else {
         const res = await unlockAdminUser(lockTargetUser.id);
         if (res.success) {
-          setActionAlert({
-            type: 'success',
-            message: `Đã mở khóa tài khoản [${lockTargetUser.username}] thành công.`
-          });
+          showToast(
+            'Đã mở khóa tài khoản!',
+            `Tài khoản [${lockTargetUser.username}] đã được kích hoạt lại.`
+          );
           loadUsers();
         } else {
           setActionAlert({ type: 'error', message: res.message });
@@ -515,17 +513,10 @@ export const UserManagementPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Thông báo thông điệp hệ thống */}
-      {actionAlert && (
-        <div
-          className={`user-mgmt-alert ${actionAlert.type === 'success' ? 'user-mgmt-alert-success' : 'user-mgmt-alert-error'
-            }`}
-        >
-          {actionAlert.type === 'success' ? (
-            <CheckCircle2 size={18} style={{ color: '#059669', flexShrink: 0, marginTop: 2 }} />
-          ) : (
-            <AlertTriangle size={18} style={{ color: '#DC2626', flexShrink: 0, marginTop: 2 }} />
-          )}
+      {/* Thông báo lỗi nếu có */}
+      {actionAlert && actionAlert.type === 'error' && (
+        <div className="user-mgmt-alert user-mgmt-alert-error">
+          <AlertTriangle size={18} style={{ color: '#DC2626', flexShrink: 0, marginTop: 2 }} />
           <div style={{ flex: 1 }}>{actionAlert.message}</div>
           <button
             onClick={() => setActionAlert(null)}
@@ -1712,12 +1703,13 @@ export const UserManagementPage: React.FC = () => {
       <UserImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        onSuccess={() => {
+        existingUsers={users}
+        onSuccess={(msg) => {
           loadUsers();
-          setActionAlert({
-            type: 'success',
-            message: 'Đã hoàn tất nhập danh sách người dùng từ tệp Excel!'
-          });
+          showToast(
+            'Nhập dữ liệu thành công!',
+            msg || 'Đã hoàn tất nhập danh sách người dùng từ tệp Excel!'
+          );
         }}
       />
     </div>

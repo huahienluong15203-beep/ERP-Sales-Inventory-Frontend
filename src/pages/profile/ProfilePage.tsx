@@ -89,7 +89,7 @@ const STRENGTH_CONFIG: Record<StrengthLevel, { label: string; color: string; bar
    - Dữ liệu kho/địa bàn mặc định là "Chưa có"
    ──────────────────────────────────────────────────────────────────────── */
 export const ProfilePage: FC = () => {
-  const { user, currentRole, logout, refreshContext } = useAuth();
+  const { user, currentRole, logout, refreshContext, showToast } = useAuth();
   const roleMeta = ROLE_METADATA_MAP[currentRole] ?? ROLE_METADATA_MAP['ROLE_ADMIN'];
 
   /* ── S2-02: State Chỉnh sửa hồ sơ cá nhân ── */
@@ -143,9 +143,12 @@ export const ProfilePage: FC = () => {
       });
 
       if (res.success) {
-        setProfileResult({ type: 'success', message: 'Cập nhật thông tin hồ sơ cá nhân thành công!' });
         setIsEditingProfile(false);
+        setProfileResult(null);
         await refreshContext();
+        showToast(
+          'Cập nhật hồ sơ thành công!'
+        );
       } else {
         setProfileResult({ type: 'error', message: res.message });
       }
@@ -192,11 +195,14 @@ export const ProfilePage: FC = () => {
     try {
       const res = await changePasswordApi(currentPassword, newPassword, confirmPassword);
       if (res.success) {
-        setResult({ type: 'success', message: res.message });
+        setResult(null);
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
-        // Thu hồi phiên đăng nhập sau 2.5s và chuyển về login
+        showToast(
+          'Đổi mật khẩu thành công!',
+          'Mật khẩu của bạn đã được thay đổi. Đang đăng xuất sau 2.5s...'
+        );
         setTimeout(() => logout(), 2500);
       } else {
         setResult({ type: 'error', message: res.message });
@@ -286,20 +292,10 @@ export const ProfilePage: FC = () => {
                 )}
               </div>
 
-              {/* Thông báo kết quả cập nhật hồ sơ */}
-              {profileResult && (
-                <div
-                  className={`flex items-start gap-1.5 p-2 rounded-xl text-[11px] font-medium border ${
-                    profileResult.type === 'success'
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                      : 'bg-red-50 text-red-700 border-red-200'
-                  }`}
-                >
-                  {profileResult.type === 'success' ? (
-                    <CheckCircle2 size={13} className="text-emerald-600 shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertCircle size={13} className="text-red-600 shrink-0 mt-0.5" />
-                  )}
+              {/* Thông báo lỗi cập nhật hồ sơ nếu có */}
+              {profileResult && profileResult.type === 'error' && (
+                <div className="flex items-start gap-1.5 p-2 rounded-xl text-[11px] font-medium border bg-red-50 text-red-700 border-red-200">
+                  <AlertCircle size={13} className="text-red-600 shrink-0 mt-0.5" />
                   <span className="flex-1">{profileResult.message}</span>
                   <button
                     type="button"
@@ -339,11 +335,10 @@ export const ProfilePage: FC = () => {
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
                       placeholder="Ví dụ: 0987654321"
-                      className={`w-full px-2.5 py-1.5 bg-white border rounded-lg text-xs text-gray-900 focus:outline-none focus:ring-2 transition ${
-                        getPhoneError(editPhone)
+                      className={`w-full px-2.5 py-1.5 bg-white border rounded-lg text-xs text-gray-900 focus:outline-none focus:ring-2 transition ${getPhoneError(editPhone)
                           ? 'border-red-400 focus:ring-red-400/20 focus:border-red-500'
                           : 'border-gray-300 focus:ring-orange-500/20 focus:border-orange-500'
-                      }`}
+                        }`}
                       disabled={profileLoading}
                     />
                     {getPhoneError(editPhone) && (
@@ -519,28 +514,11 @@ export const ProfilePage: FC = () => {
               </div>
             </div>
 
-            {/* Thông báo kết quả nếu có */}
-            {result && (
-              <div
-                className={`flex items-start gap-2 rounded-lg p-2 text-xs font-medium border ${result.type === 'success'
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                  : 'bg-red-50 text-red-700 border-red-200'
-                  }`}
-              >
-                {result.type === 'success' ? (
-                  <CheckCircle2 size={14} className="text-emerald-600 shrink-0 mt-0.5" />
-                ) : (
-                  <AlertCircle size={14} className="text-red-600 shrink-0 mt-0.5" />
-                )}
+            {/* Thông báo lỗi nếu có */}
+            {result && result.type === 'error' && (
+              <div className="flex items-start gap-2 rounded-lg p-2 text-xs font-medium border bg-red-50 text-red-700 border-red-200">
+                <AlertCircle size={14} className="text-red-600 shrink-0 mt-0.5" />
                 <span>{result.message}</span>
-              </div>
-            )}
-
-            {/* Thông báo chuyển trang */}
-            {result?.type === 'success' && (
-              <div className="flex items-center gap-1.5 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg p-2">
-                <RefreshCw size={12} className="animate-spin text-blue-600 shrink-0" />
-                <span>Đang chuyển về trang đăng nhập để áp dụng phiên bảo mật mới…</span>
               </div>
             )}
 
