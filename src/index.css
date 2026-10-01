@@ -172,32 +172,3 @@ textarea {
 .erp-fade-in {
   animation: erpFadeIn 0.25s ease-out forwards;
 }
-
-@keyframes erpSlideInToast {
-  from {
-    opacity: 0;
-    transform: translateY(-16px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.erp-login-toast {
-  animation: erpSlideInToast 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes erpToastProgress {
-  from {
-    width: 100%;
-  }
-  to {
-    width: 0%;
-  }
-}
-
-.erp-toast-progress-bar {
-  animation: erpToastProgress 1.8s linear forwards;
-}
-

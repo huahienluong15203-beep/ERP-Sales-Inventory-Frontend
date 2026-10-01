@@ -234,15 +234,10 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
   }
 
   const response = await fetch(url, { ...options, headers });
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     const data = await response.clone().json().catch(() => null);
-    const message =
-      data?.message ||
-      (response.status === 403
-        ? 'Bạn không có quyền truy cập hoặc tài khoản đã bị khóa!'
-        : 'Phiên làm việc của bạn đã hết hạn. Vui lòng đăng nhập lại!');
-    handleSessionExpired(message);
-    throw new Error(message);
+    handleSessionExpired(data?.message);
+    throw new Error(data?.message || 'SESSION_EXPIRED');
   }
   return response;
 }
@@ -271,9 +266,7 @@ export async function logoutUser(): Promise<void> {
 /**
  * S1-03: Gửi email yêu cầu đặt lại mật khẩu (hiệu lực 30 phút)
  */
-export async function sendForgotPasswordEmail(
-  email: string
-): Promise<{ success: boolean; message: string; retryAfterSeconds?: number; cooldownSeconds?: number }> {
+export async function sendForgotPasswordEmail(email: string): Promise<{ success: boolean; message: string }> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
       method: 'POST',
@@ -284,25 +277,14 @@ export async function sendForgotPasswordEmail(
     if (response.ok) {
       return {
         success: true,
-        message: data?.message || 'Đã gửi liên kết đặt lại mật khẩu. Vui lòng kiểm tra hộp thư!',
-        // Số giây phải chờ trước khi gửi lại - lấy theo cấu hình của Backend
-        cooldownSeconds: Number(data?.cooldownSeconds) || 60
+        message: data?.message || 'Nếu email của bạn tồn tại trong hệ thống, chúng tôi đã gửi liên kết đặt lại mật khẩu. Vui lòng kiểm tra hộp thư!'
       };
-    }
-    if (response.status === 429) {
-      // Gửi quá nhanh -> Backend báo số giây phải đợi để hiển thị đếm ngược
-      const headerWait = Number(response.headers.get('Retry-After'));
-      const retryAfterSeconds = Number(data?.retryAfterSeconds) || headerWait || 60;
+    } else {
       return {
         success: false,
-        message: data?.message || 'Bạn thao tác quá nhanh. Vui lòng đợi rồi thử lại!',
-        retryAfterSeconds
+        message: data?.message || 'Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau.'
       };
     }
-    return {
-      success: false,
-      message: data?.message || 'Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau.'
-    };
   } catch {
     return {
       success: false,
@@ -416,10 +398,10 @@ export async function fetchUserNavigationContext(role: RoleName): Promise<UserCo
       };
     }
   } catch (err: any) {
-    if (!token.startsWith('jwt-mock-') || err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc') || err?.message?.includes('khoá')) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
       throw err;
     }
-    // Chỉ fallback dữ liệu mẫu nếu là tài khoản demo mock hoàn toàn offline (jwt-mock-)
+    // Backend offline -> Fallback dữ liệu chuẩn
   }
 
   const metadata = ROLE_METADATA_MAP[role];
@@ -944,218 +926,3 @@ function getMockAdminUsers(params: {
     totalPages
   };
 }
-
-/* ──────────────────────────────────────────────────────────────────────────
-   S2-02: API HỒ SƠ CÁ NHÂN (XEM & CẬP NHẬT HỌ TÊN, SỐ ĐIỆN THOẠI)
-   ────────────────────────────────────────────────────────────────────────── */
-
-export interface PersonalProfileData {
-  id: number;
-  username: string;
-  fullName: string;
-  email: string;
-  phone?: string;
-  status: string;
-  roles: RoleName[];
-  warehouses: Array<{ id: number; code: string; name: string }>;
-  regions: Array<{ id: number; code: string; name: string }>;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export async function fetchPersonalProfileApi(): Promise<PersonalProfileData | null> {
-  try {
-    const res = await authFetch(`${API_BASE_URL}/api/v1/profile`, {
-      method: 'GET'
-    });
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (err: any) {
-    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
-      throw err;
-    }
-  }
-  return null;
-}
-
-export async function updatePersonalProfileApi(payload: {
-  fullName: string;
-  phone?: string;
-}): Promise<{ success: boolean; message: string; data?: PersonalProfileData }> {
-  try {
-    const res = await authFetch(`${API_BASE_URL}/api/v1/profile`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      return {
-        success: true,
-        message: 'Cập nhật hồ sơ cá nhân thành công!',
-        data
-      };
-    } else {
-      const err = await res.json().catch(() => null);
-      return {
-        success: false,
-        message: err?.message || 'Không thể cập nhật hồ sơ. Vui lòng kiểm tra lại thông tin!'
-      };
-    }
-  } catch (err: any) {
-    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
-      throw err;
-    }
-    return {
-      success: false,
-      message: 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau!'
-    };
-  }
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
-   SCRUM-18 (S2-01): API NHẬP DANH SÁCH NGƯỜI DÙNG HÀNG LOẠT TỪ EXCEL
-   ────────────────────────────────────────────────────────────────────────── */
-
-export interface UserImportRowDto {
-  rowNumber: number;
-  username: string;
-  fullName: string;
-  email: string;
-  phone?: string;
-  roles: string[];
-  warehouseCodes: string[];
-  regionCodes: string[];
-  valid: boolean;
-  errors: string[];
-}
-
-export interface UserImportPreviewResponse {
-  fileName: string;
-  totalRows: number;
-  validRowsCount: number;
-  invalidRowsCount: number;
-  rows: UserImportRowDto[];
-}
-
-export interface UserImportSummaryResponse {
-  totalProcessed: number;
-  successCount: number;
-  failedCount: number;
-  createdUsers: Array<{
-    id: number;
-    username: string;
-    fullName: string;
-    email: string;
-    phone?: string;
-    roles: string[];
-  }>;
-  failedRows: Array<{
-    rowNumber: number;
-    username: string;
-    email: string;
-    reasons: string[];
-  }>;
-}
-
-/**
- * Helper gọi API không tự động hủy phiên đăng nhập nếu gặp lỗi hoặc token chưa khớp
- */
-async function importSafeFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const token = localStorage.getItem('accessToken');
-  const headers = new Headers(options.headers || {});
-  if (token && !headers.has('Authorization')) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
-  if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
-    headers.set('Content-Type', 'application/json');
-  }
-  return fetch(url, { ...options, headers });
-}
-
-/** Tải tệp mẫu Excel nhập người dùng */
-export async function downloadUserImportTemplateApi(): Promise<{ success: boolean; message?: string }> {
-  try {
-    const res = await importSafeFetch(`${API_BASE_URL}/api/admin/users/import/template`, {
-      method: 'GET'
-    });
-
-    if (res.ok) {
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'Mau_Nhap_Nguoi_Dung_ERP.xlsx';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      return { success: true };
-    } else {
-      return { success: false, message: 'Lỗi tải tệp mẫu từ máy chủ.' };
-    }
-  } catch {
-    return { success: false, message: 'Không thể kết nối máy chủ.' };
-  }
-}
-
-/** Xem trước và kiểm tra hợp lệ từng dòng từ tệp Excel */
-export async function previewUserImportApi(
-  file: File
-): Promise<{ success: boolean; message?: string; data?: UserImportPreviewResponse }> {
-  const formData = new FormData();
-  formData.append('file', file);
-
-  try {
-    const res = await importSafeFetch(`${API_BASE_URL}/api/admin/users/import/preview`, {
-      method: 'POST',
-      body: formData
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      return { success: true, data };
-    } else {
-      const err = await res.json().catch(() => null);
-      return {
-        success: false,
-        message: err?.message || 'Không thể kiểm tra tệp Excel. Vui lòng kiểm tra lại định dạng tệp!'
-      };
-    }
-  } catch {
-    return { success: false, message: 'Lỗi kết nối máy chủ.' };
-  }
-}
-
-/** Thực thi nhập danh sách người dùng (dòng lỗi bỏ qua, dòng hợp lệ vẫn nhập) */
-export async function executeUserImportApi(
-  file: File
-): Promise<{ success: boolean; message?: string; data?: UserImportSummaryResponse }> {
-  const formData = new FormData();
-  formData.append('file', file);
-
-  try {
-    const res = await importSafeFetch(`${API_BASE_URL}/api/admin/users/import/execute`, {
-      method: 'POST',
-      body: formData
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      return { success: true, data };
-    } else {
-      const err = await res.json().catch(() => null);
-      return {
-        success: false,
-        message: err?.message || 'Không thể thực thi nhập dữ liệu. Vui lòng thử lại sau!'
-      };
-    }
-  } catch {
-    return { success: false, message: 'Lỗi kết nối máy chủ.' };
-  }
-}
-

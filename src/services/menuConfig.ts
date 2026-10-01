@@ -49,6 +49,24 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
       'ROLE_ACCOUNTANT',
       'ROLE_CUSTOMER'
     ]
+  },
+
+  // 4. Quản lý danh mục sản phẩm (EP-02 Sản Phẩm & Bảng Giá)
+  {
+    title: 'Danh mục sản phẩm',
+    path: '/products',
+    icon: 'Package',
+    epic: 'EP-02 Sản Phẩm & Bảng Giá',
+    description: 'Khai báo SKU, cài đặt quy đổi đơn vị và import Excel báo lỗi từng dòng',
+    allowedRoles: [
+      'ROLE_ADMIN',
+      'ROLE_SALES_MANAGER',
+      'ROLE_SALES_REP',
+      'ROLE_WAREHOUSE',
+      'ROLE_WH_MANAGER',
+      'ROLE_ACCOUNTANT',
+      'ROLE_CUSTOMER'
+    ]
   }
 ];
 

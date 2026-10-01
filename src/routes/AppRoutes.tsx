@@ -11,6 +11,7 @@ import { ForbiddenPage } from '../pages/common/ForbiddenPage';
 import { NotFoundPage } from '../pages/common/NotFoundPage';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
+import { ProductManagementPage } from '../pages/product/ProductManagementPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -66,6 +67,16 @@ export const AppRoutes: React.FC = () => {
         {/* Hồ sơ cá nhân (Mọi vai trò đều xem được) */}
         <Route path="/profile" element={<ProfilePage />} />
 
+        {/* Quản lý danh mục sản phẩm (EP-02: Quản lý kinh doanh & Admin toàn quyền; các vai trò khác xem có bảo mật giá vốn) */}
+        <Route
+          path="/products"
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP', 'ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ACCOUNTANT', 'ROLE_CUSTOMER']}>
+              <ProductManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Trang 403 Forbidden trực tiếp */}
         <Route path="/forbidden" element={<ForbiddenPage />} />
 
@@ -76,7 +87,8 @@ export const AppRoutes: React.FC = () => {
             m.path !== '/' &&
             m.path !== '/profile' &&
             m.path !== '/users' &&
-            m.path !== '/admin/users'
+            m.path !== '/admin/users' &&
+            m.path !== '/products'
         ).map((menuItem) => (
           <Route
             key={menuItem.path}

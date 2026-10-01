@@ -18,13 +18,73 @@ import {
 
 type AuthViewMode = 'login' | 'forgot_password';
 
-/** Hiển thị thời gian chờ: "45 giây" hoặc "4:59" (phút:giây) khi từ 1 phút trở lên. */
-function formatCooldown(seconds: number): string {
-  if (seconds < 60) return `${seconds} GIÂY`;
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
+interface DemoAccount {
+  username: string;
+  pass: string;
+  roleLabel: string;
+  desc: string;
+  badgeColor: string;
+  bg: string;
 }
+
+const DEMO_ACCOUNTS: DemoAccount[] = [
+  {
+    username: 'admin',
+    pass: 'admin123',
+    roleLabel: 'Admin Hệ Thống',
+    desc: 'Quản trị viên & Phân quyền',
+    badgeColor: '#EF4444',
+    bg: '#FEF2F2'
+  },
+  {
+    username: 'sales_manager',
+    pass: 'manager123',
+    roleLabel: 'QL Kinh Doanh',
+    desc: 'Duyệt đơn, giá & hạn mức',
+    badgeColor: '#EA580C',
+    bg: '#FFF7ED'
+  },
+  {
+    username: 'sales_rep',
+    pass: 'sales123',
+    roleLabel: 'NV Kinh Doanh',
+    desc: 'Lên đơn & chăm sóc đại lý',
+    badgeColor: '#D97706',
+    bg: '#FFFBEB'
+  },
+  {
+    username: 'wh_manager',
+    pass: 'wh123',
+    roleLabel: 'Quản Lý Kho',
+    desc: 'Điều phối & xuất kho FEFO',
+    badgeColor: '#059669',
+    bg: '#ECFDF5'
+  },
+  {
+    username: 'wh_staff',
+    pass: 'wh123',
+    roleLabel: 'Thủ Kho',
+    desc: 'Kiểm kê, nhập/xuất vật tư',
+    badgeColor: '#0891B2',
+    bg: '#ECFEFF'
+  },
+  {
+    username: 'accountant',
+    pass: 'acc123',
+    roleLabel: 'Kế Toán Viên',
+    desc: 'Hóa đơn, công nợ & đối soát',
+    badgeColor: '#4F46E5',
+    bg: '#EEF2FF'
+  },
+  {
+    username: 'customer_agent',
+    pass: 'cust123',
+    roleLabel: 'Đại Lý B2B',
+    desc: 'Minh Phát - Đặt hàng B2B',
+    badgeColor: '#7C3AED',
+    bg: '#F5F3FF'
+  }
+];
 
 export const LoginPage: React.FC = () => {
   const { login, isAuthenticated, user, clearMustChangePassword } = useAuth();
@@ -38,12 +98,14 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [selectedDemoRole, setSelectedDemoRole] = useState<string | null>(null);
+
+  // Thông báo đăng xuất thành công
+  const [logoutMessage, setLogoutMessage] = useState<string | null>(null);
 
   // Form quên mật khẩu
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSuccessMessage, setForgotSuccessMessage] = useState<string | null>(null);
-  // Số giây còn phải đợi trước khi được gửi lại email (chống spam)
-  const [forgotCooldown, setForgotCooldown] = useState(0);
 
   // Modal bắt buộc đổi mật khẩu lần đầu (S1-04 + S1-08)
   const [showForceChangeModal, setShowForceChangeModal] = useState(false);
@@ -53,28 +115,34 @@ export const LoginPage: React.FC = () => {
 
   // Trạng thái chung
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [loginSuccessMessage, setLoginSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Đếm ngược thời gian chờ gửi lại email quên mật khẩu
+  // Khôi phục tên đăng nhập đã ghi nhớ & hiển thị thông báo đăng xuất nếu vừa logout
   useEffect(() => {
-    if (forgotCooldown <= 0) return;
-    const timer = setTimeout(() => setForgotCooldown((s) => s - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [forgotCooldown]);
+    const saved = localStorage.getItem('erp_remembered_username');
+    if (saved) {
+      setUsername(saved);
+      setRememberMe(true);
+    }
+    if (sessionStorage.getItem('erp_just_logged_out')) {
+      sessionStorage.removeItem('erp_just_logged_out');
+      setLogoutMessage('Bạn đã đăng xuất an toàn khỏi hệ thống.');
+      const timer = setTimeout(() => setLogoutMessage(null), 4500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // Nếu đã đăng nhập và không phải đang đổi mật khẩu thì vào dashboard
   useEffect(() => {
-    if (isAuthenticated && !user?.mustChangePassword && !showForceChangeModal && !loginSuccessMessage) {
+    if (isAuthenticated && !user?.mustChangePassword && !showForceChangeModal) {
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, user?.mustChangePassword, showForceChangeModal, loginSuccessMessage, navigate]);
+  }, [isAuthenticated, user?.mustChangePassword, showForceChangeModal, navigate]);
 
   // Xử lý Đăng Nhập (S1-01)
   const handleLoginSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
-    setLoginSuccessMessage(null);
 
     const cleanUsername = username.trim();
     if (!cleanUsername) {
@@ -91,14 +159,17 @@ export const LoginPage: React.FC = () => {
     try {
       const result = await login(cleanUsername, password);
       if (result.success) {
+        if (rememberMe) {
+          localStorage.setItem('erp_remembered_username', cleanUsername);
+        } else {
+          localStorage.removeItem('erp_remembered_username');
+        }
+
         // Kiểm tra xem tài khoản có gắn cờ bắt buộc đổi mật khẩu lần đầu không (S1-08)
         if (result.user?.mustChangePassword) {
           setShowForceChangeModal(true);
         } else {
-          setLoginSuccessMessage('Đăng nhập thành công! Đang chuyển hướng vào hệ thống...');
-          setTimeout(() => {
-            navigate('/dashboard', { replace: true });
-          }, 350);
+          navigate('/dashboard', { replace: true });
         }
       } else {
         setErrorMessage(result.message || 'Tài khoản hoặc mật khẩu không chính xác!');
@@ -122,15 +193,8 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
-    // Kiểm tra định dạng: ten@tenmien.duoi (vd: nguyenvana@gmail.com)
-    const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/;
-    if (!EMAIL_REGEX.test(email)) {
-      setErrorMessage('Email không đúng định dạng (ví dụ đúng: nguyenvana@gmail.com). Vui lòng kiểm tra lại!');
-      return;
-    }
-
-    if (forgotCooldown > 0) {
-      setErrorMessage(`Vui lòng đợi ${formatCooldown(forgotCooldown).toLowerCase()} trước khi gửi lại.`);
+    if (!email.includes('@') || !email.includes('.')) {
+      setErrorMessage('Địa chỉ email không đúng định dạng!');
       return;
     }
 
@@ -139,12 +203,8 @@ export const LoginPage: React.FC = () => {
       const res = await sendForgotPasswordEmail(email);
       if (res.success) {
         setForgotSuccessMessage(res.message);
-        setForgotCooldown(res.cooldownSeconds ?? 60);
       } else {
         setErrorMessage(res.message);
-        if (res.retryAfterSeconds) {
-          setForgotCooldown(res.retryAfterSeconds);
-        }
       }
     } catch {
       setErrorMessage('Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra lại dịch vụ!');
@@ -264,6 +324,30 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Thông báo vừa đăng xuất thành công */}
+        {logoutMessage && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '12px 14px',
+              borderRadius: '12px',
+              background: '#ECFDF5',
+              border: '1px solid #A7F3D0',
+              color: '#065F46',
+              fontSize: '13px',
+              fontWeight: 500,
+              marginBottom: '20px',
+              lineHeight: 1.45,
+              animation: 'fadeIn 0.2s ease'
+            }}
+          >
+            <CheckCircle2 size={18} color="#10B981" style={{ flexShrink: 0 }} />
+            <span>{logoutMessage}</span>
+          </div>
+        )}
+
         {/* Thông báo lỗi nếu có */}
         {errorMessage && (
           <div
@@ -284,30 +368,6 @@ export const LoginPage: React.FC = () => {
           >
             <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
             <span>{errorMessage}</span>
-          </div>
-        )}
-
-        {/* Thông báo đăng nhập thành công */}
-        {loginSuccessMessage && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: '12px 14px',
-              borderRadius: '12px',
-              background: '#ECFDF5',
-              border: '1px solid #A7F3D0',
-              color: '#059669',
-              fontSize: '13px',
-              fontWeight: 600,
-              marginBottom: '20px',
-              lineHeight: 1.45,
-              animation: 'erpFadeIn 0.25s ease'
-            }}
-          >
-            <CheckCircle2 size={18} style={{ flexShrink: 0, color: '#10B981' }} />
-            <span>{loginSuccessMessage}</span>
           </div>
         )}
 
@@ -533,6 +593,118 @@ export const LoginPage: React.FC = () => {
                 <span>ĐĂNG NHẬP HỆ THỐNG</span>
               )}
             </button>
+
+            {/* Bộ chọn tài khoản dùng thử nhanh (1-Click Fill) */}
+            <div
+              style={{
+                marginTop: '22px',
+                paddingTop: '16px',
+                borderTop: '1px dashed #E2E8F0'
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '10px'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      letterSpacing: '0.6px',
+                      textTransform: 'uppercase',
+                      color: '#475569'
+                    }}
+                  >
+                    Tài khoản kiểm thử nhanh
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '10.5px',
+                      padding: '2px 6px',
+                      borderRadius: '6px',
+                      backgroundColor: '#FFEDD5',
+                      color: '#EA580C',
+                      fontWeight: 700
+                    }}
+                  >
+                    7 Vai Trò
+                  </span>
+                </div>
+                <span style={{ fontSize: '11px', color: '#94A3B8' }}>Click để điền</span>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(118px, 1fr))',
+                  gap: '7px'
+                }}
+              >
+                {DEMO_ACCOUNTS.map((acc) => {
+                  const isSelected = selectedDemoRole === acc.username || username === acc.username;
+                  return (
+                    <button
+                      key={acc.username}
+                      type="button"
+                      onClick={() => {
+                        setUsername(acc.username);
+                        setPassword(acc.pass);
+                        setSelectedDemoRole(acc.username);
+                        setErrorMessage(null);
+                      }}
+                      style={{
+                        padding: '8px 10px',
+                        borderRadius: '10px',
+                        border: isSelected ? `1.5px solid ${acc.badgeColor}` : '1px solid #E2E8F0',
+                        backgroundColor: isSelected ? acc.bg : '#F8FAFC',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px'
+                      }}
+                      title={`${acc.desc} - Mật khẩu: ${acc.pass}`}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontWeight: 700, fontSize: '12px', color: isSelected ? acc.badgeColor : '#1E293B' }}>
+                          {acc.username}
+                        </span>
+                        {isSelected && (
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: acc.badgeColor }} />
+                        )}
+                      </div>
+                      <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 500 }}>
+                        {acc.roleLabel}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginTop: '10px',
+                  fontSize: '11px',
+                  color: '#94A3B8'
+                }}
+              >
+                <span>* Mật khẩu mẫu sẽ tự động điền</span>
+                {selectedDemoRole && (
+                  <span style={{ color: '#EA580C', fontWeight: 600 }}>
+                    Đã điền: @{selectedDemoRole}
+                  </span>
+                )}
+              </div>
+            </div>
           </form>
         )}
 
@@ -665,7 +837,7 @@ export const LoginPage: React.FC = () => {
 
                 <button
                   type="submit"
-                  disabled={isSubmitting || forgotCooldown > 0}
+                  disabled={isSubmitting}
                   style={{
                     width: '100%',
                     height: '46px',
@@ -680,9 +852,9 @@ export const LoginPage: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '10px',
-                    cursor: isSubmitting || forgotCooldown > 0 ? 'not-allowed' : 'pointer',
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
                     border: 'none',
-                    opacity: isSubmitting || forgotCooldown > 0 ? 0.6 : 1,
+                    opacity: isSubmitting ? 0.8 : 1,
                     transition: 'all 0.2s ease',
                     marginBottom: '16px'
                   }}
@@ -699,16 +871,13 @@ export const LoginPage: React.FC = () => {
                       }}
                     />
                   ) : (
-                    <span>
-                      {forgotCooldown > 0 ? `GỬI LẠI SAU ${formatCooldown(forgotCooldown)}` : 'GỬI LIÊN KẾT ĐẶT LẠI'}
-                    </span>
+                    <span>GỬI LIÊN KẾT ĐẶT LẠI</span>
                   )}
                 </button>
 
                 <div style={{ textAlign: 'center' }}>
                   <button
                     type="button"
-                    disabled={isSubmitting}
                     onClick={() => {
                       setViewMode('login');
                       setErrorMessage(null);
@@ -971,6 +1140,30 @@ export const LoginPage: React.FC = () => {
                 ) : (
                   <span>LƯU MẬT KHẨU & TIẾP TỤC</span>
                 )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForceChangeModal(false);
+                  localStorage.removeItem('accessToken');
+                  localStorage.removeItem('erp_user_profile');
+                }}
+                style={{
+                  width: '100%',
+                  marginTop: '10px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  border: '1px solid #CBD5E1',
+                  background: '#F8FAFC',
+                  color: '#64748B',
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                Hủy bỏ & Quay lại đăng nhập
               </button>
             </form>
           </div>
