@@ -38,6 +38,7 @@ import {
   FileSpreadsheet
 } from '../../components/common/Icons';
 import { UserImportModal } from './UserImportModal';
+import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
 
 /**
  * Kiểm tra số điện thoại Việt Nam: để trống HOẶC đủ 10 số, bắt đầu bằng 03/05/07/08/09.
@@ -72,6 +73,9 @@ export const UserManagementPage: React.FC = () => {
   const [keyword, setKeyword] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
+  // Gõ từ 2 ký tự mới gọi API (đợi ngừng gõ 0,4 giây); 1 ký tự thì lọc tại chỗ
+  const resetToFirstPage = useCallback(() => setPage(0), []);
+  const { serverKeyword, localKeyword, flush: flushSearch } = useServerSearch(keyword, resetToFirstPage);
 
   // Tùy chọn form (vai trò, kho, địa bàn)
   const [formOptions, setFormOptions] = useState<AdminFormOptions>({
@@ -131,7 +135,7 @@ export const UserManagementPage: React.FC = () => {
     setActionAlert(null);
     try {
       const res = await fetchAdminUsers({
-        keyword: keyword.trim() || undefined,
+        keyword: serverKeyword || undefined,
         role: selectedRole || undefined,
         status: selectedStatus || undefined,
         page,
@@ -148,7 +152,7 @@ export const UserManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [keyword, selectedRole, selectedStatus, page, size]);
+  }, [serverKeyword, selectedRole, selectedStatus, page, size]);
 
   // Tải danh mục vai trò/kho/địa bàn lúc khởi động
   useEffect(() => {
@@ -160,12 +164,18 @@ export const UserManagementPage: React.FC = () => {
     loadUsers();
   }, [loadUsers]);
 
-  // Tìm kiếm tức thời khi submit
+  // Bấm Enter / nút Lọc: tìm ngay không cần đợi
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const changed = flushSearch();
     setPage(0);
-    loadUsers();
+    if (!changed) loadUsers();
   };
+
+  // Mới gõ 1 ký tự: lọc tại chỗ trên danh sách đang hiển thị, không gọi API
+  const visibleUsers = localKeyword
+    ? users.filter((u) => matchesKeyword(localKeyword, u.fullName, u.username, u.phone, u.email))
+    : users;
 
   // Reset bộ lọc
   const handleResetFilters = () => {
@@ -627,7 +637,7 @@ export const UserManagementPage: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ) : users.length === 0 ? (
+              ) : visibleUsers.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ padding: '48px', textAlign: 'center', color: '#6B7280' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
@@ -640,7 +650,7 @@ export const UserManagementPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                users.map((item) => {
+                visibleUsers.map((item) => {
                   const isLocked = item.status === 'LOCKED';
                   const isCurrentUser = currentUser?.username === item.username;
 
