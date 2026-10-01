@@ -44,7 +44,7 @@ export const DashboardPage: React.FC = () => {
     {
       code: 'DH-2026-003',
       customer: 'Hệ Thống Bán Buôn Miền Trung',
-      step: '1/4 bước (Chờ duyệt xuất kho FEFO)',
+      step: '1/4 bước (Chờ duyệt xuất hàng gần hạn trước)',
       percent: 25,
       path: '/orders'
     },
@@ -96,10 +96,10 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Thẻ 3: Tồn Kho Khả Dụng */}
+        {/* Thẻ 3: Hàng Sẵn Có Trong Kho */}
         <div className="erp-stat-card">
           <div className="erp-stat-card-top">
-            <span className="erp-stat-label">TỒN KHO KHẢ DỤNG</span>
+            <span className="erp-stat-label">HÀNG SẴN CÓ TRONG KHO</span>
             <div
               className="erp-stat-icon-badge"
               style={{ background: '#FEF3C7', color: '#D97706' }}
@@ -107,9 +107,9 @@ export const DashboardPage: React.FC = () => {
               <Boxes size={22} />
             </div>
           </div>
-          <div className="erp-stat-value">45.200 SKU</div>
+          <div className="erp-stat-value">45.200 Sản phẩm</div>
           <div className="erp-stat-subtext" style={{ color: '#D97706' }}>
-            <span>8 lô cận hạn cần xuất trước (FEFO)</span>
+            <span>8 lô hàng sắp hết hạn cần ưu tiên bán trước</span>
           </div>
         </div>
 

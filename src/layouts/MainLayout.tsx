@@ -126,16 +126,6 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
     return name.slice(0, 2).toUpperCase();
   };
 
-  // Gom nhóm menu theo Epic để giao diện chuyên nghiệp
-  const groupedMenus: Record<string, typeof menus> = {};
-  menus.forEach((item) => {
-    const epic = item.epic || 'Hệ thống';
-    if (!groupedMenus[epic]) {
-      groupedMenus[epic] = [];
-    }
-    groupedMenus[epic].push(item);
-  });
-
   // Lấy tiêu đề và mô tả của trang hiện tại cho Header
   const currentMenu = menus.find((m) => m.path === location.pathname);
   const pageTitle =
@@ -244,35 +234,28 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
               </p>
             </div>
           ) : (
-            Object.entries(groupedMenus).map(([epicKey, items]) => (
-              <div key={epicKey} className="erp-menu-group">
-                <div className="erp-menu-group-title">
-                  <span>{epicKey}</span>
-                </div>
-                <ul className="erp-menu-list">
-                  {items.map((item) => {
-                    const isActive = location.pathname === item.path;
-                    return (
-                      <li key={item.path} className="erp-menu-item">
-                        <Link
-                          to={item.path}
-                          className={`erp-menu-link ${isActive ? 'active' : ''}`}
-                          title={item.description}
-                        >
-                          <span className="erp-menu-icon">
-                            <DynamicIcon name={item.icon} size={18} />
-                          </span>
-                          <span className="erp-menu-title">{item.title}</span>
-                          {item.badge && (
-                            <span className="erp-menu-badge">{item.badge}</span>
-                          )}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))
+            <ul className="erp-menu-list">
+              {menus.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <li key={item.path} className="erp-menu-item">
+                    <Link
+                      to={item.path}
+                      className={`erp-menu-link ${isActive ? 'active' : ''}`}
+                      title={item.description}
+                    >
+                      <span className="erp-menu-icon">
+                        <DynamicIcon name={item.icon} size={18} />
+                      </span>
+                      <span className="erp-menu-title">{item.title}</span>
+                      {item.badge && (
+                        <span className="erp-menu-badge">{item.badge}</span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </nav>
 
