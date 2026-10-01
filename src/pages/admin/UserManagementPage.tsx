@@ -37,6 +37,24 @@ import {
   Info
 } from '../../components/common/Icons';
 
+/**
+ * Kiểm tra số điện thoại Việt Nam: để trống HOẶC đủ 10 số, bắt đầu bằng 03/05/07/08/09.
+ * Trả về câu báo lỗi, hoặc null nếu hợp lệ.
+ */
+function getPhoneError(phone?: string): string | null {
+  const value = (phone || '').trim();
+  if (!value) return null;
+  if (!/^\d+$/.test(value)) return 'Số điện thoại chỉ được gồm chữ số.';
+  if (value.length !== 10) return `Số điện thoại phải đủ 10 số (đang có ${value.length} số).`;
+  if (!/^0(3|5|7|8|9)\d{8}$/.test(value)) return 'Đầu số không hợp lệ (phải bắt đầu bằng 03, 05, 07, 08 hoặc 09).';
+  return null;
+}
+
+/** Chỉ giữ lại chữ số, tối đa 10 số. */
+function sanitizePhoneInput(raw: string): string {
+  return raw.replace(/\D/g, '').slice(0, 10);
+}
+
 export const UserManagementPage: React.FC = () => {
   const { user: currentUser, refreshContext } = useAuth();
 
@@ -180,8 +198,9 @@ export const UserManagementPage: React.FC = () => {
     }
 
     // Kiểm tra định dạng số điện thoại nếu người dùng có nhập
-    if (createForm.phone && !/^(0|\+84)(3|5|7|8|9)\d{8}$/.test(createForm.phone.trim())) {
-      setCreateError('Số điện thoại không hợp lệ! Vui lòng nhập số điện thoại gồm 10 chữ số (đầu 03, 05, 07, 08, 09) hoặc để trống.');
+    const createPhoneError = getPhoneError(createForm.phone);
+    if (createPhoneError) {
+      setCreateError(createPhoneError);
       return;
     }
 
@@ -255,8 +274,9 @@ export const UserManagementPage: React.FC = () => {
     setEditError(null);
     setEditLoading(true);
     try {
-      if (editInfoForm.phone && !/^(0|\+84)(3|5|7|8|9)\d{8}$/.test(editInfoForm.phone.trim())) {
-        setEditError('Số điện thoại không hợp lệ! Vui lòng nhập số điện thoại gồm 10 chữ số (đầu 03, 05, 07, 08, 09) hoặc để trống.');
+      const editPhoneError = getPhoneError(editInfoForm.phone);
+      if (editPhoneError) {
+        setEditError(editPhoneError);
         setEditLoading(false);
         return;
       }
@@ -826,6 +846,8 @@ export const UserManagementPage: React.FC = () => {
               <button
                 onClick={() => setIsCreateModalOpen(false)}
                 className="user-mgmt-modal-close"
+                disabled={createLoading}
+                style={createLoading ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
               >
                 <X size={18} />
               </button>
@@ -834,6 +856,18 @@ export const UserManagementPage: React.FC = () => {
             {/* Form */}
             <form onSubmit={handleCreateSubmit} style={{ display: 'contents' }}>
               <div className="user-mgmt-modal-body">
+                {/* Đang gọi API tạo tài khoản + gửi mail -> khoá toàn bộ ô nhập */}
+                <fieldset
+                  disabled={createLoading}
+                  style={{
+                    border: 'none',
+                    margin: 0,
+                    padding: 0,
+                    minWidth: 0,
+                    opacity: createLoading ? 0.6 : 1,
+                    transition: 'opacity 0.2s ease'
+                  }}
+                >
                 {/* Báo lỗi trùng username/email/phone (S1-08) */}
                 {createError && (
                   <div className="user-mgmt-alert user-mgmt-alert-error">
@@ -920,13 +954,21 @@ export const UserManagementPage: React.FC = () => {
                     </label>
                     <input
                       type="tel"
+                      inputMode="numeric"
+                      maxLength={10}
                       value={createForm.phone || ''}
                       onChange={(e) =>
-                        setCreateForm({ ...createForm, phone: e.target.value.trim() })
+                        setCreateForm({ ...createForm, phone: sanitizePhoneInput(e.target.value) })
                       }
                       placeholder="Ví dụ: 0912345678"
                       className="user-mgmt-form-input"
+                      style={getPhoneError(createForm.phone) ? { borderColor: '#DC2626' } : undefined}
                     />
+                    {getPhoneError(createForm.phone) && (
+                      <p style={{ color: '#DC2626', fontSize: 12, marginTop: 6, fontWeight: 600 }}>
+                        {getPhoneError(createForm.phone)}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -1086,6 +1128,7 @@ export const UserManagementPage: React.FC = () => {
                     </>
                   );
                 })()}
+                </fieldset>
               </div>
 
               {/* Footer */}
@@ -1094,13 +1137,15 @@ export const UserManagementPage: React.FC = () => {
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
                   className="user-mgmt-btn-cancel"
+                  disabled={createLoading}
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  disabled={createLoading}
+                  disabled={createLoading || Boolean(getPhoneError(createForm.phone))}
                   className="user-mgmt-btn-submit"
+                  style={getPhoneError(createForm.phone) ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
                 >
                   {createLoading && <RefreshCw size={15} className="animate-spin" />}
                   <span>{createLoading ? 'Đang tạo...' : 'Tạo Tài Khoản & Gửi Email'}</span>
@@ -1127,6 +1172,8 @@ export const UserManagementPage: React.FC = () => {
               <button
                 onClick={() => setIsEditModalOpen(false)}
                 className="user-mgmt-modal-close"
+                disabled={editLoading}
+                style={editLoading ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
               >
                 <X size={18} />
               </button>
@@ -1143,6 +1190,7 @@ export const UserManagementPage: React.FC = () => {
             >
               <button
                 type="button"
+                disabled={editLoading}
                 onClick={() => {
                   setEditTab('info');
                   setEditError(null);
@@ -1162,6 +1210,7 @@ export const UserManagementPage: React.FC = () => {
               </button>
               <button
                 type="button"
+                disabled={editLoading}
                 onClick={() => {
                   setEditTab('assignments');
                   setEditError(null);
@@ -1184,6 +1233,18 @@ export const UserManagementPage: React.FC = () => {
 
             {/* Tab Body */}
             <div className="user-mgmt-modal-body">
+              {/* Đang lưu -> khoá toàn bộ ô nhập và nút trong 2 tab */}
+              <fieldset
+                disabled={editLoading}
+                style={{
+                  border: 'none',
+                  margin: 0,
+                  padding: 0,
+                  minWidth: 0,
+                  opacity: editLoading ? 0.6 : 1,
+                  transition: 'opacity 0.2s ease'
+                }}
+              >
               {editError && (
                 <div className="user-mgmt-alert user-mgmt-alert-error">
                   <AlertTriangle size={18} style={{ color: '#DC2626', flexShrink: 0, marginTop: 1 }} />
@@ -1224,12 +1285,21 @@ export const UserManagementPage: React.FC = () => {
                     <label className="user-mgmt-form-label">Số điện thoại</label>
                     <input
                       type="tel"
+                      inputMode="numeric"
+                      maxLength={10}
                       value={editInfoForm.phone || ''}
                       onChange={(e) =>
-                        setEditInfoForm({ ...editInfoForm, phone: e.target.value.trim() })
+                        setEditInfoForm({ ...editInfoForm, phone: sanitizePhoneInput(e.target.value) })
                       }
+                      placeholder="Ví dụ: 0912345678 (hoặc để trống)"
                       className="user-mgmt-form-input"
+                      style={getPhoneError(editInfoForm.phone) ? { borderColor: '#DC2626' } : undefined}
                     />
+                    {getPhoneError(editInfoForm.phone) && (
+                      <p style={{ color: '#DC2626', fontSize: 12, marginTop: 6, fontWeight: 600 }}>
+                        {getPhoneError(editInfoForm.phone)}
+                      </p>
+                    )}
                   </div>
 
                   <div className="user-mgmt-modal-footer" style={{ margin: '16px -24px -22px', borderBottomLeftRadius: 18, borderBottomRightRadius: 18 }}>
@@ -1242,8 +1312,9 @@ export const UserManagementPage: React.FC = () => {
                     </button>
                     <button
                       type="submit"
-                      disabled={editLoading}
+                      disabled={editLoading || Boolean(getPhoneError(editInfoForm.phone))}
                       className="user-mgmt-btn-submit"
+                      style={getPhoneError(editInfoForm.phone) ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
                     >
                       {editLoading && <RefreshCw size={15} className="animate-spin" />}
                       <span>Lưu thông tin</span>
@@ -1475,6 +1546,7 @@ export const UserManagementPage: React.FC = () => {
                   </div>
                 </form>
               )}
+              </fieldset>
             </div>
           </div>
         </div>
@@ -1567,6 +1639,7 @@ export const UserManagementPage: React.FC = () => {
                       type="text"
                       required
                       value={lockReason}
+                      disabled={lockLoading}
                       onChange={(e) => setLockReason(e.target.value)}
                       placeholder="Nhập lý do khóa cụ thể (ví dụ: Nghỉ việc, vi phạm bảo mật...)"
                       className="user-mgmt-form-input"
@@ -1587,6 +1660,7 @@ export const UserManagementPage: React.FC = () => {
                 type="button"
                 onClick={() => setLockTargetUser(null)}
                 className="user-mgmt-btn-cancel"
+                disabled={lockLoading}
               >
                 Hủy bỏ
               </button>
