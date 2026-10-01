@@ -6,6 +6,7 @@ import { ROLE_METADATA_MAP } from '../types/user';
 import type { RoleName } from '../types/user';
 import { Icons, DynamicIcon } from '../components/common/Icons';
 import { changePasswordApi } from '../services/api';
+import { LogoutConfirmModal } from '../components/common/LogoutConfirmModal';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -18,6 +19,31 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
   // Trạng thái mở/đóng Sidebar trên Mobile (tối ưu hóa màn hình 360px)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+
+  // Trạng thái Modal xác nhận đăng xuất
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState<boolean>(false);
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
+
+  // Lắng nghe sự kiện yêu cầu đăng xuất từ bất kỳ màn hình nào
+  useEffect(() => {
+    const handleRequestLogout = () => setIsLogoutModalOpen(true);
+    window.addEventListener('erp-request-logout', handleRequestLogout);
+    return () => window.removeEventListener('erp-request-logout', handleRequestLogout);
+  }, []);
+
+  const handleConfirmLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      sessionStorage.setItem('erp_just_logged_out', '1');
+      setIsLogoutModalOpen(false);
+      navigate('/login');
+    } catch (err) {
+      console.error('Lỗi khi đăng xuất:', err);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   // Đóng Mobile Drawer khi đổi route
   useEffect(() => {
@@ -263,10 +289,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
           <button
             type="button"
             className="erp-sidebar-logout-btn"
-            onClick={async () => {
-              await logout();
-              navigate('/login');
-            }}
+            onClick={() => setIsLogoutModalOpen(true)}
             title="Đăng xuất khỏi hệ thống"
           >
             <Icons.LogOut size={16} />
@@ -302,23 +325,58 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
 
 
-          {/* Khối User Profile Avatar ở Header (như App ETC) */}
-          <div
-            className="erp-header-user-block"
-            onClick={() => navigate('/profile')}
-            title="Xem hồ sơ cá nhân"
-          >
-            <div className="erp-header-avatar">
-              {getAvatarInitials(user?.fullName, currentRole)}
+          {/* Khối User Profile Avatar ở Header (như App ETC) + Nút Đăng xuất */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div
+              className="erp-header-user-block"
+              onClick={() => navigate('/profile')}
+              title="Xem hồ sơ cá nhân"
+            >
+              <div className="erp-header-avatar">
+                {getAvatarInitials(user?.fullName, currentRole)}
+              </div>
+              <div className="erp-header-user-info">
+                <span className="erp-header-fullname">
+                  {user?.fullName || 'Người Dùng'}
+                </span>
+                <span className="erp-header-username">
+                  {user?.username || 'user'}
+                </span>
+              </div>
             </div>
-            <div className="erp-header-user-info">
-              <span className="erp-header-fullname">
-                {user?.fullName || 'Người Dùng'}
-              </span>
-              <span className="erp-header-username">
-                {user?.username || 'user'}
-              </span>
-            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsLogoutModalOpen(true)}
+              title="Đăng xuất khỏi hệ thống"
+              aria-label="Đăng xuất khỏi hệ thống"
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                border: '1px solid #FEE2E2',
+                backgroundColor: '#FEF2F2',
+                color: '#EF4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                flexShrink: 0
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#FEE2E2';
+                e.currentTarget.style.borderColor = '#FCA5A5';
+                e.currentTarget.style.color = '#DC2626';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#FEF2F2';
+                e.currentTarget.style.borderColor = '#FEE2E2';
+                e.currentTarget.style.color = '#EF4444';
+              }}
+            >
+              <Icons.LogOut size={16} />
+            </button>
           </div>
         </header>
 
@@ -464,7 +522,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
                 </button>
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={() => setIsLogoutModalOpen(true)}
                   className="w-full py-2 text-center text-xs text-slate-400 hover:text-slate-600 transition-colors font-medium cursor-pointer"
                 >
                   Đăng xuất tài khoản
@@ -474,6 +532,16 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
           </div>
         </div>
       )}
+
+      {/* 4. MODAL XÁC NHẬN ĐĂNG XUẤT */}
+      <LogoutConfirmModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => !isLoggingOut && setIsLogoutModalOpen(false)}
+        onConfirm={handleConfirmLogout}
+        user={user}
+        currentRole={currentRole}
+        isLoggingOut={isLoggingOut}
+      />
     </div>
   );
 };

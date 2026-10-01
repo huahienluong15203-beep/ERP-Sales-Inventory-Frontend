@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   Eye,
   EyeOff,
-  RefreshCw
+  RefreshCw,
+  LogOut
 } from '../../components/common/Icons';
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -277,7 +278,18 @@ export const ProfilePage: FC = () => {
                   );
                 })}
               </div>
+            </div>
 
+            {/* Nút Đăng Xuất với Xác Nhận */}
+            <div className="pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('erp-request-logout'))}
+                className="w-full h-9 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <LogOut size={14} />
+                <span>Đăng Xuất Khỏi Tài Khoản</span>
+              </button>
             </div>
           </div>
         </div>
