@@ -15,7 +15,10 @@ import type {
   CreateAgencyPayload,
   UpdateAgencyPayload,
   AgencyFilterParams,
-  AgencyListResponse
+  AgencyListResponse,
+  DeliveryPoint,
+  CreateDeliveryPointPayload,
+  UpdateDeliveryPointPayload
 } from '../types/agency';
 
 // Danh mục Nhóm khách hàng & Bảng giá tương ứng
@@ -221,6 +224,107 @@ function saveStoredAgencies(data: Agency[]) {
   }
 }
 
+// ==========================================
+// Dữ liệu mẫu Điểm giao hàng (S3-04 / SCRUM-15)
+// ==========================================
+const DELIVERY_POINTS_STORAGE_KEY = 'erp_delivery_points_v1';
+
+const INITIAL_MOCK_DELIVERY_POINTS: DeliveryPoint[] = [
+  {
+    id: 'DP-001',
+    agencyId: 'AG-001',
+    name: 'Kho Tổng Gia Lâm',
+    address: 'Lô C2, Cụm Công Nghiệp Ninh Hiệp, Gia Lâm, Hà Nội',
+    contactPerson: 'Nguyễn Văn Hùng (Thủ kho chính)',
+    phone: '0912111222',
+    routeNotes: 'Đường lớn xe container 40 feet ra vào 24/7, bốc dỡ cửa nhận hàng số 2',
+    isDefault: true,
+    createdAt: '2026-08-15 09:00:00',
+    updatedAt: '2026-08-15 09:00:00'
+  },
+  {
+    id: 'DP-002',
+    agencyId: 'AG-001',
+    name: 'Kho Trung Chuyển Hai Bà Trưng',
+    address: '158 Phố Huế, P. Ngô Thì Nhậm, Q. Hai Bà Trưng, Hà Nội',
+    contactPerson: 'Trần Đức Tuấn (Phụ trách kho phố)',
+    phone: '0983333444',
+    routeNotes: 'Đường hẹp phố cổ, chỉ cho xe tải dưới 2.5 tấn vào trước 6h sáng hoặc sau 20h',
+    isDefault: false,
+    createdAt: '2026-08-16 10:30:00',
+    updatedAt: '2026-08-16 10:30:00'
+  },
+  {
+    id: 'DP-003',
+    agencyId: 'AG-002',
+    name: 'Kho Sóng Thần - Dĩ An',
+    address: 'Đường Số 3, KCN Sóng Thần 1, TP. Dĩ An, Bình Dương',
+    contactPerson: 'Phạm Thị Thảo (Điều phối kho)',
+    phone: '0908888999',
+    routeNotes: 'Có sàn nâng dock leveler tự động, yêu cầu tài xế gọi điện trước 30 phút để mở cổng phụ',
+    isDefault: true,
+    createdAt: '2026-08-20 09:30:00',
+    updatedAt: '2026-08-20 09:30:00'
+  },
+  {
+    id: 'DP-004',
+    agencyId: 'AG-002',
+    name: 'Showroom & Điểm Giao Trung Sơn',
+    address: '45 Đường Số 7, KDC Trung Sơn, Bình Hưng, Bình Chánh, TP.HCM',
+    contactPerson: 'Lê Văn Nam (Quản lý cửa hàng)',
+    phone: '0977666555',
+    routeNotes: 'Chỉ nhận hàng giờ hành chính (8h30 - 17h00), không giao vào Chủ Nhật',
+    isDefault: false,
+    createdAt: '2026-08-22 14:00:00',
+    updatedAt: '2026-08-22 14:00:00'
+  },
+  {
+    id: 'DP-005',
+    agencyId: 'AG-003',
+    name: 'Kho Trung Tâm Cẩm Lệ',
+    address: 'Đường Số 4, KCN Hòa Cầm, P. Hòa Thọ Tây, Q. Cẩm Lệ, Đà Nẵng',
+    contactPerson: 'Nguyễn Quốc Cường',
+    phone: '0905111333',
+    routeNotes: 'Xe tải trọng lớn đỗ thoải mái, giờ làm việc từ 7h30 đến 17h30 từ Thứ 2 đến Thứ 7',
+    isDefault: true,
+    createdAt: '2026-08-25 11:00:00',
+    updatedAt: '2026-08-25 11:00:00'
+  },
+  {
+    id: 'DP-006',
+    agencyId: 'AG-004',
+    name: 'Kho Cửa Hàng Hoàng Cầu',
+    address: '24 Hoàng Cầu, P. Ô Chợ Dừa, Q. Đống Đa, Hà Nội',
+    contactPerson: 'Đặng Mai Lan',
+    phone: '0945678999',
+    routeNotes: 'Mặt đường Hoàng Cầu, xe tải 3.5 tấn có vị trí đỗ trước cửa để bốc hàng',
+    isDefault: true,
+    createdAt: '2026-09-30 11:15:00',
+    updatedAt: '2026-09-30 11:15:00'
+  }
+];
+
+export function getStoredDeliveryPoints(): DeliveryPoint[] {
+  try {
+    const raw = localStorage.getItem(DELIVERY_POINTS_STORAGE_KEY);
+    if (!raw) {
+      localStorage.setItem(DELIVERY_POINTS_STORAGE_KEY, JSON.stringify(INITIAL_MOCK_DELIVERY_POINTS));
+      return INITIAL_MOCK_DELIVERY_POINTS;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return INITIAL_MOCK_DELIVERY_POINTS;
+  }
+}
+
+export function saveStoredDeliveryPoints(data: DeliveryPoint[]) {
+  try {
+    localStorage.setItem(DELIVERY_POINTS_STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Không thể lưu danh sách điểm giao hàng vào localStorage', e);
+  }
+}
+
 /** Lấy Bảng giá tương ứng theo Nhóm khách hàng */
 export function getPricingTierByGroup(groupId: CustomerGroupId) {
   const group = CUSTOMER_GROUP_OPTIONS.find((g) => g.id === groupId);
@@ -235,6 +339,13 @@ export async function fetchAgencies(params: AgencyFilterParams): Promise<AgencyL
   await new Promise((resolve) => setTimeout(resolve, 200));
 
   let list = getStoredAgencies();
+  const allPoints = getStoredDeliveryPoints();
+
+  // Đính kèm số lượng điểm giao hàng động
+  list = list.map((a) => ({
+    ...a,
+    deliveryPointCount: allPoints.filter((dp) => dp.agencyId === a.id).length
+  }));
 
   // Tìm kiếm từ khóa (Mã, Tên, Mã số thuế, SĐT)
   if (params.keyword && params.keyword.trim()) {
@@ -479,3 +590,204 @@ export async function deleteAgency(id: string): Promise<{ success: boolean; mess
     message: `Đã xóa hồ sơ đại lý mới [${target.code}] (chưa có lịch sử giao dịch).`
   };
 }
+
+// ==========================================
+// CÁC HÀM XỬ LÝ ĐIỂM GIAO HÀNG (S3-04 / SCRUM-15)
+// ==========================================
+
+/**
+ * 7. Lấy danh sách điểm giao hàng của một đại lý
+ * Sắp xếp: Điểm mặc định lên đầu, sau đó theo ngày tạo mới nhất
+ */
+export async function fetchDeliveryPointsByAgency(agencyId: string): Promise<DeliveryPoint[]> {
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const list = getStoredDeliveryPoints();
+  const agencyPoints = list.filter((p) => p.agencyId === agencyId);
+  return agencyPoints.sort((a, b) => {
+    if (a.isDefault && !b.isDefault) return -1;
+    if (!a.isDefault && b.isDefault) return 1;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
+
+/**
+ * 8. Thêm mới một điểm giao hàng cho đại lý
+ * Nghiệp vụ S3-04:
+ * - Nếu là điểm giao hàng đầu tiên của đại lý, tự động gán isDefault = true.
+ * - Nếu người dùng chọn đặt làm mặc định (isDefault = true), tự động hủy mặc định của các điểm khác.
+ */
+export async function createDeliveryPoint(
+  payload: CreateDeliveryPointPayload
+): Promise<{ success: boolean; message: string; deliveryPoint?: DeliveryPoint }> {
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  if (!payload.name?.trim()) {
+    return { success: false, message: 'Tên điểm giao hàng không được để trống!' };
+  }
+  if (!payload.address?.trim()) {
+    return { success: false, message: 'Địa chỉ điểm giao hàng không được để trống!' };
+  }
+  if (!payload.contactPerson?.trim()) {
+    return { success: false, message: 'Tên người nhận hàng không được để trống!' };
+  }
+  if (!payload.phone?.trim()) {
+    return { success: false, message: 'Số điện thoại người nhận không được để trống!' };
+  }
+
+  let list = getStoredDeliveryPoints();
+  const agencyPoints = list.filter((p) => p.agencyId === payload.agencyId);
+  const isFirstPoint = agencyPoints.length === 0;
+  const shouldBeDefault = isFirstPoint || !!payload.isDefault;
+
+  // Nếu điểm mới là mặc định, các điểm khác của cùng đại lý phải bỏ cờ mặc định
+  if (shouldBeDefault) {
+    list = list.map((p) => {
+      if (p.agencyId === payload.agencyId) {
+        return { ...p, isDefault: false };
+      }
+      return p;
+    });
+  }
+
+  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const newPoint: DeliveryPoint = {
+    id: `DP-${Date.now().toString().slice(-4)}`,
+    agencyId: payload.agencyId,
+    name: payload.name.trim(),
+    address: payload.address.trim(),
+    contactPerson: payload.contactPerson.trim(),
+    phone: payload.phone.trim(),
+    routeNotes: payload.routeNotes?.trim() || undefined,
+    isDefault: shouldBeDefault,
+    createdAt: nowStr,
+    updatedAt: nowStr
+  };
+
+  list.push(newPoint);
+  saveStoredDeliveryPoints(list);
+
+  return {
+    success: true,
+    message: `Đã thêm điểm giao hàng "${newPoint.name}" thành công!${shouldBeDefault ? ' (Được đặt làm mặc định)' : ''}`,
+    deliveryPoint: newPoint
+  };
+}
+
+/**
+ * 9. Cập nhật thông tin điểm giao hàng
+ */
+export async function updateDeliveryPoint(
+  id: string,
+  payload: UpdateDeliveryPointPayload
+): Promise<{ success: boolean; message: string; deliveryPoint?: DeliveryPoint }> {
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  let list = getStoredDeliveryPoints();
+  const index = list.findIndex((p) => p.id === id);
+  if (index === -1) {
+    return { success: false, message: 'Không tìm thấy điểm giao hàng để cập nhật!' };
+  }
+
+  const current = list[index];
+  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+  // Nếu đặt làm mặc định, hủy mặc định của các điểm khác thuộc cùng đại lý
+  if (payload.isDefault) {
+    list = list.map((p) => {
+      if (p.agencyId === current.agencyId && p.id !== id) {
+        return { ...p, isDefault: false };
+      }
+      return p;
+    });
+  }
+
+  const updated: DeliveryPoint = {
+    ...current,
+    name: payload.name.trim(),
+    address: payload.address.trim(),
+    contactPerson: payload.contactPerson.trim(),
+    phone: payload.phone.trim(),
+    routeNotes: payload.routeNotes?.trim() || undefined,
+    isDefault: payload.isDefault !== undefined ? payload.isDefault : current.isDefault,
+    updatedAt: nowStr
+  };
+
+  list[index] = updated;
+  saveStoredDeliveryPoints(list);
+
+  return {
+    success: true,
+    message: `Cập nhật điểm giao hàng "${updated.name}" thành công!`,
+    deliveryPoint: updated
+  };
+}
+
+/**
+ * 10. Đặt một điểm giao hàng làm mặc định (S3-04 AC 2)
+ */
+export async function setDefaultDeliveryPoint(
+  id: string,
+  agencyId: string
+): Promise<{ success: boolean; message: string }> {
+  await new Promise((resolve) => setTimeout(resolve, 150));
+
+  let list = getStoredDeliveryPoints();
+  let found = false;
+
+  list = list.map((p) => {
+    if (p.agencyId === agencyId) {
+      if (p.id === id) {
+        found = true;
+        return { ...p, isDefault: true, updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 19) };
+      }
+      return { ...p, isDefault: false };
+    }
+    return p;
+  });
+
+  if (!found) {
+    return { success: false, message: 'Không tìm thấy điểm giao hàng cần đặt mặc định!' };
+  }
+
+  saveStoredDeliveryPoints(list);
+  return {
+    success: true,
+    message: 'Đã thay đổi điểm giao hàng mặc định cho đại lý thành công!'
+  };
+}
+
+/**
+ * 11. Xóa một điểm giao hàng
+ * Nếu xóa điểm mặc định mà đại lý vẫn còn các điểm khác, tự động chọn điểm đầu tiên còn lại làm mặc định
+ */
+export async function deleteDeliveryPoint(
+  id: string,
+  agencyId: string
+): Promise<{ success: boolean; message: string }> {
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  let list = getStoredDeliveryPoints();
+  const target = list.find((p) => p.id === id);
+  if (!target) {
+    return { success: false, message: 'Không tìm thấy điểm giao hàng để xóa!' };
+  }
+
+  const wasDefault = target.isDefault;
+  list = list.filter((p) => p.id !== id);
+
+  // Nếu điểm vừa xóa là mặc định, tự động chuyển mặc định cho điểm kế tiếp
+  if (wasDefault) {
+    const remainingForAgency = list.filter((p) => p.agencyId === agencyId);
+    if (remainingForAgency.length > 0) {
+      const newDefaultId = remainingForAgency[0].id;
+      list = list.map((p) => (p.id === newDefaultId ? { ...p, isDefault: true } : p));
+    }
+  }
+
+  saveStoredDeliveryPoints(list);
+  return {
+    success: true,
+    message: `Đã xóa điểm giao hàng "${target.name}".${wasDefault ? ' Điểm kế tiếp đã được tự động chọn làm mặc định.' : ''}`
+  };
+}
+

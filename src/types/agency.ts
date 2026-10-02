@@ -62,8 +62,46 @@ export interface Agency {
   transactionCount: number;   // Số lượng giao dịch / đơn hàng đã phát sinh
   totalDebt: number;          // Tổng công nợ hiện tại (VND)
   creditLimit: number;        // Hạn mức tín dụng / công nợ cho phép (VND)
+  deliveryPointCount?: number; // Số lượng điểm giao hàng đã khai báo (S3-04)
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Điểm giao hàng của đại lý (S3-04 / SCRUM-15)
+ * Một đại lý có thể có nhiều điểm giao hàng (kho tổng, kho phụ, cửa hàng...).
+ * Mỗi điểm có: tên điểm giao, địa chỉ, người nhận, số điện thoại, ghi chú đường đi, cờ mặc định.
+ */
+export interface DeliveryPoint {
+  id: string;
+  agencyId: string;           // ID của đại lý sở hữu
+  name: string;               // Tên điểm giao (vd: "Kho Tổng Gia Lâm", "Kho KCN Sóng Thần")
+  address: string;            // Địa chỉ chi tiết
+  contactPerson: string;      // Tên người nhận hàng (thủ kho của khách)
+  phone: string;              // Số điện thoại người nhận hàng
+  routeNotes?: string;        // Ghi chú đường đi (vd: "Đường hẹp cấm xe trên 5 tấn, giao giờ hành chính")
+  isDefault: boolean;         // Có phải điểm giao hàng mặc định không
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateDeliveryPointPayload {
+  agencyId: string;
+  name: string;
+  address: string;
+  contactPerson: string;
+  phone: string;
+  routeNotes?: string;
+  isDefault?: boolean;
+}
+
+export interface UpdateDeliveryPointPayload {
+  name: string;
+  address: string;
+  contactPerson: string;
+  phone: string;
+  routeNotes?: string;
+  isDefault?: boolean;
 }
 
 export interface CreateAgencyPayload {
