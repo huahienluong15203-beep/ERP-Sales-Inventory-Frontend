@@ -157,14 +157,8 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
         <div className="erp-sidebar-header">
           <div
             className="erp-logo-brand"
-            onClick={() => {
-              if (isSidebarCollapsed) {
-                toggleSidebarCollapse();
-              } else {
-                navigate('/dashboard');
-              }
-            }}
-            title={isSidebarCollapsed ? 'Mở rộng menu' : 'Về bảng điều khiển'}
+            onClick={toggleSidebarCollapse}
+            title={isSidebarCollapsed ? 'Bấm vào logo để mở rộng sidebar' : 'Bấm vào logo để thu gọn sidebar'}
           >
             <img src="/logo-cube.png" alt="ERP Logo" className="erp-logo-img" />
             {!isSidebarCollapsed && (
@@ -174,18 +168,6 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
               </div>
             )}
           </div>
-
-          {/* Nút thu gọn / mở rộng Sidebar trên Desktop */}
-          <button
-            type="button"
-            className="erp-sidebar-toggle-btn"
-            onClick={toggleSidebarCollapse}
-            title={isSidebarCollapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
-            aria-label={isSidebarCollapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
-            id="btn-sidebar-collapse-toggle"
-          >
-            {isSidebarCollapsed ? <Icons.ChevronRight size={16} /> : <Icons.ChevronLeft size={16} />}
-          </button>
 
           {/* Nút đóng Sidebar trên Mobile 360px */}
           <button
@@ -198,44 +180,38 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
           </button>
         </div>
 
-        {/* Khối Thẻ VAI TRÒ HỆ THỐNG  */}
-        <div className="erp-sidebar-role-badge" title={`Vai trò: ${currentRoleMeta.label}`}>
-          {!isSidebarCollapsed ? (
-            <>
-              <div className="erp-sidebar-role-title flex items-center justify-between">
-                <span>VAI TRÒ HỆ THỐNG</span>
-              </div>
-              <div className="erp-sidebar-role-name flex items-center justify-between">
-                {user?.roles && user.roles.length > 1 ? (
-                  <div className="relative flex items-center w-full">
-                    <select
-                      value={effectiveRole}
-                      onChange={(e) => switchRole(e.target.value as RoleName)}
-                      style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none' }}
-                      className="w-full bg-transparent font-bold text-gray-800 text-xs cursor-pointer border-none outline-none focus:ring-0 p-0 pr-5 truncate"
-                      title="Chuyển đổi vai trò làm việc"
-                    >
-                      {user.roles.map((r) => (
-                        <option key={r} value={r}>
-                          {ROLE_METADATA_MAP[r]?.label || r}
-                        </option>
-                      ))}
-                    </select>
-                    <Icons.ChevronDown size={14} className="absolute right-0 text-gray-400 pointer-events-none" />
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5 overflow-hidden">
-                    <span>{currentRoleMeta.label}</span>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="erp-role-collapsed-indicator" title={`Vai trò: ${currentRoleMeta.label}`}>
-              <span className="erp-role-dot-online" />
+        {/* Khối Thẻ VAI TRÒ HỆ THỐNG */}
+        {!isSidebarCollapsed && (
+          <div className="erp-sidebar-role-badge" title={`Vai trò: ${currentRoleMeta.label}`}>
+            <div className="erp-sidebar-role-title flex items-center justify-between">
+              <span>VAI TRÒ HỆ THỐNG</span>
             </div>
-          )}
-        </div>
+            <div className="erp-sidebar-role-name flex items-center justify-between">
+              {user?.roles && user.roles.length > 1 ? (
+                <div className="relative flex items-center w-full">
+                  <select
+                    value={effectiveRole}
+                    onChange={(e) => switchRole(e.target.value as RoleName)}
+                    style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none' }}
+                    className="w-full bg-transparent font-bold text-gray-800 text-xs cursor-pointer border-none outline-none focus:ring-0 p-0 pr-5 truncate"
+                    title="Chuyển đổi vai trò làm việc"
+                  >
+                    {user.roles.map((r) => (
+                      <option key={r} value={r}>
+                        {ROLE_METADATA_MAP[r]?.label || r}
+                      </option>
+                    ))}
+                  </select>
+                  <Icons.ChevronDown size={14} className="absolute right-0 text-gray-400 pointer-events-none" />
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 overflow-hidden">
+                  <span>{currentRoleMeta.label}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Danh sách Menu lọc theo quyền (Story S1-06: Chỉ hiển thị menu thuộc quyền) */}
         <nav className="erp-sidebar-nav" aria-label="Menu điều hướng hệ thống">

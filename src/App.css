@@ -58,17 +58,20 @@
   gap: 10px;
   cursor: pointer;
   user-select: none;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s ease;
   min-width: 0;
+  border-radius: 10px;
 }
 
 .erp-sidebar.collapsed .erp-logo-brand {
   gap: 0;
   justify-content: center;
+  width: 100%;
 }
 
-.erp-logo-brand:hover {
-  opacity: 0.88;
+.erp-logo-brand:hover .erp-logo-img {
+  transform: scale(1.08);
+  filter: drop-shadow(0 3px 6px rgba(248, 86, 6, 0.35));
 }
 
 .erp-logo-img {
@@ -78,6 +81,7 @@
   flex-shrink: 0;
   display: block;
   background: transparent !important;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .erp-logo-icon {
@@ -111,54 +115,6 @@
   font-weight: 600;
 }
 
-/* Nút Thu gọn / Mở rộng Sidebar trên Desktop */
-.erp-sidebar-toggle-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  border: 1px solid #E5E7EB;
-  background: #F9FAFB;
-  color: #6B7280;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  flex-shrink: 0;
-}
-
-.erp-sidebar-toggle-btn:hover {
-  background: #FFF5F1;
-  color: #F85606;
-  border-color: #FDBA74;
-  transform: scale(1.05);
-}
-
-.erp-sidebar.collapsed .erp-sidebar-toggle-btn {
-  position: absolute;
-  right: -13px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 110;
-  color: #4B5563;
-}
-
-.erp-sidebar.collapsed .erp-sidebar-toggle-btn:hover {
-  color: #F85606;
-  border-color: #F85606;
-  background: #FFF5F1;
-  transform: translateY(-50%) scale(1.12);
-}
-
 .erp-mobile-close-btn {
   display: none;
   color: #6B7280;
@@ -177,23 +133,6 @@
   padding: 12px 16px 10px;
   border-bottom: 1px solid #F3F4F6;
   transition: padding 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.erp-sidebar.collapsed .erp-sidebar-role-badge {
-  padding: 12px 0 10px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.erp-role-collapsed-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: #F0FDF4;
 }
 
 .erp-sidebar-role-title {
@@ -728,10 +667,6 @@
 
   .erp-sidebar.open {
     transform: translateX(0);
-  }
-
-  .erp-sidebar-toggle-btn {
-    display: none !important;
   }
 
   .erp-mobile-close-btn {
