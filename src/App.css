@@ -70,7 +70,7 @@
 }
 
 .erp-logo-brand:hover .erp-logo-img {
-  transform: scale(1.08);
+
   filter: drop-shadow(0 3px 6px rgba(248, 86, 6, 0.35));
 }
 
@@ -81,6 +81,7 @@
   flex-shrink: 0;
   display: block;
   background: transparent !important;
+  transform: translateX(-5px);
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -1777,4 +1778,4 @@
   color: #64748B;
   font-size: 12.5px;
   line-height: 1.45;
-}
+}

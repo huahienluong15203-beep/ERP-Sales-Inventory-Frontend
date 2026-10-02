@@ -160,7 +160,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             onClick={toggleSidebarCollapse}
             title={isSidebarCollapsed ? 'Bấm vào logo để mở rộng sidebar' : 'Bấm vào logo để thu gọn sidebar'}
           >
-            <img src="/logo-cube.png" alt="ERP Logo" className="erp-logo-img" />
+            <img src="/logo-cube.png" alt="ERP Logo" className="erp-logo-img logosidebar" />
             {!isSidebarCollapsed && (
               <div className="erp-logo-text">
                 <span className="erp-brand-title">ERP SALES & INVENTORY</span>
