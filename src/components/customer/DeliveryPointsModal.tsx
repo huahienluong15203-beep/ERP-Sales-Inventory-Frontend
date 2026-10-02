@@ -270,14 +270,9 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
               <Truck size={22} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-gray-900">
-                  Quản Lý Điểm Giao Hàng Đại Lý
-                </h3>
-                <span className="px-2 py-0.5 rounded-md font-mono font-bold text-[11px] bg-orange-100 text-[#F85606] border border-orange-200">
-                  {agency.code}
-                </span>
-              </div>
+              <h3 className="text-base font-bold text-gray-900">
+                Quản Lý Điểm Giao Hàng Đại Lý
+              </h3>
               <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
                 <Building2 size={13} className="text-gray-400" />
                 <span className="font-semibold text-gray-700">{agency.name}</span>
@@ -641,12 +636,9 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
 
               {/* Ghi chú đường đi cho tài xế xe tải (AC 1) */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Navigation size={13} className="text-blue-600" />
-                    <span>Ghi Chú Đường Đi Cho Tài Xế Xe Tải</span>
-                  </span>
-                  <span className="text-[10px] text-gray-400 font-normal">Không bắt buộc</span>
+                <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <Navigation size={13} className="text-blue-600" />
+                  <span>Ghi Chú Đường Đi Cho Tài Xế Xe Tải</span>
                 </label>
                 <textarea
                   rows={2}
@@ -662,22 +654,17 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
 
               {/* Checkbox Đặt làm mặc định (AC 2) */}
               <div className="pt-2">
-                <label className="flex items-start gap-2.5 p-3 rounded-xl border border-amber-200 bg-amber-50/40 cursor-pointer">
+                <label className="flex items-center gap-2.5 p-3 rounded-xl border border-amber-200 bg-amber-50/40 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={isDefault || points.length === 0}
                     disabled={points.length === 0 || (editingPoint?.isDefault && points.length === 1)}
                     onChange={(e) => setIsDefault(e.target.checked)}
-                    className="mt-0.5 accent-[#F85606] rounded cursor-pointer"
+                    className="accent-[#F85606] rounded cursor-pointer"
                   />
-                  <div className="text-xs">
-                    <strong className="text-amber-900 block font-semibold">
-                      Đặt làm Điểm Giao Hàng Mặc Định
-                    </strong>
-                    <span className="text-amber-700 text-[11px]">
-                      Khi nhân viên kinh doanh tạo đơn hàng mới cho đại lý [{agency.code}], hệ thống sẽ tự động chọn điểm giao này đầu tiên.
-                    </span>
-                  </div>
+                  <strong className="text-xs text-amber-900 font-semibold">
+                    Đặt làm Điểm Giao Hàng Mặc Định
+                  </strong>
                 </label>
               </div>
 
@@ -731,7 +718,7 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
                   <div className="flex items-center gap-2">
                     <ShoppingCart size={18} className="text-[#F85606]" />
                     <strong className="text-sm text-gray-900 font-bold">
-                      Phiếu Đặt Hàng B2B (Mô phỏng thực tế)
+                      Phiếu Đặt Hàng (Mô phỏng thực tế)
                     </strong>
                   </div>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600 font-mono">
@@ -745,7 +732,7 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
                     Đại Lý Đặt Hàng
                   </label>
                   <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs font-medium text-gray-800 flex items-center justify-between">
-                    <span>{agency.code} - {agency.name}</span>
+                    <span>{agency.name}</span>
                     <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
                       {agency.customerGroupName}
                     </span>
@@ -846,15 +833,10 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
         {/* ======================================================== */}
         {/* FOOTER MODAL */}
         {/* ======================================================== */}
-        <div className="px-6 py-3.5 border-t border-gray-100 bg-gray-50/70 flex items-center justify-between shrink-0 text-xs text-gray-500">
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>Hệ thống phân phối B2B • User Story (S3-04)</span>
-          </div>
-
+        <div className="px-6 py-3.5 border-t border-gray-100 bg-gray-50/70 flex items-center justify-end shrink-0 text-xs text-gray-500">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold transition-colors cursor-pointer"
+            className="px-5 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold transition-colors cursor-pointer"
           >
             Đóng
           </button>
