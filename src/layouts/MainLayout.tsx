@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { FC, ReactNode, FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation, Link } from '../routes/Router';
-import { ROLE_METADATA_MAP } from '../types/user';
+import { ROLE_METADATA_MAP, getUserAvatarInitials } from '../types/user';
 import type { RoleName } from '../types/user';
 import { Icons, DynamicIcon } from '../components/common/Icons';
 import { changePasswordApi } from '../services/api';
@@ -113,18 +113,6 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
     }
   };
 
-  // Lấy 2 chữ cái đầu viết tắt cho Avatar (chuẩn App ETC)
-  const getAvatarInitials = (name?: string, roleStr?: string): string => {
-    if (!name) return 'EP';
-    const words = name.trim().split(/\s+/);
-    if (words.length >= 2) {
-      return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
-    }
-    if (roleStr) {
-      return roleStr.replace('ROLE_', '').slice(0, 2).toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
-  };
 
   // Lấy tiêu đề và mô tả của trang hiện tại cho Header
   const currentMenu = menus.find((m) => m.path === location.pathname);
@@ -307,7 +295,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             title="Xem hồ sơ cá nhân"
           >
             <div className="erp-header-avatar">
-              {getAvatarInitials(user?.fullName, currentRole)}
+              {getUserAvatarInitials(user?.fullName || user?.username, currentRole)}
             </div>
             <div className="erp-header-user-info">
               <span className="erp-header-fullname">

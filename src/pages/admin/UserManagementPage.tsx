@@ -15,7 +15,7 @@ import {
   type UpdateAssignmentsPayload
 } from '../../services/api';
 import type { RoleName } from '../../types/user';
-import { ROLE_METADATA_MAP } from '../../types/user';
+import { ROLE_METADATA_MAP, getUserAvatarInitials } from '../../types/user';
 import {
   Users,
   Search,
@@ -446,13 +446,8 @@ export const UserManagementPage: React.FC = () => {
     }
   };
 
-  // Avatar initials
-  const getInitials = (name?: string) => {
-    if (!name) return 'U';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  };
+  // Avatar initials đồng bộ toàn hệ thống
+  const getInitials = (name?: string) => getUserAvatarInitials(name);
 
   // Class badge màu theo vai trò
   const getRoleBadgeClass = (role: RoleName): string => {

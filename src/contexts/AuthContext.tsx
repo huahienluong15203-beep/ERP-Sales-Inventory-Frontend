@@ -24,6 +24,7 @@ interface AuthContextType {
   switchRole: (role: RoleName) => Promise<void>;
   hasPermission: (path: string) => boolean;
   refreshContext: () => Promise<void>;
+  updateUser: (updated: Partial<UserProfile>) => void;
   clearMustChangePassword: () => void;
   showToast: (title: string, message?: string, type?: ToastType, duration?: number) => void;
   clearToast: () => void;
@@ -304,6 +305,15 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     });
   };
 
+  const updateUser = useCallback((updated: Partial<UserProfile>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const merged = { ...prev, ...updated };
+      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(merged));
+      return merged;
+    });
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -317,6 +327,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         switchRole,
         hasPermission,
         refreshContext,
+        updateUser,
         clearMustChangePassword,
         showToast,
         clearToast

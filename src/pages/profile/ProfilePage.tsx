@@ -1,6 +1,6 @@
 import { useState, type FC, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { ROLE_METADATA_MAP } from '../../types/user';
+import { ROLE_METADATA_MAP, getUserAvatarInitials } from '../../types/user';
 import { changePasswordApi, updatePersonalProfileApi } from '../../services/api';
 import {
   Mail,
@@ -89,7 +89,7 @@ const STRENGTH_CONFIG: Record<StrengthLevel, { label: string; color: string; bar
    - Dữ liệu kho/địa bàn mặc định là "Chưa có"
    ──────────────────────────────────────────────────────────────────────── */
 export const ProfilePage: FC = () => {
-  const { user, currentRole, logout, refreshContext, showToast } = useAuth();
+  const { user, currentRole, logout, refreshContext, showToast, updateUser } = useAuth();
   const roleMeta = ROLE_METADATA_MAP[currentRole] ?? ROLE_METADATA_MAP['ROLE_ADMIN'];
 
   /* ── S2-02: State Chỉnh sửa hồ sơ cá nhân ── */
@@ -145,6 +145,10 @@ export const ProfilePage: FC = () => {
       if (res.success) {
         setIsEditingProfile(false);
         setProfileResult(null);
+        updateUser({
+          fullName: trimmedName,
+          phone: editPhone.trim() || undefined
+        });
         await refreshContext();
         showToast(
           'Cập nhật hồ sơ thành công!'
@@ -214,13 +218,8 @@ export const ProfilePage: FC = () => {
     }
   }
 
-  /* ── Avatar Initials ── */
-  const initials = (() => {
-    const name = user?.fullName?.trim() || '';
-    const words = name.split(/\s+/);
-    if (words.length >= 2) return (words[0][0] + words[words.length - 1][0]).toUpperCase();
-    return name.slice(0, 2).toUpperCase() || 'QT';
-  })();
+  /* ── Avatar Initials (chuẩn đồng bộ toàn hệ thống) ── */
+  const initials = getUserAvatarInitials(user?.fullName || user?.username, currentRole);
 
   const userRoles = user?.roles && user.roles.length > 0 ? user.roles : [currentRole];
 
