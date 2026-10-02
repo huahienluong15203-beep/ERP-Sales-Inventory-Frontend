@@ -17,6 +17,7 @@ import {
 } from '../../services/agencyApi';
 import { AgencyFormModal } from '../../components/customer/AgencyFormModal';
 import { SuspendAgencyModal } from '../../components/customer/SuspendAgencyModal';
+import { DeliveryPointsModal } from '../../components/customer/DeliveryPointsModal';
 import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
 import {
   Building2,
@@ -35,7 +36,8 @@ import {
   CreditCard,
   MapPin,
   Phone,
-  BadgeDollarSign
+  BadgeDollarSign,
+  Truck
 } from '../../components/common/Icons';
 
 export const AgencyManagementPage: React.FC = () => {
@@ -67,6 +69,15 @@ export const AgencyManagementPage: React.FC = () => {
   // Modal Dừng giao dịch / Mở lại
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
   const [targetSuspendAgency, setTargetSuspendAgency] = useState<Agency | null>(null);
+
+  // Modal Quản lý Điểm giao hàng (S3-04 / SCRUM-15)
+  const [isDeliveryPointsModalOpen, setIsDeliveryPointsModalOpen] = useState(false);
+  const [selectedAgencyForPoints, setSelectedAgencyForPoints] = useState<Agency | null>(null);
+
+  const handleOpenDeliveryPoints = (agency: Agency) => {
+    setSelectedAgencyForPoints(agency);
+    setIsDeliveryPointsModalOpen(true);
+  };
 
   // Tải dữ liệu danh sách đại lý
   const loadData = useCallback(async () => {
@@ -484,6 +495,17 @@ export const AgencyManagementPage: React.FC = () => {
                               {agency.address}
                             </p>
                           )}
+                          <div className="pt-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDeliveryPoints(agency)}
+                              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-orange-50 text-[#F85606] hover:bg-orange-100 border border-orange-200 transition-colors cursor-pointer"
+                              title="Xem và quản lý các điểm giao hàng của đại lý"
+                            >
+                              <Truck size={12} />
+                              <span>{agency.deliveryPointCount ?? 0} kho / điểm giao</span>
+                            </button>
+                          </div>
                         </div>
                       </td>
 
@@ -580,6 +602,15 @@ export const AgencyManagementPage: React.FC = () => {
                       {/* Cột 6: Thao tác */}
                       <td className="py-4 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* Nút Quản lý điểm giao hàng (S3-04) */}
+                          <button
+                            onClick={() => handleOpenDeliveryPoints(agency)}
+                            title="Quản lý các điểm giao hàng của đại lý"
+                            className="p-1.5 rounded-lg border border-orange-200 text-[#F85606] hover:bg-orange-50 hover:border-orange-300 transition-colors cursor-pointer"
+                          >
+                            <Truck size={15} />
+                          </button>
+
                           {/* Nút Sửa */}
                           <button
                             onClick={() => handleOpenEdit(agency)}
@@ -677,6 +708,14 @@ export const AgencyManagementPage: React.FC = () => {
         agency={targetSuspendAgency}
         onConfirmSuspend={handleConfirmSuspend}
         onConfirmReactivate={handleConfirmReactivate}
+      />
+
+      {/* Modal Quản Lý Điểm Giao Hàng (S3-04 / SCRUM-15) */}
+      <DeliveryPointsModal
+        isOpen={isDeliveryPointsModalOpen}
+        onClose={() => setIsDeliveryPointsModalOpen(false)}
+        agency={selectedAgencyForPoints}
+        onPointsUpdated={loadData}
       />
     </div>
   );
