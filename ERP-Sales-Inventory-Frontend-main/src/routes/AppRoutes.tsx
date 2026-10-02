@@ -6,6 +6,7 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { DashboardPage } from '../pages/dashboard/DashboardPage';
 import { ProfilePage } from '../pages/profile/ProfilePage';
 import { UserManagementPage } from '../pages/admin/UserManagementPage';
+import { ProductManagementPage } from '../pages/product/ProductManagementPage';
 import { ModulePage } from '../pages/common/ModulePage';
 import { ForbiddenPage } from '../pages/common/ForbiddenPage';
 import { NotFoundPage } from '../pages/common/NotFoundPage';
@@ -66,6 +67,25 @@ export const AppRoutes: React.FC = () => {
         {/* Hồ sơ cá nhân (Mọi vai trò đều xem được) */}
         <Route path="/profile" element={<ProfilePage />} />
 
+        {/* Danh mục sản phẩm & SKU (Sprint 2: S2-05, S2-07, S2-08) */}
+        <Route
+          path="/products"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP',
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <ProductManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Trang 403 Forbidden trực tiếp */}
         <Route path="/forbidden" element={<ForbiddenPage />} />
 
@@ -75,6 +95,7 @@ export const AppRoutes: React.FC = () => {
             m.path !== '/dashboard' &&
             m.path !== '/' &&
             m.path !== '/profile' &&
+            m.path !== '/products' &&
             m.path !== '/users' &&
             m.path !== '/admin/users'
         ).map((menuItem) => (
