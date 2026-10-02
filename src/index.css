@@ -59,7 +59,8 @@
   --erp-border-sidebar: #E5E7EB;
 
   /* Kích thước layout & Breakpoints */
-  --erp-sidebar-width: 270px;
+  --erp-sidebar-width: 260px;
+  --erp-sidebar-width-collapsed: 72px;
   --erp-topbar-height: 68px;
 
   /* Typography */
