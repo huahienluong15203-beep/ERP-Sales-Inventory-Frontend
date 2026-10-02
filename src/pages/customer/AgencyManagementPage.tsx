@@ -17,6 +17,7 @@ import {
 } from '../../services/agencyApi';
 import { AgencyFormModal } from '../../components/customer/AgencyFormModal';
 import { SuspendAgencyModal } from '../../components/customer/SuspendAgencyModal';
+import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
 import {
   Building2,
   Search,
@@ -52,6 +53,9 @@ export const AgencyManagementPage: React.FC = () => {
   const [selectedGroup, setSelectedGroup] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  // Gõ từ 2 ký tự mới gọi API (đợi ngừng gõ 0,4 giây); 1 ký tự thì lọc tại chỗ
+  const resetToFirstPage = useCallback(() => setPage(0), []);
+  const { serverKeyword, localKeyword, flush: flushSearch } = useServerSearch(keyword, resetToFirstPage);
 
   // Thông báo phản hồi
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -69,7 +73,7 @@ export const AgencyManagementPage: React.FC = () => {
     setLoading(true);
     try {
       const params: AgencyFilterParams = {
-        keyword: keyword.trim() || undefined,
+        keyword: serverKeyword || undefined,
         customerGroup: selectedGroup || undefined,
         regionId: selectedRegion || undefined,
         status: selectedStatus || undefined,
@@ -85,7 +89,7 @@ export const AgencyManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [keyword, selectedGroup, selectedRegion, selectedStatus, page, size]);
+  }, [serverKeyword, selectedGroup, selectedRegion, selectedStatus, page, size]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -95,9 +99,16 @@ export const AgencyManagementPage: React.FC = () => {
   // Submit form tìm kiếm
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const changed = flushSearch();
     setPage(0);
-    loadData();
+    if (!changed) loadData();
   };
+
+  // Mới gõ 1 ký tự: lọc tại chỗ trên danh sách đang hiển thị, không gọi API
+  const visibleAgencies = localKeyword
+    ? agencies.filter((a) =>
+        matchesKeyword(localKeyword, a.code, a.name, a.taxCode, a.phone, a.assignedRepName))
+    : agencies;
 
   // Reset bộ lọc
   const handleResetFilter = () => {
@@ -428,7 +439,7 @@ export const AgencyManagementPage: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ) : agencies.length === 0 ? (
+              ) : visibleAgencies.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-400">
                     <div className="flex flex-col items-center justify-center gap-2">
@@ -439,7 +450,7 @@ export const AgencyManagementPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                agencies.map((agency) => {
+                visibleAgencies.map((agency) => {
                   const isSuspended = agency.status === 'SUSPENDED';
 
                   return (
