@@ -65,6 +65,7 @@ export interface Agency {
   deliveryPointCount?: number; // Số lượng điểm giao hàng đã khai báo (S3-04)
   createdAt: string;
   updatedAt: string;
+  maxDebtDays?: number;         // Số ngày nợ tối đa cho phép (S3-05)
 }
 
 /**
@@ -148,4 +149,26 @@ export interface AgencyListResponse {
   totalElements: number;
   totalPages: number;
   currentPage: number;
+}
+/**
+ * Nhật ký thay đổi hạn mức công nợ (S3-05 / SCRUM-16)
+ */
+export interface CreditLimitAuditLog {
+  id: string;
+  agencyId: string;
+  oldCreditLimit: number;
+  newCreditLimit: number;
+  oldMaxDebtDays: number;
+  newMaxDebtDays: number;
+  reason: string;               // Bắt buộc nhập lý do
+  updatedBy: string;             // Tên người thực hiện (vd: Kế toán Nguyễn Văn A)
+  updatedByRole: string;         // Vai trò (ROLE_ACCOUNTANT / ROLE_SALES_MANAGER)
+  updatedAt: string;
+}
+
+export interface UpdateCreditLimitPayload {
+  agencyId: string;
+  creditLimit: number;
+  maxDebtDays: number;
+  reason: string;
 }

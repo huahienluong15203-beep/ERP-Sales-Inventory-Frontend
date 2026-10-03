@@ -33,33 +33,6 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     allowedRoles: ['ROLE_ADMIN']
   },
 
-  // 3. Quản lý hồ sơ đại lý (Sprint 3: S3-03 / SCRUM-85 / EP-03 - Kế toán công nợ & Quản lý KD)
-  {
-    title: 'Hồ sơ đại lý',
-    path: '/customers',
-    icon: 'Building2',
-    epic: 'Đại lý & Hạn mức nợ',
-    description: 'Quản lý danh sách khách hàng chuẩn hóa, bảng giá và trạng thái giao dịch',
-    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
-  },
-
-  // 4. Quản lý danh mục sản phẩm (Sprint 2: S2-05)
-  {
-    title: 'Danh mục sản phẩm',
-    path: '/products',
-    icon: 'Package',
-    epic: 'Sản phẩm & Tồn kho',
-    description: 'Quản lý chuẩn hóa danh mục sản phẩm, mã SKU và bảo mật giá vốn',
-    allowedRoles: [
-      'ROLE_SALES_MANAGER',
-      'ROLE_ADMIN',
-      'ROLE_SALES_REP',
-      'ROLE_WAREHOUSE',
-      'ROLE_WH_MANAGER',
-      'ROLE_ACCOUNTANT'
-    ]
-  },
-
   // 3. Hồ sơ cá nhân
   {
     title: 'Hồ sơ cá nhân',
@@ -98,14 +71,7 @@ export function getAuthorizedMenus(roles: RoleName | RoleName[]): MenuItem[] {
   const roleList = Array.isArray(roles) ? roles : [roles];
   return ALL_SYSTEM_MENUS.filter((item) =>
     item.allowedRoles.some((r) => roleList.includes(r))
-  ).map((item) => ({
-    title: item.title,
-    path: item.path,
-    icon: item.icon,
-    epic: item.epic,
-    description: item.description,
-    badge: item.badge
-  }));
+  ).map(({ allowedRoles: _allowedRoles, ...menuItem }) => menuItem);
 }
 
 /**
