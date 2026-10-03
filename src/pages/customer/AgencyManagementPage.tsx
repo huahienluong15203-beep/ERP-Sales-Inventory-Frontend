@@ -18,6 +18,7 @@ import {
 import { AgencyFormModal } from '../../components/customer/AgencyFormModal';
 import { SuspendAgencyModal } from '../../components/customer/SuspendAgencyModal';
 import { DeliveryPointsModal } from '../../components/customer/DeliveryPointsModal';
+import { CreditLimitModal } from '../../components/customer/CreditLimitModal';
 import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
 import {
   Building2,
@@ -77,6 +78,15 @@ export const AgencyManagementPage: React.FC = () => {
   const handleOpenDeliveryPoints = (agency: Agency) => {
     setSelectedAgencyForPoints(agency);
     setIsDeliveryPointsModalOpen(true);
+  };
+
+  // Modal Thiết lập Hạn mức nợ (S3-05 / SCRUM-16)
+  const [isCreditLimitModalOpen, setIsCreditLimitModalOpen] = useState(false);
+  const [selectedAgencyForCredit, setSelectedAgencyForCredit] = useState<Agency | null>(null);
+
+  const handleOpenCreditLimit = (agency: Agency) => {
+    setSelectedAgencyForCredit(agency);
+    setIsCreditLimitModalOpen(true);
   };
 
   // Tải dữ liệu danh sách đại lý
@@ -568,8 +578,17 @@ export const AgencyManagementPage: React.FC = () => {
                               {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(agency.totalDebt)}
                             </strong>
                           </div>
-                          <div className="text-[10px] text-gray-400">
-                            Hạn mức: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(agency.creditLimit)}
+                          <div className="pt-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenCreditLimit(agency)}
+                              className="inline-flex items-center gap-1 text-[10px] text-gray-500 hover:text-[#F85606] cursor-pointer hover:underline text-left"
+                              title="Nhấn để xem lịch sử và điều chỉnh hạn mức nợ"
+                            >
+                              <span>Hạn mức: <strong className="font-mono text-gray-700">{new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(agency.creditLimit)}đ</strong></span>
+                              <span>•</span>
+                              <span>Tối đa: <strong className="text-blue-600 font-semibold">{agency.maxDebtDays || 30} ngày</strong></span>
+                            </button>
                           </div>
                         </div>
                       </td>
@@ -609,6 +628,15 @@ export const AgencyManagementPage: React.FC = () => {
                             className="p-1.5 rounded-lg border border-orange-200 text-[#F85606] hover:bg-orange-50 hover:border-orange-300 transition-colors cursor-pointer"
                           >
                             <Truck size={15} />
+                          </button>
+
+                          {/* Nút Thiết lập hạn mức công nợ (S3-05) */}
+                          <button
+                            onClick={() => handleOpenCreditLimit(agency)}
+                            title="Thiết lập hạn mức công nợ & số ngày nợ cho phép"
+                            className="p-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-colors cursor-pointer"
+                          >
+                            <CreditCard size={15} />
                           </button>
 
                           {/* Nút Sửa */}
@@ -716,6 +744,14 @@ export const AgencyManagementPage: React.FC = () => {
         onClose={() => setIsDeliveryPointsModalOpen(false)}
         agency={selectedAgencyForPoints}
         onPointsUpdated={loadData}
+      />
+
+      {/* Modal Thiết Lập Hạn Mức Nợ (S3-05 / SCRUM-16) */}
+      <CreditLimitModal
+        isOpen={isCreditLimitModalOpen}
+        onClose={() => setIsCreditLimitModalOpen(false)}
+        agency={selectedAgencyForCredit}
+        onSuccess={loadData}
       />
     </div>
   );

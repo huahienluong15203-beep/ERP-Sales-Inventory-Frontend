@@ -18,7 +18,9 @@ import type {
   AgencyListResponse,
   DeliveryPoint,
   CreateDeliveryPointPayload,
-  UpdateDeliveryPointPayload
+  UpdateDeliveryPointPayload,
+  CreditLimitAuditLog,
+  UpdateCreditLimitPayload
 } from '../types/agency';
 
 // Danh mục Nhóm khách hàng & Bảng giá tương ứng
@@ -128,7 +130,8 @@ const INITIAL_MOCK_AGENCIES: Agency[] = [
     totalDebt: 45000000,
     creditLimit: 100000000,
     createdAt: '2026-08-15 08:30:00',
-    updatedAt: '2026-09-20 14:15:00'
+    updatedAt: '2026-09-20 14:15:00',
+    maxDebtDays: 30,
   },
   {
     id: 'AG-002',
@@ -791,3 +794,71 @@ export async function deleteDeliveryPoint(
   };
 }
 
+const CREDIT_LIMIT_LOGS_KEY = 'erp_credit_limit_logs_v1';
+
+// Lấy danh sách lịch sử thay đổi của đại lý
+export async function fetchCreditLimitLogs(agencyId: string): Promise<CreditLimitAuditLog[]> {
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  try {
+    const raw = localStorage.getItem(CREDIT_LIMIT_LOGS_KEY);
+    const allLogs: CreditLimitAuditLog[] = raw ? JSON.parse(raw) : [];
+    return allLogs
+      .filter((log) => log.agencyId === agencyId)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  } catch {
+    return [];
+  }
+}
+
+// Cập nhật hạn mức & Tự động ghi nhật ký
+export async function updateCreditLimit(
+  payload: UpdateCreditLimitPayload,
+  currentUser: { fullName: string; role: string }
+): Promise<{ success: boolean; message: string }> {
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  if (!payload.reason || !payload.reason.trim()) {
+    return { success: false, message: 'Bắt buộc phải nhập lý do điều chỉnh hạn mức!' };
+  }
+  if (payload.creditLimit < 0 || payload.maxDebtDays < 0) {
+    return { success: false, message: 'Hạn mức tiền và số ngày nợ không được âm!' };
+  }
+
+  // 1. Cập nhật hồ sơ đại lý
+  const agencies = getStoredAgencies();
+  const agencyIndex = agencies.findIndex((a) => a.id === payload.agencyId);
+  if (agencyIndex === -1) {
+    return { success: false, message: 'Không tìm thấy hồ sơ đại lý!' };
+  }
+
+  const agency = agencies[agencyIndex];
+  const oldLimit = agency.creditLimit;
+  const oldDays = agency.maxDebtDays || 30;
+
+  agency.creditLimit = payload.creditLimit;
+  agency.maxDebtDays = payload.maxDebtDays;
+  agency.updatedAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  saveStoredAgencies(agencies);
+
+  // 2. Ghi một dòng vào Nhật ký kiểm toán (Audit Log)
+  const rawLogs = localStorage.getItem(CREDIT_LIMIT_LOGS_KEY);
+  const allLogs: CreditLimitAuditLog[] = rawLogs ? JSON.parse(rawLogs) : [];
+
+  const newLog: CreditLimitAuditLog = {
+    id: `LOG-${Date.now()}`,
+    agencyId: payload.agencyId,
+    oldCreditLimit: oldLimit,
+    newCreditLimit: payload.creditLimit,
+    oldMaxDebtDays: oldDays,
+    newMaxDebtDays: payload.maxDebtDays,
+    reason: payload.reason.trim(),
+    updatedBy: currentUser.fullName || 'Kế toán viên',
+    updatedByRole: currentUser.role,
+    updatedAt: agency.updatedAt
+  };
+
+  allLogs.unshift(newLog);
+  localStorage.setItem(CREDIT_LIMIT_LOGS_KEY, JSON.stringify(allLogs));
+
+  return { success: true, message: `Đã cập nhật hạn mức cho đại lý [${agency.name}] thành công!` };
+}

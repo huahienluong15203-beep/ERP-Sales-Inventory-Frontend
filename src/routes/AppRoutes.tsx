@@ -106,11 +106,8 @@ export const AppRoutes: React.FC = () => {
             m.path !== '/profile' &&
             m.path !== '/users' &&
             m.path !== '/admin/users' &&
-<<<<<<< HEAD
-            m.path !== '/categories'
-=======
+            m.path !== '/categories' &&
             m.path !== '/customers'
->>>>>>> cd3fe23eb9e5e63c82b838f1c8e8263274fd28d1
         ).map((menuItem) => (
           <Route
             key={menuItem.path}
