@@ -23,6 +23,8 @@ export interface UserProfile {
   warehouse?: string;     // Kho làm việc (đối với nhân sự kho/admin)
   workLocation?: string;  // Địa bàn làm việc (đối với kinh doanh/đại lý)
   avatar?: string;
+  avatarUrl?: string;
+  avatarThumbnailUrl?: string;
   mustChangePassword?: boolean;
 }
 
@@ -119,3 +121,30 @@ export const ROLE_METADATA_MAP: Record<RoleName, RoleMetadata> = {
     sampleLocation: 'Điểm nhận hàng: Kho Đại lý Cần Thơ'
   }
 };
+
+/**
+ * Lấy 2 chữ cái viết tắt đại diện cho avatar người dùng theo chuẩn đồng bộ hệ thống:
+ * 1. Ưu tiên lấy từ họ và tên (fullName) hoặc tên đăng nhập (username):
+ *    - Nếu >= 2 từ: chữ cái đầu từ thứ nhất + chữ cái đầu từ cuối cùng (VD: "Trần Văn A" -> "TA")
+ *    - Nếu 1 từ: 2 chữ cái đầu của từ đó (VD: "mina123" -> "MI", "Admin" -> "AD")
+ * 2. Nếu không có tên nhưng có vai trò hệ thống:
+ *    - 2 chữ cái đầu của vai trò bỏ tiền tố ROLE_ (VD: ROLE_ADMIN -> "AD", ROLE_SALES_REP -> "SA")
+ * 3. Fallback mặc định: "EP"
+ */
+export function getUserAvatarInitials(name?: string, roleStr?: string): string {
+  const clean = name?.trim() || '';
+  if (clean) {
+    const words = clean.split(/\s+/).filter(Boolean);
+    if (words.length >= 2) {
+      return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+    }
+    if (words.length === 1) {
+      return words[0].slice(0, 2).toUpperCase();
+    }
+  }
+  if (roleStr) {
+    return roleStr.replace('ROLE_', '').slice(0, 2).toUpperCase();
+  }
+  return 'EP';
+}
+
