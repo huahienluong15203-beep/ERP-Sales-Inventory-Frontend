@@ -7,6 +7,7 @@ import { DashboardPage } from '../pages/dashboard/DashboardPage';
 import { ProfilePage } from '../pages/profile/ProfilePage';
 import { UserManagementPage } from '../pages/admin/UserManagementPage';
 import { AgencyManagementPage } from '../pages/customer/AgencyManagementPage';
+import { ProductManagementPage } from '../pages/product/ProductManagementPage';
 import { ModulePage } from '../pages/common/ModulePage';
 import { ForbiddenPage } from '../pages/common/ForbiddenPage';
 import { NotFoundPage } from '../pages/common/NotFoundPage';
@@ -82,6 +83,25 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* Quản lý danh mục sản phẩm (Sprint 2: S2-05) */}
+        <Route
+          path="/products"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_SALES_REP',
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <ProductManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Hồ sơ cá nhân (Mọi vai trò đều xem được) */}
         <Route path="/profile" element={<ProfilePage />} />
 
@@ -106,8 +126,9 @@ export const AppRoutes: React.FC = () => {
             m.path !== '/profile' &&
             m.path !== '/users' &&
             m.path !== '/admin/users' &&
-            m.path !== '/categories' &&
-            m.path !== '/customers'
+            m.path !== '/customers' &&
+            m.path !== '/products' &&
+            m.path !== '/categories' 
         ).map((menuItem) => (
           <Route
             key={menuItem.path}

@@ -43,6 +43,23 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
   },
 
+  // 4. Quản lý danh mục sản phẩm (Sprint 2: S2-05)
+  {
+    title: 'Danh mục sản phẩm',
+    path: '/products',
+    icon: 'Package',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Quản lý chuẩn hóa danh mục sản phẩm, mã SKU và bảo mật giá vốn',
+    allowedRoles: [
+      'ROLE_SALES_MANAGER',
+      'ROLE_ADMIN',
+      'ROLE_SALES_REP',
+      'ROLE_WAREHOUSE',
+      'ROLE_WH_MANAGER',
+      'ROLE_ACCOUNTANT'
+    ]
+  },
+
   // 3. Hồ sơ cá nhân
   {
     title: 'Hồ sơ cá nhân',
