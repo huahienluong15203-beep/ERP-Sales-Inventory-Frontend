@@ -247,7 +247,7 @@ export const CloneVersionModal: React.FC<CloneVersionModalProps> = ({
                     const nf = parseFloat(it.floorPrice) || 0;
                     const hasErr = nf > np && np > 0;
                     return (
-                      <tr key={idx} className={hasErr ? 'bg-rose-50/60' : ''}>
+                      <tr key={`clone-item-${it.productSku || 'idx'}-${idx}`} className={hasErr ? 'bg-rose-50/60' : ''}>
                         <td className="py-2 px-3 font-mono font-bold text-slate-800 dark:text-slate-200">
                           {it.productSku}
                         </td>
@@ -299,15 +299,15 @@ export const CloneVersionModal: React.FC<CloneVersionModalProps> = ({
               className="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-xl shadow-md transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               {submitting ? (
-                <>
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <span>Đang khởi tạo phiên bản v{nextVer}...</span>
-                </>
+                </span>
               ) : (
-                <>
+                <span className="inline-flex items-center gap-1.5">
                   <Icons.Check size={16} />
                   <span>Tạo & Kích hoạt phiên bản v{nextVer}</span>
-                </>
+                </span>
               )}
             </button>
           </div>

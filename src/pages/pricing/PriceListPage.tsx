@@ -39,8 +39,10 @@ export const PriceListPage: React.FC = () => {
     try {
       const data = await fetchPriceLists();
       setPriceLists(data);
+      return data;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Lỗi khi tải danh sách bảng giá');
+      return [];
     } finally {
       setLoading(false);
     }
@@ -230,14 +232,16 @@ export const PriceListPage: React.FC = () => {
       {/* Modal Xem chi tiết dòng giá */}
       {detailModalItem && (
         <PriceListDetailModal
+          key={`detail-${detailModalItem.id}`}
           priceList={detailModalItem}
           canManage={canManage}
           onClose={() => setDetailModalItem(null)}
           onRefresh={async () => {
-            await loadData();
-            // cập nhật lại modal item
-            const updated = priceLists.find((p) => p.id === detailModalItem.id);
-            if (updated) setDetailModalItem(updated);
+            const data = await loadData();
+            if (data && data.length > 0) {
+              const updated = data.find((p) => p.id === detailModalItem.id);
+              if (updated) setDetailModalItem(updated);
+            }
           }}
           onOpenClone={handleOpenClone}
         />
@@ -246,6 +250,7 @@ export const PriceListPage: React.FC = () => {
       {/* Modal Thêm mới / Sửa bảng giá */}
       {formModalOpen && (
         <PriceListFormModal
+          key={editingItem ? `edit-${editingItem.id}` : 'create-new'}
           initialData={editingItem}
           onClose={() => {
             setFormModalOpen(false);
@@ -258,6 +263,7 @@ export const PriceListPage: React.FC = () => {
       {/* Modal Tạo phiên bản mới (Clone Version) */}
       {cloneModalItem && (
         <CloneVersionModal
+          key={`clone-${cloneModalItem.id}`}
           originalList={cloneModalItem}
           onClose={() => setCloneModalItem(null)}
           onSuccess={handleCloneSuccess}

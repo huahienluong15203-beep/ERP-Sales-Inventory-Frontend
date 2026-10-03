@@ -399,14 +399,15 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                       const numF = parseFloat(item.floorPrice) || 0;
                       const hasFloorError = numF > numP && numP > 0;
                       const diff = numP - numF;
+                      const rowKey = item.id ? `item-${item.id}` : `sku-${item.productSku || 'idx'}-${idx}`;
 
                       return (
                         <tr
-                          key={idx}
+                          key={rowKey}
                           className={hasFloorError ? 'bg-rose-50/60 dark:bg-rose-950/20' : ''}
                         >
                           <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px]">
-                            {idx + 1}
+                            <span>{idx + 1}</span>
                           </td>
                           <td className="py-2 px-3">
                             <input
@@ -452,17 +453,21 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                             />
                           </td>
                           <td className="py-2 px-3 text-center">
-                            {hasFloorError ? (
-                              <span className="text-[10px] text-rose-600 dark:text-rose-400 font-bold">
-                                Sàn &gt; Giá!
-                              </span>
-                            ) : numP > 0 ? (
-                              <span className="text-[11px] text-slate-500 font-medium">
-                                -{Math.round((diff / numP) * 100)}%
-                              </span>
-                            ) : (
-                              <span className="text-slate-400">-</span>
-                            )}
+                            <span
+                              className={
+                                hasFloorError
+                                  ? 'inline-block text-[10px] text-rose-600 dark:text-rose-400 font-bold'
+                                  : numP > 0
+                                  ? 'inline-block text-[11px] text-slate-500 font-medium'
+                                  : 'inline-block text-slate-400'
+                              }
+                            >
+                              {hasFloorError
+                                ? 'Sàn > Giá!'
+                                : numP > 0
+                                ? `-${Math.round((diff / numP) * 100)}%`
+                                : '-'}
+                            </span>
                           </td>
                           <td className="py-2 px-3 text-center">
                             <button
@@ -497,15 +502,15 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
               className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow-md transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               {submitting ? (
-                <>
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <span>Đang lưu...</span>
-                </>
+                </span>
               ) : (
-                <>
+                <span className="inline-flex items-center gap-1.5">
                   <Icons.Check size={16} />
                   <span>{isEdit ? 'Lưu cập nhật' : 'Hoàn tất & Khai báo bảng giá'}</span>
-                </>
+                </span>
               )}
             </button>
           </div>

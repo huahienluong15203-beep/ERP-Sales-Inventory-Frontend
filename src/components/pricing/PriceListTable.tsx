@@ -202,7 +202,8 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <div className="flex flex-col gap-0.5">
                         <div className="text-slate-800 dark:text-slate-200 font-medium">
-                          {item.startDate} {item.endDate ? `→ ${item.endDate}` : '→ Vô thời hạn'}
+                          <span>{item.startDate}</span>
+                          <span>{item.endDate ? ` → ${item.endDate}` : ' → Vô thời hạn'}</span>
                         </div>
                         <div>{getValidityBadge(item.startDate, item.endDate)}</div>
                       </div>
