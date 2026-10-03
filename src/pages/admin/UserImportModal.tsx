@@ -351,9 +351,9 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
         // 6. Kiểm tra Mã kho & Ràng buộc kho S1-09
         const whList: string[] = rawWarehouses
           ? rawWarehouses
-              .split(/[,;]/)
-              .map((w) => w.trim())
-              .filter(Boolean)
+            .split(/[,;]/)
+            .map((w) => w.trim())
+            .filter(Boolean)
           : [];
 
         if (isWhRole && whList.length === 0) {
@@ -363,9 +363,9 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
         // 7. Mã địa bàn
         const regList: string[] = rawRegions
           ? rawRegions
-              .split(/[,;]/)
-              .map((r) => r.trim())
-              .filter(Boolean)
+            .split(/[,;]/)
+            .map((r) => r.trim())
+            .filter(Boolean)
           : [];
 
         parsedRows.push({
@@ -525,7 +525,7 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
                 Nhập Danh Sách Người Dùng Từ Excel
               </h2>
               <span className="text-[11px] text-gray-500">
-                Story S2-01 (SCRUM-18) • Xem trước bảng dữ liệu, tự động phát hiện lỗi và bỏ qua dòng sai
+                Xem trước bảng dữ liệu, tự động phát hiện lỗi và bỏ qua dòng sai
               </span>
             </div>
           </div>
@@ -543,9 +543,8 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
         <div className="px-6 py-2.5 bg-gray-50/90 border-b border-gray-200 flex items-center justify-between shrink-0 text-xs">
           <div className="flex items-center gap-2">
             <span
-              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                step === 'SELECT_FILE' ? 'bg-orange-600 text-white' : 'bg-emerald-600 text-white'
-              }`}
+              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 'SELECT_FILE' ? 'bg-orange-600 text-white' : 'bg-emerald-600 text-white'
+                }`}
             >
               {step !== 'SELECT_FILE' ? <Check size={10} /> : '1'}
             </span>
@@ -558,13 +557,12 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
 
           <div className="flex items-center gap-2">
             <span
-              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                step === 'PREVIEW'
-                  ? 'bg-orange-600 text-white'
-                  : step === 'SUMMARY'
+              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 'PREVIEW'
+                ? 'bg-orange-600 text-white'
+                : step === 'SUMMARY'
                   ? 'bg-emerald-600 text-white'
                   : 'bg-gray-200 text-gray-600'
-              }`}
+                }`}
             >
               {step === 'SUMMARY' ? <Check size={10} /> : '2'}
             </span>
@@ -577,9 +575,8 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
 
           <div className="flex items-center gap-2">
             <span
-              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                step === 'SUMMARY' ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-600'
-              }`}
+              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 'SUMMARY' ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-600'
+                }`}
             >
               3
             </span>
@@ -686,7 +683,7 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
                 <ul className="list-disc list-inside space-y-0.5 text-gray-600">
                   <li><strong>Kiểm tra trùng lặp</strong>: Tên tài khoản, Email và Số điện thoại không được trùng với dữ liệu đã có hoặc trùng giữa các dòng trong file.</li>
                   <li><strong>Định dạng số điện thoại</strong>: Phải đúng 10 số di động Việt Nam (đầu 03, 05, 07, 08, 09).</li>
-                  <li><strong>Quy tắc vai trò kho (S1-09)</strong>: Thủ kho hoặc Quản lý kho bắt buộc phải gắn ít nhất một mã kho hợp lệ.</li>
+                  <li><strong>Quy tắc vai trò kho </strong>: Thủ kho hoặc Quản lý kho bắt buộc phải gắn ít nhất một mã kho hợp lệ.</li>
                   <li><strong>Cơ chế tự động</strong>: Dòng có lỗi sẽ tự động bị bỏ qua, dòng hợp lệ vẫn được nhập an toàn vào hệ thống.</li>
                 </ul>
               </div>
@@ -729,33 +726,30 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setFilterTab('ALL')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                      filterTab === 'ALL'
-                        ? 'bg-orange-600 text-white shadow-xs'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${filterTab === 'ALL'
+                      ? 'bg-orange-600 text-white shadow-xs'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
                   >
                     Tất cả ({previewData.totalRows})
                   </button>
                   <button
                     type="button"
                     onClick={() => setFilterTab('VALID')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                      filterTab === 'VALID'
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                    }`}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${filterTab === 'VALID'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                      }`}
                   >
                     Hợp lệ ({previewData.validRowsCount})
                   </button>
                   <button
                     type="button"
                     onClick={() => setFilterTab('INVALID')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                      filterTab === 'INVALID'
-                        ? 'bg-red-600 text-white shadow-xs'
-                        : 'bg-red-50 text-red-700 hover:bg-red-100'
-                    }`}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${filterTab === 'INVALID'
+                      ? 'bg-red-600 text-white shadow-xs'
+                      : 'bg-red-50 text-red-700 hover:bg-red-100'
+                      }`}
                   >
                     Có lỗi ({previewData.invalidRowsCount})
                   </button>
@@ -801,9 +795,8 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
                         filteredRows.map((row) => (
                           <tr
                             key={row.rowNumber}
-                            className={`transition hover:bg-gray-50/80 ${
-                              !row.valid ? 'bg-red-50/40' : ''
-                            }`}
+                            className={`transition hover:bg-gray-50/80 ${!row.valid ? 'bg-red-50/40' : ''
+                              }`}
                           >
                             <td className="py-2 px-2.5 text-center font-mono text-gray-500 font-bold">
                               #{row.rowNumber}

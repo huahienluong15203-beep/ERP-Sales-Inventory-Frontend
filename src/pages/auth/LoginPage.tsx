@@ -490,7 +490,7 @@ export const LoginPage: React.FC = () => {
                     cursor: 'pointer'
                   }}
                 />
-                <span>Duy trì trạng thái đăng nhập</span>
+                <span>Ghi nhớ đăng nhập</span>
               </label>
             </div>
 
