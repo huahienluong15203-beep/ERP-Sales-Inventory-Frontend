@@ -60,6 +60,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     ]
   },
 
+  // 5. Bảng giá sản phẩm (S2-10 / SCRUM-55: EP-02 Sản phẩm & Bảng giá)
+  {
+    title: 'Bảng giá sản phẩm',
+    path: '/pricing',
+    icon: 'Tags',
+    epic: 'Sản phẩm & Bảng giá',
+    description: 'Khai báo bảng giá theo nhóm khách hàng, thời gian hiệu lực và giá sàn',
+    allowedRoles: ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
+  },
+
   // 3. Hồ sơ cá nhân
   {
     title: 'Hồ sơ cá nhân',
