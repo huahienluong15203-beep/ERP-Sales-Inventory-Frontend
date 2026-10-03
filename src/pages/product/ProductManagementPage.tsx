@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Product, ProductStatus } from '../../types/product';
 import {
   productService,
@@ -87,137 +87,112 @@ export const ProductManagementPage: React.FC = () => {
     loadProducts();
   };
 
+  // Thống kê nhanh theo chuẩn ETC Stat Cards
+  const stats = useMemo(() => {
+    const total = products.length;
+    const active = products.filter((p) => p.status === 'ACTIVE').length;
+    const inactive = products.filter((p) => p.status === 'INACTIVE').length;
+    const categoryCount = new Set(products.map((p) => p.category)).size;
+    return { total, active, inactive, categoryCount };
+  }, [products]);
+
   return (
-    <div style={{ padding: '24px', width: '100%', boxSizing: 'border-box' }}>
+    <div className="w-full p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Toast thông báo */}
       {toastMessage && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            backgroundColor: '#111827',
-            color: '#FFFFFF',
-            padding: '12px 20px',
-            borderRadius: '10px',
-            fontSize: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-            zIndex: 10000
-          }}
-        >
-          <Icons.CheckCircle2 size={18} color="#22C55E" />
+        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm border border-gray-800 animate-in fade-in slide-in-from-bottom-2">
+          <Icons.CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* Header Phân hệ S2-05 */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '16px',
-          marginBottom: '20px'
-        }}
-      >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: '#1F2937' }}>
-              Danh mục Sản phẩm (S2-05)
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">
+              Danh mục Sản phẩm
             </h1>
-            <span
-              style={{
-                fontSize: '12px',
-                fontWeight: 600,
-                padding: '2px 8px',
-                borderRadius: '6px',
-                backgroundColor: '#FFEDD5',
-                color: '#C2410C'
-              }}
-            >
-              Chuẩn hóa toàn công ty
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
+              Chuẩn hóa SKU toàn công ty
             </span>
           </div>
-          <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6B7280' }}>
-            Quản lý mã SKU duy nhất, quy cách đóng gói, đơn vị cơ sở và bảo mật giá vốn theo vai trò.
+          <p className="mt-1 text-xs sm:text-sm text-gray-500">
+            Quản lý mã SKU duy nhất, quy cách đóng gói, đơn vị cơ sở và bảo mật giá vốn theo phân quyền RBAC.
           </p>
         </div>
 
         <button
           type="button"
           onClick={handleOpenCreate}
-          style={{
-            backgroundColor: '#F85606',
-            color: '#FFFFFF',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '10px 18px',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 2px 4px rgba(248, 86, 6, 0.25)'
-          }}
+          className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow transition-all duration-200 shrink-0 min-h-[44px]"
         >
           <Icons.Plus size={18} />
           <span>Thêm sản phẩm mới</span>
         </button>
       </div>
 
+      {/* Hàng Stat Cards chuẩn App ETC */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Tổng sản phẩm</p>
+            <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center border border-orange-100">
+            <Icons.Package size={20} />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Đang kinh doanh</p>
+            <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.active}</p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+            <Icons.CheckCircle2 size={20} />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Ngừng kinh doanh</p>
+            <p className="text-2xl font-bold text-gray-500 mt-1">{stats.inactive}</p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center border border-gray-200">
+            <Icons.AlertCircle size={20} />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Nhóm hàng</p>
+            <p className="text-2xl font-bold text-blue-600 mt-1">{stats.categoryCount}</p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+            <Icons.Building2 size={20} />
+          </div>
+        </div>
+      </div>
+
       {/* Thanh tìm kiếm và bộ lọc */}
-      <div
-        style={{
-          backgroundColor: '#FFFFFF',
-          padding: '16px',
-          borderRadius: '12px',
-          border: '1px solid #E5E7EB',
-          display: 'flex',
-          gap: '12px',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          marginBottom: '16px'
-        }}
-      >
-        <div style={{ flex: '1 1 240px', position: 'relative' }}>
-          <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }}>
-            <Icons.Search size={16} />
-          </span>
+      <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-[240px] relative">
+          <Icons.Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="Tìm theo Mã SKU, tên hàng, quy cách..."
-            style={{
-              width: '100%',
-              padding: '9px 12px 9px 36px',
-              borderRadius: '8px',
-              border: '1px solid #D1D5DB',
-              fontSize: '13px',
-              outline: 'none',
-              boxSizing: 'border-box'
-            }}
+            placeholder="Tìm theo Mã SKU, tên hàng, quy cách đóng gói..."
+            className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
           />
         </div>
 
-        <div style={{ width: '200px' }}>
+        <div className="w-full sm:w-52">
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '9px 12px',
-              borderRadius: '8px',
-              border: '1px solid #D1D5DB',
-              fontSize: '13px',
-              outline: 'none',
-              backgroundColor: '#FFFFFF'
-            }}
+            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
           >
             <option value="ALL">Tất cả nhóm hàng</option>
             {PRODUCT_CATEGORIES.map((c) => (
@@ -228,19 +203,11 @@ export const ProductManagementPage: React.FC = () => {
           </select>
         </div>
 
-        <div style={{ width: '180px' }}>
+        <div className="w-full sm:w-48">
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value as ProductStatus | 'ALL')}
-            style={{
-              width: '100%',
-              padding: '9px 12px',
-              borderRadius: '8px',
-              border: '1px solid #D1D5DB',
-              fontSize: '13px',
-              outline: 'none',
-              backgroundColor: '#FFFFFF'
-            }}
+            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang kinh doanh</option>
@@ -248,63 +215,41 @@ export const ProductManagementPage: React.FC = () => {
           </select>
         </div>
 
-        <div style={{ marginLeft: 'auto', fontSize: '13px', color: '#6B7280', fontWeight: 500 }}>
-          Tổng: <b>{products.length}</b> sản phẩm
+        <div className="w-full sm:w-auto sm:ml-auto text-xs sm:text-sm text-gray-500 font-medium">
+          Hiển thị: <span className="font-bold text-gray-900">{products.length}</span> sản phẩm
         </div>
       </div>
 
-      {/* Bảng danh sách sản phẩm full-width sạch sẽ */}
-      <div
-        style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '12px',
-          border: '1px solid #E5E7EB',
-          overflow: 'hidden',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-        }}
-      >
-        <div style={{ width: '100%', overflowX: 'auto' }}>
-          <table
-            style={{
-              width: '100%',
-              minWidth: '980px',
-              borderCollapse: 'collapse',
-              textAlign: 'left',
-              fontSize: '13px'
-            }}
-          >
+      {/* Bảng danh sách sản phẩm */}
+      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs overflow-hidden">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
             <thead>
-              <tr style={{ backgroundColor: '#F9FAFB', borderBottom: '1px solid #E5E7EB', color: '#4B5563' }}>
-                <th style={{ padding: '12px 16px', width: '56px', textAlign: 'center', whiteSpace: 'nowrap' }}>ẢNH</th>
-                <th style={{ padding: '12px 16px', width: '130px', whiteSpace: 'nowrap' }}>MÃ SKU</th>
-                <th style={{ padding: '12px 16px', minWidth: '220px', whiteSpace: 'nowrap' }}>TÊN SẢN PHẨM</th>
-                <th style={{ padding: '12px 16px', width: '160px', whiteSpace: 'nowrap' }}>NHÓM HÀNG</th>
-                <th style={{ padding: '12px 16px', width: '90px', whiteSpace: 'nowrap' }}>ĐVT CƠ SỞ</th>
-                <th style={{ padding: '12px 16px', width: '170px', whiteSpace: 'nowrap' }}>QUY CÁCH ĐÓNG GÓI</th>
-                <th style={{ padding: '12px 16px', width: '130px', whiteSpace: 'nowrap', textAlign: 'right' }}>
-                  GIÁ VỐN
-                </th>
-                <th style={{ padding: '12px 16px', width: '130px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                  TRẠNG THÁI
-                </th>
-                <th style={{ padding: '12px 16px', width: '100px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                  THAO TÁC
-                </th>
+              <tr className="bg-gray-50/80 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="py-3.5 px-4 w-14 text-center whitespace-nowrap">Ảnh</th>
+                <th className="py-3.5 px-4 w-32 whitespace-nowrap">Mã SKU</th>
+                <th className="py-3.5 px-4 min-w-[220px] whitespace-nowrap">Tên sản phẩm</th>
+                <th className="py-3.5 px-4 w-44 whitespace-nowrap">Nhóm hàng</th>
+                <th className="py-3.5 px-4 w-28 text-center whitespace-nowrap">ĐVT cơ sở</th>
+                <th className="py-3.5 px-4 w-44 whitespace-nowrap">Quy cách đóng gói</th>
+                <th className="py-3.5 px-4 w-36 text-right whitespace-nowrap">Giá vốn</th>
+                <th className="py-3.5 px-4 w-36 text-center whitespace-nowrap">Trạng thái</th>
+                <th className="py-3.5 px-4 w-28 text-center whitespace-nowrap">Thao tác</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: '36px', color: '#9CA3AF' }}>
+                  <td colSpan={9} className="text-center py-12 text-gray-400 text-sm">
                     Đang tải dữ liệu sản phẩm...
                   </td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                      <Icons.Package size={32} color="#D1D5DB" />
-                      <span>Không tìm thấy sản phẩm nào phù hợp</span>
+                  <td colSpan={9} className="text-center py-14 text-gray-500">
+                    <div className="flex flex-col items-center gap-2">
+                      <Icons.Package size={36} className="text-gray-300" />
+                      <span className="text-sm font-medium">Không tìm thấy sản phẩm nào phù hợp</span>
                     </div>
                   </td>
                 </tr>
@@ -314,33 +259,13 @@ export const ProductManagementPage: React.FC = () => {
                   return (
                     <tr
                       key={p.id}
-                      style={{
-                        borderBottom: '1px solid #F3F4F6',
-                        backgroundColor: isInactive ? '#FAFAFA' : '#FFFFFF',
-                        transition: 'background-color 0.15s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#FFF7ED';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = isInactive ? '#FAFAFA' : '#FFFFFF';
-                      }}
+                      className={`transition-colors hover:bg-orange-50/40 ${
+                        isInactive ? 'bg-gray-50/60' : 'bg-white'
+                      }`}
                     >
                       {/* 1. Ảnh với fallback an toàn */}
-                      <td style={{ padding: '10px 16px', textAlign: 'center' }}>
-                        <div
-                          style={{
-                            width: '42px',
-                            height: '42px',
-                            borderRadius: '8px',
-                            backgroundColor: '#F3F4F6',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            overflow: 'hidden',
-                            border: '1px solid #E5E7EB'
-                          }}
-                        >
+                      <td className="py-3 px-4 text-center">
+                        <div className="w-10 h-10 rounded-lg bg-gray-100 inline-flex items-center justify-center overflow-hidden border border-gray-200/80">
                           {p.imageUrl ? (
                             <img
                               src={p.imageUrl}
@@ -349,144 +274,92 @@ export const ProductManagementPage: React.FC = () => {
                                 e.currentTarget.style.display = 'none';
                                 e.currentTarget.parentElement?.querySelector('.fallback-icon')?.removeAttribute('style');
                               }}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              className="w-full h-full object-cover"
                             />
                           ) : null}
                           <span
-                            className="fallback-icon"
-                            style={{ display: p.imageUrl ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            className="fallback-icon flex items-center justify-center"
+                            style={{ display: p.imageUrl ? 'none' : 'flex' }}
                           >
-                            <Icons.Package size={20} color="#EA580C" />
+                            <Icons.Package size={18} className="text-orange-500" />
                           </span>
                         </div>
                       </td>
 
                       {/* 2. Mã SKU */}
-                      <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
-                        <span
-                          style={{
-                            fontWeight: 700,
-                            fontFamily: 'monospace',
-                            color: '#EA580C',
-                            backgroundColor: '#FFF7ED',
-                            padding: '3px 7px',
-                            borderRadius: '5px',
-                            fontSize: '12px'
-                          }}
-                        >
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className="font-mono font-bold text-xs text-orange-700 bg-orange-50 border border-orange-200/60 px-2 py-0.5 rounded">
                           {p.sku}
                         </span>
                       </td>
 
                       {/* 3. Tên sản phẩm */}
-                      <td style={{ padding: '10px 16px', fontWeight: 600, color: '#111827' }}>
+                      <td className="py-3 px-4 font-semibold text-gray-900">
                         <div>{p.name}</div>
                         {p.transactionCount > 0 && (
-                          <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 400 }}>
+                          <span className="text-xs text-gray-500 font-normal">
                             Đã phát sinh {p.transactionCount} giao dịch
                           </span>
                         )}
                       </td>
 
                       {/* 4. Nhóm hàng */}
-                      <td style={{ padding: '10px 16px', color: '#4B5563', whiteSpace: 'nowrap' }}>
+                      <td className="py-3 px-4 text-gray-600 whitespace-nowrap">
                         {p.category}
                       </td>
 
                       {/* 5. ĐVT cơ sở */}
-                      <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
-                        <span
-                          style={{
-                            backgroundColor: '#EFF6FF',
-                            color: '#1D4ED8',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            fontWeight: 600,
-                            fontSize: '12px'
-                          }}
-                        >
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200/60 px-2 py-0.5 rounded text-xs font-semibold">
                           {p.baseUnit}
                         </span>
                       </td>
 
                       {/* 6. Quy cách đóng gói */}
-                      <td style={{ padding: '10px 16px', color: '#4B5563' }}>
+                      <td className="py-3 px-4 text-gray-600 text-xs">
                         {p.packagingSpec}
                       </td>
 
-                      {/* 7. GIÁ VỐN */}
-                      <td style={{ padding: '10px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {/* 7. GIÁ VỐN (Bảo mật RBAC) */}
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
                         {canSeeCost ? (
-                          <span style={{ fontWeight: 700, color: '#C2410C' }}>
+                          <span className="font-bold text-orange-700">
                             {formatCurrencyVND(p.costPrice)}
                           </span>
                         ) : (
                           <span
-                            title="Bảo mật: Chỉ Quản lý kinh doanh & Admin được xem"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              color: '#9CA3AF',
-                              fontSize: '12px',
-                              letterSpacing: '2px',
-                              cursor: 'help'
-                            }}
+                            title="Bảo mật: Chỉ Quản lý kinh doanh & Admin được xem giá vốn"
+                            className="inline-flex items-center gap-1.5 text-gray-400 text-xs tracking-widest cursor-help"
                           >
-                            <Icons.Lock size={13} color="#9CA3AF" />
+                            <Icons.Lock size={13} className="text-gray-400" />
                             ••••••
                           </span>
                         )}
                       </td>
 
                       {/* 8. Trạng thái */}
-                      <td style={{ padding: '10px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
                         {p.status === 'ACTIVE' ? (
-                          <span
-                            style={{
-                              backgroundColor: '#DCFCE7',
-                              color: '#15803D',
-                              padding: '3px 8px',
-                              borderRadius: '9999px',
-                              fontSize: '11px',
-                              fontWeight: 700
-                            }}
-                          >
+                          <span className="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2.5 py-0.5 rounded-full text-xs font-semibold">
                             Đang kinh doanh
                           </span>
                         ) : (
-                          <span
-                            style={{
-                              backgroundColor: '#F3F4F6',
-                              color: '#6B7280',
-                              padding: '3px 8px',
-                              borderRadius: '9999px',
-                              fontSize: '11px',
-                              fontWeight: 700
-                            }}
-                          >
+                          <span className="inline-block bg-gray-100 text-gray-600 border border-gray-200 px-2.5 py-0.5 rounded-full text-xs font-semibold">
                             Ngừng kinh doanh
                           </span>
                         )}
                       </td>
 
-                      {/* Thao tác */}
-                      <td style={{ padding: '10px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      {/* 9. Thao tác */}
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
                             title="Sửa thông tin"
                             onClick={() => handleOpenEdit(p)}
-                            style={{
-                              backgroundColor: '#F3F4F6',
-                              border: 'none',
-                              borderRadius: '6px',
-                              padding: '6px',
-                              cursor: 'pointer',
-                              color: '#374151'
-                            }}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors"
                           >
-                            <Icons.Edit size={15} />
+                            <Icons.Edit size={16} />
                           </button>
 
                           <button
@@ -497,16 +370,13 @@ export const ProductManagementPage: React.FC = () => {
                                 : 'Xóa sản phẩm'
                             }
                             onClick={() => handleDeleteClick(p)}
-                            style={{
-                              backgroundColor: p.transactionCount > 0 ? '#FEF2F2' : '#FEE2E2',
-                              border: 'none',
-                              borderRadius: '6px',
-                              padding: '6px',
-                              cursor: 'pointer',
-                              color: '#DC2626'
-                            }}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              p.transactionCount > 0
+                                ? 'text-amber-600 hover:bg-amber-50'
+                                : 'text-red-500 hover:text-red-700 hover:bg-red-50'
+                            }`}
                           >
-                            <Icons.Trash2 size={15} />
+                            <Icons.Trash2 size={16} />
                           </button>
                         </div>
                       </td>
@@ -532,95 +402,39 @@ export const ProductManagementPage: React.FC = () => {
 
       {/* Modal CHẶN XÓA (Điều kiện 4) */}
       {blockedDeleteProduct && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.55)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '16px'
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: '14px',
-              maxWidth: '480px',
-              width: '100%',
-              padding: '24px',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
-            }}
-          >
-            <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-              <div
-                style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '10px',
-                  backgroundColor: '#FEF2F2',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}
-              >
-                <Icons.AlertTriangle size={24} color="#DC2626" />
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95">
+            <div className="flex gap-3.5 items-start">
+              <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 border border-red-100">
+                <Icons.AlertTriangle size={22} />
               </div>
               <div>
-                <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700, color: '#111827' }}>
+                <h3 className="text-base font-bold text-gray-900">
                   Không thể xóa sản phẩm đã có giao dịch!
                 </h3>
-                <p style={{ margin: 0, fontSize: '13px', color: '#4B5563', lineHeight: 1.5 }}>
-                  Sản phẩm <b>{blockedDeleteProduct.sku} - {blockedDeleteProduct.name}</b> đã phát sinh{' '}
-                  <span style={{ color: '#DC2626', fontWeight: 700 }}>
+                <p className="mt-1.5 text-xs sm:text-sm text-gray-600 leading-relaxed">
+                  Sản phẩm <b className="text-gray-900">{blockedDeleteProduct.sku} - {blockedDeleteProduct.name}</b> đã phát sinh{' '}
+                  <span className="text-red-600 font-bold">
                     {blockedDeleteProduct.transactionCount} giao dịch
                   </span>
-                  . Theo quy định hệ thống (S2-05 Điều kiện 4), không được xóa khỏi danh mục để tránh mất mát dữ liệu
+                  . Theo quy định hệ thống, không được xóa khỏi danh mục để tránh mất mát dữ liệu
                   kế toán và kho. Bạn chỉ có thể chuyển sang <b>Ngừng kinh doanh</b>.
                 </p>
               </div>
             </div>
 
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '10px',
-                marginTop: '20px'
-              }}
-            >
+            <div className="flex justify-end gap-2.5 mt-6">
               <button
                 type="button"
                 onClick={() => setBlockedDeleteProduct(null)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #D1D5DB',
-                  backgroundColor: '#FFFFFF',
-                  color: '#374151',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
+                className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-medium transition-colors"
               >
                 Đóng
               </button>
               <button
                 type="button"
                 onClick={handleSwitchToInactive}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: '#EA580C',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
+                className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold transition-colors shadow-xs"
               >
                 Chuyển sang Ngừng kinh doanh
               </button>
@@ -631,73 +445,35 @@ export const ProductManagementPage: React.FC = () => {
 
       {/* Modal XÁC NHẬN XÓA (transactionCount === 0) */}
       {confirmDeleteProduct && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.55)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '16px'
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: '14px',
-              maxWidth: '440px',
-              width: '100%',
-              padding: '24px',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
-            }}
-          >
-            <h3 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: 700, color: '#111827' }}>
-              Xác nhận xóa sản phẩm
-            </h3>
-            <p style={{ margin: 0, fontSize: '13px', color: '#4B5563', lineHeight: 1.5 }}>
-              Sản phẩm <b>{confirmDeleteProduct.sku} - {confirmDeleteProduct.name}</b> chưa có giao dịch nào phát sinh.
-              Bạn có chắc chắn muốn xóa vĩnh viễn sản phẩm này không?
-            </p>
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95">
+            <div className="flex gap-3.5 items-start">
+              <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 border border-red-100">
+                <Icons.Trash2 size={22} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">
+                  Xác nhận xóa vĩnh viễn sản phẩm
+                </h3>
+                <p className="mt-1.5 text-xs sm:text-sm text-gray-600 leading-relaxed">
+                  Sản phẩm <b className="text-gray-900">{confirmDeleteProduct.sku} - {confirmDeleteProduct.name}</b> chưa có giao dịch nào phát sinh.
+                  Bạn có chắc chắn muốn xóa hoàn toàn sản phẩm này khỏi hệ thống không?
+                </p>
+              </div>
+            </div>
 
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '10px',
-                marginTop: '20px'
-              }}
-            >
+            <div className="flex justify-end gap-2.5 mt-6">
               <button
                 type="button"
                 onClick={() => setConfirmDeleteProduct(null)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #D1D5DB',
-                  backgroundColor: '#FFFFFF',
-                  color: '#374151',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
+                className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-medium transition-colors"
               >
                 Hủy bỏ
               </button>
               <button
                 type="button"
                 onClick={handleConfirmNormalDelete}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: '#DC2626',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors shadow-xs"
               >
                 Xóa vĩnh viễn
               </button>
