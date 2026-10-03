@@ -1,7 +1,12 @@
-import { useState, type FC, useEffect } from 'react';
+import { useState, type FC, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ROLE_METADATA_MAP, getUserAvatarInitials } from '../../types/user';
-import { changePasswordApi, updatePersonalProfileApi } from '../../services/api';
+import {
+  changePasswordApi,
+  updatePersonalProfileApi,
+  deleteAvatarApi,
+  getAvatarFullUrl
+} from '../../services/api';
 import {
   Mail,
   Phone,
@@ -16,8 +21,12 @@ import {
   EyeOff,
   RefreshCw,
   Edit,
-  X
+  X,
+  Camera,
+  Trash2,
+  ZoomIn
 } from '../../components/common/Icons';
+import { AvatarCropModal } from '../../components/profile/AvatarCropModal';
 
 /* ──────────────────────────────────────────────────────────────────────────
    Trường nhập mật khẩu gọn gàng, chuẩn Tailwind CSS (không tràn màn hình)
@@ -98,6 +107,84 @@ export const ProfilePage: FC = () => {
   const [editPhone, setEditPhone] = useState(user?.phone || '');
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileResult, setProfileResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  /* ── S2-03: State Tải lên & Cắt ảnh đại diện ── */
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string>('');
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [avatarImgError, setAvatarImgError] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingAvatar, setDeletingAvatar] = useState(false);
+  const [showLightbox, setShowLightbox] = useState(false);
+
+  useEffect(() => {
+    setAvatarImgError(false);
+  }, [user?.avatarUrl, user?.avatarThumbnailUrl]);
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset value input để có thể chọn lại cùng một file nếu muốn
+    e.target.value = '';
+
+    // Validate định dạng JPG / PNG
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      showToast('Định dạng tệp không hợp lệ!', 'Chỉ chấp nhận ảnh định dạng JPG hoặc PNG.', 'error');
+      return;
+    }
+
+    // Validate dung lượng tối đa 2MB
+    const MAX_SIZE = 2 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      showToast('Dung lượng ảnh vượt quá giới hạn!', 'Vui lòng chọn ảnh có dung lượng tối đa 2MB.', 'error');
+      return;
+    }
+
+    // Đọc ảnh và mở modal cắt vuông
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result as string);
+      setCropFile(file);
+      setCropModalOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAvatarUploadSuccess = async (result: { avatarUrl: string; avatarThumbnailUrl: string }) => {
+    setAvatarImgError(false);
+    updateUser({
+      avatarUrl: result.avatarUrl,
+      avatarThumbnailUrl: result.avatarThumbnailUrl
+    });
+    await refreshContext();
+    showToast('Tải ảnh đại diện thành công!', 'Ảnh đại diện của bạn đã được cập nhật trên toàn hệ thống.');
+  };
+
+  const handleDeleteAvatar = async () => {
+    setDeletingAvatar(true);
+    try {
+      const res = await deleteAvatarApi();
+      if (res.success) {
+        setShowDeleteConfirm(false);
+        setShowLightbox(false);
+        updateUser({
+          avatarUrl: undefined,
+          avatarThumbnailUrl: undefined
+        });
+        await refreshContext();
+        showToast('Đã xóa ảnh đại diện!', 'Tài khoản đã trở về ảnh đại diện chữ cái mặc định.');
+      } else {
+        showToast('Không thể xóa ảnh đại diện', res.message, 'error');
+      }
+    } catch {
+      showToast('Lỗi kết nối', 'Không thể kết nối đến máy chủ. Vui lòng thử lại!', 'error');
+    } finally {
+      setDeletingAvatar(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -247,11 +334,71 @@ export const ProfilePage: FC = () => {
             ═════════════════════════════════════════════════════════════ */}
         <div className="lg:col-span-5 flex flex-col">
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5 flex flex-col justify-between h-full gap-3.5">
-            {/* 1. Header Thẻ Cá Nhân */}
-            <div className="pb-3 border-b border-gray-100 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 text-white font-extrabold text-base flex items-center justify-center shadow-sm ring-4 ring-orange-50 shrink-0">
-                {initials}
+            {/* 1. Header Thẻ Cá Nhân (S2-03: Ảnh đại diện cắt vuông & thumbnail) */}
+            <div className="pb-3 border-b border-gray-100 flex items-center gap-3.5">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/jpg"
+                className="hidden"
+                onChange={handleAvatarFileChange}
+              />
+
+              {/* Vùng Avatar: Bấm vào avatar để XEM CHI TIẾT (Phóng to), bấm vào Camera để ĐỔI ẢNH */}
+              <div className="relative group shrink-0">
+                <div
+                  onClick={() => {
+                    if (user?.avatarUrl && !avatarImgError) {
+                      setShowLightbox(true);
+                    } else {
+                      fileInputRef.current?.click();
+                    }
+                  }}
+                  title={user?.avatarUrl && !avatarImgError ? "Bấm để xem chi tiết ảnh đại diện phóng to" : "Bấm để tải ảnh đại diện mới"}
+                  className="w-14 h-14 rounded-full overflow-hidden shadow-sm ring-4 ring-orange-50 bg-gradient-to-tr from-orange-500 to-amber-500 text-white font-extrabold text-base flex items-center justify-center cursor-pointer transition-transform active:scale-95 relative"
+                >
+                  {user?.avatarUrl && !avatarImgError ? (
+                    <img
+                      src={getAvatarFullUrl(user.avatarUrl)}
+                      alt={user.fullName || user.username}
+                      onError={() => setAvatarImgError(true)}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span>{initials}</span>
+                  )}
+
+                  {/* Lớp overlay mờ khi hover: Xem chi tiết nếu đã có ảnh */}
+                  <div className="absolute inset-0 bg-black/45 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    {user?.avatarUrl && !avatarImgError ? (
+                      <>
+                        <ZoomIn size={16} />
+                        <span className="text-[9px] font-semibold mt-0.5">Chi tiết</span>
+                      </>
+                    ) : (
+                      <>
+                        <Camera size={16} />
+                        <span className="text-[9px] font-semibold mt-0.5">Tải ảnh</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Badge nút Camera nhỏ góc phải: Đổi ảnh */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
+                  title="Thay đổi ảnh đại diện"
+                  className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md flex items-center justify-center border-2 border-white cursor-pointer hover:from-orange-600 hover:to-amber-600 transition"
+                >
+                  <Camera size={11} />
+                </button>
               </div>
+
+              {/* Thông tin tên, username, vai trò và nút hành động nhanh avatar */}
               <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <h2 className="text-sm font-bold text-gray-900 truncate">
@@ -262,7 +409,7 @@ export const ProfilePage: FC = () => {
                 <div className="text-[11px] text-gray-500 font-mono truncate">
                   @{user?.username || 'user'} • Mã NV: ERP-{user?.id ? String(user.id).padStart(4, '0') : '0001'}
                 </div>
-                <div className="mt-0.5">
+                <div className="mt-0.5 flex items-center gap-2 flex-wrap">
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-orange-50 text-orange-700 border border-orange-200">
                     {roleMeta.label}
                   </span>
@@ -335,8 +482,8 @@ export const ProfilePage: FC = () => {
                       onChange={(e) => setEditPhone(e.target.value)}
                       placeholder="Ví dụ: 0987654321"
                       className={`w-full px-2.5 py-1.5 bg-white border rounded-lg text-xs text-gray-900 focus:outline-none focus:ring-2 transition ${getPhoneError(editPhone)
-                          ? 'border-red-400 focus:ring-red-400/20 focus:border-red-500'
-                          : 'border-gray-300 focus:ring-orange-500/20 focus:border-orange-500'
+                        ? 'border-red-400 focus:ring-red-400/20 focus:border-red-500'
+                        : 'border-gray-300 focus:ring-orange-500/20 focus:border-orange-500'
                         }`}
                       disabled={profileLoading}
                     />
@@ -659,6 +806,140 @@ export const ProfilePage: FC = () => {
         </div>
 
       </div>
+
+      {/* S2-03: Modal Cắt Ảnh Vuông */}
+      <AvatarCropModal
+        isOpen={cropModalOpen}
+        imageSrc={cropImageSrc}
+        originalFile={cropFile}
+        onClose={() => setCropModalOpen(false)}
+        onSuccess={handleAvatarUploadSuccess}
+      />
+
+      {/* S2-03: Hộp thoại xác nhận xóa ảnh đại diện */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999]"
+          style={{ animation: 'fadeIn 0.2s ease-out' }}
+        >
+          <div
+            className="w-full max-w-[400px] bg-white rounded-2xl border border-gray-200 shadow-2xl p-5 flex flex-col gap-3 relative"
+            style={{ animation: 'scaleIn 0.2s ease-out' }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 border border-red-100">
+                <Trash2 size={20} />
+              </div>
+              <div className="flex flex-col">
+                <h4 className="text-sm font-bold text-gray-900">Xóa ảnh đại diện?</h4>
+                <p className="text-xs text-gray-500">
+                  Ảnh đại diện sẽ trở về chữ cái mặc định ({initials})
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+              Bạn có chắc chắn muốn xóa ảnh đại diện hiện tại? Hành động này sẽ cập nhật trên toàn bộ hệ thống ngay lập tức.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deletingAvatar}
+                className="px-3 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAvatar}
+                disabled={deletingAvatar}
+                className="px-3.5 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+              >
+                {deletingAvatar && <RefreshCw size={12} className="animate-spin text-white" />}
+                <span>{deletingAvatar ? 'Đang xóa…' : 'Xác nhận xóa'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* S2-03: Modal Xem Chi Tiết Ảnh Đại Diện (Lightbox Phóng To) */}
+      {showLightbox && user?.avatarUrl && (
+        <div
+          className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-[9999]"
+          onClick={() => setShowLightbox(false)}
+          style={{ animation: 'fadeIn 0.2s ease-out' }}
+        >
+          <div
+            className="w-full max-w-[380px] bg-white rounded-3xl border border-gray-100 shadow-2xl p-6 flex flex-col items-center gap-4 relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+            style={{ animation: 'scaleIn 0.2s ease-out' }}
+          >
+            {/* Nút đóng góc phải */}
+            <button
+              type="button"
+              onClick={() => setShowLightbox(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+
+            {/* Header thông tin người dùng */}
+            <div className="flex flex-col items-center text-center">
+              <h3 className="text-base font-bold text-gray-900">{user.fullName || user.username}</h3>
+              <span className="text-xs text-gray-500 font-mono">@{user.username} • {roleMeta.label}</span>
+            </div>
+
+            {/* Ảnh phóng to tròn viền đẹp */}
+            <div className="w-52 h-52 sm:w-60 sm:h-60 rounded-full overflow-hidden ring-4 ring-orange-500/20 shadow-xl bg-gray-50 relative">
+              <img
+                src={getAvatarFullUrl(user.avatarUrl)}
+                alt={user.fullName || user.username}
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+
+
+            {/* Hành động trong modal xem ảnh: Đổi ảnh khác hoặc Xóa ảnh */}
+            <div className="flex flex-col gap-2 w-full pt-3 border-t border-gray-100">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLightbox(false);
+                    fileInputRef.current?.click();
+                  }}
+                  className="py-2.5 px-3 text-xs font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Camera size={14} />
+                  <span>Đổi ảnh mới</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLightbox(false);
+                    setShowDeleteConfirm(true);
+                  }}
+                  className="py-2.5 px-3 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Trash2 size={14} />
+                  <span>Xóa ảnh</span>
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLightbox(false)}
+                className="w-full py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

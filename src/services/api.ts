@@ -2,7 +2,18 @@ import type { RoleName, UserContextResponse, UserProfile } from '../types/user';
 import { ROLE_METADATA_MAP } from '../types/user';
 import { getAuthorizedMenus } from './menuConfig';
 
-const API_BASE_URL = 'http://localhost:8080';
+export const API_BASE_URL = 'http://localhost:8080';
+
+/**
+ * Chuyển đổi đường dẫn tương đối của avatar thành URL đầy đủ
+ */
+export function getAvatarFullUrl(path?: string | null): string {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:') || path.startsWith('blob:')) {
+    return path;
+  }
+  return `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+}
 
 export interface LoginResult {
   success: boolean;
@@ -502,6 +513,8 @@ export interface AdminUserItem {
   roles: RoleName[];
   warehouses: RefItem[];
   regions: RefItem[];
+  avatarUrl?: string | null;
+  avatarThumbnailUrl?: string | null;
   createdAt: string;
   updatedAt?: string;
 }
@@ -959,6 +972,8 @@ export interface PersonalProfileData {
   roles: RoleName[];
   warehouses: Array<{ id: number; code: string; name: string }>;
   regions: Array<{ id: number; code: string; name: string }>;
+  avatarUrl?: string | null;
+  avatarThumbnailUrl?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -1004,6 +1019,101 @@ export async function updatePersonalProfileApi(payload: {
       return {
         success: false,
         message: err?.message || 'Không thể cập nhật hồ sơ. Vui lòng kiểm tra lại thông tin!'
+      };
+    }
+  } catch (err: any) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+      throw err;
+    }
+    return {
+      success: false,
+      message: 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau!'
+    };
+  }
+}
+
+export interface AvatarUploadResult {
+  success: boolean;
+  message: string;
+  avatarUrl?: string;
+  avatarThumbnailUrl?: string;
+  profile?: PersonalProfileData;
+}
+
+/**
+ * S2-03: Tải lên ảnh đại diện cá nhân (hỗ trợ toạ độ cắt vuông x, y, width, height)
+ */
+export async function uploadAvatarApi(
+  file: File | Blob,
+  crop?: { x?: number; y?: number; width?: number; height?: number }
+): Promise<AvatarUploadResult> {
+  try {
+    const formData = new FormData();
+    formData.append('file', file, (file as File).name || 'avatar.png');
+    if (crop) {
+      if (crop.x != null) formData.append('x', String(Math.round(crop.x)));
+      if (crop.y != null) formData.append('y', String(Math.round(crop.y)));
+      if (crop.width != null) formData.append('width', String(Math.round(crop.width)));
+      if (crop.height != null) formData.append('height', String(Math.round(crop.height)));
+    }
+
+    const res = await authFetch(`${API_BASE_URL}/api/v1/profile/avatar`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        success: true,
+        message: data.message || 'Tải ảnh đại diện thành công!',
+        avatarUrl: data.avatarUrl,
+        avatarThumbnailUrl: data.avatarThumbnailUrl,
+        profile: data.profile
+      };
+    } else {
+      const err = await res.json().catch(() => null);
+      return {
+        success: false,
+        message: err?.message || 'Không thể tải lên ảnh đại diện. Vui lòng thử lại!'
+      };
+    }
+  } catch (err: any) {
+    if (err?.message === 'SESSION_EXPIRED' || err?.message?.includes('Phiên làm việc')) {
+      throw err;
+    }
+    return {
+      success: false,
+      message: 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau!'
+    };
+  }
+}
+
+/**
+ * S2-03: Xoá ảnh đại diện trở về mặc định
+ */
+export async function deleteAvatarApi(): Promise<{
+  success: boolean;
+  message: string;
+  profile?: PersonalProfileData;
+}> {
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/v1/profile/avatar`, {
+      method: 'DELETE'
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        success: true,
+        message: 'Đã xoá ảnh đại diện, trở về ảnh mặc định!',
+        profile: data
+      };
+    } else {
+      const err = await res.json().catch(() => null);
+      return {
+        success: false,
+        message: err?.message || 'Không thể xoá ảnh đại diện. Vui lòng thử lại!'
       };
     }
   } catch (err: any) {

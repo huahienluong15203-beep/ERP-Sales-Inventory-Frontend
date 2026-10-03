@@ -5,7 +5,7 @@ import { useNavigate, useLocation, Link } from '../routes/Router';
 import { ROLE_METADATA_MAP, getUserAvatarInitials } from '../types/user';
 import type { RoleName } from '../types/user';
 import { Icons, DynamicIcon } from '../components/common/Icons';
-import { changePasswordApi } from '../services/api';
+import { changePasswordApi, getAvatarFullUrl } from '../services/api';
 import { LogoutConfirmModal } from '../components/common/LogoutConfirmModal';
 
 interface MainLayoutProps {
@@ -36,6 +36,13 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
   // Hộp xác nhận đăng xuất
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
   const [loggingOut, setLoggingOut] = useState<boolean>(false);
+
+  // S2-03: Trạng thái hiển thị avatar trong Header
+  const [headerAvatarError, setHeaderAvatarError] = useState<boolean>(false);
+
+  useEffect(() => {
+    setHeaderAvatarError(false);
+  }, [user?.avatarThumbnailUrl, user?.avatarUrl]);
 
 
 
@@ -322,14 +329,23 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
 
 
-          {/* Khối User Profile Avatar ở Header (như App ETC) */}
+          {/* Khối User Profile Avatar ở Header (như App ETC) - S2-03 Đồng bộ Avatar */}
           <div
             className="erp-header-user-block"
             onClick={() => navigate('/profile')}
             title="Xem hồ sơ cá nhân"
           >
-            <div className="erp-header-avatar">
-              {getUserAvatarInitials(user?.fullName || user?.username, currentRole)}
+            <div className="erp-header-avatar rounded-full overflow-hidden">
+              {(user?.avatarThumbnailUrl || user?.avatarUrl) && !headerAvatarError ? (
+                <img
+                  src={getAvatarFullUrl(user.avatarThumbnailUrl || user.avatarUrl)}
+                  alt={user?.fullName || user?.username || 'Avatar'}
+                  onError={() => setHeaderAvatarError(true)}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                getUserAvatarInitials(user?.fullName || user?.username, currentRole)
+              )}
             </div>
             <div className="erp-header-user-info">
               <span className="erp-header-fullname">

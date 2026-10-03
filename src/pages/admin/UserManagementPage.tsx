@@ -8,6 +8,7 @@ import {
   updateAdminAssignments,
   lockAdminUser,
   unlockAdminUser,
+  getAvatarFullUrl,
   type AdminUserItem,
   type AdminFormOptions,
   type CreateAdminUserPayload,
@@ -654,7 +655,20 @@ export const UserManagementPage: React.FC = () => {
                       {/* Cột 1: Tên & Username */}
                       <td className="user-mgmt-td">
                         <div className="user-mgmt-user-cell">
-                          <div className="user-mgmt-avatar">{getInitials(item.fullName)}</div>
+                          <div className="user-mgmt-avatar">
+                            {item.avatarThumbnailUrl || item.avatarUrl ? (
+                              <img
+                                src={getAvatarFullUrl(item.avatarThumbnailUrl || item.avatarUrl)}
+                                alt={item.fullName}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  // Fallback về text initials nếu ảnh bị lỗi
+                                  (e.currentTarget as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                            ) : null}
+                            {(!item.avatarThumbnailUrl && !item.avatarUrl) && getInitials(item.fullName)}
+                          </div>
                           <div className="user-mgmt-user-info">
                             <span className="user-mgmt-fullname">
                               {item.fullName}
