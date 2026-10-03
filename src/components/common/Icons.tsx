@@ -366,6 +366,32 @@ export const Icons: Record<string, React.FC<IconProps>> = {
       <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
       <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
     </svg>
+  ),
+  History: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l4 2" />
+    </svg>
+  ),
+  TrendingDown: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polyline points="22 17 13.5 8.5 8.5 13.5 2 7" />
+      <polyline points="16 17 22 17 22 11" />
+    </svg>
+  ),
+  ArrowUpRight: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="7" y1="17" x2="17" y2="7" />
+      <polyline points="7 7 17 7 17 17" />
+    </svg>
+  ),
+  ArrowDownRight: ({ size = 20, color = 'currentColor', ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="7" y1="7" x2="17" y2="17" />
+      <polyline points="17 7 17 17 7 17" />
+    </svg>
+    </svg>
   )
 };
 
@@ -444,3 +470,8 @@ export const ZoomIn = Icons.ZoomIn;
 export const ZoomOut = Icons.ZoomOut;
 export const RotateCw = Icons.RotateCw;
 export const Image = Icons.Image;
+export const History = Icons.History;
+export const TrendingDown = Icons.TrendingDown;
+export const ArrowUpRight = Icons.ArrowUpRight;
+export const ArrowDownRight = Icons.ArrowDownRight;
+export const Copy = Icons.Copy;
