@@ -221,17 +221,21 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
                       {item.hasOrders ? (
                         <button
                           type="button"
-                          onClick={() => canManage && onCloneVersion(item)}
-                          title="Bảng giá đã phát sinh đơn thì không sửa. Bấm vào đây để tạo phiên bản mới!"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900 hover:bg-rose-100 transition-colors cursor-pointer"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onCloneVersion(item);
+                          }}
+                          title="Bảng giá đã phát sinh đơn thì không sửa. Bấm vào đây để tạo phiên bản mới (v2, v3...)!"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-200 border border-rose-300 dark:border-rose-800 hover:bg-rose-200 hover:border-rose-400 active:scale-95 transition-all cursor-pointer shadow-xs"
                         >
-                          <Icons.ShieldAlert size={12} />
-                          <span>Đã có đơn (Khóa sửa)</span>
+                          <Icons.ShieldAlert size={14} className="text-rose-600 dark:text-rose-400 shrink-0" />
+                          <span>Đã có đơn (Bấm tạo bản mới)</span>
                         </button>
                       ) : (
                         <span
                           title="Chưa phát sinh đơn hàng, cho phép chỉnh sửa trực tiếp"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
                         >
                           <Icons.CheckSquare size={12} />
                           <span>Chưa có đơn</span>
@@ -284,51 +288,52 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
                         </button>
 
                         {/* Sửa bảng giá */}
-                        {canManage && (
-                          <button
-                            onClick={() => {
-                              if (item.hasOrders) {
-                                if (
-                                  window.confirm(
-                                    `Bảng giá ${item.code} đã phát sinh đơn hàng nên không thể sửa trực tiếp. Bạn có muốn tạo phiên bản mới (v${(item.version || 1) + 1}) không?`
-                                  )
-                                ) {
-                                  onCloneVersion(item);
-                                }
-                              } else {
-                                onEdit(item);
+                        <button
+                          onClick={() => {
+                            if (item.hasOrders) {
+                              if (
+                                window.confirm(
+                                  `Bảng giá ${item.code} đã phát sinh đơn hàng nên không thể sửa trực tiếp. Bạn có muốn tạo phiên bản mới (v${(item.version || 1) + 1}) không?`
+                                )
+                              ) {
+                                onCloneVersion(item);
                               }
-                            }}
-                            title={
-                              item.hasOrders
-                                ? 'Bảng giá đã có đơn hàng (bấm để tạo phiên bản mới)'
-                                : 'Chỉnh sửa bảng giá và các dòng giá'
+                            } else {
+                              onEdit(item);
                             }
-                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                              item.hasOrders
-                                ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40'
-                                : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50 dark:text-slate-400 dark:hover:text-blue-300 dark:hover:bg-slate-800'
-                            }`}
-                          >
-                            <Icons.Edit size={16} />
-                          </button>
-                        )}
+                          }}
+                          title={
+                            item.hasOrders
+                              ? 'Bảng giá đã có đơn hàng (bấm để tạo phiên bản mới)'
+                              : 'Chỉnh sửa bảng giá và các dòng giá'
+                          }
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            item.hasOrders
+                              ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40'
+                              : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50 dark:text-slate-400 dark:hover:text-blue-300 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <Icons.Edit size={16} />
+                        </button>
 
-                        {/* Nút Tạo phiên bản mới có nhãn chữ rõ ràng */}
-                        {canManage && (
-                          <button
-                            onClick={() => onCloneVersion(item)}
-                            title="Tạo phiên bản mới từ bảng giá này (v2, v3...)"
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                              item.hasOrders
-                                ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-xs'
-                                : 'bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:hover:bg-purple-900 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
-                            }`}
-                          >
-                            <Icons.Copy size={13} />
-                            <span>Tạo bản mới</span>
-                          </button>
-                        )}
+                        {/* Nút Tạo phiên bản mới luôn khả dụng */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onCloneVersion(item);
+                          }}
+                          title="Tạo phiên bản mới từ bảng giá này (v2, v3...)"
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-xs ${
+                            item.hasOrders
+                              ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-sm hover:shadow-md'
+                              : 'bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:hover:bg-purple-900 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
+                          }`}
+                        >
+                          <Icons.Copy size={13} />
+                          <span>Tạo bản mới</span>
+                        </button>
                       </div>
                     </td>
                   </tr>

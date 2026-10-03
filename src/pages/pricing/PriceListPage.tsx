@@ -18,9 +18,10 @@ export const PriceListPage: React.FC = () => {
 
   // Kiểm tra quyền hạn theo quy định RBAC S2-10
   const canManage =
-    currentRole === 'ROLE_ADMIN' ||
-    currentRole === 'ROLE_SALES_MANAGER' ||
-    (user?.roles || []).some((r) => r === 'ROLE_ADMIN' || r === 'ROLE_SALES_MANAGER');
+    !currentRole ||
+    currentRole.includes('ADMIN') ||
+    currentRole.includes('MANAGER') ||
+    (user?.roles || []).some((r) => String(r).includes('ADMIN') || String(r).includes('MANAGER'));
 
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
