@@ -23,6 +23,8 @@ export interface UserProfile {
   warehouse?: string;     // Kho làm việc (đối với nhân sự kho/admin)
   workLocation?: string;  // Địa bàn làm việc (đối với kinh doanh/đại lý)
   avatar?: string;
+  avatarUrl?: string;
+  avatarThumbnailUrl?: string;
   mustChangePassword?: boolean;
 }
 
