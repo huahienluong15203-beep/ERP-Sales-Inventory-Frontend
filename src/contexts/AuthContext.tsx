@@ -1,6 +1,15 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type FC, type ReactNode } from 'react';
 import type { RoleName, UserProfile, MenuItem } from '../types/user';
-import { fetchUserNavigationContext, loginUser, logoutUser } from '../services/api';
+import {
+  fetchUserNavigationContext,
+  loginUser,
+  logoutUser,
+  getStoredToken,
+  getStoredItem,
+  setStoredItem,
+  removeStoredItem,
+  isRememberMeActive
+} from '../services/api';
 import { checkPathPermission } from '../services/menuConfig';
 import { SessionExpiredModal } from '../components/common/SessionExpiredModal';
 import { Icons } from '../components/common/Icons';
@@ -19,7 +28,7 @@ interface AuthContextType {
   currentRole: RoleName;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<{ success: boolean; message?: string; user?: UserProfile }>;
+  login: (username: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; message?: string; user?: UserProfile }>;
   logout: () => Promise<void>;
   switchRole: (role: RoleName) => Promise<void>;
   hasPermission: (path: string) => boolean;
@@ -58,12 +67,12 @@ function getHighestPriorityRole(roles: RoleName[]): RoleName {
 
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [currentRole, setCurrentRole] = useState<RoleName>(() => {
-    const savedRole = localStorage.getItem(STORAGE_ROLE_KEY) as RoleName;
+    const savedRole = getStoredItem(STORAGE_ROLE_KEY) as RoleName;
     return ROLE_PRIORITY.includes(savedRole) ? savedRole : 'ROLE_ADMIN';
   });
 
   const [user, setUser] = useState<UserProfile | null>(() => {
-    const saved = localStorage.getItem(STORAGE_USER_KEY);
+    const saved = getStoredItem(STORAGE_USER_KEY);
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -77,7 +86,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [menus, setMenus] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return !!localStorage.getItem(STORAGE_TOKEN_KEY);
+    return !!getStoredToken();
   });
   const [sessionExpiredData, setSessionExpiredData] = useState<{ message: string } | null>(null);
 
@@ -113,7 +122,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }, []);
 
   const loadUserContext = useCallback(async (role: RoleName, isSilent: boolean = false) => {
-    const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+    const token = getStoredToken();
     if (!token) {
       setIsAuthenticated(false);
       setUser(null);
@@ -133,13 +142,13 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (availableRoles.length > 0 && !availableRoles.includes(role)) {
           activeRole = getHighestPriorityRole(availableRoles);
           setCurrentRole(activeRole);
-          localStorage.setItem(STORAGE_ROLE_KEY, activeRole);
+          setStoredItem(STORAGE_ROLE_KEY, activeRole, isRememberMeActive());
           data.user.role = activeRole;
         }
 
         setUser((prev) => {
           const merged = { ...prev, ...data.user };
-          localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(merged));
+          setStoredItem(STORAGE_USER_KEY, JSON.stringify(merged), isRememberMeActive());
           return merged;
         });
       }
@@ -148,9 +157,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       if (err?.message === 'SESSION_EXPIRED' || err?.message === 'NO_TOKEN' || err?.message?.includes('Phiên làm việc') || err?.message?.includes('khoá') || err?.message?.includes('401') || err?.message?.includes('403')) {
         setIsAuthenticated(false);
         setUser(null);
-        localStorage.removeItem(STORAGE_TOKEN_KEY);
-        localStorage.removeItem(STORAGE_USER_KEY);
-        localStorage.removeItem(STORAGE_ROLE_KEY);
+        removeStoredItem(STORAGE_TOKEN_KEY);
+        removeStoredItem(STORAGE_USER_KEY);
+        removeStoredItem(STORAGE_ROLE_KEY);
       } else {
         console.error('Lỗi khi tải ngữ cảnh phân quyền người dùng:', err);
       }
@@ -174,11 +183,11 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
           setUser(null);
         } else {
           setIsAuthenticated(true);
-          const savedUser = localStorage.getItem(STORAGE_USER_KEY);
+          const savedUser = getStoredItem(STORAGE_USER_KEY);
           if (savedUser) {
             try { setUser(JSON.parse(savedUser)); } catch {}
           }
-          const savedRole = localStorage.getItem(STORAGE_ROLE_KEY) as RoleName;
+          const savedRole = getStoredItem(STORAGE_ROLE_KEY) as RoleName;
           if (savedRole && ROLE_PRIORITY.includes(savedRole)) {
             setCurrentRole(savedRole);
           }
@@ -202,7 +211,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       // Bỏ qua nếu thời gian giữa 2 lần focus dưới 60 giây (tránh gián đoạn, unmount UI khi mở hộp thoại chọn tệp)
       if (now - lastFocusTime < 60000) return;
       lastFocusTime = now;
-      const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+      const token = getStoredToken();
       if (token) {
         loadUserContext(currentRole, true);
       }
@@ -222,15 +231,19 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   /**
    * Đăng nhập người dùng (Story S1-01)
    */
-  const login = async (username: string, password: string): Promise<{ success: boolean; message?: string; user?: UserProfile }> => {
+  const login = async (
+    username: string,
+    password: string,
+    rememberMe: boolean = true
+  ): Promise<{ success: boolean; message?: string; user?: UserProfile }> => {
     setIsLoading(true);
     try {
-      const result = await loginUser(username, password);
+      const result = await loginUser(username, password, rememberMe);
       if (result.success && result.user) {
         setIsAuthenticated(true);
         setCurrentRole(result.user.role);
-        localStorage.setItem(STORAGE_ROLE_KEY, result.user.role);
-        localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(result.user));
+        setStoredItem(STORAGE_ROLE_KEY, result.user.role, rememberMe);
+        setStoredItem(STORAGE_USER_KEY, JSON.stringify(result.user), rememberMe);
         setUser(result.user);
 
         // HIỂN THỊ TOAST THÀNH CÔNG NGAY LẬP TỨC (0ms)
@@ -259,7 +272,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       await logoutUser();
       setIsAuthenticated(false);
       setUser(null);
-      localStorage.removeItem(STORAGE_USER_KEY);
+      removeStoredItem(STORAGE_USER_KEY);
+      removeStoredItem(STORAGE_ROLE_KEY);
+      removeStoredItem(STORAGE_TOKEN_KEY);
 
       // Hiển thị thông báo Toast đăng xuất với type = 'logout' (màu cam hổ phách ấm áp)
       showToast(
@@ -277,7 +292,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
    */
   const switchRole = async (newRole: RoleName) => {
     setCurrentRole(newRole);
-    localStorage.setItem(STORAGE_ROLE_KEY, newRole);
+    setStoredItem(STORAGE_ROLE_KEY, newRole, isRememberMeActive());
     await loadUserContext(newRole);
   };
 
@@ -300,7 +315,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setUser((prev) => {
       if (!prev) return null;
       const updated = { ...prev, mustChangePassword: false };
-      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(updated));
+      setStoredItem(STORAGE_USER_KEY, JSON.stringify(updated), isRememberMeActive());
       return updated;
     });
   };
@@ -309,7 +324,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setUser((prev) => {
       if (!prev) return null;
       const merged = { ...prev, ...updated };
-      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(merged));
+      setStoredItem(STORAGE_USER_KEY, JSON.stringify(merged), isRememberMeActive());
       return merged;
     });
   }, []);
