@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import type { PriceList, PriceListRequest, PriceListItemRequest, CustomerGroupType } from '../../types/pricing';
 import { CUSTOMER_GROUPS, CATALOG_PRODUCTS } from '../../types/pricing';
 import { createPriceList, updatePriceList } from '../../services/pricingApi';
@@ -25,61 +25,46 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
 }) => {
   const isEdit = !!initialData;
 
-  const [code, setCode] = useState<string>('');
-  const [name, setName] = useState<string>('');
-  const [customerGroup, setCustomerGroup] = useState<CustomerGroupType>('DEALER_LEVEL_1');
-  const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState<string>('');
-  const [note, setNote] = useState<string>('');
-  const [items, setItems] = useState<EditableItem[]>([]);
+  const year = new Date().getFullYear();
+  const [code, setCode] = useState<string>(() => initialData?.code || `BG-DL1-${year}`);
+  const [name, setName] = useState<string>(() => initialData?.name || `Bảng giá Đại lý Cấp 1 Toàn Quốc ${year}`);
+  const [customerGroup, setCustomerGroup] = useState<CustomerGroupType>(() => initialData?.customerGroup || 'DEALER_LEVEL_1');
+  const [startDate, setStartDate] = useState<string>(() => initialData?.startDate || new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState<string>(() => initialData?.endDate || '');
+  const [note, setNote] = useState<string>(() => initialData?.note || '');
+  const [items, setItems] = useState<EditableItem[]>(() => {
+    if (initialData?.items) {
+      return initialData.items.map((it) => ({
+        id: it.id,
+        productSku: it.productSku,
+        productName: it.productName || it.productSku,
+        price: it.price.toString(),
+        floorPrice: it.floorPrice.toString()
+      }));
+    }
+    return [
+      {
+        productSku: 'BIA-HN-330',
+        productName: 'Bia Hà Nội Lon 330ml (Thùng 24 lon)',
+        price: '210000',
+        floorPrice: '200000'
+      },
+      {
+        productSku: 'BIA-SG-330',
+        productName: 'Bia Sài Gòn Special Lon 330ml',
+        price: '260000',
+        floorPrice: '245000'
+      },
+      {
+        productSku: 'COCA-320',
+        productName: 'Nước ngọt Coca-Cola Lon 320ml',
+        price: '165000',
+        floorPrice: '155000'
+      }
+    ];
+  });
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (initialData) {
-      setCode(initialData.code);
-      setName(initialData.name);
-      setCustomerGroup(initialData.customerGroup);
-      setStartDate(initialData.startDate);
-      setEndDate(initialData.endDate || '');
-      setNote(initialData.note || '');
-      setItems(
-        (initialData.items || []).map((it) => ({
-          id: it.id,
-          productSku: it.productSku,
-          productName: it.productName || it.productSku,
-          price: it.price.toString(),
-          floorPrice: it.floorPrice.toString()
-        }))
-      );
-    } else {
-      // Giá trị mặc định khi tạo mới
-      const year = new Date().getFullYear();
-      setCode(`BG-DL1-${year}`);
-      setName(`Bảng giá Đại lý Cấp 1 Toàn Quốc ${year}`);
-      // Nạp sẵn 3 sản phẩm mẫu cho người dùng tiện thao tác
-      setItems([
-        {
-          productSku: 'BIA-HN-330',
-          productName: 'Bia Hà Nội Lon 330ml (Thùng 24 lon)',
-          price: '210000',
-          floorPrice: '200000'
-        },
-        {
-          productSku: 'BIA-SG-330',
-          productName: 'Bia Sài Gòn Special Lon 330ml',
-          price: '260000',
-          floorPrice: '245000'
-        },
-        {
-          productSku: 'COCA-320',
-          productName: 'Nước ngọt Coca-Cola Lon 320ml',
-          price: '165000',
-          floorPrice: '155000'
-        }
-      ]);
-    }
-  }, [initialData]);
 
   const handleAddItemRow = () => {
     setItems((prev) => [
