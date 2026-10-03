@@ -9,12 +9,13 @@ import { UserManagementPage } from '../pages/admin/UserManagementPage';
 import { AgencyManagementPage } from '../pages/customer/AgencyManagementPage';
 import { ProductManagementPage } from '../pages/product/ProductManagementPage';
 import { PriceListPage } from '../pages/pricing/PriceListPage';
+import { PriceHistoryPage } from '../pages/pricing/PriceHistoryPage';
+import { CategoryManagementPage } from '../pages/category/CategoryManagementPage';
 import { ModulePage } from '../pages/common/ModulePage';
 import { ForbiddenPage } from '../pages/common/ForbiddenPage';
 import { NotFoundPage } from '../pages/common/NotFoundPage';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
-import { CategoryManagementPage } from '../pages/category/CategoryManagementPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -135,6 +136,23 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* Lịch sử thay đổi giá & Biểu giá (Sprint 3: S3-02 / SCRUM-13 / EP-02) */}
+        <Route
+          path="/pricing/history"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_SALES_REP',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <PriceHistoryPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Hồ sơ cá nhân (Mọi vai trò đều xem được) */}
         <Route path="/profile" element={<ProfilePage />} />
 
@@ -163,7 +181,8 @@ export const AppRoutes: React.FC = () => {
             m.path !== '/products' &&
             m.path !== '/categories' &&
             m.path !== '/pricing' &&
-            m.path !== '/price-lists'
+            m.path !== '/price-lists' &&
+            m.path !== '/pricing/history'
         ).map((menuItem) => (
           <Route
             key={menuItem.path}

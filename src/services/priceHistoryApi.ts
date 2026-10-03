@@ -438,13 +438,29 @@ export async function fetchPriceHistory(
 
       clearTimeout(timeoutId);
 
+interface BackendAuditItem {
+  id: number;
+  targetId?: number;
+  targetCode?: string;
+  targetType?: string;
+  oldValue?: string;
+  newValue?: string;
+  createdAt: string;
+  actorId?: number;
+  actorFullName?: string;
+  actorUsername?: string;
+  action?: string;
+  reason?: string;
+  ipAddress?: string;
+}
+
       if (res.ok) {
         const json = await res.json();
         // Nếu backend trả về danh sách audit logs hợp lệ
         if (json && Array.isArray(json.content) && json.content.length > 0) {
-          const mappedContent: PriceChangeRecord[] = json.content.map((item: any) => {
-            const oldVal = parseFloat(item.oldValue) || 0;
-            const newVal = parseFloat(item.newValue) || 0;
+          const mappedContent: PriceChangeRecord[] = (json.content as BackendAuditItem[]).map((item) => {
+            const oldVal = parseFloat(item.oldValue || '0') || 0;
+            const newVal = parseFloat(item.newValue || '0') || 0;
             const diff = newVal - oldVal;
             const pct = oldVal > 0 ? (diff / oldVal) * 100 : 0;
 
@@ -589,9 +605,20 @@ export async function fetchProductPricingSummaries(): Promise<ProductPricingSumm
       });
       if (res.ok) {
         const json = await res.json();
+interface BackendProductItem {
+  id: number;
+  sku: string;
+  name: string;
+  category?: string;
+  baseUnit?: string;
+  packaging?: string;
+  costPrice?: number;
+  updatedAt?: string;
+}
+
         if (json && Array.isArray(json.content) && json.content.length > 0) {
           // Ghép thông tin sản phẩm thật từ backend
-          return json.content.map((p: any, idx: number) => {
+          return (json.content as BackendProductItem[]).map((p, idx) => {
             const cost = p.costPrice || 250000;
             const standard = Math.round(cost * 1.35);
             const tier1 = Math.round(standard * 0.75);

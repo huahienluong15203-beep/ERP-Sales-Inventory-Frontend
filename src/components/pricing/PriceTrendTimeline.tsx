@@ -7,7 +7,6 @@ import {
   CalendarClock,
   User,
   Eye,
-  Lock,
   ArrowRight
 } from '../common/Icons';
 

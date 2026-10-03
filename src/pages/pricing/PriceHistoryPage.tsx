@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type {
   PriceChangeRecord,
   PriceHistoryFilterParams,
-  PriceType,
   ProductPricingSummary,
   TimeRangeFilter,
   TrendFilter
@@ -20,21 +19,17 @@ import { PriceTrendTimeline } from '../../components/pricing/PriceTrendTimeline'
 import { PriceHistoryDetailModal } from '../../components/pricing/PriceHistoryDetailModal';
 import {
   Search,
-  Filter,
   RefreshCw,
   FileSpreadsheet,
   Eye,
   TrendingUp,
   TrendingDown,
-  CalendarClock,
   Lock,
   ChevronLeft,
   ChevronRight,
   Info,
   Building2,
-  Package,
-  SlidersHorizontal,
-  CheckCircle2
+  SlidersHorizontal
 } from '../../components/common/Icons';
 
 export const PriceHistoryPage: React.FC = () => {
