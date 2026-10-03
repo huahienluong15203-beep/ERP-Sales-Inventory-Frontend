@@ -70,6 +70,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     allowedRoles: ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
   },
 
+  // 6. Lịch sử thay đổi giá (Sprint 3: S3-02 / SCRUM-13 / EP-02 - Quản lý kinh doanh & Admin)
+  {
+    title: 'Lịch sử thay đổi giá',
+    path: '/pricing/history',
+    icon: 'History',
+    epic: 'Sản phẩm & Bảng giá',
+    description: 'Xem lịch sử thay đổi giá cũ - mới, người sửa và căn cứ giải thích cho đại lý',
+    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
+  },
+
   // 3. Hồ sơ cá nhân
   {
     title: 'Hồ sơ cá nhân',
