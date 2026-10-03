@@ -49,6 +49,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
       'ROLE_ACCOUNTANT',
       'ROLE_CUSTOMER'
     ]
+  },
+
+  // 4. Quản lý nhóm hàng nhiều cấp (EP-02: Dành cho Quản lý kinh doanh & Admin)
+  {
+    title: 'Quản lý nhóm hàng',
+    path: '/categories',
+    icon: 'Boxes',
+    epic: 'Sản phẩm & Bảng giá',
+    description: 'Cấu trúc nhóm hàng ≥ 3 cấp & xem doanh số theo ngành hàng',
+    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN']
   }
 ];
 
