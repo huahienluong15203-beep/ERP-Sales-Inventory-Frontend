@@ -8,6 +8,7 @@ import { ProfilePage } from '../pages/profile/ProfilePage';
 import { UserManagementPage } from '../pages/admin/UserManagementPage';
 import { AgencyManagementPage } from '../pages/customer/AgencyManagementPage';
 import { ProductManagementPage } from '../pages/product/ProductManagementPage';
+import { PriceListPage } from '../pages/pricing/PriceListPage';
 import { ModulePage } from '../pages/common/ModulePage';
 import { ForbiddenPage } from '../pages/common/ForbiddenPage';
 import { NotFoundPage } from '../pages/common/NotFoundPage';
@@ -102,6 +103,38 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* Quản lý bảng giá sản phẩm (S2-10 / SCRUM-55 / EP-02) */}
+        <Route
+          path="/pricing"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <PriceListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/price-lists"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <PriceListPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Hồ sơ cá nhân (Mọi vai trò đều xem được) */}
         <Route path="/profile" element={<ProfilePage />} />
 
@@ -128,7 +161,9 @@ export const AppRoutes: React.FC = () => {
             m.path !== '/admin/users' &&
             m.path !== '/customers' &&
             m.path !== '/products' &&
-            m.path !== '/categories' 
+            m.path !== '/categories' &&
+            m.path !== '/pricing' &&
+            m.path !== '/price-lists'
         ).map((menuItem) => (
           <Route
             key={menuItem.path}
