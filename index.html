@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Danh mục Sản phẩm | Chuẩn hóa Mã SKU & Tên Hàng</title>
+  <meta name="description" content="Hệ thống quản lý danh mục sản phẩm chuẩn hóa toàn công ty - Khai báo Mã SKU, Tên, Nhóm hàng, Đơn vị tính cơ sở, Quy cách đóng gói, Giá vốn, Ảnh, Trạng thái.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Background Glow & Decorative Elements -->
+  <div class="bg-pattern"></div>
+
+  <div class="app-layout">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-container">
+        <div class="brand">
+          <div class="brand-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="role-badge">Hệ Thống Chuẩn Hóa Danh Mục</div>
+            <h1 class="brand-title">Quản Lý Danh Mục Sản Phẩm</h1>
+            <p class="brand-subtitle">Chuẩn hóa tên gọi, mã hàng (SKU) và bảo mật giá vốn thống nhất toàn công ty</p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <!-- Role Switcher để kiểm tra phân quyền Giá Vốn -->
+          <div class="role-switcher-box">
+            <span class="role-switcher-label">Đang thao tác với vai trò:</span>
+            <select id="select-user-role" class="role-select" title="Chuyển đổi vai trò để kiểm tra phân quyền xem/sửa giá vốn">
+              <option value="manager" selected>👔 Quản lý kinh doanh (Đầy đủ quyền & Giá vốn)</option>
+              <option value="staff">👤 Nhân viên kinh doanh (Ẩn giá vốn)</option>
+            </select>
+          </div>
+
+          <button id="btn-open-create" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Khai Báo Sản Phẩm Mới
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- 3 Quy tắc nghiệp vụ bắt buộc theo yêu cầu -->
+      <section class="rules-banner-grid">
+        <div class="rule-card">
+          <div class="rule-icon rule-icon-blue">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </div>
+          <div class="rule-content">
+            <div class="rule-title">1. Mã SKU là duy nhất</div>
+            <div class="rule-desc">Mỗi sản phẩm có đúng 1 mã SKU duy nhất, hệ thống tự động kiểm tra chống trùng lặp toàn công ty.</div>
+          </div>
+        </div>
+
+        <div class="rule-card">
+          <div class="rule-icon rule-icon-purple">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <div class="rule-content">
+            <div class="rule-title">2. Giá vốn chỉ Quản lý kinh doanh xem & sửa</div>
+            <div class="rule-desc">Nhân viên kinh doanh không được xem và không được sửa giá vốn. Dữ liệu giá vốn được mã hóa bảo mật.</div>
+          </div>
+        </div>
+
+        <div class="rule-card">
+          <div class="rule-icon rule-icon-amber">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+          </div>
+          <div class="rule-content">
+            <div class="rule-title">3. Đã có giao dịch: Không được xóa, chỉ ngừng KD</div>
+            <div class="rule-desc">Sản phẩm đã phát sinh giao dịch đơn hàng/kho bị chặn xóa vĩnh viễn, chỉ được chuyển sang "Ngừng kinh doanh".</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stats Overview Bar -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon icon-blue">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Tổng số sản phẩm</span>
+            <span class="stat-value" id="stat-total">0</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon icon-emerald">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Đang kinh doanh</span>
+            <span class="stat-value text-emerald" id="stat-active">0</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon icon-amber">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Ngừng kinh doanh</span>
+            <span class="stat-value text-amber" id="stat-inactive">0</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon icon-purple">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Đã phát sinh giao dịch</span>
+            <span class="stat-value text-purple" id="stat-has-tx">0</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Filter & Search Toolbar -->
+      <section class="catalog-toolbar">
+        <div class="search-box">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="filter-search" placeholder="Tìm kiếm theo mã SKU duy nhất, tên sản phẩm..." autocomplete="off">
+          <button id="btn-clear-search" class="clear-btn" title="Xóa tìm kiếm" style="display: none;">&times;</button>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-select-wrapper">
+            <label for="filter-category" class="filter-label">Nhóm hàng:</label>
+            <select id="filter-category" class="form-select">
+              <option value="">Tất cả nhóm hàng</option>
+            </select>
+          </div>
+
+          <div class="filter-select-wrapper">
+            <label for="filter-status" class="filter-label">Trạng thái:</label>
+            <select id="filter-status" class="form-select">
+              <option value="">Tất cả trạng thái</option>
+              <option value="Đang kinh doanh">Đang kinh doanh</option>
+              <option value="Ngừng kinh doanh">Ngừng kinh doanh</option>
+            </select>
+          </div>
+
+          <div class="filter-select-wrapper">
+            <label for="filter-tx" class="filter-label">Giao dịch:</label>
+            <select id="filter-tx" class="form-select">
+              <option value="">Tất cả giao dịch</option>
+              <option value="has_tx">Đã có giao dịch (Chặn xóa)</option>
+              <option value="no_tx">Chưa có giao dịch (Có thể xóa)</option>
+            </select>
+          </div>
+
+          <button id="btn-reset-filters" class="btn btn-secondary btn-icon-only" title="Đặt lại bộ lọc">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="1 4 1 10 7 10"></polyline>
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- Catalog Table View -->
+      <section class="table-container">
+        <table class="product-table" id="product-table">
+          <thead>
+            <tr>
+              <th style="width: 65px;">Ảnh</th>
+              <th style="width: 140px;">Mã SKU (Duy nhất)</th>
+              <th>Tên sản phẩm</th>
+              <th style="width: 140px;">Nhóm hàng</th>
+              <th style="width: 100px;">ĐVT cơ sở</th>
+              <th style="width: 160px;">Quy cách đóng gói</th>
+              <th style="width: 140px; text-align: right;" id="th-cost-price">
+                Giá vốn
+                <span class="th-role-hint" id="th-cost-hint">(Quản lý)</span>
+              </th>
+              <th style="width: 130px; text-align: center;">Trạng thái KD</th>
+              <th style="width: 140px; text-align: center;">Lịch sử GD</th>
+              <th style="width: 100px; text-align: center;">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="product-tbody">
+            <!-- Rendered by JavaScript -->
+          </tbody>
+        </table>
+
+        <!-- Empty state -->
+        <div id="empty-state" class="empty-state" style="display: none;">
+          <div class="empty-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+          </div>
+          <h3>Không tìm thấy sản phẩm nào</h3>
+          <p>Không có sản phẩm nào phù hợp với điều kiện tìm kiếm hoặc danh mục đang trống.</p>
+          <button id="btn-empty-create" class="btn btn-primary" style="margin-top: 12px;">+ Khai báo sản phẩm mới</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: Khai báo / Chỉnh sửa Sản phẩm (8 trường bắt buộc theo yêu cầu) -->
+  <div id="product-modal" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h2 id="modal-title" class="modal-title">Khai Báo Sản Phẩm Mới</h2>
+          <p class="modal-subtitle">Điền đầy đủ 8 trường thông tin để định danh sản phẩm chuẩn hóa trên toàn hệ thống</p>
+        </div>
+        <button id="btn-close-modal" class="modal-close" aria-label="Đóng">&times;</button>
+      </div>
+
+      <form id="product-form" class="modal-body" novalidate>
+        <input type="hidden" id="form-product-id">
+
+        <div class="form-grid">
+          <!-- 1. Mã SKU - DUY NHẤT -->
+          <div class="form-group col-6">
+            <label for="input-sku" class="field-label required">
+              1. Mã SKU (Mã hàng - Duy nhất)
+              <span class="tooltip-trigger" title="Mã định danh DUY NHẤT của sản phẩm, tuyệt đối không được trùng lặp">ⓘ</span>
+            </label>
+            <div class="input-with-badge">
+              <input type="text" id="input-sku" class="form-control uppercase" placeholder="Ví dụ: COCA-330, BOTGIAT-3KG" required autocomplete="off">
+            </div>
+            <div class="field-error" id="error-sku"></div>
+            <span class="field-hint">Mã duy nhất toàn công ty, viết liền không dấu. Hệ thống sẽ kiểm tra trùng lặp tự động.</span>
+          </div>
+
+          <!-- 2. Tên sản phẩm -->
+          <div class="form-group col-6">
+            <label for="input-name" class="field-label required">
+              2. Tên sản phẩm
+              <span class="tooltip-trigger" title="Tên gọi chuẩn mực được thống nhất">ⓘ</span>
+            </label>
+            <input type="text" id="input-name" class="form-control" placeholder="Ví dụ: Nước ngọt Coca Cola lon 330ml" required>
+            <div class="field-error" id="error-name"></div>
+            <span class="field-hint">Tên chuẩn dùng trên báo giá, hợp đồng & hóa đơn.</span>
+          </div>
+
+          <!-- 3. Nhóm hàng -->
+          <div class="form-group col-6">
+            <label for="input-category" class="field-label required">
+              3. Nhóm hàng
+            </label>
+            <div class="select-or-new">
+              <input type="text" list="category-datalist" id="input-category" class="form-control" placeholder="Chọn hoặc nhập nhóm hàng..." required>
+              <datalist id="category-datalist">
+                <option value="Đồ uống & Giải khát">
+                <option value="Thực phẩm đóng gói">
+                <option value="Hóa mỹ phẩm & Tẩy rửa">
+                <option value="Bánh kẹo & Snack">
+                <option value="Sữa & Sản phẩm từ sữa">
+                <option value="Gia vị & Nông sản">
+                <option value="Văn phòng phẩm">
+                <option value="Thiết bị & Phụ kiện">
+              </datalist>
+            </div>
+            <div class="field-error" id="error-category"></div>
+          </div>
+
+          <!-- 4. Đơn vị tính cơ sở -->
+          <div class="form-group col-6">
+            <label for="input-base-uom" class="field-label required">
+              4. Đơn vị tính cơ sở (ĐVT)
+            </label>
+            <input type="text" list="uom-datalist" id="input-base-uom" class="form-control" placeholder="Ví dụ: Lon, Chai, Cái, Hộp, Gói, Kg" required>
+            <datalist id="uom-datalist">
+              <option value="Lon">
+              <option value="Chai">
+              <option value="Cái">
+              <option value="Chiếc">
+              <option value="Hộp">
+              <option value="Gói">
+              <option value="Thùng">
+              <option value="Bao">
+              <option value="Kg">
+              <option value="Lít">
+              <option value="Cuộn">
+              <option value="Bộ">
+            </datalist>
+            <div class="field-error" id="error-base-uom"></div>
+            <span class="field-hint">Đơn vị nhỏ nhất để kiểm kê & xuất kho lẻ.</span>
+          </div>
+
+          <!-- 5. Quy cách đóng gói -->
+          <div class="form-group col-6">
+            <label for="input-packaging" class="field-label required">
+              5. Quy cách đóng gói
+            </label>
+            <input type="text" id="input-packaging" class="form-control" placeholder="Ví dụ: Thùng 24 lon, Lốc 6 chai, Hộp 10 vỉ" required>
+            <div class="field-error" id="error-packaging"></div>
+            <span class="field-hint">Quy cách kiện/thùng để nhập kho & vận chuyển.</span>
+          </div>
+
+          <!-- 6. Giá vốn (CHỈ QUẢN LÝ KINH DOANH XEM VÀ SỬA ĐƯỢC) -->
+          <div class="form-group col-6" id="form-group-cost">
+            <label for="input-cost-price" class="field-label required">
+              6. Giá vốn (VNĐ / ĐVT cơ sở)
+              <span class="badge-permission">Chỉ QLKD</span>
+            </label>
+            <div class="price-input-wrapper" id="cost-input-container">
+              <input type="number" id="input-cost-price" class="form-control" placeholder="Ví dụ: 8500" min="0" step="500" required>
+              <span class="currency-tag">VNĐ</span>
+            </div>
+            <!-- Cảnh báo khi nhân viên cố truy cập -->
+            <div id="cost-price-locked-msg" class="cost-locked-notice" style="display: none;">
+              🔒 <strong>Dữ liệu bảo mật:</strong> Chỉ Quản lý kinh doanh mới có quyền xem và sửa giá vốn sản phẩm này.
+            </div>
+            <div class="field-error" id="error-cost-price"></div>
+            <div id="cost-price-preview" class="price-formatted-preview">0 VNĐ</div>
+          </div>
+
+          <!-- 7. Ảnh sản phẩm -->
+          <div class="form-group col-12">
+            <label class="field-label">
+              7. Ảnh sản phẩm
+              <span class="label-optional">(Khuyên dùng để nhân viên nhận diện đúng bao bì)</span>
+            </label>
+            <div class="image-upload-container">
+              <div class="image-preview-wrapper" id="image-preview-wrapper">
+                <img id="image-preview" src="" alt="Xem trước ảnh" style="display: none;">
+                <div class="image-placeholder" id="image-placeholder">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                  <span>Chưa có ảnh</span>
+                </div>
+              </div>
+
+              <div class="upload-controls">
+                <div class="upload-buttons">
+                  <label for="input-file-image" class="btn btn-secondary btn-sm" style="cursor: pointer;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Tải ảnh từ máy
+                  </label>
+                  <input type="file" id="input-file-image" accept="image/*" style="display: none;">
+                  <button type="button" id="btn-remove-image" class="btn btn-danger-outline btn-sm" style="display: none;">
+                    Xóa ảnh
+                  </button>
+                </div>
+
+                <div class="preset-images">
+                  <span class="preset-label">Hoặc chọn nhanh ảnh mẫu có sẵn:</span>
+                  <div class="preset-chips" id="preset-chips">
+                    <!-- Sample presets populated by JS -->
+                  </div>
+                </div>
+                <input type="hidden" id="input-image-data">
+              </div>
+            </div>
+          </div>
+
+          <!-- 8. Trạng thái kinh doanh -->
+          <div class="form-group col-12">
+            <label class="field-label required">
+              8. Trạng thái kinh doanh
+            </label>
+            <div class="status-options-grid">
+              <label class="status-radio-card is-active">
+                <input type="radio" name="input-status" value="Đang kinh doanh" checked>
+                <div class="radio-content">
+                  <span class="radio-indicator active-dot"></span>
+                  <div>
+                    <div class="radio-title">Đang kinh doanh</div>
+                    <div class="radio-desc">Toàn bộ nhân viên kinh doanh được phép chào bán và lập đơn hàng</div>
+                  </div>
+                </div>
+              </label>
+
+              <label class="status-radio-card is-inactive">
+                <input type="radio" name="input-status" value="Ngừng kinh doanh">
+                <div class="radio-content">
+                  <span class="radio-indicator inactive-dot"></span>
+                  <div>
+                    <div class="radio-title">Ngừng kinh doanh</div>
+                    <div class="radio-desc">Tạm dừng hoặc đã bỏ mẫu, không xuất hiện khi nhân viên lên báo giá mới</div>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Thuộc tính bổ trợ: Trạng thái phát sinh giao dịch (Để test quy định cấm xóa) -->
+          <div class="form-group col-12 transaction-sim-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="input-has-transactions">
+              <span>Đánh dấu sản phẩm này <strong>Đã phát sinh giao dịch</strong> (đơn hàng/hóa đơn)</span>
+            </label>
+            <span class="field-hint" style="margin-left: 24px;">
+              Quy tắc: Sản phẩm có đánh dấu này sẽ <strong>không thể xóa</strong> khỏi hệ thống, chỉ được chuyển sang <strong>"Ngừng kinh doanh"</strong>.
+            </span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="btn-cancel-modal" class="btn btn-secondary">Hủy bỏ</button>
+          <button type="submit" id="btn-save-product" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            Lưu Khai Báo Sản Phẩm
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Xem Chi Tiết Chuẩn Hóa -->
+  <div id="detail-modal" class="modal-backdrop">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">Thông Tin Chuẩn Hóa Sản Phẩm</h2>
+          <p class="modal-subtitle">Dữ liệu quy chuẩn áp dụng toàn công ty</p>
+        </div>
+        <button id="btn-close-detail" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body detail-body" id="detail-content">
+        <!-- Rendered by JS -->
+      </div>
+      <div class="modal-footer">
+        <button id="btn-copy-standard" class="btn btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Sao chép Tên & Mã chuẩn
+        </button>
+        <button id="btn-close-detail-footer" class="btn btn-primary">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Cảnh Báo Chặn Xóa Khi Đã Có Giao Dịch -->
+  <div id="blocked-delete-modal" class="modal-backdrop">
+    <div class="modal-dialog modal-dialog-sm modal-blocked">
+      <div class="modal-header blocked-header">
+        <div class="blocked-title-group">
+          <div class="blocked-icon-circle">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <div>
+            <h2 class="modal-title text-rose">KHÔNG ĐƯỢC PHÉP XÓA SẢN PHẨM</h2>
+            <p class="modal-subtitle">Quy định bảo toàn dữ liệu kinh doanh & kế toán</p>
+          </div>
+        </div>
+        <button id="btn-close-blocked" class="modal-close">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="blocked-alert-box">
+          <p>
+            Sản phẩm <strong id="blocked-product-name"></strong> (Mã SKU: <span class="sku-badge" id="blocked-product-sku"></span>) 
+            <strong>đã phát sinh giao dịch</strong> (đơn hàng, hóa đơn hoặc phiếu xuất nhập kho).
+          </p>
+          <div class="blocked-rule-quote">
+            ⚖️ <strong>Quy định bắt buộc:</strong> Sản phẩm đã phát sinh giao dịch thì <u>không được xóa</u> để bảo vệ tính toàn vẹn của lịch sử kế toán và báo cáo doanh thu. Bạn <strong>chỉ được phép chuyển sang trạng thái "Ngừng kinh doanh"</strong>.
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer blocked-footer">
+        <button type="button" id="btn-cancel-blocked" class="btn btn-secondary">Đóng lại</button>
+        <button type="button" id="btn-confirm-stop-business" class="btn btn-amber">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+          </svg>
+          Chuyển sang "Ngừng kinh doanh"
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
