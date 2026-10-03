@@ -72,10 +72,74 @@ export const SYSTEM_DEMO_CREDENTIALS: Record<
 };
 
 /**
+ * Lấy Access Token từ bộ nhớ (Ưu tiên sessionStorage, sau đó localStorage)
+ */
+export function getStoredToken(): string | null {
+  return sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+}
+
+/**
+ * Lưu Access Token theo trạng thái "Ghi nhớ đăng nhập"
+ */
+export function setStoredToken(token: string | null, rememberMe: boolean = true): void {
+  if (token) {
+    if (rememberMe) {
+      localStorage.setItem('accessToken', token);
+      sessionStorage.removeItem('accessToken');
+    } else {
+      sessionStorage.setItem('accessToken', token);
+      localStorage.removeItem('accessToken');
+    }
+  } else {
+    localStorage.removeItem('accessToken');
+    sessionStorage.removeItem('accessToken');
+  }
+}
+
+/**
+ * Lấy giá trị lưu trữ từ sessionStorage hoặc localStorage
+ */
+export function getStoredItem(key: string): string | null {
+  return sessionStorage.getItem(key) || localStorage.getItem(key);
+}
+
+/**
+ * Lưu trữ giá trị theo trạng thái rememberMe
+ */
+export function setStoredItem(key: string, value: string, rememberMe: boolean = true): void {
+  if (rememberMe) {
+    localStorage.setItem(key, value);
+    sessionStorage.removeItem(key);
+  } else {
+    sessionStorage.setItem(key, value);
+    localStorage.removeItem(key);
+  }
+}
+
+/**
+ * Xóa giá trị khỏi cả hai bộ nhớ
+ */
+export function removeStoredItem(key: string): void {
+  localStorage.removeItem(key);
+  sessionStorage.removeItem(key);
+}
+
+/**
+ * Kiểm tra xem phiên hiện tại có đang lưu dạng "Ghi nhớ đăng nhập" (localStorage) hay không
+ */
+export function isRememberMeActive(): boolean {
+  return !!localStorage.getItem('accessToken');
+}
+
+/**
  * Service kết nối API Đăng nhập Backend (Story S1-01 / S1-02)
  * Khớp chuẩn xác 100% với Spring Boot AuthController và DTO
  */
-export async function loginUser(usernameInput: string, passwordInput: string): Promise<LoginResult> {
+export async function loginUser(
+  usernameInput: string,
+  passwordInput: string,
+  rememberMe: boolean = true
+): Promise<LoginResult> {
   const username = usernameInput.trim();
   const password = passwordInput;
 
@@ -101,7 +165,7 @@ export async function loginUser(usernameInput: string, passwordInput: string): P
       const data = await response.json();
       const token = data.accessToken;
       if (token) {
-        localStorage.setItem('accessToken', token);
+        setStoredToken(token, rememberMe);
       }
 
       const backendRoles: string[] = data.roles || ['ROLE_ADMIN'];
@@ -164,7 +228,7 @@ export async function loginUser(usernameInput: string, passwordInput: string): P
   if (matched) {
     if (password === matched.pass) {
       const token = `jwt-mock-${username}-${Date.now()}`;
-      localStorage.setItem('accessToken', token);
+      setStoredToken(token, rememberMe);
 
       const userProfile: UserProfile = {
         id: Math.floor(Math.random() * 100) + 1,
@@ -194,7 +258,7 @@ export async function loginUser(usernameInput: string, passwordInput: string): P
   if (username && password.length >= 6) {
     const role: RoleName = 'ROLE_ADMIN';
     const token = `jwt-mock-custom-${Date.now()}`;
-    localStorage.setItem('accessToken', token);
+    setStoredToken(token, rememberMe);
 
     return {
       success: true,
@@ -222,9 +286,9 @@ export async function loginUser(usernameInput: string, passwordInput: string): P
  * Xử lý khi phiên làm việc bị thu hồi do tài khoản đăng nhập ở nơi khác (Single Active Session)
  */
 export function handleSessionExpired(customMessage?: string) {
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('erp_user_profile');
-  localStorage.removeItem('erp_active_role');
+  removeStoredItem('accessToken');
+  removeStoredItem('erp_user_profile');
+  removeStoredItem('erp_active_role');
   const message =
     customMessage ||
     'Phiên làm việc của bạn đã hết hạn do tài khoản đã được đăng nhập ở một thiết bị hoặc phiên làm việc khác. Vui lòng đăng nhập lại!';
@@ -235,7 +299,7 @@ export function handleSessionExpired(customMessage?: string) {
  * Hàm gọi API xác thực có kèm Access Token và tự động phát hiện 401 (Phiên bị huỷ/hết hạn)
  */
 export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const token = localStorage.getItem('accessToken');
+  const token = getStoredToken();
   const headers = new Headers(options.headers || {});
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
@@ -263,7 +327,7 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
  */
 export async function logoutUser(): Promise<void> {
   try {
-    const token = localStorage.getItem('accessToken');
+    const token = getStoredToken();
     if (token) {
       await fetch(`${API_BASE_URL}/api/auth/logout`, {
         method: 'POST',
@@ -273,9 +337,9 @@ export async function logoutUser(): Promise<void> {
       }).catch(() => {});
     }
   } finally {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('erp_user_profile');
-    localStorage.removeItem('erp_active_role');
+    removeStoredItem('accessToken');
+    removeStoredItem('erp_user_profile');
+    removeStoredItem('erp_active_role');
   }
 }
 
@@ -364,7 +428,7 @@ export async function changePasswordApi(
   confirmPassword?: string
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const token = localStorage.getItem('accessToken');
+    const token = getStoredToken();
     if (!token) {
       return { success: false, message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!' };
     }
@@ -397,7 +461,7 @@ export async function changePasswordApi(
  * Service kết nối API Backend phục vụ Story S1-06 (Navigation Context)
  */
 export async function fetchUserNavigationContext(role: RoleName): Promise<UserContextResponse> {
-  const token = localStorage.getItem('accessToken');
+  const token = getStoredToken();
   if (!token) {
     throw new Error('NO_TOKEN');
   }
@@ -1176,7 +1240,7 @@ export interface UserImportSummaryResponse {
  * Helper gọi API không tự động hủy phiên đăng nhập nếu gặp lỗi hoặc token chưa khớp
  */
 async function importSafeFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const token = localStorage.getItem('accessToken');
+  const token = getStoredToken();
   const headers = new Headers(options.headers || {});
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);

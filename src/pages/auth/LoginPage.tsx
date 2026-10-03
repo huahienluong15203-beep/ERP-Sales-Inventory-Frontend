@@ -37,7 +37,15 @@ export const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState<boolean>(() => {
+    const saved = localStorage.getItem('erp_remember_me_pref');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const handleRememberMeChange = (checked: boolean) => {
+    setRememberMe(checked);
+    localStorage.setItem('erp_remember_me_pref', String(checked));
+  };
 
   // Form quên mật khẩu
   const [forgotEmail, setForgotEmail] = useState('');
@@ -89,7 +97,7 @@ export const LoginPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const result = await login(cleanUsername, password);
+      const result = await login(cleanUsername, password, rememberMe);
       if (result.success) {
         // Kiểm tra xem tài khoản có gắn cờ bắt buộc đổi mật khẩu lần đầu không (S1-08)
         if (result.user?.mustChangePassword) {
@@ -482,7 +490,7 @@ export const LoginPage: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
+                  onChange={(e) => handleRememberMeChange(e.target.checked)}
                   style={{
                     accentColor: '#F97316',
                     width: '16px',
