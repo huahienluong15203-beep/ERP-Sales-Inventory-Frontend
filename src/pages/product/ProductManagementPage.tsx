@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Icons } from '../../components/common/Icons';
 import { ProductFormModal } from './components/ProductFormModal';
 import { ProductExcelImportModal } from './components/ProductExcelImportModal';
+import { ProductUnitConversionModal } from './components/ProductUnitConversionModal';
 
 export const ProductManagementPage: React.FC = () => {
   const { currentRole } = useAuth();
@@ -25,7 +26,7 @@ export const ProductManagementPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-
+  const [unitConversionProduct, setUnitConversionProduct] = useState<Product | null>(null);
 
   const [blockedDeleteProduct, setBlockedDeleteProduct] = useState<Product | null>(null);
   const [confirmDeleteProduct, setConfirmDeleteProduct] = useState<Product | null>(null);
@@ -326,9 +327,15 @@ export const ProductManagementPage: React.FC = () => {
 
                       {/* 5. ĐVT cơ sở */}
                       <td className="py-3 px-4 text-center whitespace-nowrap">
-                        <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200/60 px-2 py-0.5 rounded text-xs font-semibold">
-                          {p.baseUnit}
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setUnitConversionProduct(p)}
+                          title="Bấm để xem và quản lý các đơn vị tính quy đổi (S2-07)"
+                          className="inline-flex items-center gap-1.5 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:text-orange-800 border border-orange-200/80 px-2.5 py-0.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                        >
+                          <span>{p.baseUnit}</span>
+                          <Icons.Scale size={13} className="text-orange-600" />
+                        </button>
                       </td>
 
                       {/* 6. Quy cách đóng gói */}
@@ -371,9 +378,18 @@ export const ProductManagementPage: React.FC = () => {
                         <div className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
+                            title="Quản lý đơn vị quy đổi (S2-07)"
+                            onClick={() => setUnitConversionProduct(p)}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
+                          >
+                            <Icons.Scale size={16} />
+                          </button>
+
+                          <button
+                            type="button"
                             title="Sửa thông tin"
                             onClick={() => handleOpenEdit(p)}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
                           >
                             <Icons.Edit size={16} />
                           </button>
@@ -386,7 +402,7 @@ export const ProductManagementPage: React.FC = () => {
                                 : 'Xóa sản phẩm'
                             }
                             onClick={() => handleDeleteClick(p)}
-                            className={`p-1.5 rounded-lg transition-colors ${
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                               p.transactionCount > 0
                                 ? 'text-amber-600 hover:bg-amber-50'
                                 : 'text-red-500 hover:text-red-700 hover:bg-red-50'
@@ -509,6 +525,15 @@ export const ProductManagementPage: React.FC = () => {
         }}
       />
 
+      {/* Modal Quản lý Đơn vị tính quy đổi (S2-07 / SCRUM-43) */}
+      <ProductUnitConversionModal
+        isOpen={Boolean(unitConversionProduct)}
+        onClose={() => setUnitConversionProduct(null)}
+        product={unitConversionProduct}
+        onSuccess={(msg) => {
+          showToast(msg);
+        }}
+      />
     </div>
   );
 };

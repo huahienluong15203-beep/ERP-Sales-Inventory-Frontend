@@ -24,8 +24,7 @@ import type {
   UpdateCreditLimitPayload,
   CustomerAssignmentHistory,
   AssignSalesRepPayload,
-  TransferCustomersPayload,
-  UserRef
+  TransferCustomersPayload
 } from '../types/agency';
 
 // Danh mục Nhóm khách hàng & Bảng giá tương ứng
