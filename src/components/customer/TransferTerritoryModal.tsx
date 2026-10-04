@@ -11,12 +11,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   Users,
   AlertTriangle,
-  CheckCircle2,
   X,
   RefreshCw,
-  MapPin,
   ArrowRight,
-  Info,
   Building2
 } from '../common/Icons';
 
@@ -67,7 +64,6 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
   });
 
   const fromRep = salesReps.find((r) => r.id === fromRepId) || SALES_REP_OPTIONS.find((r) => r.id === fromRepId);
-  const toRep = salesReps.find((r) => r.id === toRepId) || SALES_REP_OPTIONS.find((r) => r.id === toRepId);
   const isSameRep = fromRepId === toRepId;
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -10,6 +10,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Icons } from '../../components/common/Icons';
 import { ProductFormModal } from './components/ProductFormModal';
 import { ProductExcelImportModal } from './components/ProductExcelImportModal';
+import { UnitConversionModal } from './components/UnitConversionModal';
+import { QuickConversionCalculatorModal } from './components/QuickConversionCalculatorModal';
 
 export const ProductManagementPage: React.FC = () => {
   const { currentRole } = useAuth();
@@ -25,6 +27,9 @@ export const ProductManagementPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [unitConversionProduct, setUnitConversionProduct] = useState<Product | null>(null);
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const [calculatorInitialProduct, setCalculatorInitialProduct] = useState<Product | null>(null);
 
 
   const [blockedDeleteProduct, setBlockedDeleteProduct] = useState<Product | null>(null);
@@ -126,6 +131,19 @@ export const ProductManagementPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setCalculatorInitialProduct(null);
+              setIsCalculatorOpen(true);
+            }}
+            className="inline-flex items-center justify-center gap-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-sm font-semibold px-4 py-2.5 rounded-xl shadow-2xs hover:shadow-xs transition-all duration-200 min-h-[44px] cursor-pointer"
+            title="Tiện ích quy đổi nhanh theo cách gọi hàng của kho (S2-07 / SCRUM-43)"
+          >
+            <Icons.Calculator size={18} className="text-amber-700" />
+            <span>Quy đổi kho (S2-07)</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setIsImportModalOpen(true)}
@@ -324,11 +342,22 @@ export const ProductManagementPage: React.FC = () => {
                         {p.category}
                       </td>
 
-                      {/* 5. ĐVT cơ sở */}
+                      {/* 5. ĐVT cơ sở & Đơn vị quy đổi (S2-07 / SCRUM-43) */}
                       <td className="py-3 px-4 text-center whitespace-nowrap">
-                        <span className="inline-block bg-blue-50 text-blue-700 border border-blue-200/60 px-2 py-0.5 rounded text-xs font-semibold">
-                          {p.baseUnit}
-                        </span>
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="inline-block bg-orange-50 text-orange-800 border border-orange-200 px-2 py-0.5 rounded text-xs font-bold">
+                            {p.baseUnit}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setUnitConversionProduct(p)}
+                            className="text-[10px] text-orange-600 hover:text-orange-800 hover:underline inline-flex items-center gap-0.5 cursor-pointer font-medium"
+                            title="Quản lý đơn vị quy đổi của SKU (S2-07)"
+                          >
+                            <Icons.Scale size={11} />
+                            <span>ĐVT quy đổi</span>
+                          </button>
+                        </div>
                       </td>
 
                       {/* 6. Quy cách đóng gói */}
@@ -371,9 +400,30 @@ export const ProductManagementPage: React.FC = () => {
                         <div className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
+                            title="Cài đặt đơn vị quy đổi (S2-07 / SCRUM-43)"
+                            onClick={() => setUnitConversionProduct(p)}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
+                          >
+                            <Icons.Scale size={16} />
+                          </button>
+
+                          <button
+                            type="button"
+                            title="Quy đổi nhanh kho cho sản phẩm này (S2-07 AC2)"
+                            onClick={() => {
+                              setCalculatorInitialProduct(p);
+                              setIsCalculatorOpen(true);
+                            }}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                          >
+                            <Icons.Calculator size={16} />
+                          </button>
+
+                          <button
+                            type="button"
                             title="Sửa thông tin"
                             onClick={() => handleOpenEdit(p)}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
                           >
                             <Icons.Edit size={16} />
                           </button>
@@ -386,7 +436,7 @@ export const ProductManagementPage: React.FC = () => {
                                 : 'Xóa sản phẩm'
                             }
                             onClick={() => handleDeleteClick(p)}
-                            className={`p-1.5 rounded-lg transition-colors ${
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                               p.transactionCount > 0
                                 ? 'text-amber-600 hover:bg-amber-50'
                                 : 'text-red-500 hover:text-red-700 hover:bg-red-50'
@@ -509,6 +559,24 @@ export const ProductManagementPage: React.FC = () => {
         }}
       />
 
+      {/* Modal Cài đặt Đơn vị tính quy đổi của SKU (S2-07 / SCRUM-43) */}
+      <UnitConversionModal
+        isOpen={Boolean(unitConversionProduct)}
+        onClose={() => setUnitConversionProduct(null)}
+        product={unitConversionProduct}
+        onUpdated={() => {
+          showToast('Đã cập nhật cấu hình đơn vị tính quy đổi của sản phẩm!');
+          loadProducts();
+        }}
+      />
+
+      {/* Modal Tiện ích quy đổi nhanh cho nhân viên kho (S2-07 AC2) */}
+      <QuickConversionCalculatorModal
+        isOpen={isCalculatorOpen}
+        onClose={() => setIsCalculatorOpen(false)}
+        products={products}
+        initialProduct={calculatorInitialProduct}
+      />
     </div>
   );
 };
