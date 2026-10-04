@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type {
   AuditLogItem,
   AuditLogFilterParams,
-  AuditStatsSummary
+  AuditStatsSummary,
+  AuditModuleKey
 } from '../../types/auditLog';
 import {
   fetchAuditLogs,
@@ -30,7 +31,7 @@ export const AuditLogPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Thống kê toàn cục
-  const [allLogsForStats, setAllLogsForStats] = useState<AuditLogItem[]>([]);
+  const [allLogsForStats] = useState<AuditLogItem[]>(() => getLocalAuditLogs());
 
   // Bộ lọc
   const [filters, setFilters] = useState<AuditLogFilterParams>({
@@ -47,12 +48,6 @@ export const AuditLogPage: React.FC = () => {
   // Modal chi tiết
   const [selectedLog, setSelectedLog] = useState<AuditLogItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Tải dữ liệu toàn bộ để tính thống kê
-  useEffect(() => {
-    const raw = getLocalAuditLogs();
-    setAllLogsForStats(raw);
-  }, []);
 
   // Tải dữ liệu theo trang và bộ lọc
   const loadData = useCallback(async () => {
@@ -74,8 +69,31 @@ export const AuditLogPage: React.FC = () => {
   }, [filters, page, size]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let ignore = false;
+    fetchAuditLogs({
+      ...filters,
+      page,
+      size
+    })
+      .then((res) => {
+        if (!ignore) {
+          setLogs(res.content);
+          setTotalElements(res.totalElements);
+          setTotalPages(res.totalPages);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!ignore) {
+          console.error('Lỗi khi tải nhật ký thao tác:', err);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [filters, page, size]);
 
   // Thống kê KPI
   const stats: AuditStatsSummary = useMemo(() => {
@@ -163,7 +181,9 @@ export const AuditLogPage: React.FC = () => {
       <AuditLogStats
         stats={stats}
         selectedModule={filters.module}
-        onSelectModuleFilter={(mod) => handleFilterChange({ module: mod as any })}
+        onSelectModuleFilter={(mod) =>
+          handleFilterChange({ module: mod as AuditModuleKey | 'ALL' })
+        }
       />
 
       {/* 3. Bộ lọc đa tiêu chí (S2-04: Lọc theo người dùng, loại đối tượng, khoảng thời gian) */}

@@ -9,6 +9,7 @@ import type {
   AuditLogItem,
   AuditLogFilterParams,
   AuditLogPageResponse,
+  AuditModuleKey,
   AuditModuleOption,
   AuditStatsSummary
 } from '../types/auditLog';
@@ -319,8 +320,29 @@ export async function fetchAuditLogs(
 
       if (res.ok) {
         const json = await res.json();
+        interface BackendAuditLogItem {
+          id: number;
+          module: AuditModuleKey;
+          moduleLabel?: string;
+          action?: string;
+          targetType?: string;
+          targetId?: number;
+          targetCode?: string;
+          actorId?: number;
+          actorUsername?: string;
+          actorFullName?: string;
+          oldValue?: string;
+          newValue?: string;
+          reason?: string;
+          ipAddress?: string;
+          userAgent?: string;
+          httpMethod?: string;
+          requestUri?: string;
+          createdAt: string;
+        }
+
         if (json && Array.isArray(json.content) && json.content.length > 0) {
-          const mappedContent: AuditLogItem[] = json.content.map((item: any) => {
+          const mappedContent: AuditLogItem[] = (json.content as BackendAuditLogItem[]).map((item) => {
             const moduleMeta = AUDIT_MODULE_OPTIONS.find((m) => m.value === item.module);
             return {
               id: item.id,
