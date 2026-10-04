@@ -129,18 +129,18 @@ export const PriceListPage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-bold tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+            <span className="text-xs font-bold tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-orange-50 text-[#F85606] border border-orange-200">
               EP-02: Sản phẩm & Bảng giá
             </span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-orange-50 text-[#F85606] border border-orange-200">
               SCRUM-55 (S2-10)
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
-            <Icons.Tags className="text-indigo-600 dark:text-indigo-400" size={28} />
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2.5">
+            <Icons.Tags className="text-[#F85606]" size={28} />
             Quản lý Bảng giá theo Nhóm Khách hàng
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-3xl">
+          <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-3xl">
             Khai báo nhiều bảng giá song song theo nhóm khách hàng (Đại lý cấp 1, cấp 2, khách lẻ) và thời gian hiệu lực. Thiết lập giá sàn để kiểm soát ngoại lệ duyệt đơn bán hàng.
           </p>
         </div>
@@ -151,7 +151,7 @@ export const PriceListPage: React.FC = () => {
             onClick={loadData}
             disabled={loading}
             title="Tải lại danh sách"
-            className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-xs"
+            className="p-2.5 bg-white border border-gray-200 text-gray-600 hover:text-[#F85606] rounded-xl hover:bg-gray-50 transition-colors cursor-pointer shadow-xs"
           >
             <Icons.RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -159,7 +159,7 @@ export const PriceListPage: React.FC = () => {
           {canManage && (
             <button
               onClick={handleOpenCreate}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#F85606] hover:bg-[#E04D05] text-white text-xs sm:text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
             >
               <Icons.Plus size={18} />
               <span>Khai báo bảng giá mới</span>
@@ -169,20 +169,20 @@ export const PriceListPage: React.FC = () => {
       </div>
 
       {/* Thông tin vai trò & phạm vi nghiệp vụ */}
-      <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs">
-        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-          <Icons.ShieldCheck size={16} className="text-indigo-600 dark:text-indigo-400" />
+      <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-100/80 border border-gray-200 text-xs">
+        <div className="flex items-center gap-2 text-gray-600">
+          <Icons.ShieldCheck size={16} className="text-[#F85606]" />
           <span>
             Vai trò hiện tại: <strong>{currentRole}</strong>
           </span>
-          <span className="text-slate-400">•</span>
+          <span className="text-gray-400">•</span>
           <span>
             {canManage
               ? 'Toàn quyền thiết lập bảng giá, mức giá sàn và nhân bản phiên bản'
               : 'Quyền tra cứu và áp dụng giá bán khi tạo đơn hàng'}
           </span>
         </div>
-        <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-500">
+        <div className="hidden sm:flex items-center gap-2 text-[11px] text-gray-500">
           <span>Tiền tệ: <strong>VND</strong></span>
           <span>•</span>
           <span>Múi giờ: <strong>UTC+7</strong></span>
@@ -197,7 +197,7 @@ export const PriceListPage: React.FC = () => {
 
       {/* Lỗi nếu có */}
       {error && (
-        <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-xl text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between">
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Icons.ShieldAlert size={18} className="text-rose-600" />
             <span>{error}</span>
@@ -213,9 +213,9 @@ export const PriceListPage: React.FC = () => {
 
       {/* Bảng danh sách bảng giá */}
       {loading ? (
-        <div className="p-16 flex flex-col items-center justify-center gap-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+        <div className="p-16 flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-gray-200">
+          <div className="w-8 h-8 border-3 border-orange-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-gray-500">
             Đang tải dữ liệu bảng giá...
           </p>
         </div>
