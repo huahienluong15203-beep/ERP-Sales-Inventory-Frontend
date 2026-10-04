@@ -119,31 +119,31 @@ export const CloneVersionModal: React.FC<CloneVersionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-3xl w-full max-h-[92vh] my-auto flex flex-col overflow-hidden animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl max-w-3xl w-full max-h-[92vh] my-auto flex flex-col overflow-hidden animate-in fade-in duration-200">
         {/* Header Modal */}
-        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-purple-50/50 dark:bg-purple-950/20">
+        <div className="p-5 border-b border-gray-200 flex items-center justify-between bg-orange-50/50">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
+            <div className="p-2 rounded-xl bg-orange-100 text-[#F85606]">
               <Icons.Copy size={22} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                <h2 className="text-base font-bold text-gray-900">
                   Tạo phiên bản mới từ {originalList.code}
                 </h2>
-                <span className="text-xs px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 font-bold">
+                <span className="text-xs px-2 py-0.5 rounded-md bg-orange-100 text-[#F85606] font-bold">
                   v{nextVer}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-gray-500">
                 Tuân thủ quy tắc S2-10: Bảng giá đã phát sinh đơn thì không sửa, chỉ tạo phiên bản mới
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
           >
             <Icons.X size={20} />
           </button>
@@ -152,70 +152,70 @@ export const CloneVersionModal: React.FC<CloneVersionModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
           {error && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-xl text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
-              <Icons.ShieldAlert size={16} className="shrink-0 text-rose-600 dark:text-rose-400" />
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
+              <Icons.ShieldAlert size={16} className="shrink-0 text-rose-600" />
               <span>{error}</span>
             </div>
           )}
 
           {/* Thông tin phiên bản mới */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Mã bảng giá phiên bản mới *
               </label>
               <input
                 type="text"
                 value={newCode}
                 onChange={(e) => setNewCode(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono uppercase font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs font-mono uppercase font-bold focus:ring-2 focus:ring-orange-500 focus:outline-none"
                 required
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Tên bảng giá phiên bản mới *
               </label>
               <input
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
                 required
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Ngày bắt đầu hiệu lực bản mới *
               </label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
                 required
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Ngày kết thúc hiệu lực
               </label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Ghi chú điều chỉnh phiên bản
               </label>
               <input
                 type="text"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
               />
             </div>
           </div>
@@ -223,17 +223,17 @@ export const CloneVersionModal: React.FC<CloneVersionModalProps> = ({
           {/* Danh sách sản phẩm sao chép và điều chỉnh giá */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+              <span className="text-xs font-bold text-gray-800">
                 Điều chỉnh giá & giá sàn cho phiên bản mới ({items.length} mặt hàng):
               </span>
-              <span className="text-[11px] text-slate-500">
+              <span className="text-[11px] text-gray-500">
                 Tự động kế thừa từ {originalList.code}
               </span>
             </div>
 
-            <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto max-h-60 overflow-y-auto">
+            <div className="border border-gray-200 rounded-xl overflow-x-auto max-h-60 overflow-y-auto">
               <table className="w-full text-left border-collapse text-xs">
-                <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 z-10 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-700">
+                <thead className="sticky top-0 bg-gray-100 z-10 text-[11px] uppercase tracking-wider text-gray-500 font-semibold border-b border-gray-200">
                   <tr>
                     <th className="py-2 px-3">SKU</th>
                     <th className="py-2 px-3">Tên sản phẩm</th>
@@ -241,17 +241,17 @@ export const CloneVersionModal: React.FC<CloneVersionModalProps> = ({
                     <th className="py-2 px-3 text-right">Giá sàn mới (đ)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                <tbody className="divide-y divide-gray-100">
                   {items.map((it, idx) => {
                     const np = parseFloat(it.price) || 0;
                     const nf = parseFloat(it.floorPrice) || 0;
                     const hasErr = nf > np && np > 0;
                     return (
                       <tr key={`clone-item-${it.productSku || 'idx'}-${idx}`} className={hasErr ? 'bg-rose-50/60' : ''}>
-                        <td className="py-2 px-3 font-mono font-bold text-slate-800 dark:text-slate-200">
+                        <td className="py-2 px-3 font-mono font-bold text-gray-800">
                           {it.productSku}
                         </td>
-                        <td className="py-2 px-3 text-slate-600 dark:text-slate-400 line-clamp-1">
+                        <td className="py-2 px-3 text-gray-600 line-clamp-1">
                           {it.productName}
                         </td>
                         <td className="py-2 px-3 text-right">
@@ -259,7 +259,7 @@ export const CloneVersionModal: React.FC<CloneVersionModalProps> = ({
                             type="number"
                             value={it.price}
                             onChange={(e) => handleUpdateItem(idx, 'price', e.target.value)}
-                            className="w-28 px-2 py-1 text-xs border border-slate-300 dark:border-slate-700 rounded-lg text-right font-semibold text-emerald-600"
+                            className="w-28 px-2 py-1 text-xs border border-gray-300 rounded-lg text-right font-semibold text-emerald-600"
                             required
                           />
                         </td>
@@ -271,7 +271,7 @@ export const CloneVersionModal: React.FC<CloneVersionModalProps> = ({
                             className={`w-28 px-2 py-1 text-xs border rounded-lg text-right font-semibold ${
                               hasErr
                                 ? 'border-rose-500 text-rose-600'
-                                : 'border-slate-300 dark:border-slate-700 text-amber-600'
+                                : 'border-gray-300 text-amber-600'
                             }`}
                             required
                           />
@@ -285,18 +285,18 @@ export const CloneVersionModal: React.FC<CloneVersionModalProps> = ({
           </div>
 
           {/* Footer Submit */}
-          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+          <div className="pt-3 border-t border-gray-200 flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-xl shadow-md transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="px-5 py-2 bg-[#F85606] hover:bg-[#E04D05] text-white text-xs font-semibold rounded-xl shadow-md transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               {submitting ? (
                 <span className="inline-flex items-center gap-1.5">

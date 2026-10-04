@@ -20,45 +20,45 @@ export const PriceListStats: React.FC<PriceListStatsProps> = ({ priceLists }) =>
       value: total,
       sub: `${activeCount} bảng đang kích hoạt`,
       icon: 'Tags',
-      color: 'text-indigo-600 dark:text-indigo-400',
-      bg: 'bg-indigo-50 dark:bg-indigo-950/40',
-      border: 'border-indigo-100 dark:border-indigo-900/50'
+      color: 'text-[#F85606]',
+      bg: 'bg-orange-50',
+      border: 'border-orange-100'
     },
     {
       title: 'Đại lý Cấp 1 (NPP)',
       value: tier1Count,
       sub: 'Chính sách giá buôn cấp tỉnh',
       icon: 'Building2',
-      color: 'text-amber-600 dark:text-amber-400',
-      bg: 'bg-amber-50 dark:bg-amber-950/40',
-      border: 'border-amber-100 dark:border-amber-900/50'
+      color: 'text-amber-600',
+      bg: 'bg-amber-50',
+      border: 'border-amber-100'
     },
     {
       title: 'Đại lý Cấp 2',
       value: tier2Count,
       sub: 'Bán buôn khu vực & vệ tinh',
       icon: 'Users',
-      color: 'text-blue-600 dark:text-blue-400',
-      bg: 'bg-blue-50 dark:bg-blue-950/40',
-      border: 'border-blue-100 dark:border-blue-900/50'
+      color: 'text-blue-600',
+      bg: 'bg-blue-50',
+      border: 'border-blue-100'
     },
     {
       title: 'Khách lẻ / Showroom',
       value: retailCount,
       sub: 'Giá niêm yết bán lẻ',
       icon: 'ShoppingCart',
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-      border: 'border-emerald-100 dark:border-emerald-900/50'
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+      border: 'border-emerald-100'
     },
     {
       title: 'Đã phát sinh đơn',
       value: lockedCount,
       sub: 'Bảo vệ giá, chỉ tạo bản mới',
       icon: 'ShieldCheck',
-      color: 'text-rose-600 dark:text-rose-400',
-      bg: 'bg-rose-50 dark:bg-rose-950/40',
-      border: 'border-rose-100 dark:border-rose-900/50'
+      color: 'text-rose-600',
+      bg: 'bg-rose-50',
+      border: 'border-rose-100'
     }
   ];
 
@@ -69,10 +69,10 @@ export const PriceListStats: React.FC<PriceListStatsProps> = ({ priceLists }) =>
         return (
           <div
             key={idx}
-            className={`p-4 rounded-xl border bg-white dark:bg-slate-900 ${stat.border} shadow-xs hover:shadow-md transition-shadow`}
+            className={`p-4 rounded-xl border bg-white ${stat.border} shadow-xs hover:shadow-md transition-shadow`}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-1">
+              <span className="text-xs font-medium text-gray-500 line-clamp-1">
                 {stat.title}
               </span>
               <div className={`p-2 rounded-lg ${stat.bg} ${stat.color}`}>
@@ -80,12 +80,12 @@ export const PriceListStats: React.FC<PriceListStatsProps> = ({ priceLists }) =>
               </div>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+              <span className="text-2xl font-bold text-gray-800 tracking-tight">
                 {stat.value}
               </span>
-              <span className="text-xs text-slate-400 dark:text-slate-500">bảng</span>
+              <span className="text-xs text-gray-400">bảng</span>
             </div>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
+            <p className="mt-1 text-xs text-gray-500 line-clamp-1">
               {stat.sub}
             </p>
           </div>
