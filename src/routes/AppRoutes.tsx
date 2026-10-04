@@ -10,6 +10,7 @@ import { AgencyManagementPage } from '../pages/customer/AgencyManagementPage';
 import { ProductManagementPage } from '../pages/product/ProductManagementPage';
 import { PriceListPage } from '../pages/pricing/PriceListPage';
 import { PriceHistoryPage } from '../pages/pricing/PriceHistoryPage';
+import { VolumeDiscountPage } from '../pages/pricing/VolumeDiscountPage';
 import { CategoryManagementPage } from '../pages/category/CategoryManagementPage';
 import { SupplierManagementPage } from '../pages/supplier/SupplierManagementPage';
 import { ModulePage } from '../pages/common/ModulePage';
@@ -171,6 +172,24 @@ export const AppRoutes: React.FC = () => {
             </ProtectedRoute>
           }
         />
+
+        {/* Chính sách chiết khấu theo sản lượng (Sprint 3: S3-01 / SCRUM-12 / SCRUM-77 / EP-02) */}
+        <Route
+          path="/pricing/discounts"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_SALES_REP',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <VolumeDiscountPage />
+            </ProtectedRoute>
+          }
+        />
+
 
         {/* Hồ sơ cá nhân (Mọi vai trò đều xem được) */}
         <Route path="/profile" element={<ProfilePage />} />

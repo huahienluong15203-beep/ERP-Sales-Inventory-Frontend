@@ -96,6 +96,17 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
   },
 
+  // 6b. Chiết khấu sản lượng (Sprint 3: S3-01 / SCRUM-12 / SCRUM-77 / EP-02 - Quản lý kinh doanh)
+  {
+    title: 'Chiết khấu sản lượng',
+    path: '/pricing/discounts',
+    icon: 'Percent',
+    epic: 'Sản phẩm & Bảng giá',
+    description: 'Khai báo bậc chiết khấu theo số lượng SKU/nhóm hàng và quy tắc có lợi nhất cho khách',
+    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
+  },
+
+
   // 3. Hồ sơ cá nhân
   {
     title: 'Hồ sơ cá nhân',

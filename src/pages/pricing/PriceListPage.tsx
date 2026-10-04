@@ -156,6 +156,15 @@ export const PriceListPage: React.FC = () => {
             <Icons.RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
 
+          <a
+            href="/pricing/discounts"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-300 rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition-colors"
+          >
+            <Icons.Percent size={16} className="text-indigo-600" />
+            <span className="hidden sm:inline">Chiết khấu sản lượng</span>
+            <span className="sm:hidden">CK Sản lượng</span>
+          </a>
+
           {canManage && (
             <button
               onClick={handleOpenCreate}
@@ -165,6 +174,7 @@ export const PriceListPage: React.FC = () => {
               <span>Khai báo bảng giá mới</span>
             </button>
           )}
+
         </div>
       </div>
 
