@@ -211,22 +211,6 @@ export const SupplierManagementPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Thông tin vai trò & phạm vi nghiệp vụ */}
-      <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-orange-50/60 border border-orange-100 text-xs">
-        <div className="flex items-center gap-2 text-gray-700">
-          <Icons.ShieldCheck size={16} className="text-[#F85606]" />
-          <span>
-            Vai trò: <strong className="text-gray-900">{currentRole || 'Nhân viên kho'}</strong>
-          </span>
-          <span className="text-gray-300">•</span>
-          <span>
-            {canManage
-              ? 'Toàn quyền thêm, chỉnh sửa hồ sơ pháp nhân, tạm ngưng và kiểm soát nguồn hàng'
-              : 'Quyền tra cứu thông tin đối tác phục vụ nhập kho'}
-          </span>
-        </div>
-      </div>
-
       {/* KPI Thống kê nhà cung cấp */}
       <SupplierStats stats={stats} />
 
