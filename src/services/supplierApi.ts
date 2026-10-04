@@ -1,7 +1,7 @@
 /**
  * S2-09 / SCRUM-46: API Service & Client Layer cho Quản lý danh mục nhà cung cấp
  * Tích hợp trực tiếp với SupplierController (/api/suppliers) của Backend Spring Boot.
- * Hỗ trợ Fallback LocalStorage khi chạy độc lập / Offline.
+ * Hỗ trợ Fallback LocalStorage & Tự động khởi tạo dữ liệu mẫu.
  */
 
 import { authFetch, API_BASE_URL } from './api';
@@ -18,7 +18,7 @@ import type {
 const STORAGE_KEY = 'erp_suppliers_v1';
 
 // Dữ liệu mẫu khởi tạo cho danh mục nhà cung cấp
-const INITIAL_SUPPLIERS: Supplier[] = [
+export const INITIAL_SUPPLIERS: Supplier[] = [
   {
     id: 1,
     code: 'NCC-VNM',
@@ -139,7 +139,34 @@ export async function fetchSuppliers(params?: SupplierFilterParams): Promise<Sup
   try {
     const res = await authFetch(url);
     if (res.ok) {
-      const data = await res.json();
+      const data: SupplierPageResponse = await res.json();
+
+      // Nếu backend đang rỗng (chưa có NCC nào) và không tìm kiếm gì, tự động nạp mẫu để người dùng test ngay
+      if (data.totalElements === 0 && !params?.keyword && (!params?.status || params.status === 'ALL')) {
+        for (const s of INITIAL_SUPPLIERS) {
+          try {
+            await authFetch(`${API_BASE_URL}/api/suppliers`, {
+              method: 'POST',
+              body: JSON.stringify({
+                code: s.code,
+                name: s.name,
+                taxCode: s.taxCode,
+                contactName: s.contactName,
+                phone: s.phone,
+                email: s.email,
+                address: s.address,
+                paymentTerms: s.paymentTerms,
+                note: s.note
+              })
+            });
+          } catch {
+            // bỏ qua nếu đã có
+          }
+        }
+        const refetch = await authFetch(url);
+        if (refetch.ok) return await refetch.json();
+      }
+
       return data;
     }
   } catch (err) {
@@ -177,6 +204,29 @@ export async function fetchSuppliers(params?: SupplierFilterParams): Promise<Sup
     first: page === 0,
     last: page >= totalPages - 1
   };
+}
+
+/**
+ * Nạp lại 5 nhà cung cấp mẫu
+ */
+export async function seedSampleSuppliers(): Promise<void> {
+  for (const s of INITIAL_SUPPLIERS) {
+    try {
+      await createSupplier({
+        code: s.code,
+        name: s.name,
+        taxCode: s.taxCode,
+        contactName: s.contactName || undefined,
+        phone: s.phone || undefined,
+        email: s.email || undefined,
+        address: s.address || undefined,
+        paymentTerms: s.paymentTerms || undefined,
+        note: s.note || undefined
+      });
+    } catch {
+      // bỏ qua lỗi nếu đã tồn tại
+    }
+  }
 }
 
 /**

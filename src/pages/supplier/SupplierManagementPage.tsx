@@ -4,6 +4,7 @@ import type { Supplier, SupplierStatus } from '../../types/supplier';
 import {
   fetchSuppliers,
   deleteSupplier,
+  seedSampleSuppliers,
   calculateSupplierStats
 } from '../../services/supplierApi';
 import { SupplierStats } from '../../components/supplier/SupplierStats';
@@ -80,6 +81,19 @@ export const SupplierManagementPage: React.FC = () => {
   // Thống kê nhanh
   const stats = useMemo(() => calculateSupplierStats(suppliers), [suppliers]);
 
+  // Nạp 5 nhà cung cấp mẫu
+  const handleSeedSample = async () => {
+    setLoading(true);
+    try {
+      await seedSampleSuppliers();
+      showToast?.('Nạp mẫu thành công', 'Đã khởi tạo 5 nhà cung cấp mẫu vào hệ thống', 'success');
+      loadData();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Không thể nạp dữ liệu mẫu');
+      setLoading(false);
+    }
+  };
+
   // Mở modal tạo mới
   const handleOpenCreate = () => {
     setEditingSupplier(null);
@@ -111,7 +125,7 @@ export const SupplierManagementPage: React.FC = () => {
     if (!canManage) return;
 
     const confirmed = window.confirm(
-      `Xác nhận xóa nhà cung cấp "${supplier.name}" (${supplier.code})?\n\nLưu ý: Nếu nhà cung cấp đã từng phát sinh phiếu nhập kho, hệ thống sẽ chặn xóa và yêu cầu chuyển sang ngừng giao dịch theo quy tắc S2-09.`
+      `Xác nhận xóa nhà cung cấp "${supplier.name}" (${supplier.code})?\n\nLưu ý: Nếu nhà cung cấp đã có phiếu nhập kho, hệ thống sẽ chặn xóa và yêu cầu chuyển sang ngừng giao dịch.`
     );
     if (!confirmed) return;
 
@@ -154,19 +168,18 @@ export const SupplierManagementPage: React.FC = () => {
       {/* Tiêu đề trang & Nút thao tác chính */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-bold tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-              Kho hàng & Nhập kho
-            </span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-              SCRUM-46 (S2-09)
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-orange-50 text-orange-600 border border-orange-200">
+              Quản trị Kho & Nguồn hàng
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
-            <Icons.Truck className="text-indigo-600 dark:text-indigo-400" size={28} />
-            Quản lý Danh mục Nhà Cung Cấp
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-[#F85606] shrink-0">
+              <Icons.Truck size={22} />
+            </div>
+            <span>Danh mục Nhà Cung Cấp</span>
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-3xl">
+          <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-3xl">
             Quản lý nguồn hàng và đối tác cung ứng. Phiếu nhập kho luôn gắn đúng nguồn hàng để dễ dàng truy nguyên khi có lô hàng lỗi. Nhà cung cấp đã có phiếu nhập không được xóa, chỉ ngừng giao dịch.
           </p>
         </div>
@@ -177,7 +190,7 @@ export const SupplierManagementPage: React.FC = () => {
             onClick={loadData}
             disabled={loading}
             title="Tải lại danh sách"
-            className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-xs"
+            className="p-2.5 bg-white border border-gray-200 text-gray-600 hover:text-[#F85606] hover:border-orange-300 rounded-xl hover:bg-orange-50/40 transition-all cursor-pointer shadow-xs min-h-[44px]"
           >
             <Icons.RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -185,7 +198,7 @@ export const SupplierManagementPage: React.FC = () => {
           {canManage && (
             <button
               onClick={handleOpenCreate}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs hover:shadow transition-all cursor-pointer min-h-[44px]"
             >
               <Icons.Plus size={18} />
               <span>Khai báo nhà cung cấp mới</span>
@@ -195,21 +208,18 @@ export const SupplierManagementPage: React.FC = () => {
       </div>
 
       {/* Thông tin vai trò & phạm vi nghiệp vụ */}
-      <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs">
-        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-          <Icons.ShieldCheck size={16} className="text-indigo-600 dark:text-indigo-400" />
+      <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-orange-50/60 border border-orange-100 text-xs">
+        <div className="flex items-center gap-2 text-gray-700">
+          <Icons.ShieldCheck size={16} className="text-[#F85606]" />
           <span>
-            Vai trò hiện tại: <strong>{currentRole || 'Nhân viên kho'}</strong>
+            Vai trò hiện tại: <strong className="text-gray-900">{currentRole || 'Nhân viên kho'}</strong>
           </span>
-          <span className="text-slate-400">•</span>
+          <span className="text-gray-300">•</span>
           <span>
             {canManage
               ? 'Toàn quyền thêm, cập nhật hồ sơ pháp nhân, ngừng giao dịch và kiểm soát nguồn hàng'
               : 'Quyền xem danh mục nhà cung cấp để kiểm tra nguồn hàng nhập kho'}
           </span>
-        </div>
-        <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-500">
-          <span>Quy chuẩn: <strong>S2-09 / SCRUM-46</strong></span>
         </div>
       </div>
 
@@ -218,7 +228,7 @@ export const SupplierManagementPage: React.FC = () => {
 
       {/* Lỗi nếu có */}
       {error && (
-        <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-xl text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between">
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Icons.AlertCircle size={16} />
             <span>{error}</span>
@@ -259,6 +269,8 @@ export const SupplierManagementPage: React.FC = () => {
         onEdit={handleOpenEdit}
         onToggleStatus={handleOpenToggleStatus}
         onDelete={handleDelete}
+        onOpenCreate={handleOpenCreate}
+        onSeedSample={handleSeedSample}
         canManage={canManage}
       />
 
@@ -270,7 +282,7 @@ export const SupplierManagementPage: React.FC = () => {
         onSuccess={handleFormSuccess}
       />
 
-      {/* Modal Ngừng / Tiếp tục giao dịch (bắt buộc nhập lý do S2-09) */}
+      {/* Modal Ngừng / Tiếp tục giao dịch (bắt buộc nhập lý do) */}
       <ChangeStatusModal
         isOpen={isStatusModalOpen}
         onClose={() => setIsStatusModalOpen(false)}
