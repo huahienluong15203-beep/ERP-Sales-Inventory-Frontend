@@ -27,7 +27,8 @@ export interface ProductImportRowDto {
   status?: string;
   description?: string;
   action: 'CREATE' | 'UPDATE';
-  isUpdate: boolean;
+  isUpdate?: boolean;
+  update?: boolean;
   valid: boolean;
   errors: string[];
 }

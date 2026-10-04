@@ -91,7 +91,9 @@ export async function parseProductExcelFile(
     const existing = existingMap.get(r.sku.toUpperCase().trim());
     const changedFields: string[] = [];
 
-    if (existing && r.isUpdate) {
+    const isRowUpdate = r.action === 'UPDATE' || Boolean(r.isUpdate) || Boolean((r as any).update);
+
+    if (existing && isRowUpdate) {
       if (existing.name !== r.name) changedFields.push('Tên sản phẩm');
       if (r.category && existing.category !== r.category) changedFields.push('Nhóm hàng');
       if (existing.baseUnit !== r.baseUnit) changedFields.push('ĐVT');
@@ -111,7 +113,7 @@ export async function parseProductExcelFile(
       barcode: r.barcode || '',
       status: (r.status as ProductStatus) || 'ACTIVE',
       description: r.description || '',
-      action: !r.valid ? 'ERROR' : r.isUpdate ? 'UPDATE' : 'CREATE',
+      action: !r.valid ? 'ERROR' : isRowUpdate ? 'UPDATE' : 'CREATE',
       isValid: r.valid,
       errors: r.errors || [],
       existingProduct: existing,
