@@ -43,8 +43,7 @@ import {
   Phone,
   BadgeDollarSign,
   Truck,
-  History,
-  ArrowRight
+  History
 } from '../../components/common/Icons';
 
 export const AgencyManagementPage: React.FC = () => {
@@ -176,7 +175,7 @@ export const AgencyManagementPage: React.FC = () => {
   const roleFilteredAgencies = isSalesRep
     ? agencies.filter(
         (a) =>
-          a.assignedRepId === user?.id ||
+          (user?.id != null && String(a.assignedRepId) === String(user.id)) ||
           (user?.fullName && a.assignedRepName?.toLowerCase() === user.fullName.toLowerCase()) ||
           (user?.username === 'sales_rep' ? a.assignedRepId === 'REP_001' : false) ||
           (user?.username === 'sales_rep_1' && a.assignedRepId === 'REP_001') ||

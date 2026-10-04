@@ -11,7 +11,6 @@ import {
   User,
   Clock,
   MapPin,
-  CheckCircle2,
   Info
 } from '../common/Icons';
 
