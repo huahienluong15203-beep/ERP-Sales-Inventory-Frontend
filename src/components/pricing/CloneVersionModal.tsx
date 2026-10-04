@@ -119,8 +119,8 @@ export const CloneVersionModal: React.FC<CloneVersionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl max-w-3xl w-full max-h-[92vh] my-auto flex flex-col overflow-hidden animate-in fade-in duration-200">
         {/* Header Modal */}
         <div className="p-5 border-b border-gray-200 flex items-center justify-between bg-orange-50/50">
           <div className="flex items-center gap-2">

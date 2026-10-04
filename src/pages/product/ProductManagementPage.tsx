@@ -100,7 +100,7 @@ export const ProductManagementPage: React.FC = () => {
     <div className="w-full p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Toast thông báo */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm border border-gray-800 animate-in fade-in slide-in-from-bottom-2">
+        <div className="fixed bottom-6 right-6 z-[9999] bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm border border-gray-800 animate-in fade-in slide-in-from-bottom-2">
           <Icons.CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
@@ -402,8 +402,8 @@ export const ProductManagementPage: React.FC = () => {
 
       {/* Modal CHẶN XÓA (Điều kiện 4) */}
       {blockedDeleteProduct && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-md w-full my-auto p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95">
             <div className="flex gap-3.5 items-start">
               <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 border border-red-100">
                 <Icons.AlertTriangle size={22} />
@@ -445,8 +445,8 @@ export const ProductManagementPage: React.FC = () => {
 
       {/* Modal XÁC NHẬN XÓA (transactionCount === 0) */}
       {confirmDeleteProduct && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-md w-full my-auto p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95">
             <div className="flex gap-3.5 items-start">
               <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 border border-red-100">
                 <Icons.Trash2 size={22} />

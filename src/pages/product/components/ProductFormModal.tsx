@@ -4,6 +4,7 @@ import {
   PRODUCT_CATEGORIES,
   COMMON_BASE_UNITS,
   canManageCostPrice,
+  formatCurrencyVND,
   productService
 } from '../../../services/productService';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -124,7 +125,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           updatePayload.costPrice = parsedCost;
         }
 
-        const res = await productService.updateProduct(productToEdit.id, updatePayload);
+        const res = await productService.updateProduct(productToEdit.id, updatePayload, currentRole);
         if (res.success) {
           onSuccess(res.message);
           onClose();
@@ -143,7 +144,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           status
         };
 
-        const res = await productService.createProduct(createPayload);
+        const res = await productService.createProduct(createPayload, currentRole);
         if (res.success) {
           onSuccess(res.message);
           onClose();
@@ -162,10 +163,10 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95">
+    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] my-auto flex flex-col shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95">
         {/* Header Modal */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-orange-50/70 to-white">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-orange-50/70 to-white shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center border border-orange-200/60 shrink-0">
               <Icons.Package size={20} />
@@ -330,20 +331,30 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               </div>
 
               {canEditCost ? (
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="0"
-                    step="1000"
-                    value={costPrice}
-                    onChange={(e) => setCostPrice(e.target.value)}
-                    disabled={isSubmitting}
-                    placeholder="VD: 215000"
-                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
-                  />
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">
-                    VNĐ
-                  </span>
+                <div>
+                  <div className="flex rounded-xl border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-500 transition-all overflow-hidden min-h-[44px]">
+                    <input
+                      type="number"
+                      min="0"
+                      step="1000"
+                      value={costPrice}
+                      onChange={(e) => setCostPrice(e.target.value)}
+                      disabled={isSubmitting}
+                      placeholder="VD: 215000"
+                      className="flex-1 px-3.5 py-2.5 bg-transparent text-sm font-semibold text-gray-900 focus:outline-none min-h-[44px]"
+                    />
+                    <span className="bg-gray-100 px-3.5 flex items-center justify-center border-l border-gray-200 text-xs font-bold text-gray-500 select-none shrink-0">
+                      VNĐ
+                    </span>
+                  </div>
+                  {Number(costPrice) > 0 && (
+                    <div className="mt-1.5 flex items-center justify-between text-[11px] text-gray-500">
+                      <span>Quy đổi:</span>
+                      <span className="font-bold text-orange-600 font-mono">
+                        {formatCurrencyVND(Number(costPrice) || 0)}
+                      </span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="relative">
@@ -392,7 +403,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           </div>
 
           {/* Footer Modal */}
-          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3">
+          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}
