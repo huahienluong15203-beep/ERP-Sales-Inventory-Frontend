@@ -141,9 +141,6 @@ export const AuditLogPage: React.FC = () => {
             <span className="text-xs font-bold tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-200">
               Kiểm Toán & Giám Sát Hệ Thống
             </span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
-              S2-04: Nhật Ký Tồn Kho & Công Nợ
-            </span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2.5">
             <ShieldCheck className="text-orange-600" size={28} />

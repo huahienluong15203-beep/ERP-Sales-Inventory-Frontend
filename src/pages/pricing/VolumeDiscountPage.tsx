@@ -215,11 +215,8 @@ export const VolumeDiscountPage: React.FC = () => {
               Chiết khấu theo Sản lượng
             </span>
           </div>
-          <h1 className="mt-1 flex items-center space-x-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             <span>Chính sách Chiết khấu theo Sản lượng</span>
-            <span className="inline-flex items-center rounded-lg bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
-              S3-01 / SCRUM-12
-            </span>
           </h1>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Khai báo bậc số lượng theo từng SKU hoặc nhóm hàng. Tự động áp dụng chính sách có lợi nhất cho khách hàng.

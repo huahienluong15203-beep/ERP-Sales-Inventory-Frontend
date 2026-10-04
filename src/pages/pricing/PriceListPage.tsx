@@ -128,14 +128,6 @@ export const PriceListPage: React.FC = () => {
       {/* Tiêu đề trang & Nút thao tác chính */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-bold tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-orange-50 text-[#F85606] border border-orange-200">
-              EP-02: Sản phẩm & Bảng giá
-            </span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-orange-50 text-[#F85606] border border-orange-200">
-              SCRUM-55 (S2-10)
-            </span>
-          </div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2.5">
             <Icons.Tags className="text-[#F85606]" size={28} />
             Quản lý Bảng giá theo Nhóm Khách hàng
