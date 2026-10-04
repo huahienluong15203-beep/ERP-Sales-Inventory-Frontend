@@ -12,7 +12,8 @@ import {
   TrendingUp,
   AlertCircle,
   Lock,
-  ShieldCheck
+  ShieldCheck,
+  History
 } from '../../components/common/Icons';
 
 export const DashboardPage: React.FC = () => {
@@ -202,6 +203,91 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* 2b. PHÂN HỆ QUẢN LÝ BẢNG GIÁ & LỊCH SỬ THAY ĐỔI GIÁ (S3-02 / SCRUM-13) */}
+      {canViewCostAndMargin && (
+        <div
+          onClick={() => navigate('/pricing/history')}
+          style={{
+            cursor: 'pointer',
+            marginBottom: '20px',
+            padding: '16px 20px',
+            background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
+            borderRadius: '16px',
+            border: '1px solid #BFDBFE',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: '#2563EB',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
+            >
+              <History size={22} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '15px', fontWeight: 700, color: '#1E3A8A' }}>
+                  Lịch Sử Thay Đổi Giá Sản Phẩm (S3-02)
+                </span>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: '#1D4ED8',
+                    color: '#FFFFFF'
+                  }}
+                >
+                  Mới
+                </span>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: '#FEF3C7',
+                    color: '#92400E',
+                    border: '1px solid #FCD34D'
+                  }}
+                >
+                  🔒 Lịch sử bất biến
+                </span>
+              </div>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#1E40AF' }}>
+                Cơ sở giải thích biến động giá tháng này so với tháng trước cho Đại lý • Xem giá cũ, giá mới, người sửa và căn cứ áp dụng
+              </p>
+            </div>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: '#1D4ED8',
+              fontSize: '13px',
+              fontWeight: 600,
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <span>Mở tra cứu</span>
+            <ChevronRight size={16} />
+          </div>
+        </div>
+      )}
 
       {/* 3. KHU VỰC TIẾN ĐỘ ĐƠN HÀNG & TỶ LỆ HOÀN THÀNH */}
       <div className="erp-content-grid">
