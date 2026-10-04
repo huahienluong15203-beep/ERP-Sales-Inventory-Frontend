@@ -1233,7 +1233,7 @@ export const CategoryManagement: React.FC = () => {
 
       {/* MODAL 1: CHUYỂN SẢN PHẨM GIỮA CÁC NHÓM */}
       {movingProduct && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] overflow-y-auto animate-fadeIn">
           <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 relative">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -1328,7 +1328,7 @@ export const CategoryManagement: React.FC = () => {
 
       {/* MODAL 2: CẢNH BÁO CHẶN XOÁ NHÓM VÌ CÒN SẢN PHẨM */}
       {deleteBlockedInfo && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] overflow-y-auto animate-fadeIn">
           <div className="w-full max-w-md bg-white rounded-2xl border border-red-200 shadow-2xl p-6 relative">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0">
@@ -1368,7 +1368,7 @@ export const CategoryManagement: React.FC = () => {
 
       {/* MODAL 3: XÁC NHẬN XOÁ NHÓM TRỐNG (HỢP LỆ) */}
       {confirmDeleteCategory && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] overflow-y-auto animate-fadeIn">
           <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 relative">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
@@ -1408,7 +1408,7 @@ export const CategoryManagement: React.FC = () => {
 
       {/* MODAL 4: THÊM / SỬA NHÓM HÀNG */}
       {editingCategory && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] overflow-y-auto animate-fadeIn">
           <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 relative">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-sm font-bold text-slate-800">
