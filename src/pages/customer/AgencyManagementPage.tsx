@@ -22,6 +22,8 @@ import { CreditLimitModal } from '../../components/customer/CreditLimitModal';
 import { AssignSalesRepModal } from '../../components/customer/AssignSalesRepModal';
 import { TransferTerritoryModal } from '../../components/customer/TransferTerritoryModal';
 import { AssignmentHistoryModal } from '../../components/customer/AssignmentHistoryModal';
+import { CustomerTransactionLockModal } from '../../components/customer/CustomerTransactionLockModal';
+import { DeleteAgencyModal } from '../../components/customer/DeleteAgencyModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
 import {
@@ -31,7 +33,6 @@ import {
   RefreshCw,
   Edit,
   CheckCircle2,
-  AlertTriangle,
   X,
   ChevronLeft,
   ChevronRight,
@@ -43,7 +44,9 @@ import {
   Phone,
   BadgeDollarSign,
   Truck,
-  History
+  History,
+  Lock,
+  Unlock
 } from '../../components/common/Icons';
 
 export const AgencyManagementPage: React.FC = () => {
@@ -65,18 +68,21 @@ export const AgencyManagementPage: React.FC = () => {
   const resetToFirstPage = useCallback(() => setPage(0), []);
   const { serverKeyword, localKeyword, flush: flushSearch } = useServerSearch(keyword, resetToFirstPage);
 
-  // Thông báo phản hồi
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  // Phân quyền người dùng hiện tại
+  const { currentRole, user, showToast } = useAuth();
+  const canManageAssignments = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER';
+  const canManageAgency = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER' || currentRole === 'ROLE_ACCOUNTANT';
+  const isSalesRep = currentRole === 'ROLE_SALES_REP';
 
-  // Modal Thêm / Sửa
+  // Modal Thêm Mới / Chỉnh Sửa Đại Lý (S3-03)
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingAgency, setEditingAgency] = useState<Agency | null>(null);
 
-  // Modal Dừng giao dịch / Mở lại
+  // Modal Dừng Giao Dịch / Mở Lại (S3-03)
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
   const [targetSuspendAgency, setTargetSuspendAgency] = useState<Agency | null>(null);
 
-  // Modal Quản lý Điểm giao hàng (S3-04 / SCRUM-15)
+  // Modal Quản Lý Điểm Giao Hàng (S3-04 / SCRUM-15)
   const [isDeliveryPointsModalOpen, setIsDeliveryPointsModalOpen] = useState(false);
   const [selectedAgencyForPoints, setSelectedAgencyForPoints] = useState<Agency | null>(null);
 
@@ -85,7 +91,7 @@ export const AgencyManagementPage: React.FC = () => {
     setIsDeliveryPointsModalOpen(true);
   };
 
-  // Modal Thiết lập Hạn mức nợ (S3-05 / SCRUM-16)
+  // Modal Thiết Lập Hạn Mức Nợ (S3-05 / SCRUM-16)
   const [isCreditLimitModalOpen, setIsCreditLimitModalOpen] = useState(false);
   const [selectedAgencyForCredit, setSelectedAgencyForCredit] = useState<Agency | null>(null);
 
@@ -94,11 +100,24 @@ export const AgencyManagementPage: React.FC = () => {
     setIsCreditLimitModalOpen(true);
   };
 
-  // Phân quyền người dùng hiện tại
-  const { currentRole, user } = useAuth();
-  const canManageAssignments = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER';
-  const canManageAgency = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER' || currentRole === 'ROLE_ACCOUNTANT';
-  const isSalesRep = currentRole === 'ROLE_SALES_REP';
+  // Modal Xóa Đại Lý (Cảnh báo màn hình khi có giao dịch & Xác nhận xóa)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [targetDeleteAgency, setTargetDeleteAgency] = useState<Agency | null>(null);
+
+  const handleOpenDeleteModal = (agency: Agency) => {
+    setTargetDeleteAgency(agency);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async (agency: Agency) => {
+    const res = await deleteAgency(agency.id);
+    if (res.success) {
+      showToast('Đã xóa đại lý', res.message || 'Xóa đại lý thành công', 'success');
+      loadData();
+    } else {
+      showToast('Không thể xóa đại lý', res.message || 'Có lỗi xảy ra khi xóa đại lý', 'error');
+    }
+  };
 
   // Modal Phân công nhân viên phụ trách (S3-06 / SCRUM-17)
   const [isAssignRepModalOpen, setIsAssignRepModalOpen] = useState(false);
@@ -120,6 +139,18 @@ export const AgencyManagementPage: React.FC = () => {
     setSelectedAgencyForHistory(agency);
     setIsHistoryModalOpen(true);
   };
+
+  // Modal Khóa / Mở giao dịch (S3-07 / SCRUM-19)
+  const [isLockModalOpen, setIsLockModalOpen] = useState(false);
+  const [selectedAgencyForLock, setSelectedAgencyForLock] = useState<Agency | null>(null);
+
+  const handleOpenLockModal = (agency: Agency) => {
+    setSelectedAgencyForLock(agency);
+    setIsLockModalOpen(true);
+  };
+
+  // Bộ lọc trạng thái khóa giao dịch (S3-07): '' (Tất cả), 'LOCKED' (Bị khóa), 'UNLOCKED' (Đang mở)
+  const [selectedLockFilter, setSelectedLockFilter] = useState('');
 
   // State menu thả xuống thao tác khác trên từng dòng
   const [openMenuAgencyId, setOpenMenuAgencyId] = useState<string | null>(null);
@@ -152,7 +183,7 @@ export const AgencyManagementPage: React.FC = () => {
       setTotalElements(res.totalElements);
       setTotalPages(res.totalPages);
     } catch {
-      setAlert({ type: 'error', message: 'Không thể tải danh sách đại lý. Vui lòng thử lại!' });
+      showToast('Lỗi tải dữ liệu', 'Không thể tải danh sách đại lý. Vui lòng thử lại!', 'error');
     } finally {
       setLoading(false);
     }
@@ -184,12 +215,19 @@ export const AgencyManagementPage: React.FC = () => {
       )
     : agencies;
 
-  // Mới gõ 1 ký tự: lọc tại chỗ trên danh sách đang hiển thị, không gọi API
-  const visibleAgencies = localKeyword
+  // S3-07: Lọc theo trạng thái khóa giao dịch rủi ro công nợ
+  const lockFilteredAgencies = selectedLockFilter
     ? roleFilteredAgencies.filter((a) =>
-        matchesKeyword(localKeyword, a.code, a.name, a.taxCode, a.phone, a.assignedRepName)
+        selectedLockFilter === 'LOCKED' ? Boolean(a.transactionLocked) : !a.transactionLocked
       )
     : roleFilteredAgencies;
+
+  // Mới gõ 1 ký tự: lọc tại chỗ trên danh sách đang hiển thị, không gọi API
+  const visibleAgencies = localKeyword
+    ? lockFilteredAgencies.filter((a) =>
+        matchesKeyword(localKeyword, a.code, a.name, a.taxCode, a.phone, a.assignedRepName)
+      )
+    : lockFilteredAgencies;
 
   // Reset bộ lọc
   const handleResetFilter = () => {
@@ -197,6 +235,7 @@ export const AgencyManagementPage: React.FC = () => {
     setSelectedGroup('');
     setSelectedRegion('');
     setSelectedStatus('');
+    setSelectedLockFilter('');
     setPage(0);
   };
 
@@ -217,16 +256,20 @@ export const AgencyManagementPage: React.FC = () => {
     if (editingAgency) {
       const res = await updateAgency(editingAgency.id, payload as UpdateAgencyPayload);
       if (res.success) {
-        setAlert({ type: 'success', message: res.message });
+        showToast('Thành công', res.message || 'Cập nhật đại lý thành công', 'success');
         loadData();
+      } else {
+        showToast('Không thể cập nhật', res.message || 'Có lỗi xảy ra', 'error');
       }
       return res;
     } else {
       const res = await createAgency(payload as CreateAgencyPayload);
       if (res.success) {
-        setAlert({ type: 'success', message: res.message });
+        showToast('Thành công', res.message || 'Tạo mới đại lý thành công', 'success');
         setPage(0);
         loadData();
+      } else {
+        showToast('Không thể tạo mới', res.message || 'Có lỗi xảy ra', 'error');
       }
       return res;
     }
@@ -242,8 +285,10 @@ export const AgencyManagementPage: React.FC = () => {
   const handleConfirmSuspend = async (agencyId: string, reason: string) => {
     const res = await suspendAgency(agencyId, reason);
     if (res.success) {
-      setAlert({ type: 'success', message: res.message });
+      showToast('Thành công', res.message, 'success');
       loadData();
+    } else {
+      showToast('Lỗi', res.message, 'error');
     }
     return res;
   };
@@ -252,37 +297,19 @@ export const AgencyManagementPage: React.FC = () => {
   const handleConfirmReactivate = async (agencyId: string) => {
     const res = await reactivateAgency(agencyId);
     if (res.success) {
-      setAlert({ type: 'success', message: res.message });
+      showToast('Thành công', res.message, 'success');
       loadData();
+    } else {
+      showToast('Lỗi', res.message, 'error');
     }
     return res;
-  };
-
-  // Thử xóa đại lý (Kiểm chứng quy tắc S3-03: Có giao dịch thì không được xóa)
-  const handleDeleteAttempt = async (item: Agency) => {
-    if (item.hasTransactions) {
-      setAlert({
-        type: 'error',
-        message: `BẢO VỆ DỮ LIỆU: Đại lý [${item.code}] đã phát sinh ${item.transactionCount} giao dịch / đơn hàng. Hệ thống nghiêm cấm xóa vĩnh viễn để bảo toàn sổ sách kế toán, bạn chỉ có thể chọn Dừng giao dịch!`
-      });
-      return;
-    }
-
-    if (window.confirm(`Bạn có chắc muốn xóa vĩnh viễn đại lý mới [${item.code} - ${item.name}] chưa có giao dịch?`)) {
-      const res = await deleteAgency(item.id);
-      if (res.success) {
-        setAlert({ type: 'success', message: res.message });
-        loadData();
-      } else {
-        setAlert({ type: 'error', message: res.message });
-      }
-    }
   };
 
   // Thống kê nhanh
   const activeCount = agencies.filter((a) => a.status === 'ACTIVE').length;
   const suspendedCount = agencies.filter((a) => a.status === 'SUSPENDED').length;
   const totalDebtSum = agencies.reduce((acc, a) => acc + (a.totalDebt || 0), 0);
+  const lockedCount = agencies.filter((a) => a.transactionLocked).length;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -336,27 +363,37 @@ export const AgencyManagementPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Thông báo Alert */}
-      {alert && (
-        <div
-          className={`p-4 rounded-xl text-sm flex items-start justify-between gap-3 border shadow-xs animate-in fade-in ${alert.type === 'success'
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              : 'bg-red-50 border-red-200 text-red-800'
-            }`}
-        >
-          <div className="flex items-center gap-2.5">
-            {alert.type === 'success' ? (
-              <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
-            ) : (
-              <AlertTriangle size={18} className="text-red-600 shrink-0" />
-            )}
-            <span className="font-medium">{alert.message}</span>
+
+      {/* Cảnh báo S3-07 / SCRUM-19: Có đại lý bị khóa giao dịch do rủi ro công nợ */}
+      {lockedCount > 0 && (
+        <div className="p-4 bg-rose-50/90 border border-rose-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-rose-900 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 shadow-2xs">
+              <Lock size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-rose-900 text-sm">
+                  CẢNH BÁO RỦI RO CÔNG NỢ
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-rose-200/80 text-rose-800 text-[11px] font-bold">
+                  {lockedCount} đại lý bị khóa
+                </span>
+              </div>
+              <p className="text-rose-700 text-xs mt-0.5">
+                Các đại lý bị khóa giao dịch đang <strong>bị chặn tạo đơn mới trên toàn bộ hệ thống</strong> (kể cả cổng đặt hàng B2B). Đơn dở dang vẫn xử lý được nhưng có cảnh báo rủi ro.
+              </p>
+            </div>
           </div>
           <button
-            onClick={() => setAlert(null)}
-            className="text-gray-400 hover:text-gray-600 cursor-pointer"
+            onClick={() => setSelectedLockFilter(selectedLockFilter === 'LOCKED' ? '' : 'LOCKED')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer ${
+              selectedLockFilter === 'LOCKED'
+                ? 'bg-rose-600 text-white hover:bg-rose-700 shadow-rose-200'
+                : 'bg-white text-rose-700 border border-rose-300 hover:bg-rose-100/50'
+            }`}
           >
-            <X size={16} />
+            {selectedLockFilter === 'LOCKED' ? '✕ Bỏ lọc khóa' : '🔍 Lọc đại lý bị khóa'}
           </button>
         </div>
       )}
@@ -430,7 +467,7 @@ export const AgencyManagementPage: React.FC = () => {
 
       {/* 3. Thanh Tìm Kiếm & Bộ Lọc */}
       <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs">
-        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
           {/* Ô tìm kiếm */}
           <div className="lg:col-span-2 relative">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -481,6 +518,22 @@ export const AgencyManagementPage: React.FC = () => {
             </select>
           </div>
 
+          {/* S3-07: Lọc Khóa giao dịch rủi ro nợ */}
+          <div>
+            <select
+              value={selectedLockFilter}
+              onChange={(e) => {
+                setSelectedLockFilter(e.target.value);
+                setPage(0);
+              }}
+              className="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-200 bg-white focus:border-[#F85606] outline-none"
+            >
+              <option value="">Tất cả giao dịch</option>
+              <option value="LOCKED">🔒 Bị khóa giao dịch</option>
+              <option value="UNLOCKED">✅ Đang mở giao dịch</option>
+            </select>
+          </div>
+
           {/* Lọc Trạng thái & Nút thao tác */}
           <div className="flex items-center gap-2">
             <select
@@ -496,7 +549,7 @@ export const AgencyManagementPage: React.FC = () => {
               <option value="SUSPENDED">Dừng giao dịch</option>
             </select>
 
-            {(keyword || selectedGroup || selectedRegion || selectedStatus) && (
+            {(keyword || selectedGroup || selectedRegion || selectedStatus || selectedLockFilter) && (
               <button
                 type="button"
                 onClick={handleResetFilter}
@@ -648,14 +701,6 @@ export const AgencyManagementPage: React.FC = () => {
                             <span className={`font-bold ${agency.transactionCount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
                               {agency.transactionCount} giao dịch
                             </span>
-                            {agency.hasTransactions && (
-                              <span
-                                className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200"
-                                title="Đã có phát sinh giao dịch - Hệ thống bảo vệ không cho phép xóa"
-                              >
-                                Đã có GD
-                              </span>
-                            )}
                           </div>
                           <div>
                             <span className="text-gray-500">Công nợ: </span>
@@ -678,9 +723,24 @@ export const AgencyManagementPage: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Cột 5: Trạng thái */}
+                      {/* Cột 5: Trạng thái (S3-03 & S3-07) */}
                       <td className="py-4 px-4 text-center">
-                        {isSuspended ? (
+                        {agency.transactionLocked ? (
+                          <div className="inline-flex flex-col items-center gap-1">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs">
+                              <Lock size={12} className="text-rose-600" />
+                              Khóa Giao Dịch
+                            </span>
+                            {agency.transactionLockReason && (
+                              <span
+                                className="text-[10px] text-rose-700 italic max-w-40 truncate block font-medium"
+                                title={`Lý do khóa: ${agency.transactionLockReason}`}
+                              >
+                                "{agency.transactionLockReason}"
+                              </span>
+                            )}
+                          </div>
+                        ) : isSuspended ? (
                           <div className="inline-flex flex-col items-center gap-1">
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
                               <ShieldAlert size={12} />
@@ -798,6 +858,34 @@ export const AgencyManagementPage: React.FC = () => {
                                 </div>
 
                                 <div className="py-1">
+                                  {/* Khóa / Mở giao dịch (S3-07 / SCRUM-19 - Kế toán & Quản lý) */}
+                                  {canManageAgency && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenMenuAgencyId(null);
+                                        handleOpenLockModal(agency);
+                                      }}
+                                      className={`w-full px-3 py-2 text-left flex items-center gap-2.5 transition-colors cursor-pointer ${
+                                        agency.transactionLocked
+                                          ? 'text-emerald-700 hover:bg-emerald-50'
+                                          : 'text-rose-700 hover:bg-rose-50'
+                                      }`}
+                                    >
+                                      {agency.transactionLocked ? (
+                                        <>
+                                          <Unlock size={14} className="text-emerald-600" />
+                                          <span className="font-semibold">Mở khóa giao dịch</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Lock size={14} className="text-rose-600" />
+                                          <span className="font-semibold">Khóa giao dịch (Nợ)</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  )}
+
                                   {/* Dừng / Mở lại giao dịch */}
                                   {canManageAgency && (
                                     <button
@@ -832,7 +920,7 @@ export const AgencyManagementPage: React.FC = () => {
                                       type="button"
                                       onClick={() => {
                                         setOpenMenuAgencyId(null);
-                                        handleDeleteAttempt(agency);
+                                        handleOpenDeleteModal(agency);
                                       }}
                                       className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                                     >
@@ -930,7 +1018,7 @@ export const AgencyManagementPage: React.FC = () => {
         agency={selectedAgencyForAssign}
         onSuccess={() => {
           loadData();
-          setAlert({ type: 'success', message: 'Đã phân công lại nhân viên phụ trách đại lý thành công!' });
+          showToast('Thành công', 'Đã phân công lại nhân viên phụ trách đại lý thành công!', 'success');
         }}
       />
 
@@ -941,7 +1029,7 @@ export const AgencyManagementPage: React.FC = () => {
         agencies={agencies}
         onSuccess={() => {
           loadData();
-          setAlert({ type: 'success', message: 'Đã chuyển giao địa bàn hàng loạt thành công!' });
+          showToast('Thành công', 'Đã chuyển giao địa bàn hàng loạt thành công!', 'success');
         }}
       />
 
@@ -950,6 +1038,32 @@ export const AgencyManagementPage: React.FC = () => {
         isOpen={isHistoryModalOpen}
         onClose={() => setIsHistoryModalOpen(false)}
         agency={selectedAgencyForHistory}
+      />
+
+      {/* Modal Khóa / Mở Giao Dịch Kiểm Soát Rủi Ro Nợ (S3-07 / SCRUM-19) */}
+      <CustomerTransactionLockModal
+        isOpen={isLockModalOpen}
+        onClose={() => setIsLockModalOpen(false)}
+        agency={selectedAgencyForLock}
+        onSuccess={() => {
+          loadData();
+          showToast(
+            'Thành công',
+            selectedAgencyForLock?.transactionLocked
+              ? `Đã mở khóa giao dịch cho đại lý [${selectedAgencyForLock.code}] thành công!`
+              : `Đã khóa giao dịch đại lý [${selectedAgencyForLock?.code}] do rủi ro công nợ!`,
+            'success'
+          );
+        }}
+      />
+
+      {/* Modal Xóa Đại Lý (Cảnh báo màn hình khi có giao dịch & Xác nhận xóa) */}
+      <DeleteAgencyModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        agency={targetDeleteAgency}
+        onConfirmDelete={handleConfirmDelete}
+        onOpenSuspend={handleOpenSuspendModal}
       />
     </div>
   );
