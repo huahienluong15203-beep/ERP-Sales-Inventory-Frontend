@@ -24,6 +24,7 @@ export const ProductExcelImportModal: React.FC<ProductExcelImportModalProps> = (
   existingProducts,
   onImportSuccess
 }) => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState<boolean>(false);
   const [analysis, setAnalysis] = useState<ImportAnalysisSummary | null>(null);
   const [filterAction, setFilterAction] = useState<ImportRowAction | 'ALL'>('ALL');
@@ -32,21 +33,30 @@ export const ProductExcelImportModal: React.FC<ProductExcelImportModalProps> = (
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [dragActive, setDragActive] = useState<boolean>(false);
 
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
+  // Xử lý tải tệp mẫu từ máy chủ
+  const handleDownloadTemplate = async () => {
+    const res = await downloadProductExcelTemplate();
+    if (!res.success && res.message) {
+      alert(res.message);
+    }
+  };
+
   // Xử lý khi chọn file
-  const handleFileChange = async (selectedFile: File) => {
+  const handleFileChange = async (file: File) => {
+    setSelectedFile(file);
     setIsParsing(true);
     try {
-      const result = await parseProductExcelFile(selectedFile, existingProducts);
+      const result = await parseProductExcelFile(file, existingProducts);
       setAnalysis(result);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Lỗi khi đọc file Excel:', err);
-      alert('Không thể đọc file Excel! Vui lòng kiểm tra định dạng tệp (.xlsx, .xls hoặc .csv).');
+      alert(err instanceof Error ? err.message : 'Không thể đọc file Excel! Vui lòng kiểm tra định dạng tệp (.xlsx, .xls).');
       setAnalysis(null);
+      setSelectedFile(null);
     } finally {
       setIsParsing(false);
     }
@@ -73,11 +83,11 @@ export const ProductExcelImportModal: React.FC<ProductExcelImportModalProps> = (
 
   const handleResetFile = () => {
     setAnalysis(null);
+    setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
-
 
   // Lọc các dòng hiển thị trong bảng Preview
   const displayRows = analysis
@@ -87,16 +97,13 @@ export const ProductExcelImportModal: React.FC<ProductExcelImportModalProps> = (
       })
     : [];
 
-  // Xác nhận nhập dữ liệu
+  // Xác nhận nhập dữ liệu qua Backend API
   const handleConfirmImport = async () => {
-    if (!analysis) return;
+    if (!selectedFile || !analysis) return;
 
     setIsSubmitting(true);
     try {
-      const result = await executeProductImport(analysis.rows, {
-        skipErrors,
-        overwriteExisting
-      });
+      const result = await executeProductImport(selectedFile);
 
       if (result.success) {
         onImportSuccess(result.message);
@@ -166,7 +173,7 @@ export const ProductExcelImportModal: React.FC<ProductExcelImportModalProps> = (
 
                 <button
                   type="button"
-                  onClick={downloadProductExcelTemplate}
+                  onClick={handleDownloadTemplate}
                   className="flex items-center space-x-1.5 rounded-xl bg-blue-600 px-3.5 py-2 font-bold text-white shadow-xs hover:bg-blue-700 transition-colors shrink-0"
                 >
                   <Icons.Receipt size={15} className="hidden" />
@@ -247,7 +254,7 @@ export const ProductExcelImportModal: React.FC<ProductExcelImportModalProps> = (
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={downloadProductExcelTemplate}
+                    onClick={handleDownloadTemplate}
                     className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                   >
                     Tải lại tệp mẫu
