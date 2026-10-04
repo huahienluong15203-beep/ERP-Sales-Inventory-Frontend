@@ -178,8 +178,16 @@ function saveStoredProducts(products: Product[]): void {
 }
 
 export function canManageCostPrice(role?: RoleName | null): boolean {
-  if (!role) return false;
-  return role === 'ROLE_SALES_MANAGER' || role === 'ROLE_ADMIN';
+  let activeRole = role;
+  if (!activeRole) {
+    try {
+      activeRole = (localStorage.getItem('erp_active_role') || sessionStorage.getItem('erp_active_role')) as RoleName | null;
+    } catch {
+      // ignore
+    }
+  }
+  if (!activeRole) return false;
+  return activeRole === 'ROLE_SALES_MANAGER' || activeRole === 'ROLE_ADMIN';
 }
 
 export function formatCurrencyVND(amount: number): string {
