@@ -179,10 +179,21 @@ export const PriceHistoryPage: React.FC = () => {
             <span className="hidden sm:inline">Làm mới</span>
           </button>
 
+          <a
+            href="/pricing/discounts"
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:text-indigo-600 hover:border-indigo-200 hover:bg-gray-50 transition shadow-xs"
+            title="Khai báo chính sách chiết khấu theo sản lượng (S3-01)"
+          >
+            <span className="text-indigo-600 font-bold">%</span>
+            <span className="hidden sm:inline">Chiết khấu sản lượng</span>
+          </a>
+
+
           <button
             onClick={handleExportExcel}
             className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition"
           >
+
             <FileSpreadsheet size={16} />
             <span>Xuất Excel (.xlsx)</span>
           </button>
