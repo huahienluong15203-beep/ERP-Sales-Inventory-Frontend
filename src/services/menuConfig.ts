@@ -60,6 +60,22 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     ]
   },
 
+  // 4b. Danh mục nhà cung cấp (S2-09 / SCRUM-46: Kho & Nguồn hàng)
+  {
+    title: 'Danh mục nhà cung cấp',
+    path: '/suppliers',
+    icon: 'Truck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Quản lý nguồn hàng và đối tác cung ứng, gắn vào phiếu nhập kho để truy nguyên lô lỗi',
+    allowedRoles: [
+      'ROLE_ADMIN',
+      'ROLE_WH_MANAGER',
+      'ROLE_WAREHOUSE',
+      'ROLE_SALES_MANAGER',
+      'ROLE_ACCOUNTANT'
+    ]
+  },
+
   // 5. Bảng giá sản phẩm (S2-10 / SCRUM-55: EP-02 Sản phẩm & Bảng giá)
   {
     title: 'Bảng giá sản phẩm',

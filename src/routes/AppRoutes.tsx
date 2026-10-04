@@ -11,6 +11,7 @@ import { ProductManagementPage } from '../pages/product/ProductManagementPage';
 import { PriceListPage } from '../pages/pricing/PriceListPage';
 import { PriceHistoryPage } from '../pages/pricing/PriceHistoryPage';
 import { CategoryManagementPage } from '../pages/category/CategoryManagementPage';
+import { SupplierManagementPage } from '../pages/supplier/SupplierManagementPage';
 import { ModulePage } from '../pages/common/ModulePage';
 import { ForbiddenPage } from '../pages/common/ForbiddenPage';
 import { NotFoundPage } from '../pages/common/NotFoundPage';
@@ -100,6 +101,24 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <ProductManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Quản lý danh mục nhà cung cấp (S2-09 / SCRUM-46 / Kho & Nguồn hàng) */}
+        <Route
+          path="/suppliers"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ADMIN',
+                'ROLE_WH_MANAGER',
+                'ROLE_WAREHOUSE',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <SupplierManagementPage />
             </ProtectedRoute>
           }
         />
