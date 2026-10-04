@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { Icons } from '../../components/common/Icons';
 import { ProductFormModal } from './components/ProductFormModal';
+import { ProductExcelImportModal } from './components/ProductExcelImportModal';
 
 export const ProductManagementPage: React.FC = () => {
   const { currentRole } = useAuth();
@@ -23,6 +24,8 @@ export const ProductManagementPage: React.FC = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
 
   const [blockedDeleteProduct, setBlockedDeleteProduct] = useState<Product | null>(null);
   const [confirmDeleteProduct, setConfirmDeleteProduct] = useState<Product | null>(null);
@@ -122,15 +125,28 @@ export const ProductManagementPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleOpenCreate}
-          className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow transition-all duration-200 shrink-0 min-h-[44px]"
-        >
-          <Icons.Plus size={18} />
-          <span>Thêm sản phẩm mới</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsImportModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-sm font-semibold px-4 py-2.5 rounded-xl shadow-2xs hover:shadow-xs transition-all duration-200 min-h-[44px]"
+            title="Nhập danh mục sản phẩm hàng loạt từ Excel (S2-08)"
+          >
+            <Icons.ClipboardList size={18} className="text-emerald-700" />
+            <span>Nhập từ Excel</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenCreate}
+            className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow transition-all duration-200 min-h-[44px]"
+          >
+            <Icons.Plus size={18} />
+            <span>Thêm sản phẩm mới</span>
+          </button>
+        </div>
       </div>
+
 
       {/* Hàng Stat Cards chuẩn App ETC */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -481,6 +497,19 @@ export const ProductManagementPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal Nhập danh mục sản phẩm từ Excel (S2-08 / SCRUM-44) */}
+      <ProductExcelImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        existingProducts={products}
+        onImportSuccess={(msg) => {
+          showToast(msg);
+          loadProducts();
+        }}
+      />
+
     </div>
   );
 };
+
