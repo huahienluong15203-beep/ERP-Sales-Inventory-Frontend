@@ -104,12 +104,14 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gray-200 bg-orange-50/30 text-[11px] font-bold text-gray-600 uppercase tracking-wider">
-              <th className="py-3 px-4 sm:px-6">Đối tác cung ứng</th>
-              <th className="py-3 px-4">Mã số thuế (MST)</th>
-              <th className="py-3 px-4">Người liên hệ & SĐT</th>
-              <th className="py-3 px-4">Điều khoản thanh toán</th>
-              <th className="py-3 px-4">Trạng thái</th>
-              <th className="py-3 px-4 sm:px-6 text-right">Thao tác</th>
+              <th className="py-3 px-4 sm:px-6 min-w-[180px]">Đối tác cung ứng</th>
+              <th className="py-3 px-4 whitespace-nowrap">Mã số thuế (MST)</th>
+              <th className="py-3 px-4 min-w-[150px]">Người liên hệ & SĐT</th>
+              <th className="py-3 px-4 min-w-[140px]">Điều khoản thanh toán</th>
+              <th className="py-3 px-4 whitespace-nowrap">Trạng thái</th>
+              <th className="py-3 px-4 sm:px-6 text-right whitespace-nowrap sticky right-0 bg-orange-50/95 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] border-l border-orange-100/60 z-10">
+                Thao tác
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 text-xs">
@@ -171,20 +173,21 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                     className="hover:bg-orange-50/20 transition-colors group"
                   >
                     {/* Cột 1: Thông tin NCC */}
-                    <td className="py-3.5 px-4 sm:px-6">
+                    <td className="py-3.5 px-4 sm:px-6 max-w-[240px]">
                       <div className="space-y-0.5">
                         <button
                           onClick={() => onViewDetail(supplier)}
-                          className="font-bold text-gray-900 hover:text-orange-600 text-left transition-colors cursor-pointer"
+                          className="font-bold text-gray-900 hover:text-orange-600 text-left transition-colors cursor-pointer truncate max-w-full block"
+                          title={supplier.name}
                         >
                           {supplier.name}
                         </button>
                         <div className="flex items-center gap-2 text-[11px] text-gray-500 font-mono">
-                          <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-semibold">
+                          <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-semibold shrink-0">
                             {supplier.code}
                           </span>
                           {supplier.address && (
-                            <span className="truncate max-w-xs font-sans text-gray-500" title={supplier.address}>
+                            <span className="truncate max-w-[150px] font-sans text-gray-500" title={supplier.address}>
                               • {supplier.address}
                             </span>
                           )}
@@ -193,23 +196,23 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                     </td>
 
                     {/* Cột 2: Mã số thuế */}
-                    <td className="py-3.5 px-4 font-mono font-semibold text-gray-800">
+                    <td className="py-3.5 px-4 font-mono font-semibold text-gray-800 whitespace-nowrap">
                       {supplier.taxCode}
                     </td>
 
                     {/* Cột 3: Người liên hệ & SĐT */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 max-w-[180px]">
                       {supplier.contactName || supplier.phone ? (
                         <div className="space-y-0.5">
                           {supplier.contactName && (
-                            <div className="font-medium text-gray-800">
+                            <div className="font-medium text-gray-800 truncate" title={supplier.contactName}>
                               {supplier.contactName}
                             </div>
                           )}
                           <div className="flex items-center gap-2 text-[11px] text-gray-500 font-mono">
-                            {supplier.phone && <span>{supplier.phone}</span>}
+                            {supplier.phone && <span className="shrink-0">{supplier.phone}</span>}
                             {supplier.email && (
-                              <span className="truncate max-w-[140px]" title={supplier.email}>
+                              <span className="truncate max-w-[110px]" title={supplier.email}>
                                 • {supplier.email}
                               </span>
                             )}
@@ -221,10 +224,10 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                     </td>
 
                     {/* Cột 4: Điều khoản thanh toán */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 max-w-[180px]">
                       {supplier.paymentTerms ? (
                         <span
-                          className="inline-block max-w-[220px] text-gray-700 truncate font-medium"
+                          className="inline-block max-w-full text-gray-700 truncate font-medium"
                           title={supplier.paymentTerms}
                         >
                           {supplier.paymentTerms}
@@ -235,7 +238,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                     </td>
 
                     {/* Cột 5: Trạng thái */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 whitespace-nowrap">
                       <div className="space-y-1">
                         <span
                           className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
@@ -251,7 +254,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                         </span>
                         {!isActive && supplier.statusReason && (
                           <p
-                            className="text-[10px] text-amber-600 truncate max-w-[180px]"
+                            className="text-[10px] text-amber-600 truncate max-w-[140px]"
                             title={`Lý do: ${supplier.statusReason}`}
                           >
                             Lý do: {supplier.statusReason}
@@ -260,8 +263,8 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                       </div>
                     </td>
 
-                    {/* Cột 6: Thao tác */}
-                    <td className="py-3.5 px-4 sm:px-6 text-right">
+                    {/* Cột 6: Thao tác - Sticky right để không bao giờ bị tràn mất */}
+                    <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-[#FFF9F5] shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] border-l border-gray-100 z-10 transition-colors">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => onViewDetail(supplier)}
