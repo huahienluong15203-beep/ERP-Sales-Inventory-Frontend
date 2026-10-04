@@ -19,6 +19,10 @@ import { AgencyFormModal } from '../../components/customer/AgencyFormModal';
 import { SuspendAgencyModal } from '../../components/customer/SuspendAgencyModal';
 import { DeliveryPointsModal } from '../../components/customer/DeliveryPointsModal';
 import { CreditLimitModal } from '../../components/customer/CreditLimitModal';
+import { AssignSalesRepModal } from '../../components/customer/AssignSalesRepModal';
+import { TransferTerritoryModal } from '../../components/customer/TransferTerritoryModal';
+import { AssignmentHistoryModal } from '../../components/customer/AssignmentHistoryModal';
+import { useAuth } from '../../contexts/AuthContext';
 import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
 import {
   Building2,
@@ -38,7 +42,9 @@ import {
   MapPin,
   Phone,
   BadgeDollarSign,
-  Truck
+  Truck,
+  History,
+  ArrowRight
 } from '../../components/common/Icons';
 
 export const AgencyManagementPage: React.FC = () => {
@@ -89,6 +95,47 @@ export const AgencyManagementPage: React.FC = () => {
     setIsCreditLimitModalOpen(true);
   };
 
+  // Phân quyền người dùng hiện tại
+  const { currentRole, user } = useAuth();
+  const canManageAssignments = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER';
+  const canManageAgency = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER' || currentRole === 'ROLE_ACCOUNTANT';
+  const isSalesRep = currentRole === 'ROLE_SALES_REP';
+
+  // Modal Phân công nhân viên phụ trách (S3-06 / SCRUM-17)
+  const [isAssignRepModalOpen, setIsAssignRepModalOpen] = useState(false);
+  const [selectedAgencyForAssign, setSelectedAgencyForAssign] = useState<Agency | null>(null);
+
+  const handleOpenAssignRep = (agency: Agency) => {
+    setSelectedAgencyForAssign(agency);
+    setIsAssignRepModalOpen(true);
+  };
+
+  // Modal Chuyển giao địa bàn hàng loạt (S3-06 / SCRUM-17)
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+
+  // Modal Xem lịch sử phân công (S3-06 / SCRUM-17)
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [selectedAgencyForHistory, setSelectedAgencyForHistory] = useState<Agency | null>(null);
+
+  const handleOpenHistory = (agency: Agency) => {
+    setSelectedAgencyForHistory(agency);
+    setIsHistoryModalOpen(true);
+  };
+
+  // State menu thả xuống thao tác khác trên từng dòng
+  const [openMenuAgencyId, setOpenMenuAgencyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.agency-action-dropdown')) {
+        setOpenMenuAgencyId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Tải dữ liệu danh sách đại lý
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -125,11 +172,25 @@ export const AgencyManagementPage: React.FC = () => {
     if (!changed) loadData();
   };
 
+  // S3-06: Nhân viên kinh doanh chỉ nhìn thấy đại lý mình phụ trách
+  const roleFilteredAgencies = isSalesRep
+    ? agencies.filter(
+        (a) =>
+          a.assignedRepId === user?.id ||
+          (user?.fullName && a.assignedRepName?.toLowerCase() === user.fullName.toLowerCase()) ||
+          (user?.username === 'sales_rep' ? a.assignedRepId === 'REP_001' : false) ||
+          (user?.username === 'sales_rep_1' && a.assignedRepId === 'REP_001') ||
+          (user?.username === 'sales_rep_2' && a.assignedRepId === 'REP_002') ||
+          (user?.username === 'sales_rep_3' && a.assignedRepId === 'REP_003')
+      )
+    : agencies;
+
   // Mới gõ 1 ký tự: lọc tại chỗ trên danh sách đang hiển thị, không gọi API
   const visibleAgencies = localKeyword
-    ? agencies.filter((a) =>
-        matchesKeyword(localKeyword, a.code, a.name, a.taxCode, a.phone, a.assignedRepName))
-    : agencies;
+    ? roleFilteredAgencies.filter((a) =>
+        matchesKeyword(localKeyword, a.code, a.name, a.taxCode, a.phone, a.assignedRepName)
+      )
+    : roleFilteredAgencies;
 
   // Reset bộ lọc
   const handleResetFilter = () => {
@@ -252,13 +313,27 @@ export const AgencyManagementPage: React.FC = () => {
             <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
           </button>
 
-          <button
-            onClick={handleOpenCreate}
-            className="px-4 py-2.5 bg-gradient-to-r from-[#FF6A00] to-[#EE4D2D] hover:opacity-95 text-white text-sm font-bold rounded-xl shadow-md shadow-orange-500/20 flex items-center gap-2 transition-all cursor-pointer"
-          >
-            <Plus size={18} />
-            <span>Khai Báo Đại Lý Mới</span>
-          </button>
+          {/* S3-06: Chuyển giao địa bàn hàng loạt (chỉ Quản lý kinh doanh & Admin) */}
+          {canManageAssignments && (
+            <button
+              onClick={() => setIsTransferModalOpen(true)}
+              className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:opacity-95 text-white text-sm font-bold rounded-xl shadow-md shadow-amber-500/20 flex items-center gap-2 transition-all cursor-pointer"
+              title="Chuyển giao địa bàn hàng loạt khi nhân viên nghỉ việc hoặc điều chuyển"
+            >
+              <Users size={18} />
+              <span>Chuyển Giao Địa Bàn</span>
+            </button>
+          )}
+
+          {canManageAgency && (
+            <button
+              onClick={handleOpenCreate}
+              className="px-4 py-2.5 bg-gradient-to-r from-[#FF6A00] to-[#EE4D2D] hover:opacity-95 text-white text-sm font-bold rounded-xl shadow-md shadow-orange-500/20 flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <Plus size={18} />
+              <span>Khai Báo Đại Lý Mới</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -471,7 +546,7 @@ export const AgencyManagementPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                visibleAgencies.map((agency) => {
+                visibleAgencies.map((agency, index) => {
                   const isSuspended = agency.status === 'SUSPENDED';
 
                   return (
@@ -541,16 +616,27 @@ export const AgencyManagementPage: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Cột 3: Khu vực & Người phụ trách */}
+                      {/* Cột 3: Khu vực & Người phụ trách (S3-06) */}
                       <td className="py-4 px-4">
-                        <div className="space-y-1 text-[11px]">
+                        <div className="space-y-1.5 text-[11px]">
                           <div className="flex items-center gap-1.5 text-gray-700 font-medium">
                             <MapPin size={13} className="text-blue-500 shrink-0" />
                             <span>{agency.regionName}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 text-gray-500">
-                            <Users size={13} className="text-orange-500 shrink-0" />
-                            <span>Sales: <strong className="text-gray-700">{agency.assignedRepName}</strong></span>
+                          <div className="flex items-center justify-between gap-1 text-gray-500 bg-gray-50/80 px-2 py-1 rounded-lg border border-gray-100">
+                            <div className="flex items-center gap-1.5">
+                              <Users size={12} className="text-[#F85606] shrink-0" />
+                              <span>Sales: <strong className="text-gray-800">{agency.assignedRepName || 'Chưa gán'}</strong></span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenHistory(agency)}
+                              className="text-[10px] text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5 cursor-pointer font-medium"
+                              title="Xem lịch sử phân công người phụ trách"
+                            >
+                              <History size={11} />
+                              <span>Lịch sử</span>
+                            </button>
                           </div>
                         </div>
                       </td>
@@ -618,63 +704,147 @@ export const AgencyManagementPage: React.FC = () => {
                         )}
                       </td>
 
-                      {/* Cột 6: Thao tác */}
+                      {/* Cột 6: Thao tác - Rút gọn chỉ còn 2-3 nút gọn gàng */}
                       <td className="py-4 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* Nút Quản lý điểm giao hàng (S3-04) */}
-                          <button
-                            onClick={() => handleOpenDeliveryPoints(agency)}
-                            title="Quản lý các điểm giao hàng của đại lý"
-                            className="p-1.5 rounded-lg border border-orange-200 text-[#F85606] hover:bg-orange-50 hover:border-orange-300 transition-colors cursor-pointer"
-                          >
-                            <Truck size={15} />
-                          </button>
+                        <div className="flex items-center justify-end gap-1.5 agency-action-dropdown relative">
+                          {/* 1. Nút Sửa thông tin hồ sơ */}
+                          {canManageAgency && (
+                            <button
+                              onClick={() => handleOpenEdit(agency)}
+                              title="Sửa thông tin hồ sơ đại lý"
+                              className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:text-[#F85606] hover:border-orange-300 hover:bg-orange-50 transition-colors cursor-pointer"
+                            >
+                              <Edit size={15} />
+                            </button>
+                          )}
 
-                          {/* Nút Thiết lập hạn mức công nợ (S3-05) */}
-                          <button
-                            onClick={() => handleOpenCreditLimit(agency)}
-                            title="Thiết lập hạn mức công nợ & số ngày nợ cho phép"
-                            className="p-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-colors cursor-pointer"
-                          >
-                            <CreditCard size={15} />
-                          </button>
+                          {/* 2. Nút Phân công người phụ trách (S3-06) */}
+                          {canManageAssignments && (
+                            <button
+                              onClick={() => handleOpenAssignRep(agency)}
+                              title="Phân công / Đổi nhân viên kinh doanh phụ trách"
+                              className="p-1.5 rounded-lg border border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300 transition-colors cursor-pointer"
+                            >
+                              <Users size={15} />
+                            </button>
+                          )}
 
-                          {/* Nút Sửa */}
-                          <button
-                            onClick={() => handleOpenEdit(agency)}
-                            title="Sửa thông tin hồ sơ đại lý"
-                            className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:text-[#F85606] hover:border-orange-300 hover:bg-orange-50 transition-colors cursor-pointer"
-                          >
-                            <Edit size={15} />
-                          </button>
-
-                          {/* Nút Dừng / Mở lại giao dịch */}
-                          <button
-                            onClick={() => handleOpenSuspendModal(agency)}
-                            title={isSuspended ? 'Mở lại hoạt động giao dịch' : 'Dừng giao dịch đại lý'}
-                            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${isSuspended
-                                ? 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
-                                : 'border-amber-200 text-amber-600 hover:bg-amber-50'
+                          {/* 3. Nút Menu Thao Tác Khác (...) */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setOpenMenuAgencyId(openMenuAgencyId === agency.id ? null : agency.id)}
+                              title="Thao tác khác"
+                              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                                openMenuAgencyId === agency.id
+                                  ? 'bg-orange-50 border-orange-300 text-[#F85606]'
+                                  : 'border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-800'
                               }`}
-                          >
-                            {isSuspended ? <CheckCircle2 size={15} /> : <ShieldAlert size={15} />}
-                          </button>
+                            >
+                              <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="1.5" />
+                                <circle cx="19" cy="12" r="1.5" />
+                                <circle cx="5" cy="12" r="1.5" />
+                              </svg>
+                            </button>
 
-                          {/* Nút Xóa (Dùng để kiểm chứng quy tắc S3-03: Có giao dịch thì không xóa được) */}
-                          <button
-                            onClick={() => handleDeleteAttempt(agency)}
-                            title={
-                              agency.hasTransactions
-                                ? 'Đại lý đã có giao dịch - Cấm xóa (Chỉ được dừng giao dịch)'
-                                : 'Xóa đại lý mới (Chưa có giao dịch)'
-                            }
-                            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${agency.hasTransactions
-                                ? 'border-gray-200 text-gray-300 hover:bg-red-50 hover:text-red-500'
-                                : 'border-red-200 text-red-500 hover:bg-red-50'
-                              }`}
-                          >
-                            <X size={15} />
-                          </button>
+                            {/* Dropdown menu nổi */}
+                            {openMenuAgencyId === agency.id && (
+                              <div
+                                className={`absolute right-0 ${
+                                  index >= visibleAgencies.length - 2 ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+                                } w-52 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 text-xs divide-y divide-gray-100 text-left animate-in fade-in duration-100`}
+                              >
+                                <div className="py-1">
+                                  {/* Quản lý điểm giao hàng */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenMenuAgencyId(null);
+                                      handleOpenDeliveryPoints(agency);
+                                    }}
+                                    className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-orange-50/60 hover:text-[#F85606] transition-colors cursor-pointer"
+                                  >
+                                    <Truck size={14} className="text-[#F85606]" />
+                                    <span>Điểm giao hàng ({agency.deliveryPointCount ?? 0})</span>
+                                  </button>
+
+                                  {/* Lịch sử phân công */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenMenuAgencyId(null);
+                                      handleOpenHistory(agency);
+                                    }}
+                                    className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-blue-50/60 hover:text-blue-600 transition-colors cursor-pointer"
+                                  >
+                                    <History size={14} className="text-blue-500" />
+                                    <span>Lịch sử phân công</span>
+                                  </button>
+
+                                  {/* Thiết lập hạn mức công nợ */}
+                                  {canManageAgency && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenMenuAgencyId(null);
+                                        handleOpenCreditLimit(agency);
+                                      }}
+                                      className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-blue-50/60 hover:text-blue-600 transition-colors cursor-pointer"
+                                    >
+                                      <CreditCard size={14} className="text-blue-500" />
+                                      <span>Hạn mức công nợ</span>
+                                    </button>
+                                  )}
+                                </div>
+
+                                <div className="py-1">
+                                  {/* Dừng / Mở lại giao dịch */}
+                                  {canManageAgency && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenMenuAgencyId(null);
+                                        handleOpenSuspendModal(agency);
+                                      }}
+                                      className={`w-full px-3 py-2 text-left flex items-center gap-2.5 transition-colors cursor-pointer ${
+                                        isSuspended
+                                          ? 'text-emerald-700 hover:bg-emerald-50'
+                                          : 'text-amber-700 hover:bg-amber-50'
+                                      }`}
+                                    >
+                                      {isSuspended ? (
+                                        <>
+                                          <CheckCircle2 size={14} className="text-emerald-600" />
+                                          <span>Mở lại giao dịch</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <ShieldAlert size={14} className="text-amber-600" />
+                                          <span>Dừng giao dịch</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  )}
+
+                                  {/* Xóa đại lý */}
+                                  {canManageAgency && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenMenuAgencyId(null);
+                                        handleDeleteAttempt(agency);
+                                      }}
+                                      className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                                    >
+                                      <X size={14} className="text-red-500" />
+                                      <span>Xóa đại lý</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -752,6 +922,35 @@ export const AgencyManagementPage: React.FC = () => {
         onClose={() => setIsCreditLimitModalOpen(false)}
         agency={selectedAgencyForCredit}
         onSuccess={loadData}
+      />
+
+      {/* Modal Phân Công Người Phụ Trách (S3-06 / SCRUM-17) */}
+      <AssignSalesRepModal
+        isOpen={isAssignRepModalOpen}
+        onClose={() => setIsAssignRepModalOpen(false)}
+        agency={selectedAgencyForAssign}
+        onSuccess={() => {
+          loadData();
+          setAlert({ type: 'success', message: 'Đã phân công lại nhân viên phụ trách đại lý thành công!' });
+        }}
+      />
+
+      {/* Modal Chuyển Giao Địa Bàn Hàng Loạt (S3-06 / SCRUM-17) */}
+      <TransferTerritoryModal
+        isOpen={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
+        agencies={agencies}
+        onSuccess={() => {
+          loadData();
+          setAlert({ type: 'success', message: 'Đã chuyển giao địa bàn hàng loạt thành công!' });
+        }}
+      />
+
+      {/* Modal Lịch Sử Phân Công (S3-06 / SCRUM-17) */}
+      <AssignmentHistoryModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        agency={selectedAgencyForHistory}
       />
     </div>
   );
