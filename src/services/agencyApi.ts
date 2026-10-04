@@ -24,7 +24,9 @@ import type {
   UpdateCreditLimitPayload,
   CustomerAssignmentHistory,
   AssignSalesRepPayload,
-  TransferCustomersPayload
+  TransferCustomersPayload,
+  CustomerTransactionLockPayload,
+  OrderCreationCheckResponse
 } from '../types/agency';
 
 // Danh mục Nhóm khách hàng & Bảng giá tương ứng
@@ -228,9 +230,10 @@ const INITIAL_MOCK_AGENCIES: Agency[] = [
     phone: '0236355588',
     email: 'thinhvuong.danang@gmail.com',
     address: '88 Nguyễn Văn Linh, P. Nam Dương, Q. Hải Châu, Đà Nẵng',
-    status: 'SUSPENDED',
-    suspendReason: 'Kế toán tạm dừng do quá hạn nợ 45 ngày chưa thanh toán đối soát',
-    suspendedAt: '2026-09-25 16:30:00',
+    status: 'ACTIVE',
+    transactionLocked: true,
+    transactionLockReason: 'Kế toán công nợ khóa do nợ quá hạn 45 ngày và có dấu hiệu mất khả năng thanh toán',
+    transactionLockedAt: '2026-09-25 16:30:00',
     hasTransactions: true,
     transactionCount: 15,
     totalDebt: 28500000,
@@ -1215,3 +1218,165 @@ export async function transferAgencyTerritory(
     count: targetAgencies.length
   };
 }
+
+/**
+ * Khóa hoặc Mở khóa giao dịch với đại lý (S3-07 / SCRUM-19)
+ * Dành cho: Kế toán công nợ (ROLE_ACCOUNTANT), Quản lý kinh doanh (ROLE_SALES_MANAGER), Admin
+ * - Bắt buộc nhập lý do khi khóa hoặc mở giao dịch.
+ * - Đại lý bị khóa không tạo được đơn mới trên mọi nền tảng (chặn tại S3-09 & S4-02).
+ * - Đơn dở dang vẫn xử lý được nhưng có cảnh báo.
+ */
+export async function setCustomerTransactionLock(
+  payload: CustomerTransactionLockPayload
+): Promise<{ success: boolean; message: string; agency?: Agency }> {
+  if (!payload.reason || !payload.reason.trim()) {
+    return {
+      success: false,
+      message: 'Bắt buộc phải nhập lý do khi khóa hoặc mở giao dịch với đại lý!'
+    };
+  }
+
+  // 1. Thử gọi backend PATCH /api/customers/{id}/transaction-lock nếu id là số
+  if (/^\d+$/.test(payload.agencyId)) {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/customers/${payload.agencyId}/transaction-lock`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          locked: payload.locked,
+          reason: payload.reason.trim()
+        })
+      });
+
+      if (res.ok) {
+        const backendCustomer = await res.json();
+        const list = getStoredAgencies();
+        const item = list.find((a) => a.id === payload.agencyId);
+        if (item) {
+          item.transactionLocked = backendCustomer.transactionLocked;
+          item.transactionLockReason = backendCustomer.transactionLockReason;
+          item.transactionLockedAt = backendCustomer.transactionLockedAt;
+          item.updatedAt = backendCustomer.updatedAt;
+          saveStoredAgencies(list);
+        }
+        return {
+          success: true,
+          message: payload.locked
+            ? `Đã khóa giao dịch đại lý [${backendCustomer.code}] thành công do rủi ro công nợ!`
+            : `Đã mở khóa giao dịch cho đại lý [${backendCustomer.code}] thành công!`
+        };
+      }
+      const err = await res.json().catch(() => null);
+      return {
+        success: false,
+        message: err?.message || 'Không thể cập nhật trạng thái khóa giao dịch'
+      };
+    } catch {
+      // Fallback xuống mock nếu backend offline
+    }
+  }
+
+  // 2. Mock / offline
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  const list = getStoredAgencies();
+  const target = list.find((a) => a.id === payload.agencyId);
+
+  if (!target) {
+    return { success: false, message: 'Không tìm thấy thông tin đại lý!' };
+  }
+
+  if (Boolean(target.transactionLocked) === payload.locked) {
+    return {
+      success: false,
+      message: payload.locked
+        ? 'Đại lý đã ở trạng thái bị khóa giao dịch rồi!'
+        : 'Đại lý đang ở trạng thái mở giao dịch bình thường rồi!'
+    };
+  }
+
+  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  target.transactionLocked = payload.locked;
+  target.transactionLockReason = payload.reason.trim();
+  target.transactionLockedAt = payload.locked ? nowStr : undefined;
+  target.updatedAt = nowStr;
+
+  saveStoredAgencies(list);
+
+  return {
+    success: true,
+    message: payload.locked
+      ? `Đã khóa giao dịch đại lý [${target.code} - ${target.name}]. Chặn tạo đơn mới trên toàn hệ thống!`
+      : `Đã mở khóa giao dịch cho đại lý [${target.code} - ${target.name}]. Đại lý có thể giao dịch bình thường.`,
+    agency: target
+  };
+}
+
+/**
+ * Kiểm tra điều kiện tạo đơn mới của đại lý (S3-07 & S4-02)
+ * Gọi endpoint: GET /api/customers/{id}/check-order-creation
+ */
+export async function checkCustomerOrderCreation(
+  agencyId: string
+): Promise<OrderCreationCheckResponse> {
+  if (/^\d+$/.test(agencyId)) {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/customers/${agencyId}/check-order-creation`);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Fallback xuống mock
+    }
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const list = getStoredAgencies();
+  const target = list.find((a) => a.id === agencyId);
+
+  if (!target) {
+    return {
+      customerId: agencyId,
+      customerCode: '',
+      customerName: '',
+      allowed: false,
+      blockReason: 'Không tìm thấy hồ sơ đại lý trong hệ thống',
+      transactionLocked: false
+    };
+  }
+
+  if (target.transactionLocked) {
+    return {
+      customerId: target.id,
+      customerCode: target.code,
+      customerName: target.name,
+      allowed: false,
+      blockReason: `Đại lý đang bị khóa giao dịch: ${target.transactionLockReason || 'Có dấu hiệu mất khả năng thanh toán'}. Chặn tạo đơn mới trên mọi nền tảng.`,
+      creditLimit: target.creditLimit,
+      maxDebtDays: target.maxDebtDays || 30,
+      transactionLocked: true
+    };
+  }
+
+  if (target.status === 'SUSPENDED') {
+    return {
+      customerId: target.id,
+      customerCode: target.code,
+      customerName: target.name,
+      allowed: false,
+      blockReason: `Đại lý đang tạm dừng hoạt động: ${target.suspendReason || 'Dừng giao dịch'}. Không thể tạo đơn mới.`,
+      creditLimit: target.creditLimit,
+      maxDebtDays: target.maxDebtDays || 30,
+      transactionLocked: false
+    };
+  }
+
+  return {
+    customerId: target.id,
+    customerCode: target.code,
+    customerName: target.name,
+    allowed: true,
+    creditLimit: target.creditLimit,
+    maxDebtDays: target.maxDebtDays || 30,
+    transactionLocked: false
+  };
+}
+

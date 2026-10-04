@@ -66,6 +66,9 @@ export interface Agency {
   createdAt: string;
   updatedAt: string;
   maxDebtDays?: number;         // Số ngày nợ tối đa cho phép (S3-05)
+  transactionLocked?: boolean;       // S3-07: Khóa giao dịch rủi ro công nợ (chặn tạo đơn mới trên mọi nền tảng)
+  transactionLockReason?: string;   // S3-07: Lý do khóa / mở giao dịch (bắt buộc nhập)
+  transactionLockedAt?: string;     // S3-07: Thời điểm khóa giao dịch
 }
 
 /**
@@ -205,4 +208,28 @@ export interface TransferCustomersPayload {
   toSalesRepId: string;
   regionId?: string;
   reason: string;
+}
+
+/**
+ * Payload Khóa / Mở giao dịch đại lý (S3-07 / SCRUM-19)
+ * Phục vụ: Kế toán công nợ (ROLE_ACCOUNTANT), Quản lý kinh doanh (ROLE_SALES_MANAGER), Admin
+ */
+export interface CustomerTransactionLockPayload {
+  agencyId: string;
+  locked: boolean;
+  reason: string;
+}
+
+/**
+ * Phản hồi kiểm tra khả năng tạo đơn hàng mới của đại lý (S3-07 & S4-02)
+ */
+export interface OrderCreationCheckResponse {
+  customerId: number | string;
+  customerCode: string;
+  customerName: string;
+  allowed: boolean;
+  blockReason?: string;
+  creditLimit?: number;
+  maxDebtDays?: number;
+  transactionLocked: boolean;
 }
