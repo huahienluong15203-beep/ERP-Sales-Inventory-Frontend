@@ -5,8 +5,7 @@ import {
   Search,
   SlidersHorizontal,
   RotateCcw,
-  Calendar,
-  Filter
+  Clock
 } from '../common/Icons';
 
 interface AuditLogFilterProps {
@@ -146,7 +145,7 @@ export const AuditLogFilter: React.FC<AuditLogFilterProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-xs text-slate-500">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-semibold text-slate-600 flex items-center gap-1">
-            <Calendar size={14} className="text-orange-500" />
+            <Clock size={14} className="text-orange-500" />
             <span>Khoảng ngày cụ thể:</span>
           </span>
           <div className="flex items-center gap-2">

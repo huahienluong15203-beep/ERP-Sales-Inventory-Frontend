@@ -9,7 +9,6 @@ import type {
   AuditLogItem,
   AuditLogFilterParams,
   AuditLogPageResponse,
-  AuditModuleKey,
   AuditModuleOption,
   AuditStatsSummary
 } from '../types/auditLog';

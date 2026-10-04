@@ -5,15 +5,12 @@ import {
   X,
   Lock,
   User,
-  Package,
-  Calendar,
   Info,
   Check,
   Copy,
   TrendingDown,
   TrendingUp,
-  ShieldCheck,
-  Globe
+  ShieldCheck
 } from '../common/Icons';
 
 interface AuditLogDetailModalProps {
@@ -236,7 +233,7 @@ Yêu Cầu HTTP: ${log.httpMethod || 'POST'} ${log.requestUri || ''}`;
             {/* Thông số kỹ thuật ghi vết */}
             <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                <Globe size={15} className="text-blue-500" />
+                <ShieldCheck size={15} className="text-blue-500" />
                 <span>Giao Thức Mạng & IP Client</span>
               </div>
               <div className="text-xs space-y-1.5 pt-1">

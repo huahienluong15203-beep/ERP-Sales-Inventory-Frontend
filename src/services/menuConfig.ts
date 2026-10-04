@@ -33,6 +33,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     allowedRoles: ['ROLE_ADMIN']
   },
 
+  // 2b. Nhật ký thao tác hệ thống (Sprint 2: S2-04 - Quản trị hệ thống, Kế toán, Quản lý kho, Quản lý KD)
+  {
+    title: 'Nhật ký thao tác',
+    path: '/audit-logs',
+    icon: 'ShieldCheck',
+    epic: 'Hệ Thống & Tài Khoản',
+    description: 'Truy vết thao tác điều chỉnh tồn kho khi kiểm kê lệch và công nợ',
+    allowedRoles: ['ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_WH_MANAGER', 'ROLE_SALES_MANAGER']
+  },
+
   // 3. Quản lý hồ sơ đại lý (Sprint 3: S3-03 / SCRUM-85 / EP-03 - Kế toán công nợ & Quản lý KD)
   {
     title: 'Hồ sơ đại lý',

@@ -289,6 +289,94 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
+      {/* 2c. PHÂN HỆ NHẬT KÝ THAO TÁC & KIỂM TOÁN TỒN KHO - CÔNG NỢ (S2-04) */}
+      {(currentRole === 'ROLE_ADMIN' ||
+        currentRole === 'ROLE_ACCOUNTANT' ||
+        currentRole === 'ROLE_WH_MANAGER' ||
+        currentRole === 'ROLE_SALES_MANAGER') && (
+        <div
+          onClick={() => navigate('/audit-logs')}
+          style={{
+            cursor: 'pointer',
+            marginBottom: '20px',
+            padding: '16px 20px',
+            background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
+            borderRadius: '16px',
+            border: '1px solid #FED7AA',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: '#EA580C',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
+            >
+              <ShieldCheck size={22} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '15px', fontWeight: 700, color: '#9A3412' }}>
+                  Nhật Ký Thao Tác Tồn Kho & Công Nợ (S2-04)
+                </span>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: '#C2410C',
+                    color: '#FFFFFF'
+                  }}
+                >
+                  Kiểm toán
+                </span>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: '#FEF3C7',
+                    color: '#92400E',
+                    border: '1px solid #FCD34D'
+                  }}
+                >
+                  🔍 Truy vết kiểm kê lệch cuối tháng
+                </span>
+              </div>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#9A3412' }}>
+                Tra cứu ai đã điều chỉnh tồn kho, kiểm kê cuối tháng bị lệch, thay đổi hạn mức công nợ và giá niêm yết
+              </p>
+            </div>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: '#EA580C',
+              fontSize: '13px',
+              fontWeight: 600,
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <span>Vào sổ nhật ký</span>
+            <ChevronRight size={16} />
+          </div>
+        </div>
+      )}
+
       {/* 3. KHU VỰC TIẾN ĐỘ ĐƠN HÀNG & TỶ LỆ HOÀN THÀNH */}
       <div className="erp-content-grid">
         {/* Cột Trái: Bảng Tiến Độ Đơn Hàng Gần Đây */}

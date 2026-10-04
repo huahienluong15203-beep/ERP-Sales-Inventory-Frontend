@@ -12,6 +12,7 @@ import { PriceListPage } from '../pages/pricing/PriceListPage';
 import { PriceHistoryPage } from '../pages/pricing/PriceHistoryPage';
 import { CategoryManagementPage } from '../pages/category/CategoryManagementPage';
 import { SupplierManagementPage } from '../pages/supplier/SupplierManagementPage';
+import { AuditLogPage } from '../pages/admin/AuditLogPage';
 import { ModulePage } from '../pages/common/ModulePage';
 import { ForbiddenPage } from '../pages/common/ForbiddenPage';
 import { NotFoundPage } from '../pages/common/NotFoundPage';
@@ -185,6 +186,38 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* Nhật ký thao tác tồn kho & công nợ (Sprint 2: S2-04) */}
+        <Route
+          path="/audit-logs"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_WH_MANAGER',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <AuditLogPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/audit-logs"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_WH_MANAGER',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <AuditLogPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Trang 403 Forbidden trực tiếp */}
         <Route path="/forbidden" element={<ForbiddenPage />} />
 
@@ -202,7 +235,9 @@ export const AppRoutes: React.FC = () => {
             m.path !== '/suppliers' &&
             m.path !== '/pricing' &&
             m.path !== '/price-lists' &&
-            m.path !== '/pricing/history'
+            m.path !== '/pricing/history' &&
+            m.path !== '/audit-logs' &&
+            m.path !== '/admin/audit-logs'
         ).map((menuItem) => (
           <Route
             key={menuItem.path}

@@ -4,7 +4,6 @@ import {
   Package,
   Building2,
   Tags,
-  Users,
   Lock
 } from '../common/Icons';
 

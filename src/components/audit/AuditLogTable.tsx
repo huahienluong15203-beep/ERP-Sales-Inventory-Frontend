@@ -220,7 +220,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
       {/* Phân trang */}
       <div className="px-6 py-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 bg-slate-50/40">
         <div>
-          Hiển thị <strong>{logs.length}</strong> / <strong>{totalElements}</strong> lượt thao tác hệ thống
+          Hiển thị <strong>{logs.length}</strong> / <strong>{totalElements}</strong> lượt thao tác hệ thống ({size} mục/trang)
         </div>
 
         <div className="flex items-center gap-2">
