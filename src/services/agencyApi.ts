@@ -6,6 +6,7 @@
  * - Đại lý đã phát sinh giao dịch không thể xóa, chỉ dừng giao dịch.
  */
 
+import { authFetch, API_BASE_URL } from './api';
 import type {
   Agency,
   CustomerGroupId,
@@ -20,7 +21,11 @@ import type {
   CreateDeliveryPointPayload,
   UpdateDeliveryPointPayload,
   CreditLimitAuditLog,
-  UpdateCreditLimitPayload
+  UpdateCreditLimitPayload,
+  CustomerAssignmentHistory,
+  AssignSalesRepPayload,
+  TransferCustomersPayload,
+  UserRef
 } from '../types/agency';
 
 // Danh mục Nhóm khách hàng & Bảng giá tương ứng
@@ -102,8 +107,61 @@ export const SALES_REP_OPTIONS: SalesRepOption[] = [
     phone: '0905123456',
     email: 'tri.pham@erp-system.vn',
     regionId: 'REG_DN'
+  },
+  {
+    id: 'REP_NVKHO',
+    username: 'nvkho',
+    fullName: 'Nhân Viên Kho01',
+    phone: '0904567890',
+    email: 'warehouse@erp.com',
+    regionId: 'REG_HN'
   }
 ];
+
+/**
+ * Lấy danh sách nhân viên kinh doanh đang hoạt động để phân công phụ trách.
+ * Tự động đồng bộ với danh sách tài khoản thực tế trên hệ thống (User Management).
+ */
+export async function fetchActiveSalesReps(): Promise<SalesRepOption[]> {
+  try {
+    // 1. Thử gọi API admin/users để lấy đầy đủ user có ROLE_SALES_REP và status ACTIVE
+    const res = await authFetch(`${API_BASE_URL}/api/admin/users?role=ROLE_SALES_REP&status=ACTIVE&size=100`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.content && data.content.length > 0) {
+        return data.content.map((u: any) => ({
+          id: String(u.id),
+          username: u.username,
+          fullName: u.fullName,
+          phone: u.phone || '',
+          email: u.email || '',
+          regionId: u.regions?.[0]?.code || (u.regions?.[0]?.id ? String(u.regions[0].id) : '')
+        }));
+      }
+    }
+  } catch {}
+
+  try {
+    // 2. Thử gọi API customers/form-options
+    const res = await authFetch(`${API_BASE_URL}/api/customers/form-options`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.salesReps && data.salesReps.length > 0) {
+        return data.salesReps.map((u: any) => ({
+          id: String(u.id),
+          username: u.code || '',
+          fullName: u.name,
+          phone: '',
+          email: '',
+          regionId: ''
+        }));
+      }
+    }
+  } catch {}
+
+  // 3. Fallback: Lấy danh sách mẫu có sẵn
+  return SALES_REP_OPTIONS;
+}
 
 // Dữ liệu mẫu khởi tạo trong Storage
 const STORAGE_KEY = 'erp_agencies_data_v1';
@@ -861,4 +919,300 @@ export async function updateCreditLimit(
   localStorage.setItem(CREDIT_LIMIT_LOGS_KEY, JSON.stringify(allLogs));
 
   return { success: true, message: `Đã cập nhật hạn mức cho đại lý [${agency.name}] thành công!` };
+}
+
+// ==========================================
+// PHÂN CÔNG & CHUYỂN GIAO ĐỊA BÀN (S3-06 / SCRUM-17)
+// ==========================================
+const ASSIGNMENT_HISTORIES_KEY = 'erp_assignment_histories_v1';
+
+const INITIAL_ASSIGNMENT_HISTORIES: Record<string, CustomerAssignmentHistory[]> = {
+  'AG-001': [
+    {
+      id: 'HIST-001-2',
+      changeType: 'ASSIGN',
+      fromSalesRep: { id: 'REP_003', fullName: 'Phạm Đức Trí', username: 'sales_rep_3' },
+      toSalesRep: { id: 'REP_001', fullName: 'Lê Hoàng Nam', username: 'sales_rep_1' },
+      changedBy: { id: '1', fullName: 'Quản lý kinh doanh', username: 'sales_manager' },
+      reason: 'Phân bổ lại địa bàn miền Bắc theo kế hoạch quý 3',
+      changedAt: '2026-09-01 09:30:00'
+    },
+    {
+      id: 'HIST-001-1',
+      changeType: 'CREATE',
+      fromSalesRep: null,
+      toSalesRep: { id: 'REP_003', fullName: 'Phạm Đức Trí', username: 'sales_rep_3' },
+      changedBy: { id: '1', fullName: 'Lưu Thanh Nguyên', username: 'admin' },
+      reason: 'Gán người phụ trách khi tạo hồ sơ đại lý mới',
+      changedAt: '2026-08-15 08:30:00'
+    }
+  ],
+  'AG-002': [
+    {
+      id: 'HIST-002-1',
+      changeType: 'CREATE',
+      fromSalesRep: null,
+      toSalesRep: { id: 'REP_002', fullName: 'Nguyễn Thị Minh Thư', username: 'sales_rep_2' },
+      changedBy: { id: '1', fullName: 'Lưu Thanh Nguyên', username: 'admin' },
+      reason: 'Gán người phụ trách khi tạo hồ sơ đại lý mới',
+      changedAt: '2026-08-20 09:00:00'
+    }
+  ],
+  'AG-003': [
+    {
+      id: 'HIST-003-1',
+      changeType: 'CREATE',
+      fromSalesRep: null,
+      toSalesRep: { id: 'REP_003', fullName: 'Phạm Đức Trí', username: 'sales_rep_3' },
+      changedBy: { id: '1', fullName: 'Lưu Thanh Nguyên', username: 'admin' },
+      reason: 'Gán người phụ trách khi tạo hồ sơ đại lý mới',
+      changedAt: '2026-08-25 10:20:00'
+    }
+  ],
+  'AG-004': [
+    {
+      id: 'HIST-004-1',
+      changeType: 'CREATE',
+      fromSalesRep: null,
+      toSalesRep: { id: 'REP_001', fullName: 'Lê Hoàng Nam', username: 'sales_rep_1' },
+      changedBy: { id: '1', fullName: 'Lưu Thanh Nguyên', username: 'admin' },
+      reason: 'Gán người phụ trách khi tạo hồ sơ đại lý mới',
+      changedAt: '2026-09-30 11:00:00'
+    }
+  ]
+};
+
+function getStoredAssignmentHistories(): Record<string, CustomerAssignmentHistory[]> {
+  try {
+    const raw = localStorage.getItem(ASSIGNMENT_HISTORIES_KEY);
+    if (!raw) {
+      localStorage.setItem(ASSIGNMENT_HISTORIES_KEY, JSON.stringify(INITIAL_ASSIGNMENT_HISTORIES));
+      return INITIAL_ASSIGNMENT_HISTORIES;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return INITIAL_ASSIGNMENT_HISTORIES;
+  }
+}
+
+function saveStoredAssignmentHistories(data: Record<string, CustomerAssignmentHistory[]>) {
+  try {
+    localStorage.setItem(ASSIGNMENT_HISTORIES_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Không thể lưu lịch sử phân công vào localStorage', e);
+  }
+}
+
+/**
+ * Lấy lịch sử phân công nhân viên phụ trách của một đại lý (S3-06)
+ */
+export async function fetchAssignmentHistory(agencyId: string): Promise<CustomerAssignmentHistory[]> {
+  // Thử gọi backend nếu ID là số
+  if (/^\d+$/.test(agencyId)) {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/customers/${agencyId}/assignment-history`);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Fallback xuống mock
+    }
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const allHistories = getStoredAssignmentHistories();
+  return (allHistories[agencyId] || []).sort(
+    (a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime()
+  );
+}
+
+/**
+ * Đổi nhân viên phụ trách chính cho một đại lý (S3-06)
+ */
+export async function assignAgencySalesRep(
+  payload: AssignSalesRepPayload,
+  currentUser?: { fullName?: string; username?: string; role?: string }
+): Promise<{ success: boolean; message: string }> {
+  // Thử gọi backend nếu ID là số
+  if (/^\d+$/.test(payload.agencyId)) {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/customers/${payload.agencyId}/sales-rep`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          salesRepId: Number(payload.salesRepId),
+          reason: payload.reason?.trim() || null
+        })
+      });
+      if (res.ok) {
+        return { success: true, message: 'Đã cập nhật nhân viên phụ trách đại lý thành công!' };
+      }
+      const err = await res.json().catch(() => null);
+      return { success: false, message: err?.message || 'Không thể đổi nhân viên phụ trách' };
+    } catch {
+      // Fallback xuống mock
+    }
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  const agencies = getStoredAgencies();
+  const agencyIndex = agencies.findIndex((a) => a.id === payload.agencyId);
+  if (agencyIndex === -1) {
+    return { success: false, message: 'Không tìm thấy hồ sơ đại lý cần phân công!' };
+  }
+
+  const agency = agencies[agencyIndex];
+  const allReps = await fetchActiveSalesReps();
+  const newRep = allReps.find((r) => r.id === payload.salesRepId || r.username === payload.salesRepId) || SALES_REP_OPTIONS.find((r) => r.id === payload.salesRepId);
+  if (!newRep) {
+    return { success: false, message: 'Nhân viên kinh doanh được chọn không tồn tại hoặc đã ngừng hoạt động!' };
+  }
+
+  if (agency.assignedRepId === newRep.id) {
+    return { success: false, message: 'Nhân viên này đang phụ trách đại lý này rồi!' };
+  }
+
+  const oldRep = SALES_REP_OPTIONS.find((r) => r.id === agency.assignedRepId);
+  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+  // Cập nhật đại lý
+  agency.assignedRepId = newRep.id;
+  agency.assignedRepName = newRep.fullName;
+  agency.updatedAt = nowStr;
+  saveStoredAgencies(agencies);
+
+  // Ghi nhận lịch sử phân công
+  const allHistories = getStoredAssignmentHistories();
+  const agencyHistories = allHistories[payload.agencyId] || [];
+
+  const newHistory: CustomerAssignmentHistory = {
+    id: `HIST-${Date.now()}`,
+    changeType: 'ASSIGN',
+    fromSalesRep: oldRep ? { id: oldRep.id, fullName: oldRep.fullName, username: oldRep.username } : null,
+    toSalesRep: { id: newRep.id, fullName: newRep.fullName, username: newRep.username },
+    changedBy: {
+      id: 'CURRENT_USER',
+      fullName: currentUser?.fullName || 'Quản lý kinh doanh',
+      username: currentUser?.username || 'manager'
+    },
+    reason: payload.reason?.trim() || 'Điều chuyển người phụ trách',
+    changedAt: nowStr
+  };
+
+  agencyHistories.unshift(newHistory);
+  allHistories[payload.agencyId] = agencyHistories;
+  saveStoredAssignmentHistories(allHistories);
+
+  return {
+    success: true,
+    message: `Đã phân công nhân viên ${newRep.fullName} phụ trách đại lý [${agency.name}]!`
+  };
+}
+
+/**
+ * Chuyển giao địa bàn hàng loạt khi nhân viên nghỉ việc hoặc điều chuyển (S3-06)
+ */
+export async function transferAgencyTerritory(
+  payload: TransferCustomersPayload,
+  currentUser?: { fullName?: string; username?: string; role?: string }
+): Promise<{ success: boolean; message: string; count: number }> {
+  if (payload.fromSalesRepId === payload.toSalesRepId) {
+    return {
+      success: false,
+      message: 'Nhân viên nhận bàn giao phải khác nhân viên bàn giao!',
+      count: 0
+    };
+  }
+
+  if (!payload.reason || !payload.reason.trim()) {
+    return {
+      success: false,
+      message: 'Bắt buộc phải nhập lý do chuyển giao địa bàn!',
+      count: 0
+    };
+  }
+
+  // Thử gọi backend nếu các ID là số
+  if (/^\d+$/.test(payload.fromSalesRepId) && /^\d+$/.test(payload.toSalesRepId)) {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/customers/transfer`, {
+        method: 'POST',
+        body: JSON.stringify({
+          fromSalesRepId: Number(payload.fromSalesRepId),
+          toSalesRepId: Number(payload.toSalesRepId),
+          regionId: payload.regionId ? Number(payload.regionId) : null,
+          reason: payload.reason.trim()
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return { success: true, message: data.message, count: data.count };
+      }
+      const err = await res.json().catch(() => null);
+      return { success: false, message: err?.message || 'Chuyển giao thất bại', count: 0 };
+    } catch {
+      // Fallback xuống mock
+    }
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 250));
+
+  const fromRep = SALES_REP_OPTIONS.find((r) => r.id === payload.fromSalesRepId);
+  const toRep = SALES_REP_OPTIONS.find((r) => r.id === payload.toSalesRepId);
+
+  if (!fromRep || !toRep) {
+    return { success: false, message: 'Thông tin nhân viên kinh doanh không hợp lệ!', count: 0 };
+  }
+
+  const agencies = getStoredAgencies();
+  // Lọc các đại lý đang do fromRep phụ trách, nếu có regionId thì lọc thêm theo khu vực
+  const targetAgencies = agencies.filter((a) => {
+    if (a.assignedRepId !== fromRep.id) return false;
+    if (payload.regionId && a.regionId !== payload.regionId) return false;
+    return true;
+  });
+
+  if (targetAgencies.length === 0) {
+    const regionObj = REGION_OPTIONS.find((r) => r.id === payload.regionId);
+    return {
+      success: false,
+      message: `Nhân viên ${fromRep.fullName} không phụ trách đại lý nào${regionObj ? ` tại khu vực ${regionObj.name}` : ''}!`,
+      count: 0
+    };
+  }
+
+  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const allHistories = getStoredAssignmentHistories();
+
+  // Cập nhật từng đại lý và ghi lịch sử TRANSFER
+  targetAgencies.forEach((agency) => {
+    agency.assignedRepId = toRep.id;
+    agency.assignedRepName = toRep.fullName;
+    agency.updatedAt = nowStr;
+
+    const agencyHistories = allHistories[agency.id] || [];
+    agencyHistories.unshift({
+      id: `HIST-${Date.now()}-${agency.id}`,
+      changeType: 'TRANSFER',
+      fromSalesRep: { id: fromRep.id, fullName: fromRep.fullName, username: fromRep.username },
+      toSalesRep: { id: toRep.id, fullName: toRep.fullName, username: toRep.username },
+      changedBy: {
+        id: 'CURRENT_USER',
+        fullName: currentUser?.fullName || 'Quản lý kinh doanh',
+        username: currentUser?.username || 'manager'
+      },
+      reason: payload.reason.trim(),
+      changedAt: nowStr
+    });
+    allHistories[agency.id] = agencyHistories;
+  });
+
+  saveStoredAgencies(agencies);
+  saveStoredAssignmentHistories(allHistories);
+
+  return {
+    success: true,
+    message: `Đã chuyển giao thành công ${targetAgencies.length} đại lý từ [${fromRep.fullName}] sang [${toRep.fullName}]!`,
+    count: targetAgencies.length
+  };
 }

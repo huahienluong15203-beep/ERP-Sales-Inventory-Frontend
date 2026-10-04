@@ -172,3 +172,37 @@ export interface UpdateCreditLimitPayload {
   maxDebtDays: number;
   reason: string;
 }
+
+/**
+ * Lịch sử phân công nhân viên phụ trách đại lý (S3-06 / SCRUM-17)
+ */
+export type AssignmentChangeType = 'CREATE' | 'ASSIGN' | 'TRANSFER';
+
+export interface UserRef {
+  id: string | number;
+  fullName: string;
+  username?: string;
+}
+
+export interface CustomerAssignmentHistory {
+  id: string | number;
+  changeType: AssignmentChangeType;
+  fromSalesRep?: UserRef | null;
+  toSalesRep?: UserRef | null;
+  changedBy?: UserRef | null;
+  reason?: string | null;
+  changedAt: string;
+}
+
+export interface AssignSalesRepPayload {
+  agencyId: string;
+  salesRepId: string;
+  reason?: string;
+}
+
+export interface TransferCustomersPayload {
+  fromSalesRepId: string;
+  toSalesRepId: string;
+  regionId?: string;
+  reason: string;
+}

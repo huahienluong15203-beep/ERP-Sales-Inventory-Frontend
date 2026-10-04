@@ -4,12 +4,14 @@ import type {
   Agency,
   CreateAgencyPayload,
   UpdateAgencyPayload,
-  CustomerGroupId
+  CustomerGroupId,
+  SalesRepOption
 } from '../../types/agency';
 import {
   CUSTOMER_GROUP_OPTIONS,
   REGION_OPTIONS,
   SALES_REP_OPTIONS,
+  fetchActiveSalesReps,
   getPricingTierByGroup
 } from '../../services/agencyApi';
 import { X, Building2, AlertTriangle, CheckCircle2, Info } from '../common/Icons';
@@ -30,6 +32,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
   const isEdit = Boolean(initialData);
   const formRef = useRef<HTMLFormElement>(null);
 
+  const [salesReps, setSalesReps] = useState<SalesRepOption[]>(SALES_REP_OPTIONS);
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [taxCode, setTaxCode] = useState('');
@@ -43,6 +46,16 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchActiveSalesReps().then((reps) => {
+        if (reps && reps.length > 0) {
+          setSalesReps(reps);
+        }
+      });
+    }
+  }, [isOpen]);
 
   // Bảng giá hiện thời được ánh xạ trực tiếp từ Nhóm khách hàng đã chọn
   const activePricingTier = getPricingTierByGroup(customerGroup);
@@ -336,11 +349,11 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
               <select
                 value={assignedRepId}
                 onChange={(e) => setAssignedRepId(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:border-[#F85606] outline-none"
+                className="w-full px-3.5 py-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:border-[#F85606] outline-none font-medium"
               >
-                {SALES_REP_OPTIONS.map((rep) => (
+                {salesReps.map((rep) => (
                   <option key={rep.id} value={rep.id}>
-                    {rep.fullName} ({rep.phone})
+                    {rep.fullName} {rep.phone ? `(${rep.phone})` : ''}
                   </option>
                 ))}
               </select>
