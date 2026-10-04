@@ -220,3 +220,7 @@ export interface PriceHistoryResponse {
   page: number;
   size: number;
 }
+
+// S3-01 / SCRUM-12 / SCRUM-77: Re-export Volume Discount Types
+export * from './discount';
+
