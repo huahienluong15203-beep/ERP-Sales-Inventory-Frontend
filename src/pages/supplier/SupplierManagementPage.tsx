@@ -12,6 +12,7 @@ import { SupplierTable } from '../../components/supplier/SupplierTable';
 import { SupplierFormModal } from '../../components/supplier/SupplierFormModal';
 import { ChangeStatusModal } from '../../components/supplier/ChangeStatusModal';
 import { SupplierDetailModal } from '../../components/supplier/SupplierDetailModal';
+import { DeleteSupplierModal } from '../../components/supplier/DeleteSupplierModal';
 import { Icons } from '../../components/common/Icons';
 
 export const SupplierManagementPage: React.FC = () => {
@@ -53,6 +54,9 @@ export const SupplierManagementPage: React.FC = () => {
   const [isDetailOpen, setIsDetailOpen] = useState<boolean>(false);
   const [detailSupplier, setDetailSupplier] = useState<Supplier | null>(null);
 
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [deletingSupplier, setDeletingSupplier] = useState<Supplier | null>(null);
+
   // Tải dữ liệu từ API
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -89,7 +93,11 @@ export const SupplierManagementPage: React.FC = () => {
       showToast?.('Nạp mẫu thành công', 'Đã khởi tạo 5 nhà cung cấp mẫu vào hệ thống', 'success');
       loadData();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Không thể nạp dữ liệu mẫu');
+      showToast?.(
+        'Lỗi nạp dữ liệu mẫu',
+        err instanceof Error ? err.message : 'Không thể nạp dữ liệu mẫu',
+        'error'
+      );
       setLoading(false);
     }
   };
@@ -120,26 +128,22 @@ export const SupplierManagementPage: React.FC = () => {
     setIsStatusModalOpen(true);
   };
 
-  // Xóa nhà cung cấp
-  const handleDelete = async (supplier: Supplier) => {
+  // Mở modal xác nhận xóa
+  const handleOpenDelete = (supplier: Supplier) => {
     if (!canManage) return;
+    setDeletingSupplier(supplier);
+    setIsDeleteModalOpen(true);
+  };
 
-    const confirmed = window.confirm(
-      `Xác nhận xóa nhà cung cấp "${supplier.name}" (${supplier.code})?\n\nLưu ý: Nếu nhà cung cấp đã có phiếu nhập kho, hệ thống sẽ chặn xóa và yêu cầu chuyển sang ngừng giao dịch.`
+  // Thực hiện xóa đối tác
+  const handleConfirmDelete = async (supplier: Supplier) => {
+    await deleteSupplier(supplier.id);
+    showToast?.(
+      'Xóa thành công',
+      `Đã xóa đối tác ${supplier.code} khỏi danh mục`,
+      'success'
     );
-    if (!confirmed) return;
-
-    try {
-      await deleteSupplier(supplier.id);
-      showToast?.(
-        'Xóa thành công',
-        `Đã xóa nhà cung cấp ${supplier.code} khỏi danh mục`,
-        'success'
-      );
-      loadData();
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi xóa nhà cung cấp');
-    }
+    loadData();
   };
 
   const handleFormSuccess = (saved: Supplier) => {
@@ -268,7 +272,7 @@ export const SupplierManagementPage: React.FC = () => {
         onViewDetail={handleOpenDetail}
         onEdit={handleOpenEdit}
         onToggleStatus={handleOpenToggleStatus}
-        onDelete={handleDelete}
+        onDelete={handleOpenDelete}
         onOpenCreate={handleOpenCreate}
         onSeedSample={handleSeedSample}
         canManage={canManage}
@@ -299,6 +303,17 @@ export const SupplierManagementPage: React.FC = () => {
         onEdit={handleOpenEdit}
         onToggleStatus={handleOpenToggleStatus}
         canManage={canManage}
+      />
+
+      {/* Modal Xác nhận Xóa đối tác (chuẩn giao diện ETC) */}
+      <DeleteSupplierModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDeletingSupplier(null);
+        }}
+        supplier={deletingSupplier}
+        onConfirm={handleConfirmDelete}
       />
     </div>
   );
