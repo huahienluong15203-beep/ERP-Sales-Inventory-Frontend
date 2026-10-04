@@ -840,14 +840,6 @@ export const CategoryManagement: React.FC = () => {
       {/* Header chỉ dẫn vai trò Quản lý kinh doanh */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
-              Vai Trò: Quản Lý Kinh Doanh
-            </span>
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-orange-50 text-orange-700 border border-orange-200">
-              Cấu Trúc Cây ≥ 3 Cấp
-            </span>
-          </div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-800">
             Quản Lý Nhóm Hàng Nhiều Cấp & Phân Tích Doanh Số Ngành Hàng
           </h1>
