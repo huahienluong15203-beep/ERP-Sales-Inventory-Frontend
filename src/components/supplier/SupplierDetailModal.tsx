@@ -24,12 +24,12 @@ export const SupplierDetailModal: React.FC<SupplierDetailModalProps> = ({
   const isActive = supplier.status === 'ACTIVE';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col my-auto max-h-[90vh]">
         {/* Header */}
-        <div className="px-6 py-4.5 border-b border-gray-100 flex items-center justify-between bg-orange-50/40">
+        <div className="px-6 py-4.5 border-b border-gray-100 flex items-center justify-between bg-orange-50/40 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600">
+            <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 shrink-0">
               <Icons.Building2 size={22} />
             </div>
             <div>
@@ -59,7 +59,7 @@ export const SupplierDetailModal: React.FC<SupplierDetailModalProps> = ({
         </div>
 
         {/* Body Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
           {/* Cảnh báo ngừng giao dịch */}
           {!isActive && supplier.statusReason && (
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
@@ -148,7 +148,7 @@ export const SupplierDetailModal: React.FC<SupplierDetailModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-3.5 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
+        <div className="px-6 py-3.5 border-t border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
           <div>
             {canManage && (
               <button

@@ -256,25 +256,31 @@ export async function fetchSupplierById(id: number): Promise<Supplier> {
  */
 export async function createSupplier(payload: CreateSupplierPayload): Promise<Supplier> {
   const url = `${API_BASE_URL}/api/suppliers`;
+  let isApiCall = false;
   try {
     const res = await authFetch(url, {
       method: 'POST',
       body: JSON.stringify(payload)
     });
+    isApiCall = true;
     if (res.ok) {
       return await res.json();
     }
     const errData = await res.json().catch(() => null);
-    if (errData?.message) throw new Error(errData.message);
+    const errorMsg =
+      errData?.message ||
+      (errData?.details && (Object.values(errData.details)[0] as string)) ||
+      `Lỗi ${res.status}: Không thể tạo nhà cung cấp`;
+    throw new Error(errorMsg);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (message.includes('tồn tại') || message.includes('trống') || message.includes('hợp lệ')) {
+    if (isApiCall) {
+      // API backend phản hồi lỗi (trùng mã số thuế, trùng mã NCC...), ném lỗi thẳng lên UI
       throw err;
     }
-    console.warn('API error creating supplier, fallback to local storage', err);
+    console.warn('Network error creating supplier, fallback to local storage', err);
   }
 
-  // Fallback Local Storage
+  // Fallback Local Storage chỉ khi hoàn toàn mất kết nối mạng
   const list = getLocalData();
   const normalizedCode = payload.code.trim().toUpperCase();
   const normalizedTax = payload.taxCode.trim();
@@ -313,21 +319,24 @@ export async function createSupplier(payload: CreateSupplierPayload): Promise<Su
  */
 export async function updateSupplier(id: number, payload: UpdateSupplierPayload): Promise<Supplier> {
   const url = `${API_BASE_URL}/api/suppliers/${id}`;
+  let isApiCall = false;
   try {
     const res = await authFetch(url, {
       method: 'PUT',
       body: JSON.stringify(payload)
     });
+    isApiCall = true;
     if (res.ok) {
       return await res.json();
     }
     const errData = await res.json().catch(() => null);
-    if (errData?.message) throw new Error(errData.message);
+    const errorMsg =
+      errData?.message ||
+      (errData?.details && (Object.values(errData.details)[0] as string)) ||
+      `Lỗi ${res.status}: Không thể cập nhật thông tin`;
+    throw new Error(errorMsg);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (message.includes('tồn tại') || message.includes('trống') || message.includes('hợp lệ')) {
-      throw err;
-    }
+    if (isApiCall) throw err;
     console.warn('API error updating supplier, fallback to local storage', err);
   }
 
@@ -367,21 +376,24 @@ export async function updateSupplier(id: number, payload: UpdateSupplierPayload)
  */
 export async function changeSupplierStatus(id: number, payload: ChangeSupplierStatusPayload): Promise<Supplier> {
   const url = `${API_BASE_URL}/api/suppliers/${id}/status`;
+  let isApiCall = false;
   try {
     const res = await authFetch(url, {
       method: 'PATCH',
       body: JSON.stringify(payload)
     });
+    isApiCall = true;
     if (res.ok) {
       return await res.json();
     }
     const errData = await res.json().catch(() => null);
-    if (errData?.message) throw new Error(errData.message);
+    const errorMsg =
+      errData?.message ||
+      (errData?.details && (Object.values(errData.details)[0] as string)) ||
+      `Lỗi ${res.status}: Không thể thay đổi trạng thái`;
+    throw new Error(errorMsg);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (message.includes('lý do') || message.includes('trạng thái')) {
-      throw err;
-    }
+    if (isApiCall) throw err;
     console.warn('API error changing supplier status, fallback to local storage', err);
   }
 
@@ -422,20 +434,23 @@ export async function changeSupplierStatus(id: number, payload: ChangeSupplierSt
  */
 export async function deleteSupplier(id: number): Promise<void> {
   const url = `${API_BASE_URL}/api/suppliers/${id}`;
+  let isApiCall = false;
   try {
     const res = await authFetch(url, {
       method: 'DELETE'
     });
+    isApiCall = true;
     if (res.ok) {
       return;
     }
     const errData = await res.json().catch(() => null);
-    if (errData?.message) throw new Error(errData.message);
+    const errorMsg =
+      errData?.message ||
+      (errData?.details && (Object.values(errData.details)[0] as string)) ||
+      `Lỗi ${res.status}: Không thể xoá nhà cung cấp`;
+    throw new Error(errorMsg);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (message.includes('không thể xoá') || message.includes('giao dịch')) {
-      throw err;
-    }
+    if (isApiCall) throw err;
     console.warn('API error deleting supplier, fallback to local storage', err);
   }
 

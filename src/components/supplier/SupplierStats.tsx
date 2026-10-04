@@ -9,12 +9,12 @@ interface SupplierStatsProps {
 export const SupplierStats: React.FC<SupplierStatsProps> = ({ stats }) => {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-      {/* 1. Tổng số nhà cung cấp */}
+      {/* 1. Tổng số đối tác */}
       <div className="p-4.5 rounded-2xl bg-white border border-gray-200/80 shadow-xs flex items-center justify-between">
         <div>
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider block">Tổng nhà cung cấp</span>
+          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider block">Tổng đối tác</span>
           <span className="text-2xl font-bold text-gray-900 mt-1 block">{stats.total}</span>
-          <p className="text-[11px] text-gray-400 mt-0.5">Đối tác cung ứng nguồn hàng</p>
+          <p className="text-[11px] text-gray-400 mt-0.5">Nguồn hàng liên kết</p>
         </div>
         <div className="w-12 h-12 rounded-xl bg-orange-50 border border-orange-100 text-orange-600 flex items-center justify-center shrink-0">
           <Icons.Building2 size={24} />

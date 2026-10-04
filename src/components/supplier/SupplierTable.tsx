@@ -59,7 +59,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
             type="text"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Tìm theo mã, tên nhà cung cấp, mã số thuế, SĐT..."
+            placeholder="Tìm theo mã, tên, mã số thuế, SĐT..."
             className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-gray-200 bg-gray-50/50 text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#F85606] transition-all placeholder:text-gray-400 min-h-[40px]"
           />
           {searchTerm && (
@@ -104,7 +104,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gray-200 bg-orange-50/30 text-[11px] font-bold text-gray-600 uppercase tracking-wider">
-              <th className="py-3 px-4 sm:px-6">Nhà cung cấp</th>
+              <th className="py-3 px-4 sm:px-6">Đối tác cung ứng</th>
               <th className="py-3 px-4">Mã số thuế (MST)</th>
               <th className="py-3 px-4">Người liên hệ & SĐT</th>
               <th className="py-3 px-4">Điều khoản thanh toán</th>
@@ -131,10 +131,10 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                     </div>
                     <div className="space-y-1">
                       <span className="font-bold text-base text-gray-800 block">
-                        Chưa có nhà cung cấp nào trong danh mục
+                        Chưa có đối tác nào trong danh mục
                       </span>
                       <p className="text-xs text-gray-500">
-                        Bạn có thể tạo nhà cung cấp mới hoặc nạp sẵn 5 nhà cung cấp mẫu (Vinamilk, Sabeco...) để kiểm tra nhanh.
+                        Bạn có thể tạo đối tác mới hoặc nạp sẵn 5 đơn vị mẫu (Vinamilk, Sabeco...) để kiểm tra nhanh.
                       </p>
                     </div>
 
@@ -146,7 +146,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                           className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
                         >
                           <Icons.Plus size={16} />
-                          <span>Khai báo nhà cung cấp</span>
+                          <span>Thêm mới đối tác</span>
                         </button>
                         <button
                           type="button"
@@ -154,7 +154,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                           className="inline-flex items-center gap-1.5 px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 font-semibold text-xs rounded-xl border border-orange-200 transition-all cursor-pointer"
                         >
                           <Icons.Sparkles size={16} />
-                          <span>Nạp 5 nhà cung cấp mẫu</span>
+                          <span>Nạp 5 đối tác mẫu</span>
                         </button>
                       </div>
                     )}
@@ -322,7 +322,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
           <div>
             Hiển thị <strong>{currentPage * pageSize + 1}</strong> -{' '}
             <strong>{Math.min((currentPage + 1) * pageSize, totalElements)}</strong> trong tổng số{' '}
-            <strong>{totalElements}</strong> nhà cung cấp
+            <strong>{totalElements}</strong> đối tác
           </div>
 
           <div className="flex items-center gap-1.5">

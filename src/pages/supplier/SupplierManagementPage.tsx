@@ -170,17 +170,17 @@ export const SupplierManagementPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-orange-50 text-orange-600 border border-orange-200">
-              Quản trị Kho & Nguồn hàng
+              Quản trị Nguồn hàng
             </span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-[#F85606] shrink-0">
               <Icons.Truck size={22} />
             </div>
-            <span>Danh mục Nhà Cung Cấp</span>
+            <span>Đối Tác Cung Ứng</span>
           </h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-3xl">
-            Quản lý nguồn hàng và đối tác cung ứng. Phiếu nhập kho luôn gắn đúng nguồn hàng để dễ dàng truy nguyên khi có lô hàng lỗi. Nhà cung cấp đã có phiếu nhập không được xóa, chỉ ngừng giao dịch.
+          <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-2xl">
+            Hồ sơ pháp nhân, mã số thuế và điều khoản thanh toán phục vụ nhập kho, truy nguyên lô lỗi.
           </p>
         </div>
 
@@ -201,24 +201,24 @@ export const SupplierManagementPage: React.FC = () => {
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs hover:shadow transition-all cursor-pointer min-h-[44px]"
             >
               <Icons.Plus size={18} />
-              <span>Khai báo nhà cung cấp mới</span>
+              <span>Thêm đối tác mới</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Thông tin vai trò & phạm vi nghiệp vụ */}
-      <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-orange-50/60 border border-orange-100 text-xs">
+      <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-orange-50/60 border border-orange-100 text-xs">
         <div className="flex items-center gap-2 text-gray-700">
           <Icons.ShieldCheck size={16} className="text-[#F85606]" />
           <span>
-            Vai trò hiện tại: <strong className="text-gray-900">{currentRole || 'Nhân viên kho'}</strong>
+            Vai trò: <strong className="text-gray-900">{currentRole || 'Nhân viên kho'}</strong>
           </span>
           <span className="text-gray-300">•</span>
           <span>
             {canManage
-              ? 'Toàn quyền thêm, cập nhật hồ sơ pháp nhân, ngừng giao dịch và kiểm soát nguồn hàng'
-              : 'Quyền xem danh mục nhà cung cấp để kiểm tra nguồn hàng nhập kho'}
+              ? 'Toàn quyền thêm, chỉnh sửa hồ sơ pháp nhân, tạm ngưng và kiểm soát nguồn hàng'
+              : 'Quyền tra cứu thông tin đối tác phục vụ nhập kho'}
           </span>
         </div>
       </div>

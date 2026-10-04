@@ -153,29 +153,37 @@ export const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
         onClose();
       }
     } catch (err: unknown) {
-      setApiError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin');
+      const msg = err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin';
+      setApiError(msg);
+      // Ánh xạ lỗi trùng lặp từ backend trực tiếp vào ô input tương ứng
+      const lower = msg.toLowerCase();
+      if (lower.includes('thuế') || lower.includes('taxcode')) {
+        setErrors((prev) => ({ ...prev, taxCode: msg }));
+      } else if (lower.includes('mã nhà cung cấp') || lower.includes('code')) {
+        setErrors((prev) => ({ ...prev, code: msg }));
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col my-auto max-h-[90vh]">
         {/* Header */}
-        <div className="px-6 py-4.5 border-b border-gray-100 flex items-center justify-between bg-orange-50/40">
+        <div className="px-6 py-4.5 border-b border-gray-100 flex items-center justify-between bg-orange-50/40 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600">
+            <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 shrink-0">
               <Icons.Truck size={22} />
             </div>
             <div>
               <h2 className="text-lg font-bold text-gray-900">
-                {isEdit ? 'Cập nhật Thông tin Nhà Cung Cấp' : 'Khai báo Nhà Cung Cấp Mới'}
+                {isEdit ? 'Cập nhật Thông tin Đối Tác' : 'Thêm Mới Đối Tác Cung Ứng'}
               </h2>
               <p className="text-xs text-gray-500">
                 {isEdit
                   ? `Mã: ${supplier?.code} (Mã không thay đổi sau khi tạo)`
-                  : 'Nguồn hàng chuẩn để gắn đúng vào phiếu nhập kho truy nguyên lô lỗi'}
+                  : 'Nguồn hàng chuẩn để gắn vào phiếu nhập kho truy nguyên nguồn gốc'}
               </p>
             </div>
           </div>
@@ -346,7 +354,7 @@ export const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
           </div>
 
           {/* Footer Buttons */}
-          <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-3">
+          <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}
@@ -367,7 +375,7 @@ export const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
               ) : (
                 <>
                   <Icons.Check size={14} />
-                  <span>{isEdit ? 'Lưu thay đổi' : 'Thêm nhà cung cấp'}</span>
+                  <span>{isEdit ? 'Lưu thay đổi' : 'Lưu đối tác'}</span>
                 </>
               )}
             </button>
