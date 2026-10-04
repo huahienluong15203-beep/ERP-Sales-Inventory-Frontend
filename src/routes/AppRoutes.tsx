@@ -199,6 +199,7 @@ export const AppRoutes: React.FC = () => {
             m.path !== '/customers' &&
             m.path !== '/products' &&
             m.path !== '/categories' &&
+            m.path !== '/suppliers' &&
             m.path !== '/pricing' &&
             m.path !== '/price-lists' &&
             m.path !== '/pricing/history'
