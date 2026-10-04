@@ -103,13 +103,13 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-gray-200 bg-orange-50/30 text-[11px] font-bold text-gray-600 uppercase tracking-wider">
+            <tr className="border-b border-gray-200 bg-gray-50 text-[11px] font-bold text-gray-600 uppercase tracking-wider">
               <th className="py-3 px-4 sm:px-6 min-w-[180px]">Đối tác cung ứng</th>
               <th className="py-3 px-4 whitespace-nowrap">Mã số thuế (MST)</th>
               <th className="py-3 px-4 min-w-[150px]">Người liên hệ & SĐT</th>
               <th className="py-3 px-4 min-w-[140px]">Điều khoản thanh toán</th>
               <th className="py-3 px-4 whitespace-nowrap">Trạng thái</th>
-              <th className="py-3 px-4 sm:px-6 text-right whitespace-nowrap sticky right-0 bg-orange-50/95 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] border-l border-orange-100/60 z-10">
+              <th className="py-3 px-4 sm:px-6 text-right whitespace-nowrap sticky right-0 bg-gray-50 border-l border-gray-200 z-10">
                 Thao tác
               </th>
             </tr>
@@ -170,7 +170,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                 return (
                   <tr
                     key={supplier.id}
-                    className="hover:bg-orange-50/20 transition-colors group"
+                    className="hover:bg-gray-50/80 transition-colors group"
                   >
                     {/* Cột 1: Thông tin NCC */}
                     <td className="py-3.5 px-4 sm:px-6 max-w-[240px]">
@@ -264,7 +264,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                     </td>
 
                     {/* Cột 6: Thao tác - Sticky right để không bao giờ bị tràn mất */}
-                    <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-[#FFF9F5] shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] border-l border-gray-100 z-10 transition-colors">
+                    <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-gray-50 border-l border-gray-100 z-10 transition-colors">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => onViewDetail(supplier)}
