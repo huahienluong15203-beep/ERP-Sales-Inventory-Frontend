@@ -159,6 +159,14 @@ export const ProfilePage: FC = () => {
       avatarUrl: result.avatarUrl,
       avatarThumbnailUrl: result.avatarThumbnailUrl
     });
+    // Lưu vào cache cục bộ để đồng bộ tức thì sang trang Quản lý tài khoản
+    if (user?.username) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('erp_avatar_cache') || '{}');
+        stored[user.username.toLowerCase()] = result.avatarThumbnailUrl || result.avatarUrl;
+        localStorage.setItem('erp_avatar_cache', JSON.stringify(stored));
+      } catch {}
+    }
     await refreshContext();
     showToast('Tải ảnh đại diện thành công!', 'Ảnh đại diện của bạn đã được cập nhật trên toàn hệ thống.');
   };
@@ -174,6 +182,13 @@ export const ProfilePage: FC = () => {
           avatarUrl: undefined,
           avatarThumbnailUrl: undefined
         });
+        if (user?.username) {
+          try {
+            const stored = JSON.parse(localStorage.getItem('erp_avatar_cache') || '{}');
+            delete stored[user.username.toLowerCase()];
+            localStorage.setItem('erp_avatar_cache', JSON.stringify(stored));
+          } catch {}
+        }
         await refreshContext();
         showToast('Đã xóa ảnh đại diện!', 'Tài khoản đã trở về ảnh đại diện chữ cái mặc định.');
       } else {
