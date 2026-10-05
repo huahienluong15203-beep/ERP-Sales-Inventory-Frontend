@@ -2,289 +2,269 @@
  * S3-01 / SCRUM-12 / SCRUM-77: Dịch vụ API Quản lý Chính sách Chiết khấu theo Sản lượng
  * Phân hệ: EP-02 / EP-04: Sản phẩm & Bảng giá, Chính sách chiết khấu
  *
- * Tính năng chính:
- * 1. CRUD chính sách chiết khấu theo sản lượng (SKU hoặc Nhóm hàng).
- * 2. Lưu trữ bền vững (LocalStorage) với bộ hạt dữ liệu khởi tạo phong phú.
- * 3. Quy tắc cốt lõi: Best-Deal Rule Engine
- *    - Tự động quét tất cả các chính sách đang hiệu lực phù hợp với SKU / Nhóm hàng / Nhóm khách hàng.
- *    - Tìm bậc chiết khấu tương ứng với số lượng mua.
- *    - Quy đổi chiết khấu sang số tiền giảm thực tế (VND).
- *    - Tự động chọn chính sách có mức giảm lớn nhất (có lợi nhất cho khách hàng).
- *    - Xuất báo cáo giải trình minh bạch công thức so sánh.
- * 4. Xuất dữ liệu chính sách ra định dạng CSV/Excel.
+ * Kết nối backend Spring Boot:
+ * - GET    /api/discount-policies?status=&keyword=
+ * - GET    /api/discount-policies/{id}
+ * - POST   /api/discount-policies            (ADMIN, SALES_MANAGER)
+ * - PUT    /api/discount-policies/{id}       (ADMIN, SALES_MANAGER)
+ * - PATCH  /api/discount-policies/{id}/status?status=ACTIVE|INACTIVE (ADMIN, SALES_MANAGER)
+ * - POST   /api/discount-policies/calculate  (Best-Deal Rule Engine phía server)
+ * Backend không có xoá cứng: "xoá" = ngừng áp dụng (INACTIVE).
  */
 
 import type {
   VolumeDiscountPolicy,
   VolumeDiscountPolicyRequest,
+  VolumeDiscountTier,
   BestDealSimulationInput,
   BestDealSimulationOutput,
   PolicyCandidateResult,
-  VolumeDiscountFilterParams
+  VolumeDiscountFilterParams,
+  DiscountCalculationType,
+  DiscountPolicyStatus
 } from '../types/discount';
-import { CATALOG_PRODUCTS } from '../types/pricing';
+import type { CatalogProduct } from '../types/pricing';
+import { API_BASE_URL, authFetch } from './api';
 
-const STORAGE_KEY = 'erp_volume_discount_policies_v1';
-
-export const AVAILABLE_CATEGORIES = [
-  'Đồ uống có cồn',
-  'Nước giải khát',
-  'Thực phẩm dinh dưỡng',
-  'Gia vị thực phẩm',
-  'Lương thực',
-  'Cà phê & Trà'
-];
+const BASE = `${API_BASE_URL}/api/discount-policies`;
 
 export const BEST_DEAL_RULE_STATEMENT =
   'Quy tắc kinh doanh: Khi một đơn hàng hoặc dòng sản phẩm cùng lúc thỏa mãn nhiều chính sách chiết khấu (ví dụ: vừa có chính sách riêng theo SKU, vừa có chính sách theo nhóm hàng, hoặc chương trình đại lý), hệ thống sẽ tự động so sánh và áp dụng chính sách có tổng mức chiết khấu cao nhất (có lợi nhất cho khách hàng), không cộng dồn chồng chéo trừ khi có quy định ngoại lệ.';
 
-// Danh sách dữ liệu mẫu ban đầu
-const INITIAL_POLICIES: VolumeDiscountPolicy[] = [
-  {
-    id: 'CK-BIA-HN-2026',
-    code: 'CK-BIA-HN-Q4',
-    name: 'Chiết khấu sản lượng Bia Hà Nội Lon 330ml - Quý 4',
-    scopeType: 'SKU',
-    targetId: 'BIA-HN-330',
-    targetName: 'Bia Hà Nội Lon 330ml (Thùng 24 lon)',
-    customerGroup: 'ALL',
-    customerGroupLabel: 'Tất cả đại lý & Khách mua sỉ',
-    startDate: '2026-01-01',
-    endDate: '2026-12-31',
-    status: 'ACTIVE',
-    priority: 1,
-    description: 'Chương trình kích cầu sản lượng cho dòng Bia Hà Nội chủ lực, áp dụng theo bậc thùng mua.',
-    bestDealRuleNote: BEST_DEAL_RULE_STATEMENT,
-    appliedOrdersCount: 42,
-    totalDiscountGiven: 48500000,
-    createdAt: '2026-01-01T08:00:00Z',
-    updatedAt: '2026-09-15T10:30:00Z',
-    createdBy: 'Nguyễn Văn Minh (Quản lý KD)',
-    tiers: [
-      {
-        tierOrder: 1,
-        minQuantity: 20,
-        maxQuantity: 49,
-        discountType: 'PERCENT',
-        discountValue: 3,
-        note: 'Sản lượng khởi điểm'
-      },
-      {
-        tierOrder: 2,
-        minQuantity: 50,
-        maxQuantity: 99,
-        discountType: 'PERCENT',
-        discountValue: 5,
-        note: 'Đạt định mức đại lý khá'
-      },
-      {
-        tierOrder: 3,
-        minQuantity: 100,
-        maxQuantity: null,
-        discountType: 'PERCENT',
-        discountValue: 8,
-        note: 'Tổng thầu / Đơn hàng lớn'
-      }
-    ]
-  },
-  {
-    id: 'CK-BEV-CAT-2026',
-    code: 'CK-NHOM-BEV',
-    name: 'Chiết khấu sản lượng toàn ngành Nước giải khát',
-    scopeType: 'CATEGORY',
-    targetId: 'Nước giải khát',
-    targetName: 'Nhóm: Nước giải khát (Coca, Lavie, Redbull...)',
-    customerGroup: 'DEALER_LEVEL_1',
-    customerGroupLabel: 'Đại lý Cấp 1 (Tổng thầu / NPP Lớn)',
-    startDate: '2026-02-01',
-    endDate: null,
-    status: 'ACTIVE',
-    priority: 2,
-    description: 'Áp dụng cho toàn bộ sản phẩm thuộc nhóm Nước giải khát khi đại lý cấp 1 mua số lượng lớn.',
-    bestDealRuleNote: BEST_DEAL_RULE_STATEMENT,
-    appliedOrdersCount: 28,
-    totalDiscountGiven: 32400000,
-    createdAt: '2026-02-01T09:00:00Z',
-    updatedAt: '2026-08-20T14:15:00Z',
-    createdBy: 'Nguyễn Văn Minh (Quản lý KD)',
-    tiers: [
-      {
-        tierOrder: 1,
-        minQuantity: 30,
-        maxQuantity: 99,
-        discountType: 'FIXED_AMOUNT',
-        discountValue: 6000,
-        note: 'Giảm 6.000 đ/thùng'
-      },
-      {
-        tierOrder: 2,
-        minQuantity: 100,
-        maxQuantity: 299,
-        discountType: 'FIXED_AMOUNT',
-        discountValue: 12000,
-        note: 'Giảm 12.000 đ/thùng'
-      },
-      {
-        tierOrder: 3,
-        minQuantity: 300,
-        maxQuantity: null,
-        discountType: 'FIXED_AMOUNT',
-        discountValue: 20000,
-        note: 'Giảm 20.000 đ/thùng cho đơn tổng thầu'
-      }
-    ]
-  },
-  {
-    id: 'CK-BIA-SG-2026',
-    code: 'CK-BIA-SG-TIER',
-    name: 'Ưu đãi số lượng Bia Sài Gòn Special',
-    scopeType: 'SKU',
-    targetId: 'BIA-SG-330',
-    targetName: 'Bia Sài Gòn Special Lon 330ml',
-    customerGroup: 'ALL',
-    customerGroupLabel: 'Tất cả đại lý',
-    startDate: '2026-03-01',
-    endDate: '2026-11-30',
-    status: 'ACTIVE',
-    priority: 1,
-    description: 'Chính sách chiết khấu trực tiếp tiền mặt theo từng thùng sản phẩm Bia Sài Gòn Special.',
-    bestDealRuleNote: BEST_DEAL_RULE_STATEMENT,
-    appliedOrdersCount: 35,
-    totalDiscountGiven: 41200000,
-    createdAt: '2026-03-01T08:30:00Z',
-    updatedAt: '2026-07-10T16:00:00Z',
-    createdBy: 'Nguyễn Văn Minh (Quản lý KD)',
-    tiers: [
-      {
-        tierOrder: 1,
-        minQuantity: 25,
-        maxQuantity: 49,
-        discountType: 'FIXED_AMOUNT',
-        discountValue: 10000,
-        note: 'Giảm 10.000 đ/thùng'
-      },
-      {
-        tierOrder: 2,
-        minQuantity: 50,
-        maxQuantity: 99,
-        discountType: 'FIXED_AMOUNT',
-        discountValue: 18000,
-        note: 'Giảm 18.000 đ/thùng'
-      },
-      {
-        tierOrder: 3,
-        minQuantity: 100,
-        maxQuantity: null,
-        discountType: 'FIXED_AMOUNT',
-        discountValue: 28000,
-        note: 'Giảm 28.000 đ/thùng'
-      }
-    ]
-  },
-  {
-    id: 'CK-ALCOHOL-CAT-2026',
-    code: 'CK-CAT-DO-UONG-CON',
-    name: 'Chiết khấu nhóm Đồ uống có cồn (Đại lý cấp 2)',
-    scopeType: 'CATEGORY',
-    targetId: 'Đồ uống có cồn',
-    targetName: 'Nhóm: Đồ uống có cồn (Bia Hà Nội, Sài Gòn, Trúc Bạch...)',
-    customerGroup: 'DEALER_LEVEL_2',
-    customerGroupLabel: 'Đại lý Cấp 2 (Bán buôn khu vực)',
-    startDate: '2026-01-15',
-    endDate: null,
-    status: 'ACTIVE',
-    priority: 2,
-    description: 'Áp dụng cho đại lý cấp 2 nhập số lượng tích lũy nhóm hàng bia.',
-    bestDealRuleNote: BEST_DEAL_RULE_STATEMENT,
-    appliedOrdersCount: 19,
-    totalDiscountGiven: 18900000,
-    createdAt: '2026-01-15T11:00:00Z',
-    updatedAt: '2026-05-12T09:40:00Z',
-    createdBy: 'Trần Thị Thu (Admin)',
-    tiers: [
-      {
-        tierOrder: 1,
-        minQuantity: 40,
-        maxQuantity: 79,
-        discountType: 'PERCENT',
-        discountValue: 3.5,
-        note: 'Bậc đại lý cơ sở'
-      },
-      {
-        tierOrder: 2,
-        minQuantity: 80,
-        maxQuantity: null,
-        discountType: 'PERCENT',
-        discountValue: 6,
-        note: 'Bậc đại lý chiến lược'
-      }
-    ]
-  },
-  {
-    id: 'CK-GAO-ST25-2026',
-    code: 'CK-GAO-ST25',
-    name: 'Chiết khấu mua sỉ Gạo ST25 Ông Cua Túi 5kg',
-    scopeType: 'SKU',
-    targetId: 'GAO-ST25-5K',
-    targetName: 'Gạo ST25 Ông Cua Túi 5kg',
-    customerGroup: 'ALL',
-    customerGroupLabel: 'Tất cả đối tượng',
-    startDate: '2026-01-01',
-    endDate: '2026-06-30',
-    status: 'EXPIRED',
-    priority: 3,
-    description: 'Chương trình chiết khấu vụ mùa đầu năm 2026 (Đã hết hạn).',
-    bestDealRuleNote: BEST_DEAL_RULE_STATEMENT,
-    appliedOrdersCount: 54,
-    totalDiscountGiven: 26700000,
-    createdAt: '2026-01-01T08:00:00Z',
-    updatedAt: '2026-07-01T00:00:00Z',
-    createdBy: 'Nguyễn Văn Minh (Quản lý KD)',
-    tiers: [
-      {
-        tierOrder: 1,
-        minQuantity: 50,
-        maxQuantity: 99,
-        discountType: 'PERCENT',
-        discountValue: 4,
-        note: 'Từ 50 túi'
-      },
-      {
-        tierOrder: 2,
-        minQuantity: 100,
-        maxQuantity: null,
-        discountType: 'PERCENT',
-        discountValue: 7.5,
-        note: 'Từ 100 túi'
-      }
-    ]
-  }
-];
+// ============================================================================
+// Kiểu dữ liệu backend
+// ============================================================================
 
-function getStoredPolicies(): VolumeDiscountPolicy[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_POLICIES));
-      return INITIAL_POLICIES;
-    }
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
-    }
-  } catch (err) {
-    console.error('Error reading volume discounts from localStorage:', err);
-  }
-  return INITIAL_POLICIES;
+type BeScope = 'PRODUCT' | 'CATEGORY';
+type BeDiscountType = 'PERCENT' | 'AMOUNT_PER_UNIT';
+
+interface BeTier {
+  id: number;
+  minQuantity: number;
+  discountValue: number;
 }
 
-function saveStoredPolicies(policies: VolumeDiscountPolicy[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(policies));
-  } catch (err) {
-    console.error('Error saving volume discounts to localStorage:', err);
-  }
+interface BePolicy {
+  id: number;
+  code: string;
+  name: string;
+  scope: BeScope;
+  productId: number | null;
+  productSku: string | null;
+  productName: string | null;
+  categoryId: number | null;
+  categoryName: string | null;
+  discountType: BeDiscountType;
+  startDate: string;
+  endDate: string | null;
+  status: 'ACTIVE' | 'INACTIVE';
+  note: string | null;
+  tiers: BeTier[];
+  createdAt: string;
+  updatedAt: string;
 }
+
+interface BeCandidate {
+  policyId: number;
+  policyCode: string;
+  policyName: string;
+  scope: BeScope;
+  discountType: BeDiscountType;
+  tierMinQuantity: number;
+  discountValue: number;
+  discountPerUnit: number;
+  discountAmount: number;
+}
+
+interface BeCalculateResponse {
+  productId: number;
+  productSku: string;
+  quantity: number;
+  unitPrice: number;
+  grossAmount: number;
+  discountAmount: number;
+  netAmount: number;
+  applied: BeCandidate | null;
+  candidates: BeCandidate[];
+}
+
+interface BeProduct {
+  id: number;
+  sku: string;
+  name: string;
+  category: string | null;
+  categoryId: number | null;
+  baseUnit: string | null;
+}
+
+interface BeCategory {
+  id: number;
+  name: string;
+  level: number;
+}
+
+export interface DiscountCategoryOption {
+  id: string;
+  name: string;
+  level: number;
+}
+
+// ============================================================================
+// Tiện ích
+// ============================================================================
+
+/** Đọc lỗi backend ({code, message, details, timestamp}) và ném Error với nội dung hữu ích */
+async function throwBackendError(res: Response, fallback: string): Promise<never> {
+  const data = await res.json().catch(() => null);
+  let text = '';
+  if (data && typeof data === 'object') {
+    const details = (data as { details?: unknown }).details;
+    const message = (data as { message?: unknown }).message;
+    let firstDetail = '';
+    if (details && typeof details === 'object' && !Array.isArray(details)) {
+      const vals = Object.values(details as Record<string, unknown>);
+      if (vals.length > 0) firstDetail = String(vals[0]);
+    } else if (Array.isArray(details) && details.length > 0) {
+      firstDetail = String(details[0]);
+    } else if (typeof details === 'string') {
+      firstDetail = details;
+    }
+    if (typeof message === 'string' && message && message !== 'Dữ liệu không hợp lệ') {
+      text = message;
+    } else if (firstDetail) {
+      text = firstDetail;
+    } else if (typeof message === 'string') {
+      text = message;
+    }
+  }
+  throw new Error(text || `${fallback} (HTTP ${res.status})`);
+}
+
+async function requestJson<T>(url: string, options: RequestInit, fallback: string): Promise<T> {
+  const res = await authFetch(url, options);
+  if (!res.ok) {
+    await throwBackendError(res, fallback);
+  }
+  return (await res.json()) as T;
+}
+
+/** Ngày hôm nay theo múi giờ Asia/Ho_Chi_Minh (YYYY-MM-DD) */
+function todayVN(): string {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' });
+}
+
+function toFeType(t: BeDiscountType): DiscountCalculationType {
+  return t === 'PERCENT' ? 'PERCENT' : 'FIXED_AMOUNT';
+}
+
+function mapPolicy(p: BePolicy): VolumeDiscountPolicy {
+  const isSku = p.scope === 'PRODUCT';
+  let status: DiscountPolicyStatus = p.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE';
+  if (p.endDate && p.endDate < todayVN()) status = 'EXPIRED';
+
+  const sorted = [...(p.tiers || [])].sort((a, b) => Number(a.minQuantity) - Number(b.minQuantity));
+  const tiers: VolumeDiscountTier[] = sorted.map((t, idx) => ({
+    id: t.id,
+    tierOrder: idx + 1,
+    minQuantity: Number(t.minQuantity),
+    maxQuantity: idx < sorted.length - 1 ? Number(sorted[idx + 1].minQuantity) - 1 : null,
+    discountType: toFeType(p.discountType),
+    discountValue: Number(t.discountValue)
+  }));
+
+  return {
+    id: p.id,
+    code: p.code,
+    name: p.name,
+    scopeType: isSku ? 'SKU' : 'CATEGORY',
+    targetId: isSku ? p.productSku || '' : p.categoryId != null ? String(p.categoryId) : '',
+    targetName: (isSku ? p.productName : p.categoryName) || '',
+    customerGroup: 'ALL',
+    customerGroupLabel: 'Tất cả nhóm đại lý',
+    startDate: p.startDate,
+    endDate: p.endDate,
+    status,
+    priority: isSku ? 1 : 2,
+    description: p.note || '',
+    bestDealRuleNote: BEST_DEAL_RULE_STATEMENT,
+    tiers,
+    appliedOrdersCount: 0,
+    totalDiscountGiven: 0,
+    createdAt: p.createdAt,
+    updatedAt: p.updatedAt,
+    createdBy: ''
+  };
+}
+
+function toBackendBody(req: VolumeDiscountPolicyRequest) {
+  if (!req.tiers || req.tiers.length === 0) {
+    throw new Error('Chính sách phải có ít nhất một bậc chiết khấu!');
+  }
+  const types = new Set(req.tiers.map((t) => t.discountType));
+  if (types.size > 1) {
+    throw new Error('Tất cả các bậc phải cùng kiểu giảm (% hoặc số tiền/đơn vị)');
+  }
+  const feType = req.tiers[0].discountType;
+  const isSku = req.scopeType === 'SKU';
+  return {
+    code: req.code.trim(),
+    name: req.name.trim(),
+    scope: isSku ? 'PRODUCT' : 'CATEGORY',
+    productSku: isSku ? req.targetId : null,
+    categoryId: isSku ? null : Number(req.targetId),
+    discountType: feType === 'PERCENT' ? 'PERCENT' : 'AMOUNT_PER_UNIT',
+    startDate: req.startDate,
+    endDate: req.endDate || null,
+    note: req.description || '',
+    tiers: [...req.tiers]
+      .sort((a, b) => a.minQuantity - b.minQuantity)
+      .map((t) => ({ minQuantity: t.minQuantity, discountValue: t.discountValue }))
+  };
+}
+
+async function patchStatus(id: string | number, status: 'ACTIVE' | 'INACTIVE'): Promise<VolumeDiscountPolicy> {
+  const data = await requestJson<BePolicy>(
+    `${BASE}/${id}/status?status=${status}`,
+    { method: 'PATCH' },
+    'Không thể đổi trạng thái chính sách'
+  );
+  return mapPolicy(data);
+}
+
+// ============================================================================
+// Danh mục tham chiếu (sản phẩm, nhóm hàng)
+// ============================================================================
+
+
+/** Danh sách sản phẩm đang kinh doanh để chọn trong form / mô phỏng */
+export async function fetchDiscountProductOptions(): Promise<CatalogProduct[]> {
+  const data = await requestJson<{ content: BeProduct[] }>(
+    `${API_BASE_URL}/api/products?page=0&size=200&status=ACTIVE`,
+    { method: 'GET' },
+    'Không tải được danh sách sản phẩm'
+  );
+  return (data.content || []).map((p) => ({
+    sku: p.sku,
+    name: p.name,
+    defaultCategory: p.category || '',
+    unit: p.baseUnit || '',
+    suggestedRetailPrice: 0
+  }));
+}
+
+/** Danh sách nhóm hàng (phẳng) để chọn trong form */
+export async function fetchDiscountCategoryOptions(): Promise<DiscountCategoryOption[]> {
+  const data = await requestJson<BeCategory[]>(
+    `${API_BASE_URL}/api/product-categories`,
+    { method: 'GET' },
+    'Không tải được danh sách nhóm hàng'
+  );
+  return (data || []).map((c) => ({ id: String(c.id), name: c.name, level: c.level }));
+}
+
+// ============================================================================
+// CRUD chính sách
+// ============================================================================
 
 /**
  * Lấy danh sách chính sách chiết khấu theo bộ lọc
@@ -292,49 +272,31 @@ function saveStoredPolicies(policies: VolumeDiscountPolicy[]): void {
 export async function getVolumeDiscountPolicies(
   params: VolumeDiscountFilterParams = {}
 ): Promise<{ data: VolumeDiscountPolicy[]; total: number }> {
-  // Mô phỏng độ trễ mạng nhẹ
-  await new Promise((resolve) => setTimeout(resolve, 150));
-
-  let list = getStoredPolicies();
-
-  if (params.keyword && params.keyword.trim() !== '') {
-    const kw = params.keyword.toLowerCase().trim();
-    list = list.filter(
-      (p) =>
-        p.code.toLowerCase().includes(kw) ||
-        p.name.toLowerCase().includes(kw) ||
-        p.targetId.toLowerCase().includes(kw) ||
-        p.targetName.toLowerCase().includes(kw) ||
-        (p.description && p.description.toLowerCase().includes(kw))
-    );
-  }
-
-  if (params.scopeType && params.scopeType !== 'ALL') {
-    list = list.filter((p) => p.scopeType === params.scopeType);
-  }
-
-  if (params.customerGroup && params.customerGroup !== 'ALL') {
-    list = list.filter(
-      (p) => p.customerGroup === 'ALL' || p.customerGroup === params.customerGroup
-    );
-  }
+  const query = new URLSearchParams();
+  if (params.keyword && params.keyword.trim() !== '') query.set('keyword', params.keyword.trim());
+  // Backend chỉ biết ACTIVE/INACTIVE; EXPIRED được suy ra từ ngày kết thúc nên lọc phía client
+  const qs = query.toString();
+  const raw = await requestJson<BePolicy[]>(
+    `${BASE}${qs ? `?${qs}` : ''}`,
+    { method: 'GET' },
+    'Không tải được danh sách chính sách chiết khấu'
+  );
+  let list = (raw || []).map(mapPolicy);
 
   if (params.status && params.status !== 'ALL') {
     list = list.filter((p) => p.status === params.status);
   }
-
+  if (params.scopeType && params.scopeType !== 'ALL') {
+    list = list.filter((p) => p.scopeType === params.scopeType);
+  }
   if (params.targetCategory && params.targetCategory !== 'ALL') {
+    const tc = params.targetCategory.toLowerCase();
     list = list.filter(
-      (p) =>
-        p.targetId === params.targetCategory ||
-        p.targetName.toLowerCase().includes(params.targetCategory!.toLowerCase())
+      (p) => p.targetId === params.targetCategory || p.targetName.toLowerCase().includes(tc)
     );
   }
 
-  return {
-    data: list,
-    total: list.length
-  };
+  return { data: list, total: list.length };
 }
 
 /**
@@ -343,65 +305,28 @@ export async function getVolumeDiscountPolicies(
 export async function getVolumeDiscountPolicyById(
   id: string | number
 ): Promise<VolumeDiscountPolicy | null> {
-  const list = getStoredPolicies();
-  const found = list.find((p) => String(p.id) === String(id));
-  return found || null;
+  const res = await authFetch(`${BASE}/${id}`, { method: 'GET' });
+  if (res.status === 404) return null;
+  if (!res.ok) await throwBackendError(res, 'Không tải được chính sách');
+  return mapPolicy((await res.json()) as BePolicy);
 }
 
 /**
- * Tạo mới chính sách chiết khấu
+ * Tạo mới chính sách chiết khấu (backend tạo ở trạng thái ACTIVE)
  */
 export async function createVolumeDiscountPolicy(
   req: VolumeDiscountPolicyRequest
 ): Promise<VolumeDiscountPolicy> {
-  const list = getStoredPolicies();
-
-  // Kiểm tra trùng mã code
-  if (list.some((p) => p.code.toLowerCase() === req.code.toLowerCase())) {
-    throw new Error(`Mã chính sách "${req.code}" đã tồn tại trong hệ thống! Vui lòng chọn mã khác.`);
+  const body = toBackendBody(req);
+  const data = await requestJson<BePolicy>(
+    BASE,
+    { method: 'POST', body: JSON.stringify(body) },
+    'Không thể tạo chính sách chiết khấu'
+  );
+  if (req.status === 'INACTIVE' && data.status !== 'INACTIVE') {
+    return patchStatus(data.id, 'INACTIVE');
   }
-
-  // Sắp xếp các bậc số lượng tăng dần
-  const sortedTiers = [...req.tiers]
-    .sort((a, b) => a.minQuantity - b.minQuantity)
-    .map((tier, idx) => ({
-      ...tier,
-      tierOrder: idx + 1
-    }));
-
-  const newPolicy: VolumeDiscountPolicy = {
-    id: `CK-${Date.now()}`,
-    code: req.code.trim().toUpperCase(),
-    name: req.name.trim(),
-    scopeType: req.scopeType,
-    targetId: req.targetId,
-    targetName: req.targetName,
-    customerGroup: req.customerGroup,
-    customerGroupLabel:
-      req.customerGroup === 'ALL'
-        ? 'Tất cả đại lý'
-        : req.customerGroup === 'DEALER_LEVEL_1'
-        ? 'Đại lý Cấp 1 (Tổng thầu)'
-        : req.customerGroup === 'DEALER_LEVEL_2'
-        ? 'Đại lý Cấp 2 (Bán buôn)'
-        : 'Khách lẻ / Showroom',
-    startDate: req.startDate,
-    endDate: req.endDate || null,
-    status: req.status,
-    priority: req.priority || 2,
-    description: req.description || '',
-    bestDealRuleNote: BEST_DEAL_RULE_STATEMENT,
-    tiers: sortedTiers,
-    appliedOrdersCount: 0,
-    totalDiscountGiven: 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    createdBy: 'Nguyễn Văn Minh (Quản lý KD)'
-  };
-
-  list.unshift(newPolicy);
-  saveStoredPolicies(list);
-  return newPolicy;
+  return mapPolicy(data);
 }
 
 /**
@@ -411,64 +336,23 @@ export async function updateVolumeDiscountPolicy(
   id: string | number,
   req: VolumeDiscountPolicyRequest
 ): Promise<VolumeDiscountPolicy> {
-  const list = getStoredPolicies();
-  const index = list.findIndex((p) => String(p.id) === String(id));
-  if (index === -1) {
-    throw new Error(`Không tìm thấy chính sách với ID: ${id}`);
-  }
-
-  // Kiểm tra trùng code với chính sách khác
-  const duplicate = list.find(
-    (p) => String(p.id) !== String(id) && p.code.toLowerCase() === req.code.toLowerCase()
+  const body = toBackendBody(req);
+  const data = await requestJson<BePolicy>(
+    `${BASE}/${id}`,
+    { method: 'PUT', body: JSON.stringify(body) },
+    'Không thể cập nhật chính sách chiết khấu'
   );
-  if (duplicate) {
-    throw new Error(`Mã chính sách "${req.code}" đã được sử dụng bởi chính sách khác!`);
+  if (req.status === 'INACTIVE' && data.status !== 'INACTIVE') {
+    return patchStatus(data.id, 'INACTIVE');
   }
-
-  const sortedTiers = [...req.tiers]
-    .sort((a, b) => a.minQuantity - b.minQuantity)
-    .map((tier, idx) => ({
-      ...tier,
-      tierOrder: idx + 1
-    }));
-
-  const updated: VolumeDiscountPolicy = {
-    ...list[index],
-    code: req.code.trim().toUpperCase(),
-    name: req.name.trim(),
-    scopeType: req.scopeType,
-    targetId: req.targetId,
-    targetName: req.targetName,
-    customerGroup: req.customerGroup,
-    customerGroupLabel:
-      req.customerGroup === 'ALL'
-        ? 'Tất cả đại lý'
-        : req.customerGroup === 'DEALER_LEVEL_1'
-        ? 'Đại lý Cấp 1 (Tổng thầu)'
-        : req.customerGroup === 'DEALER_LEVEL_2'
-        ? 'Đại lý Cấp 2 (Bán buôn)'
-        : 'Khách lẻ / Showroom',
-    startDate: req.startDate,
-    endDate: req.endDate || null,
-    status: req.status,
-    priority: req.priority || list[index].priority,
-    description: req.description || '',
-    tiers: sortedTiers,
-    updatedAt: new Date().toISOString()
-  };
-
-  list[index] = updated;
-  saveStoredPolicies(list);
-  return updated;
+  return mapPolicy(data);
 }
 
 /**
- * Xóa một chính sách chiết khấu
+ * Backend không cho xoá cứng (quy tắc dự án) → "Ngừng áp dụng" = chuyển INACTIVE
  */
 export async function deleteVolumeDiscountPolicy(id: string | number): Promise<boolean> {
-  const list = getStoredPolicies();
-  const filtered = list.filter((p) => String(p.id) !== String(id));
-  saveStoredPolicies(filtered);
+  await patchStatus(id, 'INACTIVE');
   return true;
 }
 
@@ -478,186 +362,168 @@ export async function deleteVolumeDiscountPolicy(id: string | number): Promise<b
 export async function togglePolicyStatus(
   id: string | number
 ): Promise<VolumeDiscountPolicy> {
-  const list = getStoredPolicies();
-  const index = list.findIndex((p) => String(p.id) === String(id));
-  if (index === -1) {
-    throw new Error(`Không tìm thấy chính sách với ID: ${id}`);
-  }
-
-  const current = list[index];
-  const newStatus = current.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-  list[index] = {
-    ...current,
-    status: newStatus,
-    updatedAt: new Date().toISOString()
-  };
-
-  saveStoredPolicies(list);
-  return list[index];
+  const current = await requestJson<BePolicy>(
+    `${BASE}/${id}`,
+    { method: 'GET' },
+    'Không tải được chính sách'
+  );
+  return patchStatus(id, current.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE');
 }
 
-/**
- * ============================================================================
- * BEST-DEAL RULE ENGINE:
- * "Nhiều chính sách cùng áp dụng thì lấy chính sách có lợi nhất cho khách,
- * quy tắc này được ghi rõ trong tài liệu"
- * ============================================================================
- */
+// ============================================================================
+// BEST-DEAL RULE ENGINE (tính ở backend: POST /calculate)
+// ============================================================================
+
+let productCache: Promise<CatalogProduct[]> | null = null;
+
+function getProductsCached(): Promise<CatalogProduct[]> {
+  if (!productCache) {
+    productCache = fetchDiscountProductOptions().catch(() => {
+      productCache = null;
+      return [] as CatalogProduct[];
+    });
+  }
+  return productCache;
+}
+
+async function lookupListPrice(customerGroup: string, productSku: string): Promise<number> {
+  const query = new URLSearchParams({ customerGroup, productSku });
+  const res = await authFetch(`${API_BASE_URL}/api/price-lists/lookup?${query.toString()}`, {
+    method: 'GET'
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    const msg = data && typeof data.message === 'string' ? data.message : '';
+    throw new Error(
+      `Không tìm thấy giá bán đang hiệu lực của SKU ${productSku} cho nhóm khách hàng đã chọn${
+        msg ? `: ${msg}` : ''
+      }. Vui lòng nhập đơn giá thủ công.`
+    );
+  }
+  const data = (await res.json()) as { price?: number };
+  const price = Number(data?.price);
+  if (!price || price <= 0) {
+    throw new Error(
+      `SKU ${productSku} chưa có giá bán hiệu lực trong bảng giá của nhóm khách hàng đã chọn. Vui lòng nhập đơn giá thủ công.`
+    );
+  }
+  return price;
+}
+
 export async function simulateBestDeal(
   input: BestDealSimulationInput
 ): Promise<BestDealSimulationOutput> {
-  const product = CATALOG_PRODUCTS.find((p) => p.sku === input.productSku) || {
-    sku: input.productSku,
-    name: input.productSku,
-    defaultCategory: 'Khác',
-    unit: 'Đơn vị',
-    suggestedRetailPrice: input.unitPrice || 250000
-  };
-
-  const unitPrice = input.unitPrice && input.unitPrice > 0 ? input.unitPrice : product.suggestedRetailPrice;
   const quantity = Math.max(1, input.quantity);
-  const totalOriginalAmount = unitPrice * quantity;
+  const unitPrice =
+    input.unitPrice && input.unitPrice > 0
+      ? input.unitPrice
+      : await lookupListPrice(input.customerGroup, input.productSku);
 
-  const policies = getStoredPolicies();
+  const calc = await requestJson<BeCalculateResponse>(
+    `${BASE}/calculate`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ productSku: input.productSku, quantity, unitPrice, date: todayVN() })
+    },
+    'Không thể mô phỏng chiết khấu'
+  );
 
-  // Tìm tất cả chính sách ACTIVE
-  const activePolicies = policies.filter((p) => p.status === 'ACTIVE');
+  const [policiesRes, products] = await Promise.all([
+    getVolumeDiscountPolicies().catch(() => ({ data: [] as VolumeDiscountPolicy[], total: 0 })),
+    getProductsCached()
+  ]);
+  const policyMap = new Map(policiesRes.data.map((p) => [String(p.id), p]));
+  const product = products.find((p) => p.sku === input.productSku);
+  const productName = product?.name || input.productSku;
+  const unit = product?.unit || 'đơn vị';
 
-  // Đánh giá từng chính sách
-  const candidateResults: PolicyCandidateResult[] = [];
+  const gross = Number(calc.grossAmount) || unitPrice * quantity;
+  const appliedId = calc.applied ? String(calc.applied.policyId) : null;
 
-  for (const policy of activePolicies) {
-    // 1. Kiểm tra đối tượng khách hàng
-    const matchesCustomer =
-      policy.customerGroup === 'ALL' || policy.customerGroup === input.customerGroup;
-    if (!matchesCustomer) {
-      continue; // Không thuộc đối tượng áp dụng
-    }
-
-    // 2. Kiểm tra phạm vi (Scope): theo SKU hoặc theo Category
-    let matchesScope = false;
-    if (policy.scopeType === 'SKU' && policy.targetId === product.sku) {
-      matchesScope = true;
-    } else if (
-      policy.scopeType === 'CATEGORY' &&
-      policy.targetId.toLowerCase() === product.defaultCategory.toLowerCase()
-    ) {
-      matchesScope = true;
-    }
-
-    if (!matchesScope) {
-      continue;
-    }
-
-    // 3. Tìm bậc (Tier) thỏa mãn số lượng
-    // Sắp xếp bậc theo minQuantity giảm dần để lấy bậc cao nhất thỏa mãn
-    const sortedTiers = [...policy.tiers].sort((a, b) => b.minQuantity - a.minQuantity);
-    const matchedTier = sortedTiers.find((tier) => {
-      const minOk = quantity >= tier.minQuantity;
-      const maxOk = tier.maxQuantity === null || quantity <= tier.maxQuantity;
-      return minOk && maxOk;
-    });
-
-    if (!matchedTier) {
-      // Số lượng chưa đạt bậc tối thiểu của chính sách này
-      candidateResults.push({
-        policy,
-        matchedTier: null,
-        isEligible: false,
-        ineligibleReason: `Chưa đạt số lượng tối thiểu (${policy.tiers[0]?.minQuantity || 0} ${product.unit})`,
-        discountType: 'PERCENT',
-        discountValue: 0,
-        unitDiscountAmount: 0,
-        totalDiscountAmount: 0,
-        finalUnitPrice: unitPrice,
-        finalTotalPrice: totalOriginalAmount,
-        effectiveDiscountRate: 0,
-        isBestDeal: false
-      });
-      continue;
-    }
-
-    // 4. Tính toán số tiền chiết khấu thực tế (VND)
-    let unitDiscount = 0;
-    if (matchedTier.discountType === 'PERCENT') {
-      unitDiscount = (unitPrice * matchedTier.discountValue) / 100;
-    } else {
-      // FIXED_AMOUNT (VND / đơn vị)
-      unitDiscount = matchedTier.discountValue;
-    }
-
-    // Đảm bảo không giảm quá giá trị gốc
-    unitDiscount = Math.min(unitDiscount, unitPrice);
-    const totalDiscount = unitDiscount * quantity;
-    const finalUnitPrice = Math.max(0, unitPrice - unitDiscount);
-    const finalTotalPrice = Math.max(0, totalOriginalAmount - totalDiscount);
-    const effectiveRate = unitPrice > 0 ? (unitDiscount / unitPrice) * 100 : 0;
-
-    candidateResults.push({
+  const candidates: PolicyCandidateResult[] = (calc.candidates || []).map((c) => {
+    const feType = toFeType(c.discountType);
+    const policy: VolumeDiscountPolicy = policyMap.get(String(c.policyId)) || {
+      id: c.policyId,
+      code: c.policyCode,
+      name: c.policyName,
+      scopeType: c.scope === 'PRODUCT' ? 'SKU' : 'CATEGORY',
+      targetId: c.scope === 'PRODUCT' ? input.productSku : '',
+      targetName: c.scope === 'PRODUCT' ? productName : product?.defaultCategory || '',
+      customerGroup: 'ALL',
+      customerGroupLabel: 'Tất cả nhóm đại lý',
+      startDate: '',
+      endDate: null,
+      status: 'ACTIVE',
+      priority: c.scope === 'PRODUCT' ? 1 : 2,
+      bestDealRuleNote: BEST_DEAL_RULE_STATEMENT,
+      tiers: [],
+      createdAt: '',
+      updatedAt: '',
+      createdBy: ''
+    };
+    const matchedTier =
+      policy.tiers.find((t) => Number(t.minQuantity) === Number(c.tierMinQuantity)) || {
+        tierOrder: 1,
+        minQuantity: Number(c.tierMinQuantity),
+        maxQuantity: null,
+        discountType: feType,
+        discountValue: Number(c.discountValue)
+      };
+    const unitDiscount = Number(c.discountPerUnit) || 0;
+    const totalDiscount = Number(c.discountAmount) || 0;
+    return {
       policy,
       matchedTier,
       isEligible: true,
-      discountType: matchedTier.discountType,
-      discountValue: matchedTier.discountValue,
-      unitDiscountAmount: Math.round(unitDiscount),
-      totalDiscountAmount: Math.round(totalDiscount),
-      finalUnitPrice: Math.round(finalUnitPrice),
-      finalTotalPrice: Math.round(finalTotalPrice),
-      effectiveDiscountRate: Number(effectiveRate.toFixed(2)),
-      isBestDeal: false
-    });
-  }
+      discountType: feType,
+      discountValue: Number(c.discountValue),
+      unitDiscountAmount: unitDiscount,
+      totalDiscountAmount: totalDiscount,
+      finalUnitPrice: Math.max(0, unitPrice - unitDiscount),
+      finalTotalPrice: Math.max(0, gross - totalDiscount),
+      effectiveDiscountRate: unitPrice > 0 ? Number(((unitDiscount / unitPrice) * 100).toFixed(2)) : 0,
+      isBestDeal: appliedId !== null && String(c.policyId) === appliedId
+    };
+  });
 
-  // 5. Áp dụng quy tắc "BEST DEAL":
-  // Chọn chính sách có totalDiscountAmount LỚN NHẤT
-  const eligibleCandidates = candidateResults.filter((c) => c.isEligible && c.totalDiscountAmount > 0);
+  // Sắp xếp: chính sách được áp dụng lên đầu, sau đó theo mức giảm giảm dần
+  candidates.sort((a, b) => {
+    if (a.isBestDeal !== b.isBestDeal) return a.isBestDeal ? -1 : 1;
+    return b.totalDiscountAmount - a.totalDiscountAmount;
+  });
+  const bestDeal = candidates.find((c) => c.isBestDeal) || null;
 
-  let bestDeal: PolicyCandidateResult | null = null;
-
-  if (eligibleCandidates.length > 0) {
-    // Sắp xếp giảm dần theo totalDiscountAmount. Nếu bằng nhau, ưu tiên chính sách SKU trước Category
-    eligibleCandidates.sort((a, b) => {
-      if (b.totalDiscountAmount !== a.totalDiscountAmount) {
-        return b.totalDiscountAmount - a.totalDiscountAmount;
-      }
-      if (a.policy.scopeType === 'SKU' && b.policy.scopeType === 'CATEGORY') {
-        return -1;
-      }
-      return a.policy.priority - b.policy.priority;
-    });
-
-    bestDeal = eligibleCandidates[0];
-    bestDeal.isBestDeal = true;
-  }
-
-  // Tạo lời giải thích minh bạch
+  const fmt = (n: number) => n.toLocaleString('vi-VN');
   let explanation = '';
   if (!bestDeal) {
-    if (candidateResults.length === 0) {
-      explanation = `Không tìm thấy chính sách chiết khấu nào áp dụng cho ${product.name} và nhóm khách hàng này.`;
-    } else {
-      explanation = `Có ${candidateResults.length} chính sách liên quan nhưng số lượng mua (${quantity} ${product.unit}) chưa đạt mức tối thiểu của bất kỳ bậc chiết khấu nào.`;
-    }
-  } else if (eligibleCandidates.length === 1) {
-    explanation = `Áp dụng chính sách duy nhất thỏa mãn: "${bestDeal.policy.name}" (${bestDeal.matchedTier?.discountType === 'PERCENT' ? `${bestDeal.matchedTier.discountValue}%` : `${bestDeal.matchedTier?.discountValue.toLocaleString('vi-VN')} đ/${product.unit}`}), tiết kiệm được ${bestDeal.totalDiscountAmount.toLocaleString('vi-VN')} đ cho khách hàng.`;
+    explanation = `Không có chính sách chiết khấu nào đang hiệu lực mà số lượng mua (${quantity} ${unit}) của ${productName} đạt bậc tối thiểu.`;
+  } else if (candidates.length === 1) {
+    explanation = `Áp dụng chính sách duy nhất thỏa mãn: "${bestDeal.policy.name}" (${
+      bestDeal.discountType === 'PERCENT'
+        ? `${bestDeal.discountValue}%`
+        : `${fmt(bestDeal.discountValue)} đ/${unit}`
+    }), tiết kiệm được ${fmt(bestDeal.totalDiscountAmount)} đ cho khách hàng.`;
   } else {
-    const others = eligibleCandidates.slice(1);
-    const runnerUp = others[0];
+    const runnerUp = candidates.find((c) => !c.isBestDeal)!;
     const diff = bestDeal.totalDiscountAmount - runnerUp.totalDiscountAmount;
-    explanation = `Có ${eligibleCandidates.length} chính sách cùng thỏa mãn. Theo quy tắc Best-Deal, hệ thống tự động chọn chính sách "${bestDeal.policy.name}" với mức giảm cao nhất: ${bestDeal.totalDiscountAmount.toLocaleString('vi-VN')} đ (nhiều hơn chính sách đứng thứ hai "${runnerUp.policy.name}" ${diff > 0 ? diff.toLocaleString('vi-VN') + ' đ' : '0 đ'}).`;
+    explanation = `Có ${candidates.length} chính sách cùng thỏa mãn. Theo quy tắc Best-Deal, hệ thống tự động chọn chính sách "${bestDeal.policy.name}" với mức giảm cao nhất: ${fmt(
+      bestDeal.totalDiscountAmount
+    )} đ (nhiều hơn chính sách đứng thứ hai "${runnerUp.policy.name}" ${fmt(Math.max(0, diff))} đ${
+      diff === 0 ? ', bằng nhau nên ưu tiên chính sách theo SKU' : ''
+    }).`;
   }
 
   return {
-    productSku: product.sku,
-    productName: product.name,
-    category: product.defaultCategory,
-    unit: product.unit,
+    productSku: calc.productSku || input.productSku,
+    productName,
+    category: product?.defaultCategory || '',
+    unit,
     unitPrice,
     quantity,
     customerGroup: input.customerGroup,
-    totalOriginalAmount,
+    totalOriginalAmount: gross,
     appliedBestDeal: bestDeal,
-    candidatePolicies: candidateResults,
+    candidatePolicies: candidates,
     explanation,
     bestDealRuleStatement: BEST_DEAL_RULE_STATEMENT
   };

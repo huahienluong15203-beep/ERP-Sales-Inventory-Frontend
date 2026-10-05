@@ -7,8 +7,13 @@ import type {
   DiscountCustomerScope,
   DiscountCalculationType
 } from '../../types/discount';
-import { CATALOG_PRODUCTS, CUSTOMER_GROUPS } from '../../types/pricing';
-import { AVAILABLE_CATEGORIES, BEST_DEAL_RULE_STATEMENT } from '../../services/volumeDiscountApi';
+import type { CatalogProduct } from '../../types/pricing';
+import {
+  BEST_DEAL_RULE_STATEMENT,
+  fetchDiscountProductOptions,
+  fetchDiscountCategoryOptions
+} from '../../services/volumeDiscountApi';
+import type { DiscountCategoryOption } from '../../services/volumeDiscountApi';
 
 interface VolumeDiscountFormModalProps {
   isOpen: boolean;
@@ -77,6 +82,48 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
+  // Danh mục thật từ backend
+  const [products, setProducts] = useState<CatalogProduct[]>([]);
+  const [categories, setCategories] = useState<DiscountCategoryOption[]>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    setIsLoadingOptions(true);
+    Promise.all([fetchDiscountProductOptions(), fetchDiscountCategoryOptions()])
+      .then(([prods, cats]) => {
+        if (cancelled) return;
+        setProducts(prods);
+        setCategories(cats);
+        // Khi tạo mới: mặc định chọn phần tử đầu tiên của danh sách
+        if (mode !== 'edit' || !initialData) {
+          setTargetId((prev) => {
+            if (prev) return prev;
+            if (prods[0]) {
+              setTargetName(prods[0].name);
+              return prods[0].sku;
+            }
+            return '';
+          });
+        }
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setErrorMsg(
+          err instanceof Error
+            ? `Không tải được danh mục sản phẩm/nhóm hàng: ${err.message}`
+            : 'Không tải được danh mục sản phẩm/nhóm hàng!'
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingOptions(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, mode, initialData]);
+
   // Điền dữ liệu khi edit hoặc reset khi create
   useEffect(() => {
     if (initialData && mode === 'edit') {
@@ -112,12 +159,12 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
       }
     } else {
       // Giá trị mặc định khi tạo mới
-      const defaultProduct = CATALOG_PRODUCTS[0];
+      const defaultProduct = products[0];
       setCode(`CK-SL-${Date.now().toString().slice(-4)}`);
       setName('Chính sách Chiết khấu Sản lượng Mới');
       setScopeType('SKU');
-      setTargetId(defaultProduct.sku);
-      setTargetName(defaultProduct.name);
+      setTargetId(defaultProduct ? defaultProduct.sku : '');
+      setTargetName(defaultProduct ? defaultProduct.name : '');
       setCustomerGroup('ALL');
       setStartDate(new Date().toISOString().slice(0, 10));
       setEndDate('');
@@ -153,33 +200,35 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
       ]);
     }
     setErrorMsg(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, mode, isOpen]);
 
   // Thay đổi phạm vi áp dụng
   const handleScopeChange = (newScope: DiscountScopeType) => {
     setScopeType(newScope);
     if (newScope === 'SKU') {
-      const prod = CATALOG_PRODUCTS[0];
-      setTargetId(prod.sku);
-      setTargetName(prod.name);
+      const prod = products[0];
+      setTargetId(prod ? prod.sku : '');
+      setTargetName(prod ? prod.name : '');
     } else {
-      const cat = AVAILABLE_CATEGORIES[0];
-      setTargetId(cat);
-      setTargetName(`Nhóm: ${cat}`);
+      const cat = categories[0];
+      setTargetId(cat ? cat.id : '');
+      setTargetName(cat ? cat.name : '');
     }
   };
 
   const handleProductSelect = (sku: string) => {
-    const prod = CATALOG_PRODUCTS.find((p) => p.sku === sku);
+    const prod = products.find((p) => p.sku === sku);
     if (prod) {
       setTargetId(prod.sku);
       setTargetName(prod.name);
     }
   };
 
-  const handleCategorySelect = (cat: string) => {
-    setTargetId(cat);
-    setTargetName(`Nhóm: ${cat}`);
+  const handleCategorySelect = (catId: string) => {
+    const cat = categories.find((c) => c.id === catId);
+    setTargetId(catId);
+    setTargetName(cat ? cat.name : '');
   };
 
   // Thêm một bậc chiết khấu mới
@@ -217,7 +266,12 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
     field: K,
     value: TierDraft[K]
   ) => {
-    const updated = [...tiers];
+    // Backend chỉ hỗ trợ một kiểu giảm cho cả chính sách → đổi kiểu ở một bậc sẽ áp dụng cho mọi bậc
+    if (field === 'discountType') {
+      setTiers(tiers.map((t) => ({ ...t, discountType: value as DiscountCalculationType })));
+      return;
+    }
+    const updated = tiers.map((t) => ({ ...t }));
     updated[index][field] = value;
     if (field === 'isUnlimited' && value === true) {
       updated[index].maxQuantity = null;
@@ -239,6 +293,14 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
       setErrorMsg('Vui lòng nhập Tên chính sách chiết khấu!');
       return;
     }
+    if (!targetId) {
+      setErrorMsg(
+        scopeType === 'SKU'
+          ? 'Vui lòng chọn sản phẩm (SKU) áp dụng! Danh sách sản phẩm đang trống.'
+          : 'Vui lòng chọn nhóm hàng áp dụng! Danh sách nhóm hàng đang trống.'
+      );
+      return;
+    }
     if (!startDate) {
       setErrorMsg('Vui lòng chọn Ngày bắt đầu hiệu lực!');
       return;
@@ -251,6 +313,10 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
     // Validate danh sách bậc
     if (tiers.length === 0) {
       setErrorMsg('Vui lòng tạo ít nhất một bậc chiết khấu!');
+      return;
+    }
+    if (new Set(tiers.map((t) => t.discountType)).size > 1) {
+      setErrorMsg('Tất cả các bậc phải cùng kiểu giảm (% hoặc số tiền/đơn vị)');
       return;
     }
 
@@ -431,9 +497,21 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                       onChange={(e) => handleProductSelect(e.target.value)}
                       className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs sm:text-sm font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
                     >
-                      {CATALOG_PRODUCTS.map((prod) => (
+                      {isLoadingOptions && products.length === 0 && (
+                        <option value="">Đang tải danh sách sản phẩm...</option>
+                      )}
+                      {!isLoadingOptions && products.length === 0 && (
+                        <option value="">-- Chưa có sản phẩm đang kinh doanh --</option>
+                      )}
+                      {targetId && !products.some((p) => p.sku === targetId) && (
+                        <option value={targetId}>
+                          [{targetId}] {targetName}
+                        </option>
+                      )}
+                      {products.map((prod) => (
                         <option key={prod.sku} value={prod.sku}>
-                          [{prod.sku}] {prod.name} ({prod.defaultCategory})
+                          [{prod.sku}] {prod.name}
+                          {prod.defaultCategory ? ` (${prod.defaultCategory})` : ''}
                         </option>
                       ))}
                     </select>
@@ -443,9 +521,18 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                       onChange={(e) => handleCategorySelect(e.target.value)}
                       className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs sm:text-sm font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
                     >
-                      {AVAILABLE_CATEGORIES.map((cat) => (
-                        <option key={cat} value={cat}>
-                          Nhóm: {cat}
+                      {isLoadingOptions && categories.length === 0 && (
+                        <option value="">Đang tải danh sách nhóm hàng...</option>
+                      )}
+                      {!isLoadingOptions && categories.length === 0 && (
+                        <option value="">-- Chưa có nhóm hàng --</option>
+                      )}
+                      {targetId && !categories.some((c) => c.id === targetId) && (
+                        <option value={targetId}>Nhóm: {targetName || targetId}</option>
+                      )}
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.level > 1 ? `${'— '.repeat(cat.level - 1)}` : ''}Nhóm: {cat.name}
                         </option>
                       ))}
                     </select>
@@ -459,16 +546,13 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                   </label>
                   <select
                     value={customerGroup}
+                    disabled
                     onChange={(e) => setCustomerGroup(e.target.value as DiscountCustomerScope)}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs sm:text-sm font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
+                    className="w-full rounded-xl border border-gray-200 bg-gray-100 px-3.5 py-2.5 text-xs sm:text-sm font-medium text-gray-600 shadow-2xs cursor-not-allowed"
                   >
-                    <option value="ALL">Tất cả khách hàng & Đại lý</option>
-                    {Object.entries(CUSTOMER_GROUPS).map(([key, info]) => (
-                      <option key={key} value={key}>
-                        {info.label}
-                      </option>
-                    ))}
+                    <option value="ALL">Tất cả nhóm đại lý</option>
                   </select>
+                  <p className="mt-1 text-[11px] text-gray-500">Áp dụng cho mọi nhóm đại lý</p>
                 </div>
 
                 {/* Ngày bắt đầu */}
@@ -523,7 +607,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                     2. Cấu hình Bậc chiết khấu theo sản lượng (Tiered Tiers)
                   </h4>
                   <p className="text-xs text-gray-500">
-                    Chiết khấu tính theo phần trăm (%) hoặc theo số tiền trên đơn vị (VND/đơn vị)
+                    Chiết khấu tính theo phần trăm (%) hoặc theo số tiền trên đơn vị (VND/đơn vị) — mọi bậc dùng chung một hình thức CK
                   </p>
                 </div>
                 <button
