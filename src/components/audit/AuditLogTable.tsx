@@ -1,6 +1,8 @@
 import React from 'react';
 import type { AuditLogItem } from '../../types/auditLog';
 import { AUDIT_MODULE_OPTIONS, formatDateTime } from '../../services/auditLogApi';
+import { getAvatarFullUrl } from '../../services/api';
+import { getUserAvatarInitials } from '../../types/user';
 import {
   Lock,
   Eye,
@@ -111,11 +113,31 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
                       </span>
                     </td>
 
-                    {/* 2. Người thực hiện (Actor) */}
+                    {/* 2. Người thực hiện (Actor) - Đồng bộ Avatar */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600">
-                          <User size={14} />
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-orange-100 border border-orange-200/80 flex items-center justify-center text-[#F85606] font-bold overflow-hidden shrink-0 shadow-2xs">
+                          {log.actorAvatarUrl ? (
+                            <img
+                              src={getAvatarFullUrl(log.actorAvatarUrl)}
+                              alt={log.actorFullName}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                                const parent = (e.target as HTMLElement).parentElement;
+                                if (parent) {
+                                  const span = document.createElement('span');
+                                  span.className = 'text-[11px] font-bold text-orange-700';
+                                  span.innerText = getUserAvatarInitials(log.actorFullName, log.actorRole);
+                                  parent.appendChild(span);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <span className="text-[11px] font-bold text-orange-700">
+                              {getUserAvatarInitials(log.actorFullName, log.actorRole)}
+                            </span>
+                          )}
                         </div>
                         <div>
                           <div className="font-bold text-slate-900 text-xs">

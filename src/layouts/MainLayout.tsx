@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { FC, ReactNode, FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation, Link } from '../routes/Router';
@@ -16,6 +16,13 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
   const { user, menus, currentRole, switchRole, logout, isLoading, clearMustChangePassword } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Luôn đảm bảo "Hồ sơ cá nhân" (/profile) hiển thị ở cuối danh sách tính năng nghiệp vụ, ngay trên Đăng xuất
+  const displayedMenus = useMemo(() => {
+    const nonProfile = menus.filter((m) => m.path !== '/profile');
+    const profileItem = menus.find((m) => m.path === '/profile');
+    return profileItem ? [...nonProfile, profileItem] : nonProfile;
+  }, [menus]);
 
   // Trạng thái mở/đóng Sidebar trên Mobile (tối ưu hóa màn hình 360px)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
@@ -260,7 +267,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             </div>
           ) : (
             <ul className="erp-menu-list">
-              {menus.map((item) => {
+              {displayedMenus.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
                   <li key={item.path} className="erp-menu-item">

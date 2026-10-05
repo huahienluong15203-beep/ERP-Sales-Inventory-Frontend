@@ -281,6 +281,51 @@ export function getLocalAuditLogs(): AuditLogItem[] {
 }
 
 /**
+ * Ghi nhận một bản ghi nhật ký thao tác cục bộ (dùng khi thao tác offline hoặc dự phòng fallback)
+ */
+export function recordLocalAuditLog(entry: Partial<AuditLogItem>): AuditLogItem {
+  const currentLogs = getLocalAuditLogs();
+  const id = Date.now();
+  const moduleMeta = AUDIT_MODULE_OPTIONS.find((m) => m.value === entry.module);
+
+  const newLog: AuditLogItem = {
+    id,
+    module: entry.module || 'INVENTORY',
+    moduleLabel: entry.moduleLabel || moduleMeta?.label || 'Tồn kho & Kiểm kê',
+    action: entry.action || 'UPDATE_UNIT_CONVERSION',
+    actionLabel: entry.actionLabel || 'Cập nhật hệ số quy đổi',
+    targetType: entry.targetType || 'PRODUCT_UNIT',
+    targetId: entry.targetId,
+    targetCode: entry.targetCode || 'SP-SKU',
+    targetName: entry.targetName,
+    actorId: entry.actorId || 1,
+    actorUsername: entry.actorUsername || 'user',
+    actorFullName: entry.actorFullName || 'Người thực hiện',
+    actorRole: entry.actorRole || 'Thủ kho',
+    actorAvatarUrl: entry.actorAvatarUrl,
+    actorAvatarThumbnailUrl: entry.actorAvatarThumbnailUrl,
+    oldValue: entry.oldValue || '—',
+    newValue: entry.newValue || '—',
+    deltaFormatted: entry.deltaFormatted || (entry.oldValue && entry.newValue ? `${entry.oldValue} ➔ ${entry.newValue}` : undefined),
+    deltaType: entry.deltaType || 'neutral',
+    reason: entry.reason || 'Cập nhật hệ số quy đổi qua giao diện',
+    ipAddress: entry.ipAddress || '127.0.0.1',
+    userAgent: navigator.userAgent,
+    httpMethod: entry.httpMethod || 'PUT',
+    requestUri: entry.requestUri || '/api/products/units',
+    createdAt: new Date().toISOString()
+  };
+
+  const updatedLogs = [newLog, ...currentLogs];
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedLogs));
+  } catch (err) {
+    console.error('Lỗi lưu audit log cục bộ:', err);
+  }
+  return newLog;
+}
+
+/**
  * Tra cứu danh sách nhật ký thao tác hệ thống (S2-04)
  * - Tự động gọi Backend /api/audit-logs nếu có server
  * - Fallback về local dataset phong phú nếu backend chưa bật hoặc rỗng
@@ -331,6 +376,7 @@ export async function fetchAuditLogs(
           actorId?: number;
           actorUsername?: string;
           actorFullName?: string;
+          actorAvatarUrl?: string;
           oldValue?: string;
           newValue?: string;
           reason?: string;
@@ -362,6 +408,7 @@ export async function fetchAuditLogs(
                 : item.actorUsername?.includes('acc')
                 ? 'Kế toán'
                 : 'Hệ thống',
+              actorAvatarUrl: item.actorAvatarUrl,
               oldValue: item.oldValue || '—',
               newValue: item.newValue || '—',
               deltaFormatted: item.oldValue && item.newValue ? `${item.oldValue} ➔ ${item.newValue}` : undefined,
@@ -375,9 +422,13 @@ export async function fetchAuditLogs(
             };
           });
 
+          // Trộn thêm các log cục bộ phát sinh gần đây (nếu có log mock hoặc fallback chưa kịp lên server)
+          const localLogs = getLocalAuditLogs().filter((l) => l.id > 1700000000000);
+          const combined = [...localLogs.filter((l) => !mappedContent.some((m) => m.id === l.id)), ...mappedContent];
+
           return {
-            content: mappedContent,
-            totalElements: json.totalElements || mappedContent.length,
+            content: combined,
+            totalElements: (json.totalElements || mappedContent.length) + localLogs.length,
             totalPages: json.totalPages || Math.ceil(mappedContent.length / size),
             page: json.page || page,
             size: json.size || size

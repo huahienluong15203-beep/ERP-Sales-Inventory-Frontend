@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import type { AuditLogItem } from '../../types/auditLog';
 import { AUDIT_MODULE_OPTIONS, formatDateTime } from '../../services/auditLogApi';
+import { getAvatarFullUrl } from '../../services/api';
+import { getUserAvatarInitials } from '../../types/user';
 import {
   X,
   Lock,
@@ -206,26 +208,45 @@ Yêu Cầu HTTP: ${log.httpMethod || 'POST'} ${log.requestUri || ''}`;
 
           {/* Chi tiết người thực hiện & Thông tin kỹ thuật mạng */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Thông tin nhân sự */}
+            {/* Thông tin nhân sự - Đồng bộ Avatar */}
             <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
                 <User size={15} className="text-emerald-500" />
                 <span>Nhân Sự Thực Hiện Thao Tác</span>
               </div>
+              <div className="flex items-center gap-3 pt-1 border-b border-slate-100 pb-2">
+                <div className="w-10 h-10 rounded-full bg-orange-100 border border-orange-200 flex items-center justify-center text-[#F85606] font-bold overflow-hidden shrink-0 shadow-2xs">
+                  {log.actorAvatarUrl ? (
+                    <img
+                      src={getAvatarFullUrl(log.actorAvatarUrl)}
+                      alt={log.actorFullName}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                        const parent = (e.target as HTMLElement).parentElement;
+                        if (parent) {
+                          const span = document.createElement('span');
+                          span.className = 'text-xs font-bold text-orange-700';
+                          span.innerText = getUserAvatarInitials(log.actorFullName, log.actorRole);
+                          parent.appendChild(span);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <span className="text-xs font-bold text-orange-700">
+                      {getUserAvatarInitials(log.actorFullName, log.actorRole)}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-slate-900 text-sm truncate">{log.actorFullName}</div>
+                  <div className="text-xs text-orange-600 font-mono">@{log.actorUsername}</div>
+                </div>
+              </div>
               <div className="text-xs space-y-1.5 pt-1">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Họ và tên:</span>
-                  <span className="font-bold text-slate-800">{log.actorFullName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Tài khoản:</span>
-                  <span className="font-mono text-orange-600 font-semibold">
-                    @{log.actorUsername}
-                  </span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-slate-500">Vị trí / Phụ trách:</span>
-                  <span className="text-slate-700">{log.actorRole || 'Chưa cập nhật'}</span>
+                  <span className="text-slate-700 font-medium">{log.actorRole || 'Chưa cập nhật'}</span>
                 </div>
               </div>
             </div>
