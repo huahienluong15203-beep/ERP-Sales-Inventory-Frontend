@@ -64,7 +64,7 @@ export const AuditLogFilter: React.FC<AuditLogFilterProps> = ({
       <div className="flex items-center justify-between pb-3 border-b border-slate-100">
         <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
           <SlidersHorizontal size={18} className="text-orange-600" />
-          <span>Bộ Lọc Truy Vết & Kiểm Toán Thao Tác (S2-04)</span>
+          <span>Bộ Lọc Truy Vết & Kiểm Toán Thao Tác</span>
         </div>
 
         {isFiltered && (

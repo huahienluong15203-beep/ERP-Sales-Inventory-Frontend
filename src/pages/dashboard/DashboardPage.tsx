@@ -240,7 +240,7 @@ export const DashboardPage: React.FC = () => {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '15px', fontWeight: 700, color: '#1E3A8A' }}>
-                  Lịch Sử Thay Đổi Giá Sản Phẩm (S3-02)
+                  Lịch Sử Thay Đổi Giá Sản Phẩm
                 </span>
                 <span
                   style={{
@@ -328,7 +328,7 @@ export const DashboardPage: React.FC = () => {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '15px', fontWeight: 700, color: '#9A3412' }}>
-                  Nhật Ký Thao Tác Tồn Kho & Công Nợ (S2-04)
+                  Nhật Ký Thao Tác Tồn Kho & Công Nợ
                 </span>
                 <span
                   style={{

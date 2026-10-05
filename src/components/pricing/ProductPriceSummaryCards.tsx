@@ -2,9 +2,7 @@ import React from 'react';
 import {
   FileText,
   TrendingUp,
-  TrendingDown,
-  ShieldCheck,
-  Lock
+  TrendingDown
 } from '../common/Icons';
 
 interface ProductPriceSummaryCardsProps {
@@ -21,7 +19,7 @@ export const ProductPriceSummaryCards: React.FC<ProductPriceSummaryCardsProps> =
   selectedProductCount
 }) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {/* Thẻ 1: Tổng số biến động giá */}
       <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition">
         <div className="flex items-center justify-between">
@@ -91,28 +89,6 @@ export const ProductPriceSummaryCards: React.FC<ProductPriceSummaryCardsProps> =
         </div>
       </div>
 
-      {/* Thẻ 4: Chuẩn kiểm toán ERP bất biến */}
-      <div className="p-5 rounded-2xl bg-white border border-gray-100 text-gray-900 shadow-xs hover:shadow-md transition relative overflow-hidden">
-        <div className="absolute right-0 bottom-0 opacity-5 trangray-x-3 trangray-y-3 pointer-events-none">
-          <ShieldCheck size={90} />
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Chuẩn Kiểm Toán ERP
-          </span>
-          <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600">
-            <Lock size={18} />
-          </div>
-        </div>
-        <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-xl font-black text-amber-600">
-            100% BẤT BIẾN
-          </span>
-        </div>
-        <div className="mt-2 text-xs text-gray-500">
-          Lịch sử giá không thể sửa và không thể xoá
-        </div>
-      </div>
     </div>
   );
 };

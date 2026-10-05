@@ -147,12 +147,6 @@ export const PriceHistoryPage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 text-xs font-bold rounded-md bg-blue-100 text-blue-700">
-              EP-02: Sản phẩm & Bảng giá
-            </span>
-            <span className="px-2.5 py-0.5 text-xs font-mono font-bold rounded-md bg-orange-100 text-[#F85606]">
-              S3-02 / SCRUM-13
-            </span>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-md bg-amber-50 text-amber-700 border border-amber-200">
               <Lock size={12} />
               Lịch sử bất biến (Không thể sửa/xóa)
@@ -405,9 +399,9 @@ export const PriceHistoryPage: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <Lock size={12} className="text-amber-500" />
-            <span>Dữ liệu chỉ đọc (Read-only) • Lịch sử không sửa và không xoá được</span>
+          <div className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+            <Lock size={15} className="shrink-0 text-amber-600" />
+            <span>Chỉ xem — lịch sử giá không thể sửa hoặc xoá</span>
           </div>
         </div>
 
@@ -424,7 +418,7 @@ export const PriceHistoryPage: React.FC = () => {
                 <th className="py-3.5 px-4 text-center">Biến Động</th>
                 <th className="py-3.5 px-4">Người Sửa Giá</th>
                 <th className="py-3.5 px-4">Căn Cứ & Lý Do</th>
-                <th className="py-3.5 px-4 text-center">Thao Tác</th>
+                <th className="py-3.5 px-4 text-center">Chỉ Xem</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -544,7 +538,7 @@ export const PriceHistoryPage: React.FC = () => {
                         </p>
                       </td>
 
-                      {/* Thao tác (Chỉ Xem chi tiết để giải thích đại lý, KHÔNG CÓ SỬA/XOÁ) */}
+                      {/* Chỉ xem chi tiết; không cung cấp thao tác sửa hoặc xoá lịch sử */}
                       <td className="py-3.5 px-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
@@ -553,7 +547,7 @@ export const PriceHistoryPage: React.FC = () => {
                           title="Xem kịch bản đối thoại giải thích với đại lý"
                         >
                           <Eye size={14} />
-                          <span>Chi tiết giải thích</span>
+                          <span>Xem chi tiết</span>
                         </button>
                       </td>
                     </tr>
@@ -593,21 +587,6 @@ export const PriceHistoryPage: React.FC = () => {
               <ChevronRight size={16} />
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* 6. Hướng dẫn nghiệp vụ giải thích đại lý */}
-      <div className="p-5 rounded-2xl bg-orange-50/60 border border-orange-200/80 flex items-start gap-4">
-        <div className="p-2.5 rounded-xl bg-orange-100 text-[#F85606] shrink-0">
-          <Building2 size={24} />
-        </div>
-        <div className="space-y-1">
-          <h4 className="text-sm font-bold text-orange-950">
-            Cẩm nang Quản lý Kinh doanh: Hướng dẫn giải thích biến động giá với Đại lý (S3-02)
-          </h4>
-          <p className="text-xs text-orange-900/80 leading-relaxed">
-            Khi Đại lý thắc mắc <em>"Vì sao giá tháng này lại khác tháng trước?"</em>, Quản lý kinh doanh bấm vào nút <strong>"Chi tiết giải thích"</strong> của sản phẩm tương ứng để tra cứu nguyên nhân chính thức (chi phí nguyên vật liệu, điều chỉnh từ nhà máy sản xuất, chính sách khuyến mại mùa vụ...). Bạn có thể sao chép nhanh kịch bản giải thích hoặc xuất file Excel gửi kèm công văn số quyết định cho Đại lý.
-          </p>
         </div>
       </div>
 

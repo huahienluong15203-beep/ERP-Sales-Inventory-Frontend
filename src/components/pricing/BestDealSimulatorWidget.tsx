@@ -72,10 +72,6 @@ export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = (
                     (Đang tính toán...)
                   </span>
                 )}
-                <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
-                  SCRUM-12 / S3-01
-                </span>
-
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Tự động so sánh tất cả chính sách thỏa mãn để trao mức chiết khấu cao nhất cho khách hàng
