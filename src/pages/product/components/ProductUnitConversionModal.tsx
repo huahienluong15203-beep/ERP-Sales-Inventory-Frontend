@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Product } from '../../../types/product';
 import type {
   ProductUnitConversion,
@@ -30,6 +30,60 @@ const COMMON_CONVERSION_UNITS = [
   'Cây'
 ];
 
+export const isBaseUnitRow = (u: ProductUnitConversion, prod: Product | null): boolean => {
+  if (u.isBaseUnit === true || u.baseUnit === true) return true;
+  if (!prod) return false;
+  return (
+    u.unitName?.trim().toLowerCase() === prod.baseUnit?.trim().toLowerCase() &&
+    Number(u.conversionFactor) === 1
+  );
+};
+
+const sanitizeUnitsList = (rawUnits: ProductUnitConversion[], prod: Product | null): ProductUnitConversion[] => {
+  if (!prod) return rawUnits;
+  const baseName = (prod.baseUnit || '').trim().toLowerCase();
+
+  const baseItem: ProductUnitConversion = {
+    id: 0,
+    productId: Number(prod.id) || 0,
+    sku: prod.sku,
+    unitName: prod.baseUnit,
+    conversionFactor: 1,
+    isBaseUnit: true,
+    baseUnit: true,
+    formula: `1 ${prod.baseUnit} = 1 ${prod.baseUnit}`,
+    status: 'ACTIVE',
+    description: 'Đơn vị tính cơ sở chuẩn của SKU'
+  };
+
+  const seen = new Set<string>();
+  const conversions: ProductUnitConversion[] = [];
+
+  for (const u of rawUnits) {
+    if (!u.unitName) continue;
+    const name = u.unitName.trim();
+    const nameLower = name.toLowerCase();
+
+    // TUYỆT ĐỐI không cho đơn vị quy đổi trùng tên với đơn vị cơ sở (vd: Thùng trùng với Thùng)
+    if (nameLower === baseName) continue;
+
+    // TUYỆT ĐỐI không cho 2 đơn vị quy đổi trùng tên nhau
+    if (seen.has(nameLower)) continue;
+    seen.add(nameLower);
+
+    conversions.push({
+      ...u,
+      unitName: name,
+      conversionFactor: Number(u.conversionFactor) || 1,
+      isBaseUnit: false,
+      baseUnit: false,
+      formula: `1 ${name} = ${u.conversionFactor} ${prod.baseUnit}`
+    });
+  }
+
+  return [baseItem, ...conversions];
+};
+
 export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProps> = ({
   isOpen,
   onClose,
@@ -37,6 +91,10 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
   onSuccess
 }) => {
   const [units, setUnits] = useState<ProductUnitConversion[]>([]);
+  const conversionUnits = useMemo(
+    () => units.filter((u) => !isBaseUnitRow(u, product)),
+    [units, product]
+  );
   const [resolvedProductId, setResolvedProductId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'LIST' | 'CALCULATOR'>('LIST');
@@ -62,7 +120,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
   const [deletingUnit, setDeletingUnit] = useState<ProductUnitConversion | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
-  // Máy tính quy đổi kho (S2-07 AC2)
+  // Máy tính quy đổi kho
   const [calcUnitName, setCalcUnitName] = useState<string>('');
   const [calcQuantity, setCalcQuantity] = useState<string>('1');
   const [calcResult, setCalcResult] = useState<UnitConversionResult | null>(null);
@@ -75,7 +133,12 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
     const raw = localStorage.getItem(`erp_unit_conversions_${prod.sku}`);
     if (raw) {
       try {
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const sanitized = sanitizeUnitsList(parsed, prod);
+          localStorage.setItem(`erp_unit_conversions_${prod.sku}`, JSON.stringify(sanitized));
+          return sanitized;
+        }
       } catch {
         // ignore
       }
@@ -88,45 +151,15 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
       unitName: prod.baseUnit || 'Lon',
       conversionFactor: 1,
       isBaseUnit: true,
+      baseUnit: true,
       formula: `1 ${prod.baseUnit || 'Lon'} = 1 ${prod.baseUnit || 'Lon'}`,
       isDefaultPurchase: false,
-      isDefaultSale: true,
-      status: 'ACTIVE'
+      isDefaultSale: false,
+      status: 'ACTIVE',
+      description: 'Đơn vị tính cơ sở chuẩn của SKU'
     };
 
-    // Nếu quy cách có chữ "thùng 24" -> gợi ý thêm Thùng
     const sampleUnits: ProductUnitConversion[] = [base];
-    if (prod.packagingSpec && prod.packagingSpec.toLowerCase().includes('24')) {
-      sampleUnits.push({
-        id: 9991,
-        productId: 0,
-        sku: prod.sku,
-        unitName: 'Thùng',
-        conversionFactor: 24,
-        isBaseUnit: false,
-        formula: `1 Thùng = 24 ${prod.baseUnit || 'Lon'}`,
-        isDefaultPurchase: true,
-        isDefaultSale: false,
-        status: 'ACTIVE',
-        description: prod.packagingSpec
-      });
-    }
-    if (prod.packagingSpec && prod.packagingSpec.toLowerCase().includes('lốc')) {
-      sampleUnits.push({
-        id: 9992,
-        productId: 0,
-        sku: prod.sku,
-        unitName: 'Lốc',
-        conversionFactor: 6,
-        isBaseUnit: false,
-        formula: `1 Lốc = 6 ${prod.baseUnit || 'Lon'}`,
-        isDefaultPurchase: false,
-        isDefaultSale: false,
-        status: 'ACTIVE',
-        description: 'Lốc 6'
-      });
-    }
-
     localStorage.setItem(`erp_unit_conversions_${prod.sku}`, JSON.stringify(sampleUnits));
     return sampleUnits;
   }, []);
@@ -169,9 +202,9 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
       try {
         const data = await productUnitConversionService.getUnits(realId);
         if (Array.isArray(data) && data.length > 0) {
-          setUnits(data);
-          // Set default cho calculator
-          const nonBase = data.find((u) => !u.isBaseUnit) || data[0];
+          const sanitized = sanitizeUnitsList(data, product);
+          setUnits(sanitized);
+          const nonBase = sanitized.find((u) => !isBaseUnitRow(u, product)) || sanitized[0];
           setCalcUnitName(nonBase ? nonBase.unitName : product.baseUnit);
           setIsLoading(false);
           return;
@@ -184,7 +217,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
     // Dự phòng fallback
     const fallbackList = getStoredUnitsFallback(product);
     setUnits(fallbackList);
-    const nonBase = fallbackList.find((u) => !u.isBaseUnit) || fallbackList[0];
+    const nonBase = fallbackList.find((u) => !isBaseUnitRow(u, product)) || fallbackList[0];
     setCalcUnitName(nonBase ? nonBase.unitName : product.baseUnit);
     setIsLoading(false);
   }, [product, getStoredUnitsFallback]);
@@ -218,6 +251,10 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
 
   // Mở form chỉnh sửa
   const handleOpenEdit = (unit: ProductUnitConversion) => {
+    if (isBaseUnitRow(unit, product)) {
+      setErrorBanner(`Đơn vị cơ sở chuẩn (${product?.baseUnit}) được quản lý cố định trên thông tin sản phẩm và không thể sửa tại đây.`);
+      return;
+    }
     setEditingUnit(unit);
     setFormUnitName(unit.unitName);
     setFormFactor(unit.conversionFactor.toString());
@@ -270,6 +307,11 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
     );
     if (duplicate) {
       setErrorBanner(`Đơn vị "${name}" đã được khai báo trên SKU này.`);
+      return;
+    }
+
+    if (editingUnit && isBaseUnitRow(editingUnit, product)) {
+      setErrorBanner(`Không thể chỉnh sửa đơn vị tính cơ sở chuẩn (${product?.baseUnit}) tại đây.`);
       return;
     }
 
@@ -337,6 +379,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
             unitName: name,
             conversionFactor: factor,
             isBaseUnit: false,
+            baseUnit: false,
             formula: `1 ${name} = ${factor} ${product?.baseUnit}`,
             barcode: formBarcode.trim() || '',
             isDefaultPurchase: formDefaultPurchase,
@@ -348,10 +391,11 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
           updatedList.push(newUnit);
         }
 
+        const sanitized = sanitizeUnitsList(updatedList, product);
         if (storageKey) {
-          localStorage.setItem(storageKey, JSON.stringify(updatedList));
+          localStorage.setItem(storageKey, JSON.stringify(sanitized));
         }
-        setUnits(updatedList);
+        setUnits(sanitized);
         setSuccessBanner(editingUnit ? `Đã cập nhật đơn vị tính "${name}"!` : `Đã thêm đơn vị tính "${name}"!`);
         setIsFormOpen(false);
       }
@@ -369,6 +413,11 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
   // Xác nhận Xóa đơn vị
   const handleConfirmDelete = async () => {
     if (!deletingUnit) return;
+    if (isBaseUnitRow(deletingUnit, product)) {
+      setErrorBanner('Không thể xóa đơn vị tính cơ sở chuẩn.');
+      setDeletingUnit(null);
+      return;
+    }
     setIsDeleting(true);
     setErrorBanner(null);
 
@@ -380,10 +429,11 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
         const updatedList = units.filter(
           (u) => !(u.id === deletingUnit.id && u.unitName === deletingUnit.unitName)
         );
+        const sanitized = sanitizeUnitsList(updatedList, product);
         if (storageKey) {
-          localStorage.setItem(storageKey, JSON.stringify(updatedList));
+          localStorage.setItem(storageKey, JSON.stringify(sanitized));
         }
-        setUnits(updatedList);
+        setUnits(sanitized);
       }
 
       setSuccessBanner(`Đã xóa đơn vị quy đổi "${deletingUnit.unitName}" khỏi SKU.`);
@@ -396,7 +446,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
     }
   };
 
-  // Tính toán quy đổi nhanh (AC2)
+  // Tính toán quy đổi nhanh
   const handleCalculateConversion = async (unitName: string, qtyStr: string) => {
     setCalcUnitName(unitName);
     setCalcQuantity(qtyStr);
@@ -407,35 +457,45 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
       return;
     }
 
-    setCalcLoading(true);
-    try {
-      // Ưu tiên gọi Backend API POST /api/products/convert
-      const res = await productUnitConversionService.calculateConversion({
-        productId: resolvedProductId || undefined,
-        sku: product.sku,
-        unitName,
-        quantity: qty
-      });
-      setCalcResult(res);
-    } catch {
-      // Fallback tính toán nội bộ realtime
-      const targetUnit = units.find((u) => u.unitName === unitName);
-      const factor = targetUnit ? targetUnit.conversionFactor : 1;
-      const baseQty = qty * factor;
+    // 1. Luôn tính toán tức thời từ danh sách đơn vị hiện có trong modal
+    const targetUnit = units.find(
+      (u) => u.unitName.trim().toLowerCase() === unitName.trim().toLowerCase()
+    );
+    const factor = targetUnit ? Number(targetUnit.conversionFactor) : 1;
+    const resolvedName = targetUnit ? targetUnit.unitName : unitName;
+    const baseQty = Math.round(qty * factor * 10000) / 10000;
 
-      setCalcResult({
-        productId: resolvedProductId || 0,
-        sku: product.sku,
-        productName: product.name,
-        inputUnit: unitName,
-        inputQuantity: qty,
-        conversionFactor: factor,
-        baseUnit: product.baseUnit,
-        baseQuantity: baseQty,
-        formula: `${qty} ${unitName} × ${factor} = ${baseQty} ${product.baseUnit}`
-      });
-    } finally {
-      setCalcLoading(false);
+    const immediateResult: UnitConversionResult = {
+      productId: resolvedProductId || 0,
+      sku: product.sku,
+      productName: product.name,
+      inputUnit: resolvedName,
+      inputQuantity: qty,
+      conversionFactor: factor,
+      baseUnit: product.baseUnit,
+      baseQuantity: baseQty,
+      formula: `${qty} ${resolvedName} × ${factor} = ${baseQty} ${product.baseUnit}`
+    };
+    setCalcResult(immediateResult);
+
+    // 2. Nếu có resolvedProductId hợp lệ, đồng bộ qua backend
+    if (resolvedProductId && resolvedProductId < 9000) {
+      setCalcLoading(true);
+      try {
+        const res = await productUnitConversionService.calculateConversion({
+          productId: resolvedProductId,
+          sku: product.sku,
+          unitName: resolvedName,
+          quantity: qty
+        });
+        if (res && res.conversionFactor === factor) {
+          setCalcResult(res);
+        }
+      } catch {
+        // Fallback tức thời đã hiển thị chính xác
+      } finally {
+        setCalcLoading(false);
+      }
     }
   };
 
@@ -455,9 +515,6 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                 <h3 className="text-base sm:text-lg font-bold text-gray-900">
                   Đơn vị tính quy đổi của sản phẩm
                 </h3>
-                <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-800 border border-orange-200/60">
-                  S2-07 / SCRUM-43
-                </span>
               </div>
               <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
                 <span className="font-mono font-bold text-gray-800 bg-gray-100 px-1.5 py-0.5 rounded">
@@ -540,7 +597,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                 }`}
               >
                 <Icons.ClipboardList size={14} />
-                <span>Danh sách đơn vị ({units.length})</span>
+                <span>Đơn vị quy đổi ({conversionUnits.length})</span>
               </button>
 
               <button
@@ -548,7 +605,13 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                 onClick={() => {
                   setActiveTab('CALCULATOR');
                   setIsFormOpen(false);
-                  handleCalculateConversion(calcUnitName || product.baseUnit, calcQuantity);
+                  const validUnit =
+                    (units.some((u) => u.unitName === calcUnitName) ? calcUnitName : null) ||
+                    (units.find((u) => !isBaseUnitRow(u, product))?.unitName) ||
+                    units[0]?.unitName ||
+                    product.baseUnit;
+                  setCalcUnitName(validUnit);
+                  handleCalculateConversion(validUnit, calcQuantity || '1');
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                   activeTab === 'CALCULATOR'
@@ -557,7 +620,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                 }`}
               >
                 <Icons.Calculator size={14} />
-                <span>Máy tính quy đổi (AC2)</span>
+                <span>Máy tính quy đổi</span>
               </button>
             </div>
           </div>
@@ -624,7 +687,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                       Chọn nhanh tên đơn vị:
                     </label>
                     <div className="flex flex-wrap gap-1.5">
-                      {COMMON_CONVERSION_UNITS.map((u) => (
+                      {COMMON_CONVERSION_UNITS.filter((u) => u.toLowerCase() !== (product.baseUnit || '').toLowerCase()).map((u) => (
                         <button
                           key={u}
                           type="button"
@@ -754,7 +817,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                       <div className="flex items-start gap-2">
                         <Icons.AlertTriangle size={15} className="text-amber-600 shrink-0 mt-0.5" />
                         <p className="font-semibold">
-                          Quy tắc bất biến S2-07 AC3: Đổi hệ số quy đổi không làm sai lệch các giao dịch kho đã ghi trước đó.
+                          Quy tắc hệ thống: Đổi hệ số quy đổi không làm sai lệch các giao dịch kho đã ghi nhận trước đó.
                         </p>
                       </div>
                       <div>
@@ -826,34 +889,26 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                           </div>
                         </td>
                       </tr>
-                    ) : units.length === 0 ? (
+                    ) : conversionUnits.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-gray-400">
-                          Chưa có đơn vị quy đổi nào được khai báo.
+                        <td colSpan={7} className="py-8 text-center text-gray-500">
+                          <p className="font-semibold text-gray-700">Chưa có đơn vị quy đổi nào được cấu hình cho SKU này.</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Mọi giao dịch mua hàng, bán hàng và xuất nhập kho đang sử dụng trực tiếp đơn vị cơ sở chuẩn: <strong className="text-gray-800 font-semibold">{product.baseUnit}</strong>.
+                          </p>
                         </td>
                       </tr>
                     ) : (
-                      units.map((u, idx) => (
+                      conversionUnits.map((u, idx) => (
                         <tr
                           key={u.id || idx}
-                          className={`transition-colors ${
-                            u.isBaseUnit
-                              ? 'bg-emerald-50/30 hover:bg-emerald-50/50'
-                              : 'hover:bg-gray-50/80'
-                          }`}
+                          className="hover:bg-gray-50/80 transition-colors"
                         >
                           {/* Tên đơn vị */}
                           <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-gray-900 text-sm">
-                                {u.unitName}
-                              </span>
-                              {u.isBaseUnit && (
-                                <span className="inline-flex items-center rounded-md bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                                  ĐƠN VỊ CƠ SỞ
-                                </span>
-                              )}
-                            </div>
+                            <span className="font-bold text-gray-900 text-sm">
+                              {u.unitName}
+                            </span>
                             {u.description && (
                               <p className="text-[11px] text-gray-400 mt-0.5">
                                 {u.description}
@@ -928,33 +983,24 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
 
                           {/* Thao tác */}
                           <td className="px-4 py-3 text-center">
-                            {u.isBaseUnit ? (
-                              <span
-                                title="Đơn vị tính cơ sở chuẩn không được chỉnh sửa hoặc xóa tại đây"
-                                className="text-[11px] text-gray-400 italic cursor-help"
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                title="Chỉnh sửa đơn vị quy đổi"
+                                onClick={() => handleOpenEdit(u)}
+                                className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
                               >
-                                Mặc định
-                              </span>
-                            ) : (
-                              <div className="inline-flex items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  title="Chỉnh sửa đơn vị quy đổi"
-                                  onClick={() => handleOpenEdit(u)}
-                                  className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
-                                >
-                                  <Icons.Edit size={15} />
-                                </button>
-                                <button
-                                  type="button"
-                                  title="Xóa đơn vị quy đổi"
-                                  onClick={() => setDeletingUnit(u)}
-                                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                                >
-                                  <Icons.Trash2 size={15} />
-                                </button>
-                              </div>
-                            )}
+                                <Icons.Edit size={15} />
+                              </button>
+                              <button
+                                type="button"
+                                title="Xóa đơn vị quy đổi"
+                                onClick={() => setDeletingUnit(u)}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                              >
+                                <Icons.Trash2 size={15} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -966,14 +1012,14 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
               {/* Hướng dẫn nghiệp vụ */}
               <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-3.5 text-xs text-gray-600 space-y-1">
                 <p>
-                  <strong className="text-gray-800">Quy tắc nghiệp vụ S2-07: </strong>
+                  <strong className="text-gray-800">Quy tắc quy đổi: </strong>
                   Mỗi SKU được khai báo nhiều đơn vị quy đổi (Thùng, Lốc, Két...). Khi phát sinh đơn hàng hoặc phiếu nhập/xuất kho, thủ kho có thể chọn đơn vị bất kỳ; hệ thống sẽ tự động nhân hệ số quy đổi về số lượng đơn vị cơ sở chuẩn (<strong>{product.baseUnit}</strong>) để ghi vào thẻ kho và sổ kế toán.
                 </p>
               </div>
             </div>
           )}
 
-          {/* TAB 2: MÁY TÍNH QUY ĐỔI KHO (S2-07 AC2) */}
+          {/* TAB 2: MÁY TÍNH QUY ĐỔI KHO */}
           {activeTab === 'CALCULATOR' && (
             <div className="space-y-5 animate-in fade-in duration-200">
               <div className="p-4 rounded-xl border border-orange-200 bg-orange-50/40">
@@ -983,7 +1029,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-900 text-sm">
-                      Tiện ích tính toán quy đổi tức thời (S2-07 AC2)
+                      Tiện ích tính toán quy đổi tức thời
                     </h4>
                     <p className="text-xs text-gray-600 mt-0.5">
                       Mô phỏng nhập xuất theo thùng/lốc: Hệ thống tự động nhân hệ số để tính ra số lượng đơn vị cơ sở chuẩn ghi sổ kho.
@@ -1004,7 +1050,10 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                       onChange={(e) => handleCalculateConversion(e.target.value, calcQuantity)}
                       className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                     >
-                      {units.map((u) => (
+                      <option value={product.baseUnit}>
+                        {product.baseUnit} (Đơn vị cơ sở chuẩn - Hệ số: 1)
+                      </option>
+                      {conversionUnits.map((u) => (
                         <option key={u.unitName} value={u.unitName}>
                           {u.unitName} (Hệ số: {u.conversionFactor} {product.baseUnit})
                         </option>
@@ -1128,7 +1177,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
         {/* Footer Modal */}
         <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4 bg-gray-50 shrink-0">
           <div className="text-xs text-gray-500">
-            Tổng số đơn vị khả dụng: <strong className="text-gray-900">{units.length}</strong> (Gồm 1 đơn vị cơ sở)
+            Số đơn vị quy đổi: <strong className="text-gray-900">{conversionUnits.length}</strong> (Đơn vị tính cơ sở chuẩn: <strong className="text-gray-900">{product.baseUnit}</strong>)
           </div>
 
           <button

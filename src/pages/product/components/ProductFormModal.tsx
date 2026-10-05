@@ -141,7 +141,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           packagingSpec: packagingSpec.trim(),
           costPrice: parsedCost,
           imageUrl: imageUrl.trim(),
-          status
+          status: 'ACTIVE'
         };
 
         const res = await productService.createProduct(createPayload, currentRole);
@@ -200,23 +200,60 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               </div>
             )}
 
-            {/* 1. Mã SKU & 8. Trạng thái */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* 1. Mã SKU & Trạng thái kinh doanh */}
+            {isEditing ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+                    1. Mã SKU duy nhất <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={sku}
+                    disabled
+                    className="w-full px-3.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-sm font-mono font-semibold uppercase tracking-wider text-gray-700 opacity-80 cursor-not-allowed min-h-[44px]"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Mã SKU cố định không được thay đổi</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+                    Trạng thái kinh doanh <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as ProductStatus)}
+                    disabled={isSubmitting}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
+                  >
+                    <option value="ACTIVE">Đang kinh doanh (ACTIVE)</option>
+                    <option value="INACTIVE">Ngừng kinh doanh (INACTIVE)</option>
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1">Chuyển sang "Ngừng kinh doanh" khi sản phẩm ngừng lưu hành</p>
+                </div>
+              </div>
+            ) : (
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
-                  1. Mã SKU duy nhất <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    1. Mã SKU duy nhất <span className="text-red-500">*</span>
+                  </label>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    Mặc định: Đang kinh doanh
+                  </span>
+                </div>
                 <input
                   type="text"
                   value={sku}
                   onChange={(e) => handleSkuChange(e.target.value)}
                   placeholder="VD: SP-COCA-330"
-                  disabled={isEditing || isSubmitting}
+                  disabled={isSubmitting}
                   className={`w-full px-3.5 py-2.5 bg-gray-50 border rounded-xl text-sm font-mono font-semibold uppercase tracking-wider text-gray-900 focus:outline-none focus:ring-2 transition-all min-h-[44px] ${
                     skuError
                       ? 'border-red-400 focus:ring-red-500/20 focus:border-red-500'
                       : 'border-gray-200 focus:ring-orange-500/20 focus:border-orange-500'
-                  } ${isEditing ? 'opacity-70 bg-gray-100 cursor-not-allowed' : ''}`}
+                  }`}
                 />
                 {skuError ? (
                   <p className="text-xs text-red-600 font-medium mt-1">{skuError}</p>
@@ -224,23 +261,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   <p className="text-xs text-gray-400 mt-1">Mã nhận diện duy nhất toàn hệ thống (không trùng lặp)</p>
                 )}
               </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
-                  8. Trạng thái kinh doanh <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as ProductStatus)}
-                  disabled={isSubmitting}
-                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
-                >
-                  <option value="ACTIVE">Đang kinh doanh (ACTIVE)</option>
-                  <option value="INACTIVE">Ngừng kinh doanh (INACTIVE)</option>
-                </select>
-                <p className="text-xs text-gray-400 mt-1">Sản phẩm ngừng kinh doanh vẫn lưu vết lịch sử giao dịch</p>
-              </div>
-            </div>
+            )}
 
             {/* 2. Tên sản phẩm */}
             <div>

@@ -506,7 +506,7 @@ export const UserManagementPage: React.FC = () => {
               color: '#ffffff',
               boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)'
             }}
-            title="Nhập danh sách người dùng hàng loạt từ tệp Excel (SCRUM-18 / S2-01)"
+            title="Nhập danh sách người dùng hàng loạt từ tệp Excel"
           >
             <FileSpreadsheet size={18} />
             <span>Nhập Từ Excel</span>

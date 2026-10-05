@@ -28,7 +28,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
-  Building2,
   SlidersHorizontal
 } from '../../components/common/Icons';
 
