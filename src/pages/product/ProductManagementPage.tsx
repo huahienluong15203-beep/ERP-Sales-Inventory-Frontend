@@ -15,6 +15,7 @@ import { ProductUnitConversionModal } from './components/ProductUnitConversionMo
 export const ProductManagementPage: React.FC = () => {
   const { currentRole } = useAuth();
   const canSeeCost = canManageCostPrice(currentRole);
+  const canManageProducts = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER';
 
   const [products, setProducts] = useState<Product[]>([]);
   const [keyword, setKeyword] = useState('');
@@ -126,26 +127,28 @@ export const ProductManagementPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => setIsImportModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-sm font-semibold px-4 py-2.5 rounded-xl shadow-2xs hover:shadow-xs transition-all duration-200 min-h-[44px]"
-            title="Nhập danh mục sản phẩm hàng loạt từ Excel (S2-08)"
-          >
-            <Icons.ClipboardList size={18} className="text-emerald-700" />
-            <span>Nhập từ Excel</span>
-          </button>
+        {canManageProducts && (
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsImportModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-sm font-semibold px-4 py-2.5 rounded-xl shadow-2xs hover:shadow-xs transition-all duration-200 min-h-[44px]"
+              title="Nhập danh mục sản phẩm từ file Excel"
+            >
+              <Icons.ClipboardList size={18} className="text-emerald-700" />
+              <span>Nhập từ Excel</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={handleOpenCreate}
-            className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow transition-all duration-200 min-h-[44px]"
-          >
-            <Icons.Plus size={18} />
-            <span>Thêm sản phẩm mới</span>
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={handleOpenCreate}
+              className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow transition-all duration-200 min-h-[44px]"
+            >
+              <Icons.Plus size={18} />
+              <span>Thêm sản phẩm mới</span>
+            </button>
+          </div>
+        )}
       </div>
 
 
@@ -330,7 +333,7 @@ export const ProductManagementPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setUnitConversionProduct(p)}
-                          title="Bấm để xem và quản lý các đơn vị tính quy đổi (S2-07)"
+                          title="Xem và quản lý các đơn vị tính quy đổi"
                           className="inline-flex items-center gap-1.5 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:text-orange-800 border border-orange-200/80 px-2.5 py-0.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                         >
                           <span>{p.baseUnit}</span>
@@ -378,38 +381,42 @@ export const ProductManagementPage: React.FC = () => {
                         <div className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
-                            title="Quản lý đơn vị quy đổi (S2-07)"
+                            title="Quản lý đơn vị tính quy đổi"
                             onClick={() => setUnitConversionProduct(p)}
                             className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
                           >
                             <Icons.Scale size={16} />
                           </button>
 
-                          <button
-                            type="button"
-                            title="Sửa thông tin"
-                            onClick={() => handleOpenEdit(p)}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
-                          >
-                            <Icons.Edit size={16} />
-                          </button>
+                          {canManageProducts && (
+                            <>
+                              <button
+                                type="button"
+                                title="Sửa thông tin sản phẩm"
+                                onClick={() => handleOpenEdit(p)}
+                                className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
+                              >
+                                <Icons.Edit size={16} />
+                              </button>
 
-                          <button
-                            type="button"
-                            title={
-                              p.transactionCount > 0
-                                ? 'Đã có giao dịch: Không được xóa, chỉ được ngừng kinh doanh'
-                                : 'Xóa sản phẩm'
-                            }
-                            onClick={() => handleDeleteClick(p)}
-                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                              p.transactionCount > 0
-                                ? 'text-amber-600 hover:bg-amber-50'
-                                : 'text-red-500 hover:text-red-700 hover:bg-red-50'
-                            }`}
-                          >
-                            <Icons.Trash2 size={16} />
-                          </button>
+                              <button
+                                type="button"
+                                title={
+                                  p.transactionCount > 0
+                                    ? 'Đã có giao dịch: Không được xóa, chỉ được ngừng kinh doanh'
+                                    : 'Xóa sản phẩm'
+                                }
+                                onClick={() => handleDeleteClick(p)}
+                                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                  p.transactionCount > 0
+                                    ? 'text-amber-600 hover:bg-amber-50'
+                                    : 'text-red-500 hover:text-red-700 hover:bg-red-50'
+                                }`}
+                              >
+                                <Icons.Trash2 size={16} />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -514,7 +521,7 @@ export const ProductManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Nhập danh mục sản phẩm từ Excel (S2-08 / SCRUM-44) */}
+      {/* Modal Nhập danh mục sản phẩm từ Excel */}
       <ProductExcelImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
@@ -525,7 +532,7 @@ export const ProductManagementPage: React.FC = () => {
         }}
       />
 
-      {/* Modal Quản lý Đơn vị tính quy đổi (S2-07 / SCRUM-43) */}
+      {/* Modal Quản lý Đơn vị tính quy đổi */}
       <ProductUnitConversionModal
         isOpen={Boolean(unitConversionProduct)}
         onClose={() => setUnitConversionProduct(null)}

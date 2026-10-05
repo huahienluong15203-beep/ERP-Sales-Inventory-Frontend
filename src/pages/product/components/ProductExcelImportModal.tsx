@@ -153,9 +153,6 @@ export const ProductExcelImportModal: React.FC<ProductExcelImportModalProps> = (
                 <h3 className="text-base sm:text-lg font-bold text-gray-900">
                   Nhập danh mục sản phẩm từ Excel
                 </h3>
-                <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-800 border border-orange-200/60">
-                  S2-08 / SCRUM-44
-                </span>
               </div>
               <p className="text-xs text-gray-500">
                 Nhập hàng loạt đến 5.000 mã hàng. Xem trước và tự động cập nhật sản phẩm nếu SKU đã tồn tại.
@@ -400,7 +397,7 @@ export const ProductExcelImportModal: React.FC<ProductExcelImportModalProps> = (
                 <div className="flex items-start space-x-2">
                   <Icons.CheckSquare size={16} className="mt-0.5 shrink-0 text-[#F85606]" />
                   <p>
-                    <strong className="font-semibold text-gray-900">Quy tắc nghiệp vụ S2-08: </strong>
+                    <strong className="font-semibold text-gray-900">Quy tắc nhập dữ liệu: </strong>
                     Hệ thống tự động đối soát SKU. Những SKU đã có trên danh mục sẽ được gán nhãn{' '}
                     <span className="rounded bg-amber-100 px-1.5 py-0.5 font-bold text-amber-800 border border-amber-200">
                       CẬP NHẬT

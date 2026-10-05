@@ -139,7 +139,7 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
 
     // Sheet 2: Hướng dẫn & Quy định
     const ws2Data = [
-      ['HƯỚNG DẪN QUY CHUẨN NHẬP DỮ LIỆU NGƯỜI DÙNG TỪ EXCEL (SCRUM-18 / S2-01)'],
+      ['HƯỚNG DẪN QUY CHUẨN NHẬP DỮ LIỆU NGƯỜI DÙNG TỪ EXCEL'],
       [''],
       ['1. Các cột có dấu (*) là bắt buộc phải nhập dữ liệu.'],
       ['2. Tên đăng nhập: 3 - 50 ký tự, viết liền không dấu, không trùng với tài khoản đã có trong hệ thống.'],
