@@ -599,7 +599,7 @@ export const CategoryManagement: React.FC = () => {
       {/* Toast thông báo nhanh */}
       {toastMessage && (
         <div
-          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 border text-xs font-medium animate-bounce transition-all ${
+          className={`fixed top-4 right-4 z-[10000] px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 border text-xs font-medium animate-bounce transition-all ${
             toastMessage.type === 'error'
               ? 'bg-red-50 border-red-200 text-red-700'
               : toastMessage.type === 'info'

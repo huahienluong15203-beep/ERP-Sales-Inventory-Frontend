@@ -205,7 +205,7 @@ export const VolumeDiscountPage: React.FC = () => {
     <div className="space-y-6 pb-12">
       {/* Toast thông báo */}
       {toastMsg && (
-        <div className="fixed right-6 top-20 z-50 flex items-center space-x-2 rounded-xl bg-gray-900 px-4 py-3 text-xs font-semibold text-white shadow-xl">
+        <div className="fixed right-6 top-20 z-[10000] flex items-center space-x-2 rounded-xl bg-gray-900 px-4 py-3 text-xs font-semibold text-white shadow-xl">
           {toastMsg.type === 'success' ? (
             <Icons.CheckSquare size={16} className="text-emerald-400" />
           ) : (
