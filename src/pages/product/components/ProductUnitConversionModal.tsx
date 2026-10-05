@@ -557,7 +557,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
         action: 'DELETE_UNIT_CONVERSION',
         actionLabel: 'Xóa đơn vị quy đổi',
         targetType: 'PRODUCT_UNIT',
-        targetId: deletingUnit.id,
+        targetId: deletingUnit.id ?? undefined,
         targetCode: product?.sku || 'SKU',
         targetName: product?.name || 'Sản phẩm',
         actorId: user?.id || 1,

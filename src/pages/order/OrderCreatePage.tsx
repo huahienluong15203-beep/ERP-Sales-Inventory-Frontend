@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Agency, DeliveryPoint } from '../../types/agency';
-import type { OrderDraft, OrderItem } from '../../types/order';
+import type { OrderDraft, OrderItem, OrderDraftBackendRequest } from '../../types/order';
 import type { OrderProductCatalogItem } from '../../services/orderService';
 import {
   createOrderItemFromCatalog,
@@ -13,8 +13,13 @@ import {
   getActiveDraft,
   setActiveDraft,
   clearActiveDraft,
-  formatCurrencyVND
+  formatCurrencyVND,
+  previewOrderOnBackend,
+  saveDraftToBackend,
+  fetchBackendDrafts,
+  fetchBackendDraftById
 } from '../../services/orderService';
+import { fetchAgencies, fetchDeliveryPointsByAgency } from '../../services/agencyApi';
 import { useAuth } from '../../contexts/AuthContext';
 import { OrderHeaderCard } from '../../components/order/OrderHeaderCard';
 import { OrderItemRow } from '../../components/order/OrderItemRow';
@@ -27,7 +32,8 @@ import {
   CheckCircle2,
   FileText,
   RefreshCw,
-  Tag
+  Tag,
+  AlertTriangle
 } from '../../components/common/Icons';
 
 export const OrderCreatePage: React.FC = () => {
@@ -35,6 +41,8 @@ export const OrderCreatePage: React.FC = () => {
 
   // Dữ liệu đơn hàng hiện tại
   const [currentDraftId, setCurrentDraftId] = useState<string>(() => `DRAFT-${Date.now()}`);
+  const [backendDraftId, setBackendDraftId] = useState<number | null>(null);
+  const [backendWarnings, setBackendWarnings] = useState<string[]>([]);
   const [selectedAgency, setSelectedAgency] = useState<Agency | null>(null);
   const [selectedDeliveryPoint, setSelectedDeliveryPoint] = useState<DeliveryPoint | null>(null);
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<string>(() => {
@@ -189,8 +197,39 @@ export const OrderCreatePage: React.FC = () => {
     showToast('Tạo đơn mới', 'Đã khởi tạo form đặt hàng mới', 'info');
   };
 
+  // Kết nối Backend Real-time Preview khi có đại lý backend và sản phẩm
+  useEffect(() => {
+    if (selectedAgency?.id && /^\d+$/.test(selectedAgency.id) && items.length > 0) {
+      const backendReq: OrderDraftBackendRequest = {
+        draftId: backendDraftId,
+        customerId: Number(selectedAgency.id),
+        deliveryAddressId:
+          selectedDeliveryPoint?.id && /^\d+$/.test(selectedDeliveryPoint.id)
+            ? Number(selectedDeliveryPoint.id)
+            : null,
+        desiredDeliveryDate: expectedDeliveryDate || null,
+        note: orderNote || null,
+        lines: items.map((it) => ({
+          productSku: it.sku,
+          unitName: it.selectedUnit,
+          quantity: it.quantity
+        }))
+      };
+
+      previewOrderOnBackend(backendReq).then((res) => {
+        if (res && res.warnings) {
+          setBackendWarnings(res.warnings);
+        } else {
+          setBackendWarnings([]);
+        }
+      });
+    } else {
+      setBackendWarnings([]);
+    }
+  }, [selectedAgency?.id, selectedDeliveryPoint?.id, expectedDeliveryDate, orderNote, items, backendDraftId]);
+
   // Xử lý Lưu Nháp (Draft)
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (!selectedAgency && items.length === 0) {
       showToast('Chưa có thông tin', 'Vui lòng chọn đại lý hoặc thêm sản phẩm trước khi lưu nháp', 'error');
       return;
@@ -199,6 +238,7 @@ export const OrderCreatePage: React.FC = () => {
     setIsSavingDraft(true);
     const draftObj: OrderDraft = {
       id: currentDraftId,
+      backendDraftId: backendDraftId || undefined,
       status: 'DRAFT',
       agencyId: selectedAgency?.id || '',
       agencyCode: selectedAgency?.code || '',
@@ -224,14 +264,100 @@ export const OrderCreatePage: React.FC = () => {
       updatedAt: new Date().toISOString()
     };
 
+    // Nếu là đại lý backend và có sản phẩm, lưu trực tiếp lên Backend API
+    if (selectedAgency?.id && /^\d+$/.test(selectedAgency.id) && items.length > 0) {
+      const backendReq: OrderDraftBackendRequest = {
+        draftId: backendDraftId,
+        customerId: Number(selectedAgency.id),
+        deliveryAddressId:
+          selectedDeliveryPoint?.id && /^\d+$/.test(selectedDeliveryPoint.id)
+            ? Number(selectedDeliveryPoint.id)
+            : null,
+        desiredDeliveryDate: expectedDeliveryDate || null,
+        note: orderNote || null,
+        lines: items.map((it) => ({
+          productSku: it.sku,
+          unitName: it.selectedUnit,
+          quantity: it.quantity
+        }))
+      };
+
+      try {
+        const beRes = await saveDraftToBackend(backendReq, backendDraftId);
+        if (beRes && beRes.id) {
+          draftObj.backendDraftId = beRes.id;
+          draftObj.orderNumber = beRes.code || undefined;
+          setBackendDraftId(beRes.id);
+          saveDraft(draftObj);
+          setSavedDrafts(getSavedDrafts());
+          setIsSavingDraft(false);
+          showToast('Đã lưu nháp máy chủ', `Đã lưu đơn nháp lên máy chủ thành công [Mã: ${beRes.code}]`, 'success');
+          return;
+        }
+      } catch (err) {
+        console.warn('Lỗi lưu nháp backend:', err);
+      }
+    }
+
     saveDraft(draftObj);
     setSavedDrafts(getSavedDrafts());
     setIsSavingDraft(false);
     showToast('Đã lưu nháp', `Đã lưu đơn nháp [${draftObj.id}]. Bạn có thể mở lại gõ bất cứ lúc nào!`, 'success');
   };
 
+  // Mở danh sách đơn nháp (Đồng bộ từ Backend + Local)
+  const handleOpenDraftsModal = async () => {
+    setIsDraftsModalOpen(true);
+    try {
+      const beDrafts = await fetchBackendDrafts();
+      const localDrafts = getSavedDrafts();
+      if (beDrafts.length > 0) {
+        const beIds = new Set(beDrafts.map((d) => d.backendDraftId));
+        const merged = [...beDrafts, ...localDrafts.filter((d) => !d.backendDraftId || !beIds.has(d.backendDraftId))];
+        setSavedDrafts(merged);
+      } else {
+        setSavedDrafts(localDrafts);
+      }
+    } catch {
+      setSavedDrafts(getSavedDrafts());
+    }
+  };
+
   // Mở lại đơn nháp đã lưu
-  const handleSelectSavedDraft = (draft: OrderDraft) => {
+  const handleSelectSavedDraft = async (draft: OrderDraft) => {
+    // Nếu là đơn nháp từ Backend, tải chi tiết đầy đủ từ API
+    if (draft.backendDraftId) {
+      const full = await fetchBackendDraftById(draft.backendDraftId);
+      if (full) {
+        setBackendDraftId(full.backendDraftId || null);
+        setCurrentDraftId(full.id);
+        setExpectedDeliveryDate(full.expectedDeliveryDate || expectedDeliveryDate);
+        setOrderNote(full.note || '');
+        setItems(full.items || []);
+
+        // Khôi phục đại lý từ API
+        try {
+          const agencyRes = await fetchAgencies({ keyword: full.agencyCode || full.agencyName });
+          const matched = agencyRes.content.find((a) => a.id === full.agencyId || a.code === full.agencyCode);
+          if (matched) {
+            setSelectedAgency(matched);
+            if (full.deliveryPointId) {
+              const points = await fetchDeliveryPointsByAgency(matched.id);
+              const p = points.find((pt: DeliveryPoint) => pt.id === full.deliveryPointId) || points[0];
+              if (p) setSelectedDeliveryPoint(p);
+            }
+          }
+        } catch (err) {
+          console.warn('Lỗi phục hồi đại lý từ backend:', err);
+        }
+
+        showToast('Đã mở đơn nháp', `Đã tải lại đơn nháp [${full.orderNumber || full.id}] từ máy chủ`, 'info');
+        setIsDraftsModalOpen(false);
+        return;
+      }
+    }
+
+    setBackendDraftId(draft.backendDraftId || null);
     setCurrentDraftId(draft.id);
     setExpectedDeliveryDate(draft.expectedDeliveryDate || expectedDeliveryDate);
     setOrderNote(draft.note || '');
@@ -383,9 +509,9 @@ export const OrderCreatePage: React.FC = () => {
           {/* Nút Xem danh sách đơn nháp */}
           <button
             type="button"
-            onClick={() => setIsDraftsModalOpen(true)}
+            onClick={handleOpenDraftsModal}
             className="px-3 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:border-orange-200 hover:text-[#F85606] hover:bg-orange-50/50 flex items-center gap-1.5 transition-all relative"
-            title="Xem các đơn nháp đã lưu trên máy"
+            title="Xem các đơn nháp đã lưu trên máy hoặc máy chủ"
           >
             <FileText size={15} />
             <span>Đơn Nháp</span>
@@ -410,6 +536,18 @@ export const OrderCreatePage: React.FC = () => {
 
       {/* Nội dung tạo đơn */}
       <div className="space-y-5">
+
+        {/* CẢNH BÁO TỪ BACKEND NẾU CÓ (S3-07 / S3-09) */}
+        {backendWarnings.length > 0 && (
+          <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 space-y-1.5 animate-in fade-in">
+            {backendWarnings.map((warn, wIdx) => (
+              <div key={wIdx} className="flex items-start gap-2 text-xs font-semibold">
+                <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                <span>{warn}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* 2. KHỐI 1: CHỌN ĐẠI LÝ & ĐIỂM GIAO HÀNG */}
         <OrderHeaderCard
@@ -567,6 +705,7 @@ export const OrderCreatePage: React.FC = () => {
         onClose={() => setIsProductPickerOpen(false)}
         onSelectProduct={handleAddProduct}
         addedSkuList={addedSkuList}
+        agency={selectedAgency}
       />
 
       {/* MODAL 2: XEM VÀ MỞ LẠI ĐƠN NHÁP */}

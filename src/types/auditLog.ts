@@ -59,6 +59,7 @@ export interface AuditLogFilterParams {
 
 export interface AuditLogPageResponse {
   content: AuditLogItem[];
+  logs?: AuditLogItem[];
   page: number;
   size: number;
   totalElements: number;

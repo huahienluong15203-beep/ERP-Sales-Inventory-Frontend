@@ -3,7 +3,15 @@
  * Phân hệ: EP-04 Đặt hàng & Duyệt ngoại lệ (order, cart, approval)
  */
 
-import type { OrderDraft, OrderItem, OrderItemUnitOption } from '../types/order';
+import { authFetch, API_BASE_URL } from './api';
+import type {
+  OrderDraft,
+  OrderItem,
+  OrderItemUnitOption,
+  OrderDraftBackendRequest,
+  OrderBackendResponse,
+  ProductOptionBackendResponse
+} from '../types/order';
 import type { CustomerGroupId } from '../types/agency';
 
 const DRAFTS_STORAGE_KEY = 'erp_order_drafts_v1';
@@ -20,6 +28,9 @@ export interface OrderProductCatalogItem {
   category: string;
   baseUnit: string;
   basePrice: number; // Giá bán lẻ niêm yết theo đơn vị cơ sở
+  priceAvailable?: boolean;
+  priceMessage?: string | null;
+  priceListCode?: string | null;
   availableUnits: {
     unitName: string;
     conversionFactor: number;
@@ -379,7 +390,228 @@ export function getSavedDrafts(): OrderDraft[] {
 }
 
 /**
- * Lưu đơn nháp vào LocalStorage (hỗ trợ tạo mới hoặc cập nhật đơn dở)
+ * 1. Gọi Backend API /api/orders/product-options để lấy gợi ý sản phẩm và giá theo nhóm khách hàng (S3-09)
+ */
+export async function fetchBackendProductOptions(
+  customerId?: string | number,
+  keyword?: string
+): Promise<OrderProductCatalogItem[]> {
+  if (customerId && /^\d+$/.test(String(customerId))) {
+    try {
+      const kw = keyword && keyword.trim() ? encodeURIComponent(keyword.trim()) : '';
+      const url = `${API_BASE_URL}/api/orders/product-options?customerId=${customerId}${kw ? `&keyword=${kw}` : ''}`;
+      const res = await authFetch(url);
+      if (res.ok) {
+        const data: ProductOptionBackendResponse[] = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data.map((item) => ({
+            id: String(item.productId),
+            sku: item.sku,
+            name: item.name,
+            category: 'Sản phẩm kinh doanh',
+            baseUnit: item.baseUnit,
+            basePrice: Number(item.unitPrice || 0),
+            priceAvailable: item.priceAvailable,
+            priceMessage: item.message,
+            priceListCode: item.priceListCode,
+            availableUnits: (item.units || []).map((u) => ({
+              unitName: u.unitName,
+              conversionFactor: Number(u.conversionFactor),
+              isBaseUnit: u.unitName.trim().toLowerCase() === item.baseUnit.trim().toLowerCase()
+            })),
+            stockAvailable: 9999
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn('Lỗi gọi /api/orders/product-options, fallback sang catalog cục bộ:', err);
+    }
+  }
+
+  // Fallback sang CATALOG_ORDERABLE_PRODUCTS
+  let list = CATALOG_ORDERABLE_PRODUCTS;
+  if (keyword && keyword.trim()) {
+    const q = keyword.trim().toLowerCase();
+    list = list.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
+  }
+  return list.map((p) => ({ ...p, priceAvailable: true }));
+}
+
+/**
+ * 2. Gọi Backend API /api/orders/preview để tính tổng tiền, chiết khấu và cảnh báo (S3-09)
+ */
+export async function previewOrderOnBackend(
+  request: OrderDraftBackendRequest
+): Promise<OrderBackendResponse | null> {
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/orders/preview`, {
+      method: 'POST',
+      body: JSON.stringify(request)
+    });
+    if (res.ok) {
+      return (await res.json()) as OrderBackendResponse;
+    }
+    const errData = await res.json().catch(() => null);
+    console.warn('Backend preview phản hồi lỗi:', errData);
+  } catch (err) {
+    console.warn('Không thể kết nối /api/orders/preview:', err);
+  }
+  return null;
+}
+
+/**
+ * 3. Lưu đơn nháp lên máy chủ Backend (/api/orders/drafts hoặc PUT /api/orders/{id})
+ */
+export async function saveDraftToBackend(
+  request: OrderDraftBackendRequest,
+  draftId?: number | null
+): Promise<OrderBackendResponse | null> {
+  try {
+    const isUpdate = Boolean(draftId && draftId > 0);
+    const url = isUpdate
+      ? `${API_BASE_URL}/api/orders/${draftId}`
+      : `${API_BASE_URL}/api/orders/drafts`;
+    const method = isUpdate ? 'PUT' : 'POST';
+
+    const res = await authFetch(url, {
+      method,
+      body: JSON.stringify(request)
+    });
+
+    if (res.ok) {
+      return (await res.json()) as OrderBackendResponse;
+    }
+    const err = await res.json().catch(() => null);
+    console.warn('Lưu nháp backend thất bại:', err);
+  } catch (err) {
+    console.warn('Lỗi kết nối lưu nháp lên backend:', err);
+  }
+  return null;
+}
+
+/**
+ * 4. Tải danh sách đơn nháp từ Backend (GET /api/orders?status=DRAFT)
+ */
+export async function fetchBackendDrafts(keyword?: string): Promise<OrderDraft[]> {
+  try {
+    const kw = keyword && keyword.trim() ? encodeURIComponent(keyword.trim()) : '';
+    const res = await authFetch(`${API_BASE_URL}/api/orders?status=DRAFT${kw ? `&keyword=${kw}` : ''}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.content)) {
+        return data.content.map((item: any) => ({
+          id: `BACKEND-DRAFT-${item.id}`,
+          backendDraftId: item.id,
+          orderNumber: item.code,
+          status: 'DRAFT',
+          agencyId: String(item.customerId),
+          agencyCode: item.customerCode,
+          agencyName: item.customerName,
+          customerGroup: 'TIER_1',
+          customerGroupName: 'Đại lý Cấp 1',
+          pricingTierCode: 'BG-C1',
+          pricingTierName: 'Bảng giá áp dụng',
+          deliveryPointId: '',
+          deliveryPointName: 'Kho đại lý',
+          deliveryAddress: '',
+          expectedDeliveryDate: item.desiredDeliveryDate || new Date().toISOString().slice(0, 10),
+          items: [],
+          totalItemsCount: item.lineCount || 0,
+          totalQuantity: item.lineCount || 0,
+          subtotalAmount: Number(item.totalAmount || 0),
+          discountAmount: 0,
+          totalPayable: Number(item.totalAmount || 0),
+          salesRepId: '3',
+          salesRepName: item.createdByUsername || 'sales_rep',
+          createdAt: item.updatedAt || new Date().toISOString(),
+          updatedAt: item.updatedAt || new Date().toISOString()
+        } as OrderDraft));
+      }
+    }
+  } catch (err) {
+    console.warn('Không thể tải đơn nháp từ backend:', err);
+  }
+  return [];
+}
+
+/**
+ * 5. Tải chi tiết một đơn nháp từ Backend (GET /api/orders/{id})
+ */
+export async function fetchBackendDraftById(id: number): Promise<OrderDraft | null> {
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/orders/${id}`);
+    if (res.ok) {
+      const data: OrderBackendResponse = await res.json();
+      const items: OrderItem[] = (data.lines || []).map((line, idx) => ({
+        id: `line-${line.productId}-${idx}`,
+        productId: line.productId,
+        sku: line.productSku,
+        name: line.productName,
+        baseUnit: line.baseUnit,
+        selectedUnit: line.unitName,
+        conversionFactor: Number(line.conversionFactor || 1),
+        quantity: Number(line.quantity),
+        baseQuantity: Number(line.baseQuantity),
+        unitPrice: Number(line.pricePerUnit),
+        rawAmount: Number(line.grossAmount),
+        discountPercent: line.discountAmount > 0 && line.grossAmount > 0 ? (line.discountAmount / line.grossAmount) * 100 : 0,
+        discountAmount: Number(line.discountAmount),
+        finalAmount: Number(line.netAmount),
+        appliedDiscountNote: line.discountPolicyCode ? `Chính sách ${line.discountPolicyCode}` : undefined,
+        availableUnits: [
+          {
+            unitName: line.unitName,
+            conversionFactor: Number(line.conversionFactor || 1),
+            isBaseUnit: line.unitName === line.baseUnit,
+            unitPrice: Number(line.pricePerUnit)
+          }
+        ]
+      }));
+
+      const grpId: CustomerGroupId =
+        data.customerGroup === 'DEALER_LEVEL_1'
+          ? 'TIER_1'
+          : data.customerGroup === 'DEALER_LEVEL_2'
+          ? 'TIER_2'
+          : 'RETAIL_SHOWROOM';
+
+      return {
+        id: `BACKEND-DRAFT-${data.id}`,
+        backendDraftId: data.id || undefined,
+        orderNumber: data.code || undefined,
+        status: 'DRAFT',
+        agencyId: String(data.customerId),
+        agencyCode: data.customerCode,
+        agencyName: data.customerName,
+        customerGroup: grpId,
+        customerGroupName: data.customerGroupLabel || 'Đại lý',
+        pricingTierCode: data.lines?.[0]?.priceListCode || 'BG-STANDARD',
+        pricingTierName: data.lines?.[0]?.priceListCode || 'Bảng giá chuẩn',
+        deliveryPointId: data.deliveryAddress ? String(data.deliveryAddress.id) : '',
+        deliveryPointName: data.deliveryAddress?.label || 'Kho chính đại lý',
+        deliveryAddress: data.deliveryAddress?.address || '',
+        expectedDeliveryDate: data.desiredDeliveryDate || new Date().toISOString().slice(0, 10),
+        note: data.note || '',
+        items,
+        totalItemsCount: items.length,
+        totalQuantity: items.reduce((acc, i) => acc + i.quantity, 0),
+        subtotalAmount: Number(data.subtotal || 0),
+        discountAmount: Number(data.discountTotal || 0),
+        totalPayable: Number(data.totalAmount || 0),
+        salesRepId: '3',
+        salesRepName: data.createdByUsername || 'sales_rep',
+        createdAt: data.createdAt || new Date().toISOString(),
+        updatedAt: data.updatedAt || new Date().toISOString()
+      };
+    }
+  } catch (err) {
+    console.warn('Lỗi lấy chi tiết đơn nháp backend:', err);
+  }
+  return null;
+}
+
+/**
+ * Lưu đơn nháp vào LocalStorage và đồng bộ lên Backend nếu là đại lý backend
  */
 export function saveDraft(draft: OrderDraft): OrderDraft {
   const drafts = getSavedDrafts();
@@ -398,6 +630,30 @@ export function saveDraft(draft: OrderDraft): OrderDraft {
   }
 
   localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
+
+  // Đồng bộ lên backend bất đồng bộ nếu agencyId là số
+  if (/^\d+$/.test(draft.agencyId)) {
+    const backendReq: OrderDraftBackendRequest = {
+      draftId: draft.backendDraftId || null,
+      customerId: Number(draft.agencyId),
+      deliveryAddressId: /^\d+$/.test(draft.deliveryPointId) ? Number(draft.deliveryPointId) : null,
+      desiredDeliveryDate: draft.expectedDeliveryDate || null,
+      note: draft.note || null,
+      lines: draft.items.map((it) => ({
+        productSku: it.sku,
+        unitName: it.selectedUnit,
+        quantity: it.quantity
+      }))
+    };
+    saveDraftToBackend(backendReq, draft.backendDraftId).then((res) => {
+      if (res && res.id) {
+        updatedDraft.backendDraftId = res.id;
+        updatedDraft.orderNumber = res.code || undefined;
+        localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
+      }
+    });
+  }
+
   return updatedDraft;
 }
 

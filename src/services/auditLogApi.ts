@@ -386,6 +386,7 @@ export async function fetchAuditLogs(
           targetType?: string;
           targetId?: number;
           targetCode?: string;
+          targetName?: string;
           actorId?: number;
           actorUsername?: string;
           actorFullName?: string;
@@ -457,6 +458,7 @@ export async function fetchAuditLogs(
 
           return {
             content: combined,
+            logs: combined,
             totalElements: (json.totalElements || mappedContent.length) + localLogs.length,
             totalPages: json.totalPages || Math.ceil(mappedContent.length / size),
             page: json.page || page,
@@ -517,6 +519,7 @@ export async function fetchAuditLogs(
 
   return {
     content: pagedLogs,
+    logs: pagedLogs,
     page,
     size,
     totalElements,

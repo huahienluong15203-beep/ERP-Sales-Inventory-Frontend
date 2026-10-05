@@ -53,6 +53,7 @@ export interface OrderItem {
  */
 export interface OrderDraft {
   id: string;                       // Mã đơn nháp (vd: DRAFT-20261005-XXXX)
+  backendDraftId?: number;          // ID đơn nháp trên máy chủ Backend (nếu có)
   orderNumber?: string;             // Số hiệu đơn hàng khi đã chốt (vd: DH-20261005-001)
   status: OrderStatus;
   // Thông tin đại lý mua hàng
@@ -126,4 +127,84 @@ export interface SaveOrderPayload {
     unitPrice: number;
   }[];
   isDraft: boolean; // true = Lưu nháp, false = Chốt đơn chính thức
+}
+
+/**
+ * Backend API DTOs cho Story S3-09
+ */
+export interface OrderDraftBackendRequest {
+  draftId?: number | null;
+  customerId: number;
+  deliveryAddressId?: number | null;
+  desiredDeliveryDate?: string | null;
+  note?: string | null;
+  lines: Array<{
+    productSku: string;
+    unitName?: string | null;
+    quantity: number;
+  }>;
+}
+
+export interface OrderLineBackendResponse {
+  id?: number | null;
+  lineNo: number;
+  productId: number;
+  productSku: string;
+  productName: string;
+  unitName: string;
+  conversionFactor: number;
+  quantity: number;
+  baseUnit: string;
+  baseQuantity: number;
+  priceListCode?: string | null;
+  unitPrice: number;
+  pricePerUnit: number;
+  floorPrice?: number;
+  grossAmount: number;
+  discountPolicyCode?: string | null;
+  discountAmount: number;
+  netAmount: number;
+}
+
+export interface OrderBackendResponse {
+  id?: number | null;
+  code?: string | null;
+  status: string;
+  customerId: number;
+  customerCode: string;
+  customerName: string;
+  customerGroup: string;
+  customerGroupLabel: string;
+  deliveryAddress?: {
+    id: number;
+    label: string;
+    address: string;
+    receiverName?: string;
+    receiverPhone?: string;
+  } | null;
+  desiredDeliveryDate?: string | null;
+  note?: string | null;
+  lines: OrderLineBackendResponse[];
+  subtotal: number;
+  discountTotal: number;
+  totalAmount: number;
+  createdByUsername?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  warnings?: string[];
+}
+
+export interface ProductOptionBackendResponse {
+  productId: number;
+  sku: string;
+  name: string;
+  baseUnit: string;
+  units: Array<{
+    unitName: string;
+    conversionFactor: number;
+  }>;
+  priceAvailable: boolean;
+  unitPrice?: number | null;
+  priceListCode?: string | null;
+  message?: string | null;
 }
