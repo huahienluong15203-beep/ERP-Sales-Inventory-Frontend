@@ -40,6 +40,7 @@ import {
 } from '../../components/common/Icons';
 import { UserImportModal } from './UserImportModal';
 import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
+import { fetchAuditLogs } from '../../services/auditLogApi';
 
 /**
  * Kiểm tra số điện thoại Việt Nam: để trống HOẶC đủ 10 số, bắt đầu bằng 03/05/07/08/09.
@@ -90,6 +91,39 @@ export const UserManagementPage: React.FC = () => {
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+
+  // Bản đồ đồng bộ avatar người dùng (kết hợp cache cục bộ và Nhật ký thao tác để đồng bộ tức thì)
+  const [avatarMap, setAvatarMap] = useState<Record<string, string>>(() => {
+    try {
+      const stored = localStorage.getItem('erp_avatar_cache');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    // Tự động thu thập avatar người dùng từ Nhật ký thao tác để đồng bộ ngay lập tức
+    fetchAuditLogs({ size: 100 })
+      .then((res) => {
+        if (res && res.logs) {
+          const map: Record<string, string> = {};
+          res.logs.forEach((log) => {
+            if (log.actorUsername && log.actorAvatarUrl) {
+              map[log.actorUsername.toLowerCase()] = log.actorAvatarUrl;
+            }
+          });
+          setAvatarMap((prev) => {
+            const next = { ...map, ...prev };
+            try {
+              localStorage.setItem('erp_avatar_cache', JSON.stringify(next));
+            } catch {}
+            return next;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Modal Thêm Tài Khoản (S1-08)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
@@ -649,6 +683,10 @@ export const UserManagementPage: React.FC = () => {
                 visibleUsers.map((item) => {
                   const isLocked = item.status === 'LOCKED';
                   const isCurrentUser = currentUser?.username === item.username;
+                  const displayAvatar = (isCurrentUser ? (currentUser?.avatarThumbnailUrl || currentUser?.avatarUrl) : null)
+                    || item.avatarThumbnailUrl
+                    || item.avatarUrl
+                    || avatarMap[item.username.toLowerCase()];
 
                   return (
                     <tr key={item.id} className={isLocked ? 'row-locked' : ''}>
@@ -656,18 +694,24 @@ export const UserManagementPage: React.FC = () => {
                       <td className="user-mgmt-td">
                         <div className="user-mgmt-user-cell">
                           <div className="user-mgmt-avatar">
-                            {item.avatarThumbnailUrl || item.avatarUrl ? (
+                            {displayAvatar ? (
                               <img
-                                src={getAvatarFullUrl(item.avatarThumbnailUrl || item.avatarUrl)}
+                                src={getAvatarFullUrl(displayAvatar)}
                                 alt={item.fullName}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
                                   // Fallback về text initials nếu ảnh bị lỗi
-                                  (e.currentTarget as HTMLElement).style.display = 'none';
+                                  const target = e.currentTarget;
+                                  target.style.display = 'none';
+                                  if (target.nextElementSibling) {
+                                    (target.nextElementSibling as HTMLElement).style.display = 'flex';
+                                  }
                                 }}
                               />
                             ) : null}
-                            {(!item.avatarThumbnailUrl && !item.avatarUrl) && getInitials(item.fullName)}
+                            <span style={{ display: displayAvatar ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                              {getInitials(item.fullName)}
+                            </span>
                           </div>
                           <div className="user-mgmt-user-info">
                             <span className="user-mgmt-fullname">
@@ -1191,11 +1235,43 @@ export const UserManagementPage: React.FC = () => {
         <div className="user-mgmt-modal-overlay">
           <div className="user-mgmt-modal-dialog">
             <div className="user-mgmt-modal-header">
-              <div>
-                <h3 className="user-mgmt-modal-title">
-                  Cập Nhật Tài Khoản: @{editingUser.username}
-                </h3>
-                <p className="user-mgmt-modal-desc">{editingUser.fullName}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div className="user-mgmt-avatar" style={{ width: 42, height: 42 }}>
+                  {(() => {
+                    const isCurrent = currentUser?.username === editingUser.username;
+                    const editAvatar = (isCurrent ? (currentUser?.avatarThumbnailUrl || currentUser?.avatarUrl) : null)
+                      || editingUser.avatarThumbnailUrl
+                      || editingUser.avatarUrl
+                      || avatarMap[editingUser.username.toLowerCase()];
+                    return (
+                      <>
+                        {editAvatar ? (
+                          <img
+                            src={getAvatarFullUrl(editAvatar)}
+                            alt={editingUser.fullName}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              if (target.nextElementSibling) {
+                                (target.nextElementSibling as HTMLElement).style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <span style={{ display: editAvatar ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                          {getInitials(editingUser.fullName)}
+                        </span>
+                      </>
+                    );
+                  })()}
+                </div>
+                <div>
+                  <h3 className="user-mgmt-modal-title">
+                    Cập Nhật Tài Khoản: @{editingUser.username}
+                  </h3>
+                  <p className="user-mgmt-modal-desc">{editingUser.fullName}</p>
+                </div>
               </div>
               <button
                 onClick={() => setIsEditModalOpen(false)}

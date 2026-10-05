@@ -159,6 +159,14 @@ export const ProfilePage: FC = () => {
       avatarUrl: result.avatarUrl,
       avatarThumbnailUrl: result.avatarThumbnailUrl
     });
+    // Lưu vào cache cục bộ để đồng bộ tức thì sang trang Quản lý tài khoản
+    if (user?.username) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('erp_avatar_cache') || '{}');
+        stored[user.username.toLowerCase()] = result.avatarThumbnailUrl || result.avatarUrl;
+        localStorage.setItem('erp_avatar_cache', JSON.stringify(stored));
+      } catch {}
+    }
     await refreshContext();
     showToast('Tải ảnh đại diện thành công!', 'Ảnh đại diện của bạn đã được cập nhật trên toàn hệ thống.');
   };
@@ -174,6 +182,13 @@ export const ProfilePage: FC = () => {
           avatarUrl: undefined,
           avatarThumbnailUrl: undefined
         });
+        if (user?.username) {
+          try {
+            const stored = JSON.parse(localStorage.getItem('erp_avatar_cache') || '{}');
+            delete stored[user.username.toLowerCase()];
+            localStorage.setItem('erp_avatar_cache', JSON.stringify(stored));
+          } catch {}
+        }
         await refreshContext();
         showToast('Đã xóa ảnh đại diện!', 'Tài khoản đã trở về ảnh đại diện chữ cái mặc định.');
       } else {
@@ -407,7 +422,7 @@ export const ProfilePage: FC = () => {
                   <span className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-100 shrink-0" title="Đang trực tuyến" />
                 </div>
                 <div className="text-[11px] text-gray-500 font-mono truncate">
-                  @{user?.username || 'user'} • Mã NV: ERP-{user?.id ? String(user.id).padStart(4, '0') : '0001'}
+                  Mã NV: ERP-{user?.id ? String(user.id).padStart(4, '0') : '0001'}
                 </div>
                 <div className="mt-0.5 flex items-center gap-2 flex-wrap">
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-orange-50 text-orange-700 border border-orange-200">
@@ -889,7 +904,7 @@ export const ProfilePage: FC = () => {
             {/* Header thông tin người dùng */}
             <div className="flex flex-col items-center text-center">
               <h3 className="text-base font-bold text-gray-900">{user.fullName || user.username}</h3>
-              <span className="text-xs text-gray-500 font-mono">@{user.username} • {roleMeta.label}</span>
+              <span className="text-xs text-gray-500 font-mono">{roleMeta.label} • Mã NV: ERP-{user.id ? String(user.id).padStart(4, '0') : '0001'}</span>
             </div>
 
             {/* Ảnh phóng to tròn viền đẹp */}

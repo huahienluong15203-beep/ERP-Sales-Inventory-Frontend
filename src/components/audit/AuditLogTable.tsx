@@ -1,6 +1,8 @@
 import React from 'react';
 import type { AuditLogItem } from '../../types/auditLog';
 import { AUDIT_MODULE_OPTIONS, formatDateTime } from '../../services/auditLogApi';
+import { getAvatarFullUrl } from '../../services/api';
+import { getUserAvatarInitials } from '../../types/user';
 import {
   Lock,
   Eye,
@@ -55,18 +57,29 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
 
       {/* Nội dung bảng */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm border-collapse">
+        <table className="w-full text-left text-sm border-collapse table-fixed">
+          <colgroup>
+            <col style={{ width: '12%' }} />
+            <col style={{ width: '17%' }} />
+            <col style={{ width: '14%' }} />
+            <col style={{ width: '13%' }} />
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '9%' }} />
+            <col style={{ width: '9%' }} />
+            <col style={{ width: '6%' }} />
+          </colgroup>
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
-              <th className="py-3.5 px-4">Thời Điểm</th>
-              <th className="py-3.5 px-4">Người Thực Hiện</th>
-              <th className="py-3.5 px-4">Phân Hệ & Thao Tác</th>
-              <th className="py-3.5 px-4">Mã Đối Tượng (SKU/ĐL)</th>
-              <th className="py-3.5 px-4 text-right">Trước Điều Chỉnh</th>
-              <th className="py-3.5 px-4 text-right">Sau Điều Chỉnh</th>
-              <th className="py-3.5 px-4 text-center">Chênh Lệch</th>
-              <th className="py-3.5 px-4">Lý Do / Căn Cứ Điều Chỉnh</th>
-              <th className="py-3.5 px-4 text-center">Thao Tác</th>
+              <th className="py-3.5 px-3">Thời Điểm</th>
+              <th className="py-3.5 px-3">Người Thực Hiện</th>
+              <th className="py-3.5 px-3">Phân Hệ & Thao Tác</th>
+              <th className="py-3.5 px-3">Mã Đối Tượng (SKU/ĐL)</th>
+              <th className="py-3.5 px-3 text-right">Trước Đ/C</th>
+              <th className="py-3.5 px-3 text-right">Sau Đ/C</th>
+              <th className="py-3.5 px-2 text-center">Chênh Lệch</th>
+              <th className="py-3.5 px-3">Lý Do / Căn Cứ</th>
+              <th className="py-3.5 px-2 text-center">Thao Tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -95,6 +108,15 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
                 const isDecrease = log.deltaType === 'decrease';
                 const isIncrease = log.deltaType === 'increase';
 
+                // Tách mã SKU sạch và tên quy cách (không kẹp chữ :Thùng vào mã SKU)
+                const cleanTargetCode = log.targetCode ? log.targetCode.split(':')[0] : '—';
+                const cleanTargetName =
+                  log.targetName && log.targetName !== 'PRODUCT_UNIT' && log.targetName !== 'PRODUCT_INVENTORY'
+                    ? log.targetName
+                    : log.targetCode && log.targetCode.includes(':')
+                    ? `Đơn vị: ${log.targetCode.split(':')[1]}`
+                    : '';
+
                 return (
                   <tr
                     key={log.id}
@@ -102,88 +124,110 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
                     className="hover:bg-slate-50/80 transition cursor-pointer group"
                   >
                     {/* 1. Thời điểm */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="font-semibold text-slate-900 text-xs">
+                    <td className="py-3 px-3 overflow-hidden">
+                      <div className="font-semibold text-slate-900 text-xs truncate" title={formatDateTime(log.createdAt)}>
                         {formatDateTime(log.createdAt)}
                       </div>
-                      <span className="text-[11px] text-slate-400 font-mono">
+                      <span className="text-[11px] text-slate-400 font-mono truncate block">
                         Log #{log.id}
                       </span>
                     </td>
 
-                    {/* 2. Người thực hiện (Actor) */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600">
-                          <User size={14} />
+                    {/* 2. Người thực hiện (Actor) - Đồng bộ Avatar */}
+                    <td className="py-3 px-3 overflow-hidden">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-orange-100 border border-orange-200/80 flex items-center justify-center text-[#F85606] font-bold overflow-hidden shrink-0 shadow-2xs">
+                          {log.actorAvatarUrl ? (
+                            <img
+                              src={getAvatarFullUrl(log.actorAvatarUrl)}
+                              alt={log.actorFullName}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                                const parent = (e.target as HTMLElement).parentElement;
+                                if (parent) {
+                                  const span = document.createElement('span');
+                                  span.className = 'text-[11px] font-bold text-orange-700';
+                                  span.innerText = getUserAvatarInitials(log.actorFullName, log.actorRole);
+                                  parent.appendChild(span);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <span className="text-[11px] font-bold text-orange-700">
+                              {getUserAvatarInitials(log.actorFullName, log.actorRole)}
+                            </span>
+                          )}
                         </div>
-                        <div>
-                          <div className="font-bold text-slate-900 text-xs">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-slate-900 text-xs truncate" title={log.actorFullName}>
                             {log.actorFullName}
                           </div>
-                          <div className="text-[11px] text-slate-400">
-                            @{log.actorUsername} • {log.actorRole || 'Nhân sự'}
+                          <div className="text-[11px] text-slate-400 truncate" title={`@${log.actorUsername} • ${log.actorRole || 'Nhân sự'}`}>
+                            {log.actorRole || `@${log.actorUsername}`}
                           </div>
                         </div>
                       </div>
                     </td>
 
                     {/* 3. Phân hệ & Thao tác */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
+                    <td className="py-3 px-3 overflow-hidden">
                       <span
-                        className="inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-md"
+                        className="inline-block px-2 py-0.5 text-[11px] font-bold rounded-md truncate max-w-full"
                         style={{
                           backgroundColor: moduleMeta?.badgeBg || '#F1F5F9',
                           color: moduleMeta?.badgeColor || '#334155'
                         }}
+                        title={log.moduleLabel}
                       >
                         {log.moduleLabel}
                       </span>
-                      <div className="text-[11px] font-medium text-slate-600 mt-0.5">
+                      <div className="text-[11px] font-medium text-slate-600 mt-0.5 truncate" title={log.actionLabel || log.action}>
                         {log.actionLabel || log.action}
                       </div>
                     </td>
 
                     {/* 4. Mã đối tượng (SKU / Phiếu / Khách nợ) */}
-                    <td className="py-3.5 px-4">
-                      <span className="font-mono font-bold text-orange-600 text-xs block">
-                        {log.targetCode}
+                    <td className="py-3 px-3 overflow-hidden">
+                      <span className="font-mono font-bold text-orange-600 text-xs block truncate" title={cleanTargetCode}>
+                        {cleanTargetCode}
                       </span>
-                      {log.targetName && (
-                        <p className="text-xs text-slate-600 line-clamp-1 mt-0.5" title={log.targetName}>
-                          {log.targetName}
+                      {cleanTargetName && (
+                        <p className="text-xs text-slate-500 truncate mt-0.5" title={cleanTargetName}>
+                          {cleanTargetName}
                         </p>
                       )}
                     </td>
 
                     {/* 5. Giá trị trước (Old Value) */}
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                      <span className="font-medium text-slate-500 line-through text-xs">
+                    <td className="py-3 px-3 text-right overflow-hidden">
+                      <span className="font-medium text-slate-500 line-through text-xs block truncate" title={log.oldValue}>
                         {log.oldValue}
                       </span>
                     </td>
 
                     {/* 6. Giá trị sau (New Value) */}
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                      <span className="font-bold text-slate-900 text-xs">
+                    <td className="py-3 px-3 text-right overflow-hidden">
+                      <span className="font-bold text-slate-900 text-xs block truncate" title={log.newValue}>
                         {log.newValue}
                       </span>
                     </td>
 
                     {/* 7. Chênh lệch (Delta) */}
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <td className="py-3 px-2 text-center overflow-hidden">
                       {log.deltaFormatted ? (
                         <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold rounded-md ${
+                          className={`inline-flex items-center justify-center gap-1 px-2 py-0.5 text-[11px] font-bold rounded-md max-w-full ${
                             isDecrease
                               ? 'bg-rose-50 text-rose-700 border border-rose-200'
                               : isIncrease
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : 'bg-slate-100 text-slate-700'
                           }`}
+                          title={log.deltaFormatted}
                         >
-                          {isIncrease ? <TrendingUp size={12} /> : isDecrease ? <TrendingDown size={12} /> : null}
-                          <span>{log.deltaFormatted}</span>
+                          {isIncrease ? <TrendingUp size={12} className="shrink-0" /> : isDecrease ? <TrendingDown size={12} className="shrink-0" /> : null}
+                          <span className="truncate">{log.deltaFormatted}</span>
                         </span>
                       ) : (
                         <span className="text-slate-300 text-xs">—</span>
@@ -191,22 +235,22 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
                     </td>
 
                     {/* 8. Lý do / Căn cứ điều chỉnh */}
-                    <td className="py-3.5 px-4 max-w-xs">
-                      <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed" title={log.reason}>
+                    <td className="py-3 px-3 overflow-hidden">
+                      <p className="text-xs text-slate-700 truncate" title={log.reason}>
                         {log.reason}
                       </p>
                     </td>
 
                     {/* 9. Nút xem chi tiết kỹ thuật */}
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <td className="py-3 px-2 text-center overflow-hidden" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
                         onClick={() => onSelectLog(log)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-orange-50 hover:text-orange-600 text-slate-700 transition cursor-pointer"
+                        className="inline-flex items-center justify-center px-2 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-orange-50 hover:text-orange-600 text-slate-700 transition cursor-pointer"
                         title="Xem bằng chứng kiểm toán chi tiết"
                       >
                         <Eye size={13} />
-                        <span>Chi tiết</span>
+                        <span className="ml-1 hidden xl:inline">Xem</span>
                       </button>
                     </td>
                   </tr>

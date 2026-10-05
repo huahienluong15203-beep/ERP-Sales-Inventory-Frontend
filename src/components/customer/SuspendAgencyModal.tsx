@@ -123,7 +123,7 @@ export const SuspendAgencyModal: React.FC<SuspendAgencyModalProps> = ({
               <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl flex items-start gap-2.5 text-xs text-amber-900">
                 <ShieldAlert size={18} className="text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="block mb-0.5">QUY TẮC BẢO TOÀN (S3-03):</strong>
+                  <strong className="block mb-0.5">QUY TẮC BẢO TOÀN DỮ LIỆU:</strong>
                   Đại lý đã phát sinh giao dịch sẽ <strong>không bao giờ bị xóa</strong> để bảo toàn chứng từ kế toán.
                   Khi chuyển sang <strong>Dừng giao dịch</strong>, đại lý sẽ bị chặn tạo đơn bán lẻ và đặt hàng mới, nhưng vẫn tra cứu được công nợ lịch sử.
                 </div>

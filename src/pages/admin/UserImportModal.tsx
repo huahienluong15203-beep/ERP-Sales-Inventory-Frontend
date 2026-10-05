@@ -145,7 +145,7 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
       ['2. Tên đăng nhập: 3 - 50 ký tự, viết liền không dấu, không trùng với tài khoản đã có trong hệ thống.'],
       ['3. Email: Phải đúng định dạng chuẩn (vd: user@domain.com) và chưa từng được đăng ký trong hệ thống.'],
       ['4. Số điện thoại: Tùy chọn (cho phép để trống để nhân viên tự cập nhật sau trong Hồ sơ cá nhân). Nếu nhập thì phải đủ 10 số (đầu 03, 05, 07, 08, 09) và không trùng lặp.'],
-      ['5. Ràng buộc kho (S1-09): Nhân viên kho (ROLE_WAREHOUSE) hoặc Quản lý kho (ROLE_WH_MANAGER) BẮT BUỘC phải điền Mã kho hợp lệ.'],
+      ['5. Ràng buộc kho: Nhân viên kho (ROLE_WAREHOUSE) hoặc Quản lý kho (ROLE_WH_MANAGER) BẮT BUỘC phải điền Mã kho hợp lệ.'],
       ['6. Các dòng có lỗi sẽ tự động được hệ thống bỏ qua, các dòng hợp lệ vẫn sẽ được nhập an toàn vào hệ thống.'],
       [''],
       ['DANH SÁCH MÃ VAI TRÒ HỢP LỆ:', 'MÔ TẢ'],
@@ -357,7 +357,7 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
           : [];
 
         if (isWhRole && whList.length === 0) {
-          errors.push('Vai trò Nhân viên kho / Quản lý kho bắt buộc phải gắn với ít nhất một mã kho hợp lệ (S1-09).');
+          errors.push('Vai trò Nhân viên kho / Quản lý kho bắt buộc phải gắn với ít nhất một mã kho hợp lệ.');
         }
 
         // 7. Mã địa bàn

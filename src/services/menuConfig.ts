@@ -117,7 +117,17 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
 
-  // 3. Hồ sơ cá nhân
+  // 7. Quản lý nhóm hàng nhiều cấp (EP-02: Dành cho Quản lý kinh doanh & Admin)
+  {
+    title: 'Quản lý nhóm hàng',
+    path: '/categories',
+    icon: 'Boxes',
+    epic: 'Sản phẩm & Bảng giá',
+    description: 'Cấu trúc nhóm hàng ≥ 3 cấp & xem doanh số theo ngành hàng',
+    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+  },
+
+  // 8. Hồ sơ cá nhân (Luôn ở dưới cùng các tính năng nghiệp vụ, ngay trên Đăng xuất)
   {
     title: 'Hồ sơ cá nhân',
     path: '/profile',
@@ -133,16 +143,6 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
       'ROLE_ACCOUNTANT',
       'ROLE_CUSTOMER'
     ]
-  },
-
-  // 4. Quản lý nhóm hàng nhiều cấp (EP-02: Dành cho Quản lý kinh doanh & Admin)
-  {
-    title: 'Quản lý nhóm hàng',
-    path: '/categories',
-    icon: 'Boxes',
-    epic: 'Sản phẩm & Bảng giá',
-    description: 'Cấu trúc nhóm hàng ≥ 3 cấp & xem doanh số theo ngành hàng',
-    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN']
   }
 ];
 
@@ -150,10 +150,11 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
  * Hàm lọc danh sách menu theo vai trò người dùng (Tiêu chuẩn S1-06)
  * "Mục menu không thuộc quyền thì không hiển thị"
  * Hỗ trợ một hoặc nhiều vai trò cùng lúc
+ * Luôn bảo đảm "Hồ sơ cá nhân" ở vị trí cuối cùng trong danh sách
  */
 export function getAuthorizedMenus(roles: RoleName | RoleName[]): MenuItem[] {
   const roleList = Array.isArray(roles) ? roles : [roles];
-  return ALL_SYSTEM_MENUS.filter((item) =>
+  const list = ALL_SYSTEM_MENUS.filter((item) =>
     item.allowedRoles.some((r) => roleList.includes(r))
   ).map((item) => ({
     title: item.title,
@@ -163,6 +164,14 @@ export function getAuthorizedMenus(roles: RoleName | RoleName[]): MenuItem[] {
     description: item.description,
     badge: item.badge
   }));
+
+  // Đảm bảo "Hồ sơ cá nhân" (/profile) luôn nằm ở vị trí cuối cùng của Sidebar
+  const nonProfile = list.filter((m) => m.path !== '/profile');
+  const profileItem = list.find((m) => m.path === '/profile');
+  if (profileItem) {
+    return [...nonProfile, profileItem];
+  }
+  return nonProfile;
 }
 
 /**

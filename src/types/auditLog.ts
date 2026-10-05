@@ -29,6 +29,8 @@ export interface AuditLogItem {
   actorUsername: string;        // wh_staff, wh_manager, accountant, sales_manager, admin
   actorFullName: string;        // Tên hiển thị người dùng
   actorRole?: string;           // Thủ kho, Quản lý kho, Kế toán, Quản trị viên
+  actorAvatarUrl?: string;      // S2-03: Ảnh đại diện người dùng
+  actorAvatarThumbnailUrl?: string;
   oldValue: string;             // Giá trị trước điều chỉnh
   newValue: string;             // Giá trị sau điều chỉnh
   deltaFormatted?: string;      // Chênh lệch (+/-) có định dạng

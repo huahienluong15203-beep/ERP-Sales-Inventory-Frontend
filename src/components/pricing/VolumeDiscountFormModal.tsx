@@ -330,7 +330,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                   : 'Cập Nhật Chính Sách Chiết Khấu'}
               </h3>
               <p className="text-xs text-orange-100">
-                Ticket S3-01 / SCRUM-12 (Tự động so sánh và áp dụng mức có lợi nhất cho khách hàng)
+                Tự động so sánh và áp dụng mức chiết khấu có lợi nhất cho khách hàng
               </p>
             </div>
           </div>

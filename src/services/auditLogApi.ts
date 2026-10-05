@@ -270,7 +270,20 @@ export function getLocalAuditLogs(): AuditLogItem[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return parsed.map((item: AuditLogItem) => {
+          if (item.targetCode && item.targetCode.includes(':')) {
+            const parts = item.targetCode.split(':');
+            return {
+              ...item,
+              targetCode: parts[0],
+              targetName:
+                item.targetName && item.targetName !== 'PRODUCT_UNIT'
+                  ? item.targetName
+                  : `Đơn vị: ${parts[1]}`
+            };
+          }
+          return item;
+        });
       }
     }
   } catch {
@@ -278,6 +291,51 @@ export function getLocalAuditLogs(): AuditLogItem[] {
   }
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(INITIAL_AUDIT_LOGS));
   return INITIAL_AUDIT_LOGS;
+}
+
+/**
+ * Ghi nhận một bản ghi nhật ký thao tác cục bộ (dùng khi thao tác offline hoặc dự phòng fallback)
+ */
+export function recordLocalAuditLog(entry: Partial<AuditLogItem>): AuditLogItem {
+  const currentLogs = getLocalAuditLogs();
+  const id = Date.now();
+  const moduleMeta = AUDIT_MODULE_OPTIONS.find((m) => m.value === entry.module);
+
+  const newLog: AuditLogItem = {
+    id,
+    module: entry.module || 'INVENTORY',
+    moduleLabel: entry.moduleLabel || moduleMeta?.label || 'Tồn kho & Kiểm kê',
+    action: entry.action || 'UPDATE_UNIT_CONVERSION',
+    actionLabel: entry.actionLabel || 'Cập nhật hệ số quy đổi',
+    targetType: entry.targetType || 'PRODUCT_UNIT',
+    targetId: entry.targetId,
+    targetCode: entry.targetCode || 'SP-SKU',
+    targetName: entry.targetName,
+    actorId: entry.actorId || 1,
+    actorUsername: entry.actorUsername || 'user',
+    actorFullName: entry.actorFullName || 'Người thực hiện',
+    actorRole: entry.actorRole || 'Thủ kho',
+    actorAvatarUrl: entry.actorAvatarUrl,
+    actorAvatarThumbnailUrl: entry.actorAvatarThumbnailUrl,
+    oldValue: entry.oldValue || '—',
+    newValue: entry.newValue || '—',
+    deltaFormatted: entry.deltaFormatted || (entry.oldValue && entry.newValue ? `${entry.oldValue} ➔ ${entry.newValue}` : undefined),
+    deltaType: entry.deltaType || 'neutral',
+    reason: entry.reason || 'Cập nhật hệ số quy đổi qua giao diện',
+    ipAddress: entry.ipAddress || '127.0.0.1',
+    userAgent: navigator.userAgent,
+    httpMethod: entry.httpMethod || 'PUT',
+    requestUri: entry.requestUri || '/api/products/units',
+    createdAt: new Date().toISOString()
+  };
+
+  const updatedLogs = [newLog, ...currentLogs];
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedLogs));
+  } catch (err) {
+    console.error('Lỗi lưu audit log cục bộ:', err);
+  }
+  return newLog;
 }
 
 /**
@@ -331,6 +389,7 @@ export async function fetchAuditLogs(
           actorId?: number;
           actorUsername?: string;
           actorFullName?: string;
+          actorAvatarUrl?: string;
           oldValue?: string;
           newValue?: string;
           reason?: string;
@@ -344,6 +403,19 @@ export async function fetchAuditLogs(
         if (json && Array.isArray(json.content) && json.content.length > 0) {
           const mappedContent: AuditLogItem[] = (json.content as BackendAuditLogItem[]).map((item) => {
             const moduleMeta = AUDIT_MODULE_OPTIONS.find((m) => m.value === item.module);
+            const rawCode = item.targetCode || `#${item.targetId || item.id}`;
+            const [skuPart, unitPart] = rawCode.includes(':') ? rawCode.split(':') : [rawCode, ''];
+
+            // Chuẩn hóa delta ngắn gọn nếu có thông tin hệ số
+            let displayDelta = item.oldValue && item.newValue ? `${item.oldValue} ➔ ${item.newValue}` : undefined;
+            if (item.oldValue && item.newValue && item.oldValue.includes('Hệ số:') && item.newValue.includes('Hệ số:')) {
+              const oldMatch = item.oldValue.match(/Hệ số:\s*(\d+(\.\d+)?)/);
+              const newMatch = item.newValue.match(/Hệ số:\s*(\d+(\.\d+)?)/);
+              if (oldMatch && newMatch) {
+                displayDelta = `${oldMatch[1]} ➔ ${newMatch[1]}`;
+              }
+            }
+
             return {
               id: item.id,
               module: item.module,
@@ -352,8 +424,11 @@ export async function fetchAuditLogs(
               actionLabel: item.action,
               targetType: item.targetType || 'TARGET',
               targetId: item.targetId,
-              targetCode: item.targetCode || `#${item.targetId || item.id}`,
-              targetName: item.targetType,
+              targetCode: skuPart,
+              targetName:
+                item.targetType === 'PRODUCT_UNIT'
+                  ? (unitPart ? `Đơn vị: ${unitPart}` : 'Quy cách sản phẩm')
+                  : (item.targetName || item.targetType),
               actorId: item.actorId,
               actorUsername: item.actorUsername || 'user',
               actorFullName: item.actorFullName || item.actorUsername || 'Người dùng',
@@ -362,9 +437,10 @@ export async function fetchAuditLogs(
                 : item.actorUsername?.includes('acc')
                 ? 'Kế toán'
                 : 'Hệ thống',
+              actorAvatarUrl: item.actorAvatarUrl,
               oldValue: item.oldValue || '—',
               newValue: item.newValue || '—',
-              deltaFormatted: item.oldValue && item.newValue ? `${item.oldValue} ➔ ${item.newValue}` : undefined,
+              deltaFormatted: displayDelta,
               deltaType: 'neutral',
               reason: item.reason || 'Cập nhật hệ thống',
               ipAddress: item.ipAddress || '127.0.0.1',
@@ -375,9 +451,13 @@ export async function fetchAuditLogs(
             };
           });
 
+          // Trộn thêm các log cục bộ phát sinh gần đây (nếu có log mock hoặc fallback chưa kịp lên server)
+          const localLogs = getLocalAuditLogs().filter((l) => l.id > 1700000000000);
+          const combined = [...localLogs.filter((l) => !mappedContent.some((m) => m.id === l.id)), ...mappedContent];
+
           return {
-            content: mappedContent,
-            totalElements: json.totalElements || mappedContent.length,
+            content: combined,
+            totalElements: (json.totalElements || mappedContent.length) + localLogs.length,
             totalPages: json.totalPages || Math.ceil(mappedContent.length / size),
             page: json.page || page,
             size: json.size || size

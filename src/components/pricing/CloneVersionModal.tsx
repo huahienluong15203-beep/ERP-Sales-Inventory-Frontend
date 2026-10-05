@@ -137,7 +137,7 @@ export const CloneVersionModal: React.FC<CloneVersionModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-gray-500">
-                Tuân thủ quy tắc S2-10: Bảng giá đã phát sinh đơn thì không sửa, chỉ tạo phiên bản mới
+                Quy tắc nghiệp vụ: Bảng giá đã phát sinh đơn thì không sửa, chỉ tạo phiên bản mới
               </p>
             </div>
           </div>
