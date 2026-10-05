@@ -649,6 +649,9 @@ export const UserManagementPage: React.FC = () => {
                 visibleUsers.map((item) => {
                   const isLocked = item.status === 'LOCKED';
                   const isCurrentUser = currentUser?.username === item.username;
+                  const displayAvatar = (isCurrentUser ? (currentUser?.avatarThumbnailUrl || currentUser?.avatarUrl) : null)
+                    || item.avatarThumbnailUrl
+                    || item.avatarUrl;
 
                   return (
                     <tr key={item.id} className={isLocked ? 'row-locked' : ''}>
@@ -656,18 +659,24 @@ export const UserManagementPage: React.FC = () => {
                       <td className="user-mgmt-td">
                         <div className="user-mgmt-user-cell">
                           <div className="user-mgmt-avatar">
-                            {item.avatarThumbnailUrl || item.avatarUrl ? (
+                            {displayAvatar ? (
                               <img
-                                src={getAvatarFullUrl(item.avatarThumbnailUrl || item.avatarUrl)}
+                                src={getAvatarFullUrl(displayAvatar)}
                                 alt={item.fullName}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
                                   // Fallback về text initials nếu ảnh bị lỗi
-                                  (e.currentTarget as HTMLElement).style.display = 'none';
+                                  const target = e.currentTarget;
+                                  target.style.display = 'none';
+                                  if (target.nextElementSibling) {
+                                    (target.nextElementSibling as HTMLElement).style.display = 'flex';
+                                  }
                                 }}
                               />
                             ) : null}
-                            {(!item.avatarThumbnailUrl && !item.avatarUrl) && getInitials(item.fullName)}
+                            <span style={{ display: displayAvatar ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                              {getInitials(item.fullName)}
+                            </span>
                           </div>
                           <div className="user-mgmt-user-info">
                             <span className="user-mgmt-fullname">
@@ -1191,11 +1200,42 @@ export const UserManagementPage: React.FC = () => {
         <div className="user-mgmt-modal-overlay">
           <div className="user-mgmt-modal-dialog">
             <div className="user-mgmt-modal-header">
-              <div>
-                <h3 className="user-mgmt-modal-title">
-                  Cập Nhật Tài Khoản: @{editingUser.username}
-                </h3>
-                <p className="user-mgmt-modal-desc">{editingUser.fullName}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div className="user-mgmt-avatar" style={{ width: 42, height: 42 }}>
+                  {(() => {
+                    const isCurrent = currentUser?.username === editingUser.username;
+                    const editAvatar = (isCurrent ? (currentUser?.avatarThumbnailUrl || currentUser?.avatarUrl) : null)
+                      || editingUser.avatarThumbnailUrl
+                      || editingUser.avatarUrl;
+                    return (
+                      <>
+                        {editAvatar ? (
+                          <img
+                            src={getAvatarFullUrl(editAvatar)}
+                            alt={editingUser.fullName}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              if (target.nextElementSibling) {
+                                (target.nextElementSibling as HTMLElement).style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <span style={{ display: editAvatar ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                          {getInitials(editingUser.fullName)}
+                        </span>
+                      </>
+                    );
+                  })()}
+                </div>
+                <div>
+                  <h3 className="user-mgmt-modal-title">
+                    Cập Nhật Tài Khoản: @{editingUser.username}
+                  </h3>
+                  <p className="user-mgmt-modal-desc">{editingUser.fullName}</p>
+                </div>
               </div>
               <button
                 onClick={() => setIsEditModalOpen(false)}
