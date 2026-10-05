@@ -9,6 +9,7 @@
 import { authFetch, API_BASE_URL } from './api';
 import type {
   Agency,
+  AgencyStatus,
   CustomerGroupId,
   CustomerGroupOption,
   RegionOption,
@@ -398,16 +399,66 @@ export function getPricingTierByGroup(groupId: CustomerGroupId) {
  * 1. Lấy danh sách hồ sơ đại lý kèm tìm kiếm và lọc
  */
 export async function fetchAgencies(params: AgencyFilterParams): Promise<AgencyListResponse> {
-  // Giả lập trễ mạng nhẹ để tạo UX mượt mà
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  // 1. Kết nối Backend API /api/customers nếu có
+  let backendAgencies: Agency[] = [];
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/customers?size=100`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.content) && data.content.length > 0) {
+        backendAgencies = data.content.map((c: any) => {
+          const grpId: CustomerGroupId =
+            c.customerGroup === 'DEALER_LEVEL_1'
+              ? 'TIER_1'
+              : c.customerGroup === 'DEALER_LEVEL_2'
+              ? 'TIER_2'
+              : 'RETAIL_SHOWROOM';
+          const pTier = getPricingTierByGroup(grpId);
+          return {
+            id: String(c.id),
+            code: c.code,
+            name: c.name,
+            taxCode: c.taxCode || '',
+            customerGroup: grpId,
+            customerGroupName: c.customerGroupLabel || (grpId === 'TIER_1' ? 'Đại lý Cấp 1' : 'Đại lý Cấp 2'),
+            pricingTier: pTier,
+            regionId: c.region?.id ? String(c.region.id) : 'REG_HN',
+            regionName: c.region?.name || 'Miền Bắc',
+            assignedRepId: c.salesRep?.id ? String(c.salesRep.id) : '',
+            assignedRepName: c.salesRep?.name || 'Chưa gán',
+            phone: c.phone || '',
+            email: c.email || '',
+            address: c.address || '',
+            status: (c.status === 'ACTIVE' ? 'ACTIVE' : 'SUSPENDED') as AgencyStatus,
+            creditLimit: Number(c.creditLimit || 50000000),
+            maxDebtDays: c.maxDebtDays || 30,
+            transactionLocked: Boolean(c.transactionLocked),
+            transactionLockReason: c.transactionLockReason || '',
+            transactionLockedAt: c.transactionLockedAt,
+            createdAt: c.createdAt || new Date().toISOString(),
+            updatedAt: c.updatedAt || new Date().toISOString(),
+            deliveryPointCount: 1
+          } as Agency;
+        });
+      }
+    }
+  } catch (err) {
+    // Không kết nối được hoặc offline -> dùng mock data
+  }
 
   let list = getStoredAgencies();
+  // Nếu có đại lý từ backend, ưu tiên đặt lên đầu danh sách
+  if (backendAgencies.length > 0) {
+    const backendCodes = new Set(backendAgencies.map((b) => b.code.toUpperCase()));
+    list = [...backendAgencies, ...list.filter((a) => !backendCodes.has(a.code.toUpperCase()))];
+  }
+
   const allPoints = getStoredDeliveryPoints();
 
   // Đính kèm số lượng điểm giao hàng động
   list = list.map((a) => ({
     ...a,
-    deliveryPointCount: allPoints.filter((dp) => dp.agencyId === a.id).length
+    deliveryPointCount: a.deliveryPointCount || allPoints.filter((dp) => dp.agencyId === a.id).length
   }));
 
   // Tìm kiếm từ khóa (Mã, Tên, Mã số thuế, SĐT)
@@ -663,6 +714,31 @@ export async function deleteAgency(id: string): Promise<{ success: boolean; mess
  * Sắp xếp: Điểm mặc định lên đầu, sau đó theo ngày tạo mới nhất
  */
 export async function fetchDeliveryPointsByAgency(agencyId: string): Promise<DeliveryPoint[]> {
+  // 1. Thử lấy từ Backend nếu agencyId là ID số
+  if (/^\d+$/.test(agencyId)) {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/customers/${agencyId}/delivery-addresses`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data.map((addr: any) => ({
+            id: String(addr.id),
+            agencyId: String(addr.customerId || agencyId),
+            name: addr.label || 'Kho nhận hàng',
+            address: addr.address || '',
+            contactPerson: addr.receiverName || '',
+            phone: addr.receiverPhone || '',
+            isDefault: Boolean(addr.isDefault),
+            createdAt: addr.createdAt || new Date().toISOString(),
+            updatedAt: addr.updatedAt || addr.createdAt || new Date().toISOString()
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn('Backend delivery addresses fetch failed, falling back:', err);
+    }
+  }
+
   await new Promise((resolve) => setTimeout(resolve, 150));
   const list = getStoredDeliveryPoints();
   const agencyPoints = list.filter((p) => p.agencyId === agencyId);
@@ -672,6 +748,8 @@ export async function fetchDeliveryPointsByAgency(agencyId: string): Promise<Del
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 }
+
+export const fetchDeliveryPoints = fetchDeliveryPointsByAgency;
 
 /**
  * 8. Thêm mới một điểm giao hàng cho đại lý

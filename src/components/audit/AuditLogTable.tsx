@@ -10,7 +10,6 @@ import {
   Info,
   TrendingUp,
   TrendingDown,
-  User,
   ChevronLeft,
   ChevronRight
 } from '../common/Icons';

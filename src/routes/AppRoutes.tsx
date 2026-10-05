@@ -12,6 +12,7 @@ import { PriceListPage } from '../pages/pricing/PriceListPage';
 import { PriceHistoryPage } from '../pages/pricing/PriceHistoryPage';
 import { VolumeDiscountPage } from '../pages/pricing/VolumeDiscountPage';
 import { CategoryManagementPage } from '../pages/category/CategoryManagementPage';
+import { OrderCreatePage } from '../pages/order/OrderCreatePage';
 import { SupplierManagementPage } from '../pages/supplier/SupplierManagementPage';
 import { AuditLogPage } from '../pages/admin/AuditLogPage';
 import { ModulePage } from '../pages/common/ModulePage';
@@ -192,6 +193,38 @@ export const AppRoutes: React.FC = () => {
         />
 
 
+        {/* Đặt hàng đại lý (Sprint 3: S3-09 / SCRUM-14 / EP-04) */}
+        <Route
+          path="/orders/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_REP',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <OrderCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/orders"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_REP',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <OrderCreatePage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Hồ sơ cá nhân (Mọi vai trò đều xem được) */}
         <Route path="/profile" element={<ProfilePage />} />
 
@@ -255,6 +288,8 @@ export const AppRoutes: React.FC = () => {
             m.path !== '/pricing' &&
             m.path !== '/price-lists' &&
             m.path !== '/pricing/history' &&
+            m.path !== '/orders/create' &&
+            m.path !== '/orders' &&
             m.path !== '/audit-logs' &&
             m.path !== '/admin/audit-logs'
         ).map((menuItem) => (

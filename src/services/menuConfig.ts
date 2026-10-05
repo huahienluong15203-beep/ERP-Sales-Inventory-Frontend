@@ -116,6 +116,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
   },
 
+  // 6c. Đặt hàng đại lý (Sprint 3: S3-09 / SCRUM-14 / EP-04: Đặt hàng & Duyệt ngoại lệ)
+  {
+    title: 'Đặt hàng đại lý',
+    path: '/orders/create',
+    icon: 'ShoppingCart',
+    epic: 'Đặt hàng & Duyệt ngoại lệ',
+    description: 'Lên đơn nhanh tại điểm bán, tự động áp giá & chiết khấu sản lượng',
+    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
+  },
+
 
   // 7. Quản lý nhóm hàng nhiều cấp (EP-02: Dành cho Quản lý kinh doanh & Admin)
   {
