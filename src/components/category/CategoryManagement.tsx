@@ -1,321 +1,54 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import type { ProductCategory, CategoryProduct, CategoryRollup } from '../../types/category';
+import { useAuth } from '../../contexts/AuthContext';
+import {
+  CATEGORY_MAX_LEVEL,
+  CATEGORY_PRODUCTS_MAX_PAGE_SIZE,
+  createCategory,
+  deleteCategory,
+  fetchCategories,
+  fetchCategoryProducts,
+  moveProductsToCategory,
+  updateCategory,
+  type CategoryWithCount
+} from '../../services/categoryApi';
 
-// Dữ liệu khởi tạo chuẩn phân cấp tối thiểu 3 cấp và số liệu doanh số ngành hàng
-const INITIAL_CATEGORIES: ProductCategory[] = [
-  // Cấp 1: Ngành hàng (Division)
-  {
-    id: 'cat-douong',
-    code: 'NG-DOUONG',
-    name: 'Ngành Đồ Uống & Giải Khát',
-    level: 1,
-    parentId: null,
-    description: 'Toàn bộ các mặt hàng đồ uống đóng chai, lon và cồn'
-  },
-  // Cấp 2: Nhóm hàng (Group)
-  {
-    id: 'cat-bia',
-    code: 'NH-BIA',
-    name: 'Bia & Đồ Uống Có Cồn',
-    level: 2,
-    parentId: 'cat-douong',
-    description: 'Bia lon, bia chai và đồ uống lên men'
-  },
-  // Cấp 3: Phân nhóm hàng (Subgroup)
-  {
-    id: 'cat-bia-lon',
-    code: 'PN-BIA-LON',
-    name: 'Bia Lon Thương Mại',
-    level: 3,
-    parentId: 'cat-bia',
-    description: 'Bia lon quy cách 330ml - 500ml'
-  },
-  {
-    id: 'cat-bia-chai',
-    code: 'PN-BIA-CHAI',
-    name: 'Bia Chai Truyền Thống',
-    level: 3,
-    parentId: 'cat-bia',
-    description: 'Bia chai thủy tinh két 20-24 chai'
-  },
-  // Cấp 2: Nhóm hàng (Group)
-  {
-    id: 'cat-ngk',
-    code: 'NH-NGK',
-    name: 'Nước Giải Khát Không Cồn',
-    level: 2,
-    parentId: 'cat-douong',
-    description: 'Nước ngọt có gas, trà thảo mộc, nước khoáng'
-  },
-  // Cấp 3: Phân nhóm hàng (Subgroup)
-  {
-    id: 'cat-ngk-gas',
-    code: 'PN-NGK-GAS',
-    name: 'Nước Ngọt Có Gas',
-    level: 3,
-    parentId: 'cat-ngk',
-    description: 'Nước giải khát có ga hương cola, cam, chanh'
-  },
-  {
-    id: 'cat-tra-dongchai',
-    code: 'PN-TRA-DONGCHAI',
-    name: 'Trà & Cà Phê Đóng Chai',
-    level: 3,
-    parentId: 'cat-ngk',
-    description: 'Trà xanh, trà ô long, cà phê lon pha sẵn'
-  },
-  {
-    id: 'cat-nuoc-khoang',
-    code: 'PN-NUOC-KHOANG',
-    name: 'Nước Khoáng & Tinh Khiết',
-    level: 3,
-    parentId: 'cat-ngk',
-    description: 'Nước khoáng thiên nhiên đóng chai các dung tích'
-  },
+// Chỉ ADMIN và SALES_MANAGER được ghi (backend @PreAuthorize). Các vai trò khác chỉ xem.
+const WRITE_ROLES = new Set(['ADMIN', 'SALES_MANAGER']);
+const normalizeRole = (r: unknown) => String(r || '').toUpperCase().replace(/^ROLE_/, '');
 
-  // Cấp 1: Ngành hàng (Division)
-  {
-    id: 'cat-banhkeo',
-    code: 'NG-BANHKEO',
-    name: 'Ngành Bánh Kẹo & Tiện Lợi',
-    level: 1,
-    parentId: null,
-    description: 'Bánh ngọt, bánh quy, snack và kẹo các loại'
-  },
-  // Cấp 2: Nhóm hàng (Group)
-  {
-    id: 'cat-banh-quy',
-    code: 'NH-BANH-QUY',
-    name: 'Bánh Quy & Bánh Tươi',
-    level: 2,
-    parentId: 'cat-banhkeo',
-    description: 'Bánh bơ quy, cracker, bánh xốp kem'
-  },
-  // Cấp 3: Phân nhóm hàng (Subgroup)
-  {
-    id: 'cat-banh-bo',
-    code: 'PN-BANH-BO',
-    name: 'Bánh Quy Bơ Cao Cấp',
-    level: 3,
-    parentId: 'cat-banh-quy',
-    description: 'Bánh quy bơ hộp thiếc và hộp giấy biếu tặng'
-  },
-  {
-    id: 'cat-banh-choco',
-    code: 'PN-BANH-CHOCO',
-    name: 'Bánh Phủ Sô Cô La',
-    level: 3,
-    parentId: 'cat-banh-quy',
-    description: 'Bánh pie phủ socola kem dẻo'
-  },
+const NO_SALES_DATA_NOTE = 'Chưa có dữ liệu doanh số (sẽ có khi có đơn hàng)';
 
-  // Cấp 1: Ngành hàng (Division)
-  {
-    id: 'cat-giavi',
-    code: 'NG-GIAVI',
-    name: 'Ngành Gia Vị & Chế Biến',
-    level: 1,
-    parentId: null,
-    description: 'Gia vị nhà bếp, nước chấm và nông sản'
-  },
-  // Cấp 2: Nhóm hàng (Group)
-  {
-    id: 'cat-nuoc-cham',
-    code: 'NH-NUOC-CHAM',
-    name: 'Nước Chấm & Gia Vị Lỏng',
-    level: 2,
-    parentId: 'cat-giavi',
-    description: 'Nước mắm cá cơm, nước tương đậu nành'
-  },
-  // Cấp 3: Phân nhóm hàng (Subgroup)
-  {
-    id: 'cat-nuoc-mam',
-    code: 'PN-NUOC-MAM',
-    name: 'Nước Mắm Truyền Thống',
-    level: 3,
-    parentId: 'cat-nuoc-cham',
-    description: 'Nước mắm độ đạm cao đóng chai thuỷ tinh/nhựa'
-  },
-  // Cấp 2: Nhóm hàng mẫu chưa có sản phẩm (dùng để kiểm thử quy tắc xoá nhóm)
-  {
-    id: 'cat-nhom-thu-nghiem',
-    code: 'NH-TEST-TRONG',
-    name: 'Nhóm Hàng Thử Nghiệm (Trống)',
-    level: 2,
-    parentId: 'cat-giavi',
-    description: 'Nhóm tạo mới phục vụ kiểm thử - Chưa gán sản phẩm'
-  },
-  // Cấp 3: Phân nhóm trống (Có thể xoá an toàn)
-  {
-    id: 'cat-phan-nhom-trong',
-    code: 'PN-TEST-TRONG-01',
-    name: 'Phân Nhóm Trống (Có Thể Xoá)',
-    level: 3,
-    parentId: 'cat-nhom-thu-nghiem',
-    description: 'Phân nhóm không có sản phẩm nào, kiểm chứng quy tắc cho phép xoá'
-  }
-];
-
-const INITIAL_PRODUCTS: CategoryProduct[] = [
-  // Thuộc PN-BIA-LON
-  {
-    id: 'prod-1',
-    sku: 'SP-BIA-001',
-    name: 'Bia Saigon Special 330ml (Lon)',
-    baseUnit: 'Lon',
-    categoryId: 'cat-bia-lon',
-    unitPrice: 15500,
-    salesQuantity: 45000,
-    revenue: 697500000
-  },
-  {
-    id: 'prod-2',
-    sku: 'SP-BIA-002',
-    name: 'Bia Tiger Crystal 330ml (Lon)',
-    baseUnit: 'Lon',
-    categoryId: 'cat-bia-lon',
-    unitPrice: 17800,
-    salesQuantity: 32000,
-    revenue: 569600000
-  },
-  {
-    id: 'prod-3',
-    sku: 'SP-BIA-003',
-    name: 'Bia Heineken Silver 330ml (Lon)',
-    baseUnit: 'Lon',
-    categoryId: 'cat-bia-lon',
-    unitPrice: 20500,
-    salesQuantity: 28000,
-    revenue: 574000000
-  },
-
-  // Thuộc PN-BIA-CHAI
-  {
-    id: 'prod-4',
-    sku: 'SP-BIA-004',
-    name: 'Bia Hà Nội Nhãn Vàng 450ml (Chai)',
-    baseUnit: 'Chai',
-    categoryId: 'cat-bia-chai',
-    unitPrice: 12000,
-    salesQuantity: 38000,
-    revenue: 456000000
-  },
-  {
-    id: 'prod-5',
-    sku: 'SP-BIA-005',
-    name: 'Bia Saigon Lager 450ml (Chai)',
-    baseUnit: 'Chai',
-    categoryId: 'cat-bia-chai',
-    unitPrice: 12500,
-    salesQuantity: 41000,
-    revenue: 512500000
-  },
-
-  // Thuộc PN-NGK-GAS
-  {
-    id: 'prod-6',
-    sku: 'SP-COCA-001',
-    name: 'Nước Ngọt Coca-Cola Original 320ml (Lon)',
-    baseUnit: 'Lon',
-    categoryId: 'cat-ngk-gas',
-    unitPrice: 10000,
-    salesQuantity: 62000,
-    revenue: 620000000
-  },
-  {
-    id: 'prod-7',
-    sku: 'SP-PEPSI-001',
-    name: 'Nước Ngọt Pepsi Không Calo 320ml (Lon)',
-    baseUnit: 'Lon',
-    categoryId: 'cat-ngk-gas',
-    unitPrice: 9800,
-    salesQuantity: 48000,
-    revenue: 470400000
-  },
-
-  // Thuộc PN-TRA-DONGCHAI
-  {
-    id: 'prod-8',
-    sku: 'SP-TRA-001',
-    name: 'Trà Xanh Không Độ Hương Chanh 455ml (Chai)',
-    baseUnit: 'Chai',
-    categoryId: 'cat-tra-dongchai',
-    unitPrice: 8500,
-    salesQuantity: 55000,
-    revenue: 467500000
-  },
-  {
-    id: 'prod-9',
-    sku: 'SP-TRA-002',
-    name: 'Trà Ô Long TEA+ Plus 455ml (Chai)',
-    baseUnit: 'Chai',
-    categoryId: 'cat-tra-dongchai',
-    unitPrice: 9000,
-    salesQuantity: 43000,
-    revenue: 387000000
-  },
-
-  // Thuộc PN-NUOC-KHOANG
-  {
-    id: 'prod-10',
-    sku: 'SP-NUOC-001',
-    name: 'Nước Khoáng Thiên Nhiên La Vie 500ml (Chai)',
-    baseUnit: 'Chai',
-    categoryId: 'cat-nuoc-khoang',
-    unitPrice: 5000,
-    salesQuantity: 75000,
-    revenue: 375000000
-  },
-
-  // Thuộc PN-BANH-BO
-  {
-    id: 'prod-11',
-    sku: 'SP-BANH-001',
-    name: 'Bánh Quy Bơ Hoàng Gia Danisa 454g (Hộp)',
-    baseUnit: 'Hộp',
-    categoryId: 'cat-banh-bo',
-    unitPrice: 125000,
-    salesQuantity: 8500,
-    revenue: 1062500000
-  },
-
-  // Thuộc PN-BANH-CHOCO
-  {
-    id: 'prod-12',
-    sku: 'SP-BANH-002',
-    name: 'Bánh Chocopie Orion Hộp 12 Cái (Hộp)',
-    baseUnit: 'Hộp',
-    categoryId: 'cat-banh-choco',
-    unitPrice: 56000,
-    salesQuantity: 22000,
-    revenue: 1232000000
-  },
-
-  // Thuộc PN-NUOC-MAM
-  {
-    id: 'prod-13',
-    sku: 'SP-MAM-001',
-    name: 'Nước Mắm Nam Ngư Cá Cơm Đệ Nhị 900ml (Chai)',
-    baseUnit: 'Chai',
-    categoryId: 'cat-nuoc-mam',
-    unitPrice: 26000,
-    salesQuantity: 30000,
-    revenue: 780000000
-  }
-];
+const levelLabel = (level: number) =>
+  level === 1 ? 'Ngành hàng' : level === 2 ? 'Nhóm hàng' : level === 3 ? 'Phân nhóm' : `Nhóm cấp ${level}`;
 
 export const CategoryManagement: React.FC = () => {
-  // Danh sách danh mục & sản phẩm
-  const [categories, setCategories] = useState<ProductCategory[]>(INITIAL_CATEGORIES);
-  const [products, setProducts] = useState<CategoryProduct[]>(INITIAL_PRODUCTS);
-
-  // Nhóm đang chọn trong cây (mặc định chọn Ngành Đồ Uống & Giải Khát)
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('cat-douong');
-
-  // Trạng thái mở rộng các node cây (mặc định mở tất cả cấp 1 và cấp 2)
-  const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(
-    () => new Set(['cat-douong', 'cat-bia', 'cat-ngk', 'cat-banhkeo', 'cat-banh-quy', 'cat-giavi', 'cat-nuoc-cham', 'cat-nhom-thu-nghiem'])
+  const { user } = useAuth();
+  const canManage = useMemo(
+    () => (user?.roles || []).some((r) => WRITE_ROLES.has(normalizeRole(r))),
+    [user]
   );
+
+  // Danh sách nhóm hàng (từ server)
+  const [categories, setCategories] = useState<CategoryWithCount[]>([]);
+  const [loadingTree, setLoadingTree] = useState<boolean>(true);
+  const [treeError, setTreeError] = useState<string | null>(null);
+
+  // Sản phẩm của nhóm đang chọn (từ server)
+  const [products, setProducts] = useState<CategoryProduct[]>([]);
+  const [productsTotal, setProductsTotal] = useState<number>(0);
+  const [loadingProducts, setLoadingProducts] = useState<boolean>(false);
+  const [productsError, setProductsError] = useState<string | null>(null);
+  const [productsReloadKey, setProductsReloadKey] = useState<number>(0);
+
+  // Đang gửi yêu cầu ghi (tạo/sửa/xoá/chuyển)
+  const [saving, setSaving] = useState<boolean>(false);
+
+  // Nhóm đang chọn trong cây
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+
+  // Trạng thái mở rộng các node cây
+  const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(() => new Set());
 
   // Tùy chọn xem: 'BRANCH' = toàn bộ nhánh ngành hàng, 'DIRECT' = chỉ sản phẩm gắn trực tiếp
   const [viewScope, setViewScope] = useState<'BRANCH' | 'DIRECT'>('BRANCH');
@@ -327,7 +60,7 @@ export const CategoryManagement: React.FC = () => {
   const [movingProduct, setMovingProduct] = useState<CategoryProduct | null>(null);
   const [targetCategoryId, setTargetCategoryId] = useState<string>('');
 
-  // Modal cảnh báo không thể xoá nhóm vì còn sản phẩm
+  // Modal cảnh báo không thể xoá nhóm vì còn sản phẩm / nhóm con
   const [deleteBlockedInfo, setDeleteBlockedInfo] = useState<{
     category: ProductCategory;
     productCount: number;
@@ -359,12 +92,73 @@ export const CategoryManagement: React.FC = () => {
     }, 4000);
   };
 
-  const formatVND = (val: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
-  };
+  const errMsg = (err: unknown, fallback: string) =>
+    err instanceof Error && err.message ? err.message : fallback;
 
-  const formatNumber = (val: number) => {
-    return new Intl.NumberFormat('vi-VN').format(val);
+  // Tải cây nhóm hàng từ server
+  const loadCategories = useCallback(async (opts: { initial?: boolean } = {}) => {
+    setLoadingTree(true);
+    setTreeError(null);
+    try {
+      const list = await fetchCategories();
+      setCategories(list);
+      if (opts.initial) {
+        // Mặc định mở các nhóm cấp 1, 2 và chọn ngành hàng đầu tiên
+        setExpandedNodeIds(new Set(list.filter((c) => c.level <= 2).map((c) => c.id)));
+      }
+      setSelectedCategoryId((prev) => {
+        if (prev && list.some((c) => c.id === prev)) return prev;
+        const firstRoot = list.find((c) => c.parentId === null) || list[0];
+        return firstRoot ? firstRoot.id : '';
+      });
+    } catch (err) {
+      setTreeError(errMsg(err, 'Không thể tải cây nhóm hàng.'));
+    } finally {
+      setLoadingTree(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCategories({ initial: true });
+  }, [loadCategories]);
+
+  // Tải sản phẩm của nhóm đang chọn theo phạm vi xem
+  useEffect(() => {
+    if (!selectedCategoryId) {
+      setProducts([]);
+      setProductsTotal(0);
+      return;
+    }
+    let cancelled = false;
+    setLoadingProducts(true);
+    setProductsError(null);
+    fetchCategoryProducts(selectedCategoryId, {
+      includeSubgroups: viewScope === 'BRANCH',
+      page: 0,
+      size: CATEGORY_PRODUCTS_MAX_PAGE_SIZE
+    })
+      .then((res) => {
+        if (cancelled) return;
+        setProducts(res.content);
+        setProductsTotal(res.totalElements);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setProducts([]);
+        setProductsTotal(0);
+        setProductsError(errMsg(err, 'Không thể tải danh sách sản phẩm.'));
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingProducts(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCategoryId, viewScope, productsReloadKey]);
+
+  const refreshAll = async () => {
+    await loadCategories();
+    setProductsReloadKey((k) => k + 1);
   };
 
   // Tìm tất cả ID của nhóm con (đệ quy) thuộc một nhóm
@@ -383,42 +177,33 @@ export const CategoryManagement: React.FC = () => {
     };
   }, [categories]);
 
-  // Tính toán doanh số tổng hợp (Rollup Sales) cho từng nhóm hàng trong cây
+  // Số SKU tổng hợp (Rollup) theo cây — doanh số/sản lượng chưa có dữ liệu nên bằng 0
   const rollupsByCategoryId = useMemo(() => {
     const map: Record<string, CategoryRollup> = {};
+    const countById: Record<string, number> = {};
+    categories.forEach((c) => {
+      countById[c.id] = c.productCount || 0;
+    });
 
     categories.forEach((cat) => {
       const subtreeIds = getSubtreeCategoryIds(cat.id);
-      const directProds = products.filter((p) => p.categoryId === cat.id);
-      const allSubtreeProds = products.filter((p) => subtreeIds.includes(p.categoryId));
-
-      const directRevenue = directProds.reduce((sum, p) => sum + p.revenue, 0);
-      const totalRevenue = allSubtreeProds.reduce((sum, p) => sum + p.revenue, 0);
-      const directQuantity = directProds.reduce((sum, p) => sum + p.salesQuantity, 0);
-      const totalQuantity = allSubtreeProds.reduce((sum, p) => sum + p.salesQuantity, 0);
-
       map[cat.id] = {
         categoryId: cat.id,
-        directProductCount: directProds.length,
-        totalProductCount: allSubtreeProds.length,
-        directRevenue,
-        totalRevenue,
-        directQuantity,
-        totalQuantity
+        directProductCount: countById[cat.id] || 0,
+        totalProductCount: subtreeIds.reduce((sum, id) => sum + (countById[id] || 0), 0),
+        directRevenue: 0,
+        totalRevenue: 0,
+        directQuantity: 0,
+        totalQuantity: 0
       };
     });
 
     return map;
-  }, [categories, products, getSubtreeCategoryIds]);
-
-  // Tổng doanh số toàn bộ hệ thống để tính tỷ trọng
-  const totalSystemRevenue = useMemo(() => {
-    return products.reduce((sum, p) => sum + p.revenue, 0);
-  }, [products]);
+  }, [categories, getSubtreeCategoryIds]);
 
   // Nhóm đang chọn hiện tại
   const selectedCategory = useMemo(() => {
-    return categories.find((c) => c.id === selectedCategoryId) || categories[0];
+    return categories.find((c) => c.id === selectedCategoryId) || null;
   }, [categories, selectedCategoryId]);
 
   // Đường dẫn Breadcrumb của nhóm đang chọn
@@ -433,22 +218,12 @@ export const CategoryManagement: React.FC = () => {
     return crumbs;
   }, [selectedCategory, categories]);
 
-  // Danh sách sản phẩm hiển thị theo nhóm đang chọn và phạm vi xem
+  // Danh sách sản phẩm hiển thị (lọc tìm kiếm phía client trên trang đã tải)
   const displayedProducts = useMemo(() => {
-    if (!selectedCategory) return [];
-    const subtreeIds = getSubtreeCategoryIds(selectedCategory.id);
-
-    let list = viewScope === 'BRANCH'
-      ? products.filter((p) => subtreeIds.includes(p.categoryId))
-      : products.filter((p) => p.categoryId === selectedCategory.id);
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      list = list.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
-    }
-
-    return list;
-  }, [selectedCategory, viewScope, products, searchQuery, getSubtreeCategoryIds]);
+    if (!searchQuery.trim()) return products;
+    const q = searchQuery.toLowerCase().trim();
+    return products.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
+  }, [products, searchQuery]);
 
   // Toggle mở/đóng node cây
   const toggleExpand = (catId: string) => {
@@ -471,13 +246,14 @@ export const CategoryManagement: React.FC = () => {
     setExpandedNodeIds(new Set());
   };
 
-  // Thao tác yêu cầu xoá nhóm hàng (Kiểm tra nghiêm ngặt quy tắc "Nhóm còn sản phẩm thì không xoá được")
+  // Yêu cầu xoá nhóm hàng (backend chặn nếu còn nhóm con hoặc sản phẩm — kiểm tra trước ở FE)
   const handleDeleteCategoryClick = (cat: ProductCategory) => {
+    if (!canManage) return;
     const rollup = rollupsByCategoryId[cat.id];
     const totalCount = rollup?.totalProductCount || 0;
+    const childCount = categories.filter((c) => c.parentId === cat.id).length;
 
     if (totalCount > 0) {
-      // BỊ CHẶN: Nhóm hoặc các nhóm con vẫn còn chứa sản phẩm
       setDeleteBlockedInfo({
         category: cat,
         productCount: totalCount,
@@ -486,49 +262,51 @@ export const CategoryManagement: React.FC = () => {
       return;
     }
 
-    // Kiểm tra thêm: nếu nhóm có nhóm con
-    const children = categories.filter((c) => c.parentId === cat.id);
-    if (children.length > 0) {
-      // Nhóm con nhưng không có sản phẩm nào
-      setConfirmDeleteCategory(cat);
+    if (childCount > 0) {
+      setDeleteBlockedInfo({
+        category: cat,
+        productCount: 0,
+        reason: `Nhóm "${cat.name}" còn ${childCount} nhóm con trực thuộc. Vui lòng xoá các nhóm con trước khi xoá nhóm này.`
+      });
       return;
     }
 
-    // Nhóm hoàn toàn trống -> Cho phép xác nhận xoá
     setConfirmDeleteCategory(cat);
   };
 
-  // Thực hiện xoá nhóm khi đã thoả mãn điều kiện không còn sản phẩm
-  const executeDeleteCategory = () => {
-    if (!confirmDeleteCategory) return;
+  // Thực hiện xoá nhóm qua API
+  const executeDeleteCategory = async () => {
+    if (!confirmDeleteCategory || !canManage || saving) return;
     const catToDelete = confirmDeleteCategory;
-
-    // Lấy toàn bộ ID của nhóm và các nhóm con trống
-    const idsToDelete = getSubtreeCategoryIds(catToDelete.id);
-
-    // Cập nhật danh sách nhóm
-    setCategories((prev) => prev.filter((c) => !idsToDelete.includes(c.id)));
-
-    // Nếu nhóm đang chọn nằm trong danh sách bị xoá -> chọn lại nhóm cha hoặc nhóm đầu tiên
-    if (idsToDelete.includes(selectedCategoryId)) {
-      const fallback = categories.find((c) => !idsToDelete.includes(c.id) && c.level === 1);
-      setSelectedCategoryId(fallback ? fallback.id : '');
+    setSaving(true);
+    try {
+      await deleteCategory(catToDelete.id);
+      if (catToDelete.id === selectedCategoryId) {
+        setSelectedCategoryId(catToDelete.parentId || '');
+      }
+      setConfirmDeleteCategory(null);
+      showToast(`Đã xoá nhóm "${catToDelete.name}" thành công!`, 'success');
+      await loadCategories();
+    } catch (err) {
+      setConfirmDeleteCategory(null);
+      showToast(errMsg(err, 'Không thể xoá nhóm hàng.'), 'error');
+      await refreshAll();
+    } finally {
+      setSaving(false);
     }
-
-    setConfirmDeleteCategory(null);
-    showToast(`Đã xoá nhóm "${catToDelete.name}" thành công!`, 'success');
   };
 
   // Bắt đầu mở modal chuyển nhóm cho sản phẩm
   const handleOpenMoveModal = (prod: CategoryProduct) => {
+    if (!canManage) return;
     setMovingProduct(prod);
     setTargetCategoryId(prod.categoryId);
   };
 
-  // Thực hiện chuyển sản phẩm sang nhóm đích
-  const handleExecuteMoveProduct = (e: React.FormEvent) => {
+  // Thực hiện chuyển sản phẩm sang nhóm đích qua API
+  const handleExecuteMoveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!movingProduct || !targetCategoryId) return;
+    if (!movingProduct || !targetCategoryId || !canManage || saving) return;
 
     if (targetCategoryId === movingProduct.categoryId) {
       showToast('Sản phẩm đã ở nhóm này rồi, vui lòng chọn nhóm khác!', 'info');
@@ -536,93 +314,90 @@ export const CategoryManagement: React.FC = () => {
     }
 
     const oldCat = categories.find((c) => c.id === movingProduct.categoryId);
-    const newCat = categories.find((c) => c.id === targetCategoryId);
-
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === movingProduct.id) {
-          return { ...p, categoryId: targetCategoryId };
-        }
-        return p;
-      })
-    );
-
-    const prodName = movingProduct.name;
-    setMovingProduct(null);
-    showToast(
-      `Đã chuyển sản phẩm "${prodName}" từ nhóm "${oldCat?.name || 'Cũ'}" sang nhóm "${newCat?.name || 'Mới'}" thành công! Doanh số ngành hàng đã được cập nhật lại tức thì.`,
-      'success'
-    );
+    setSaving(true);
+    try {
+      const result = await moveProductsToCategory(targetCategoryId, [movingProduct.id]);
+      const prodName = movingProduct.name;
+      setMovingProduct(null);
+      showToast(
+        `Đã chuyển sản phẩm "${prodName}" từ nhóm "${oldCat?.name || 'Cũ'}" sang nhóm "${result.categoryName}" thành công!`,
+        'success'
+      );
+      await refreshAll();
+    } catch (err) {
+      showToast(errMsg(err, 'Không thể chuyển sản phẩm.'), 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // Lưu thêm mới hoặc sửa nhóm hàng
-  const handleSaveCategory = (e: React.FormEvent) => {
+  // Lưu thêm mới hoặc sửa nhóm hàng qua API
+  const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingCategory) return;
+    if (!editingCategory || !canManage || saving) return;
 
     const trimmedName = editingCategory.name.trim();
     const trimmedCode = editingCategory.code.trim().toUpperCase();
 
-    if (!trimmedName || !trimmedCode) {
+    if (!trimmedName || (editingCategory.isNew && !trimmedCode)) {
       showToast('Vui lòng nhập đầy đủ mã nhóm và tên nhóm hàng!', 'error');
       return;
     }
 
-    // Kiểm tra trùng mã nhóm
-    const isCodeDuplicate = categories.some(
-      (c) => c.code.toUpperCase() === trimmedCode && c.id !== editingCategory.id
-    );
-    if (isCodeDuplicate) {
-      showToast(`Mã nhóm hàng "${trimmedCode}" đã tồn tại trong hệ thống. Vui lòng chọn mã khác!`, 'error');
-      return;
-    }
-
     if (editingCategory.isNew) {
-      const newId = `cat-${Date.now()}`;
-      const newCat: ProductCategory = {
-        id: newId,
-        code: trimmedCode,
-        name: trimmedName,
-        level: editingCategory.level,
-        parentId: editingCategory.parentId,
-        description: editingCategory.description.trim()
-      };
-      setCategories((prev) => [...prev, newCat]);
-      // Tự động mở node cha để thấy nhóm mới
-      if (editingCategory.parentId) {
-        setExpandedNodeIds((prev) => new Set([...prev, editingCategory.parentId as string]));
+      if (!/^[A-Za-z0-9][A-Za-z0-9_-]{1,29}$/.test(trimmedCode)) {
+        showToast('Mã nhóm dài 2–30 ký tự, chỉ gồm chữ, số, "-" hoặc "_".', 'error');
+        return;
       }
-      setSelectedCategoryId(newId);
-      showToast(`Đã tạo mới nhóm hàng "${trimmedName}" (Cấp ${editingCategory.level}) thành công!`, 'success');
-    } else {
-      setCategories((prev) =>
-        prev.map((c) => {
-          if (c.id === editingCategory.id) {
-            return {
-              ...c,
-              code: trimmedCode,
-              name: trimmedName,
-              description: editingCategory.description.trim()
-            };
-          }
-          return c;
-        })
-      );
-      showToast(`Đã cập nhật thông tin nhóm hàng "${trimmedName}" thành công!`, 'success');
+      if (categories.some((c) => c.code.toUpperCase() === trimmedCode)) {
+        showToast(`Mã nhóm hàng "${trimmedCode}" đã tồn tại trong hệ thống. Vui lòng chọn mã khác!`, 'error');
+        return;
+      }
     }
 
-    setEditingCategory(null);
+    setSaving(true);
+    try {
+      if (editingCategory.isNew) {
+        const created = await createCategory({
+          code: trimmedCode,
+          name: trimmedName,
+          description: editingCategory.description,
+          parentId: editingCategory.parentId
+        });
+        if (editingCategory.parentId) {
+          setExpandedNodeIds((prev) => new Set([...prev, editingCategory.parentId as string]));
+        }
+        setSelectedCategoryId(created.id);
+        showToast(`Đã tạo mới nhóm hàng "${created.name}" (Cấp ${created.level}) thành công!`, 'success');
+      } else if (editingCategory.id) {
+        const updated = await updateCategory(editingCategory.id, {
+          name: trimmedName,
+          description: editingCategory.description
+        });
+        showToast(`Đã cập nhật thông tin nhóm hàng "${updated.name}" thành công!`, 'success');
+      }
+      setEditingCategory(null);
+      await loadCategories();
+    } catch (err) {
+      showToast(errMsg(err, 'Không thể lưu nhóm hàng.'), 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Mở modal thêm nhóm con
   const handleOpenAddChild = (parentCat: ProductCategory) => {
-    const nextLevel = parentCat.level + 1;
+    if (!canManage) return;
+    if (parentCat.level >= CATEGORY_MAX_LEVEL) {
+      showToast(`Cây nhóm hàng tối đa ${CATEGORY_MAX_LEVEL} cấp, không thể thêm nhóm con.`, 'info');
+      return;
+    }
     setEditingCategory({
       isNew: true,
       parentId: parentCat.id,
       parentName: parentCat.name,
-      level: nextLevel,
-      code: `${parentCat.code}-NEW`,
+      level: parentCat.level + 1,
+      code: '',
       name: '',
       description: ''
     });
@@ -630,9 +405,11 @@ export const CategoryManagement: React.FC = () => {
 
   // Mở modal sửa thông tin nhóm
   const handleOpenEdit = (cat: ProductCategory) => {
+    if (!canManage) return;
     setEditingCategory({
       isNew: false,
       parentId: cat.parentId,
+      parentName: categories.find((c) => c.id === cat.parentId)?.name,
       level: cat.level,
       id: cat.id,
       code: cat.code,
@@ -654,10 +431,11 @@ export const CategoryManagement: React.FC = () => {
           const isSelected = selectedCategoryId === cat.id;
           const rollup = rollupsByCategoryId[cat.id] || {
             directProductCount: 0,
-            totalProductCount: 0,
-            directRevenue: 0,
-            totalRevenue: 0
+            totalProductCount: 0
           };
+          const childCount = categories.filter((c) => c.parentId === cat.id).length;
+          const deleteBlocked = rollup.totalProductCount > 0 || childCount > 0;
+          const canAddChild = cat.level < CATEGORY_MAX_LEVEL;
 
           return (
             <div key={cat.id} className="group">
@@ -705,7 +483,7 @@ export const CategoryManagement: React.FC = () => {
                         ? 'bg-amber-100 text-amber-800'
                         : 'bg-slate-100 text-slate-600'
                     }`}
-                    title={`Cấp ${cat.level}: ${cat.level === 1 ? 'Ngành hàng' : cat.level === 2 ? 'Nhóm hàng' : 'Phân nhóm'}`}
+                    title={`Cấp ${cat.level}: ${levelLabel(cat.level)}`}
                   >
                     L{cat.level}
                   </span>
@@ -719,34 +497,36 @@ export const CategoryManagement: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Phần bên phải: Doanh số ngành hàng tích lũy + Số lượng sản phẩm + Nút thao tác nhanh */}
+                {/* Phần bên phải: Số lượng sản phẩm cộng dồn + Nút thao tác nhanh */}
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  {/* Doanh số tổng hợp của nhánh ngành hàng này */}
+                  {/* Số SKU tổng hợp của nhánh (doanh số chưa có dữ liệu) */}
                   <div className="text-right">
                     <span
                       className={`text-[11px] font-bold font-mono block ${
                         isSelected ? 'text-orange-600' : 'text-slate-700'
                       }`}
-                      title="Doanh số cộng dồn của toàn bộ ngành/nhóm"
+                      title="Số mã hàng cộng dồn của toàn bộ ngành/nhóm"
                     >
-                      {formatVND(rollup.totalRevenue)}
-                    </span>
-                    <span className="text-[10px] text-slate-400">
                       {rollup.totalProductCount} SKU
+                    </span>
+                    <span className="text-[10px] text-slate-400" title="Số mã gắn trực tiếp">
+                      {rollup.directProductCount} trực tiếp
                     </span>
                   </div>
 
-                  {/* Menu thao tác nhanh */}
+                  {/* Menu thao tác nhanh (chỉ ADMIN / SALES_MANAGER) */}
+                  {canManage && (
                   <div className="flex items-center gap-0.5 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                    {/* Nút thêm nhóm con (tối đa cấp 4) */}
+                    {/* Nút thêm nhóm con (tối đa CATEGORY_MAX_LEVEL cấp) */}
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleOpenAddChild(cat);
                       }}
-                      className="p-1 hover:bg-slate-200 text-slate-600 hover:text-orange-600 rounded cursor-pointer"
-                      title="Thêm nhóm con cấp dưới"
+                      disabled={!canAddChild}
+                      className="p-1 hover:bg-slate-200 text-slate-600 hover:text-orange-600 rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={canAddChild ? 'Thêm nhóm con cấp dưới' : `Đã đạt tối đa ${CATEGORY_MAX_LEVEL} cấp`}
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
@@ -776,13 +556,15 @@ export const CategoryManagement: React.FC = () => {
                         handleDeleteCategoryClick(cat);
                       }}
                       className={`p-1 rounded cursor-pointer ${
-                        rollup.totalProductCount > 0
+                        deleteBlocked
                           ? 'text-slate-300 hover:text-red-500 hover:bg-red-50'
                           : 'text-red-500 hover:bg-red-100'
                       }`}
                       title={
                         rollup.totalProductCount > 0
                           ? `Không thể xoá: Nhóm còn ${rollup.totalProductCount} sản phẩm`
+                          : childCount > 0
+                          ? `Không thể xoá: Nhóm còn ${childCount} nhóm con`
                           : 'Xoá nhóm hàng trống'
                       }
                     >
@@ -791,6 +573,7 @@ export const CategoryManagement: React.FC = () => {
                       </svg>
                     </button>
                   </div>
+                  )}
                 </div>
               </div>
 
@@ -806,11 +589,10 @@ export const CategoryManagement: React.FC = () => {
   // Rollup của nhóm đang được chọn
   const activeRollup = selectedCategory ? rollupsByCategoryId[selectedCategory.id] : null;
 
-  // Tính tỷ trọng đóng góp của nhóm đang chọn so với toàn ngành
-  const contributionPercent = useMemo(() => {
-    if (!activeRollup || totalSystemRevenue === 0) return 0;
-    return ((activeRollup.totalRevenue / totalSystemRevenue) * 100).toFixed(1);
-  }, [activeRollup, totalSystemRevenue]);
+  const activeChildCount = selectedCategory
+    ? categories.filter((c) => c.parentId === selectedCategory.id).length
+    : 0;
+  const activeDeleteBlocked = (activeRollup?.totalProductCount || 0) > 0 || activeChildCount > 0;
 
   return (
     <div className="space-y-5">
@@ -846,10 +628,25 @@ export const CategoryManagement: React.FC = () => {
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             Theo dõi doanh số theo ngành hàng, phân nhóm sản phẩm, điều chuyển mã hàng và bảo toàn toàn vẹn dữ liệu danh mục.
           </p>
+          {!canManage && (
+            <p className="text-[11px] text-amber-700 mt-1">
+              Bạn đang ở chế độ chỉ xem. Chỉ Quản trị viên và Quản lý kinh doanh được thêm/sửa/xoá nhóm và chuyển sản phẩm.
+            </p>
+          )}
         </div>
 
         {/* Nút thêm Ngành hàng cấp 1 mới */}
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => refreshAll()}
+            disabled={loadingTree}
+            className="px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all cursor-pointer disabled:opacity-50"
+            title="Tải lại dữ liệu từ máy chủ"
+          >
+            {loadingTree ? 'Đang tải...' : 'Tải lại'}
+          </button>
+          {canManage && (
           <button
             type="button"
             onClick={() =>
@@ -857,7 +654,7 @@ export const CategoryManagement: React.FC = () => {
                 isNew: true,
                 parentId: null,
                 level: 1,
-                code: `NG-NEW-${Date.now().toString().slice(-4)}`,
+                code: '',
                 name: '',
                 description: ''
               })
@@ -869,6 +666,7 @@ export const CategoryManagement: React.FC = () => {
             </svg>
             <span>Tạo Ngành Hàng Mới (Cấp 1)</span>
           </button>
+          )}
         </div>
       </div>
 
@@ -885,7 +683,7 @@ export const CategoryManagement: React.FC = () => {
                 Cây Cấu Trúc Nhóm Hàng
               </h2>
               <span className="text-[11px] text-slate-400">
-                Hiển thị doanh số tổng hợp trên từng nhánh
+                Hiển thị số mã hàng cộng dồn trên từng nhánh
               </span>
             </div>
 
@@ -918,15 +716,35 @@ export const CategoryManagement: React.FC = () => {
               Quy tắc quản trị nhóm hàng:
             </div>
             <ul className="list-disc pl-4 space-y-0.5 text-amber-700">
-              <li>Mỗi nhóm hiển thị doanh số cộng dồn của toàn nhánh (Rollup).</li>
-              <li><strong>Nhóm còn sản phẩm thì KHÔNG xoá được</strong> (nút xoá sẽ bị chặn cảnh báo).</li>
+              <li>Mỗi nhóm hiển thị số mã hàng cộng dồn của toàn nhánh (Rollup). {NO_SALES_DATA_NOTE}.</li>
+              <li><strong>Nhóm còn sản phẩm hoặc nhóm con thì KHÔNG xoá được</strong>.</li>
+              <li>Cây tối đa {CATEGORY_MAX_LEVEL} cấp; mã nhóm và nhóm cha không đổi được sau khi tạo.</li>
               <li>Chuyển sản phẩm giữa các nhóm bằng nút <em>"Chuyển nhóm"</em> ở bảng bên phải.</li>
             </ul>
           </div>
 
           {/* Vùng hiển thị Cây */}
           <div className="max-h-[640px] overflow-y-auto pr-1">
-            {renderCategoryTree(null, 0)}
+            {loadingTree && categories.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-400">Đang tải cây nhóm hàng...</div>
+            ) : treeError ? (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 space-y-2">
+                <div>{treeError}</div>
+                <button
+                  type="button"
+                  onClick={() => loadCategories()}
+                  className="px-3 py-1 rounded-lg bg-white border border-red-200 font-bold hover:bg-red-100 cursor-pointer"
+                >
+                  Thử lại
+                </button>
+              </div>
+            ) : categories.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-400">
+                Chưa có nhóm hàng nào.{canManage ? ' Bấm "Tạo Ngành Hàng Mới" để bắt đầu.' : ''}
+              </div>
+            ) : (
+              renderCategoryTree(null, 0)
+            )}
           </div>
         </div>
 
@@ -956,13 +774,7 @@ export const CategoryManagement: React.FC = () => {
                     </React.Fragment>
                   ))}
                   <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
-                    Cấp {selectedCategory.level} (
-                    {selectedCategory.level === 1
-                      ? 'Ngành hàng'
-                      : selectedCategory.level === 2
-                      ? 'Nhóm hàng'
-                      : 'Phân nhóm'}
-                    )
+                    Cấp {selectedCategory.level} ({levelLabel(selectedCategory.level)})
                   </span>
                 </div>
 
@@ -982,12 +794,26 @@ export const CategoryManagement: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  {canManage && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEdit(selectedCategory)}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
+                      title="Sửa tên và mô tả nhóm"
+                    >
+                      <span>Sửa</span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleOpenAddChild(selectedCategory)}
-                      className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
-                      title="Thêm nhóm con dưới nhóm này"
+                      disabled={selectedCategory.level >= CATEGORY_MAX_LEVEL}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={
+                        selectedCategory.level >= CATEGORY_MAX_LEVEL
+                          ? `Đã đạt tối đa ${CATEGORY_MAX_LEVEL} cấp`
+                          : 'Thêm nhóm con dưới nhóm này'
+                      }
                     >
                       <svg className="w-3.5 h-3.5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
@@ -999,13 +825,13 @@ export const CategoryManagement: React.FC = () => {
                       type="button"
                       onClick={() => handleDeleteCategoryClick(selectedCategory)}
                       className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                        (activeRollup?.totalProductCount || 0) > 0
+                        activeDeleteBlocked
                           ? 'border-slate-200 text-slate-400 hover:bg-slate-50'
                           : 'border-red-200 text-red-600 hover:bg-red-50'
                       }`}
                       title={
-                        (activeRollup?.totalProductCount || 0) > 0
-                          ? 'Chặn xoá vì nhóm đang có sản phẩm'
+                        activeDeleteBlocked
+                          ? 'Chặn xoá vì nhóm đang có sản phẩm hoặc nhóm con'
                           : 'Xoá nhóm hàng này'
                       }
                     >
@@ -1015,6 +841,7 @@ export const CategoryManagement: React.FC = () => {
                       <span>Xoá Nhóm</span>
                     </button>
                   </div>
+                  )}
                 </div>
 
                 {/* 4 THẺ THỐNG KÊ DOANH SỐ THEO NGÀNH HÀNG (QUẢN LÝ KINH DOANH) */}
@@ -1024,11 +851,11 @@ export const CategoryManagement: React.FC = () => {
                     <span className="text-[11px] font-medium text-orange-800 block">
                       Doanh Số Ngành Hàng
                     </span>
-                    <span className="text-sm sm:text-base font-extrabold text-orange-600 font-mono block leading-tight">
-                      {formatVND(activeRollup?.totalRevenue || 0)}
+                    <span className="text-sm sm:text-base font-extrabold text-orange-600/50 font-mono block leading-tight">
+                      —
                     </span>
                     <span className="text-[10px] text-orange-700/80 block">
-                      Cộng dồn toàn bộ nhánh
+                      {NO_SALES_DATA_NOTE}
                     </span>
                   </div>
 
@@ -1037,11 +864,11 @@ export const CategoryManagement: React.FC = () => {
                     <span className="text-[11px] font-medium text-slate-600 block">
                       Tổng Sản Lượng Bán
                     </span>
-                    <span className="text-sm sm:text-base font-bold text-slate-800 font-mono block leading-tight">
-                      {formatNumber(activeRollup?.totalQuantity || 0)}
+                    <span className="text-sm sm:text-base font-bold text-slate-400 font-mono block leading-tight">
+                      —
                     </span>
                     <span className="text-[10px] text-slate-400 block">
-                      Đơn vị tính cơ sở
+                      Chưa có dữ liệu (ĐVT cơ sở)
                     </span>
                   </div>
 
@@ -1063,11 +890,11 @@ export const CategoryManagement: React.FC = () => {
                     <span className="text-[11px] font-medium text-emerald-800 block">
                       Tỷ Trọng Doanh Số
                     </span>
-                    <span className="text-sm sm:text-base font-bold text-emerald-700 font-mono block leading-tight">
-                      {contributionPercent}%
+                    <span className="text-sm sm:text-base font-bold text-emerald-700/50 font-mono block leading-tight">
+                      —
                     </span>
                     <span className="text-[10px] text-emerald-600 block">
-                      Trong toàn hệ thống
+                      Chưa có dữ liệu doanh số
                     </span>
                   </div>
                 </div>
@@ -1084,8 +911,13 @@ export const CategoryManagement: React.FC = () => {
                       </span>
                     </h3>
                     <p className="text-xs text-slate-400">
-                      Xem doanh số chi tiết từng mã và thực hiện chuyển nhóm hàng
+                      {canManage ? 'Xem mã hàng trong nhóm và thực hiện chuyển nhóm hàng' : 'Xem mã hàng trong nhóm'}
                     </p>
+                    {productsTotal > products.length && (
+                      <p className="text-[11px] text-amber-700">
+                        Đang hiển thị {products.length}/{productsTotal} sản phẩm đầu tiên.
+                      </p>
+                    )}
                   </div>
 
                   {/* Toggle phạm vi xem + Ô tìm kiếm */}
@@ -1117,13 +949,13 @@ export const CategoryManagement: React.FC = () => {
                       </button>
                     </div>
 
-                    <div className="relative">
+                    <div className="relative w-full sm:w-auto">
                       <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Tìm SKU, tên sản phẩm..."
-                        className="h-8 pl-8 pr-3 rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200 w-44"
+                        className="h-8 pl-8 pr-3 rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200 w-full sm:w-44"
                       />
                       <svg
                         className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2"
@@ -1148,22 +980,38 @@ export const CategoryManagement: React.FC = () => {
                         <th className="py-2.5 px-3">Nhóm Hiện Tại</th>
                         <th className="py-2.5 px-3 text-right">Sản Lượng Bán</th>
                         <th className="py-2.5 px-3 text-right">Doanh Số (VND)</th>
-                        <th className="py-2.5 px-3 text-center">Thao Tác</th>
+                        {canManage && <th className="py-2.5 px-3 text-center">Thao Tác</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {displayedProducts.length === 0 ? (
+                      {loadingProducts ? (
                         <tr>
-                          <td colSpan={7} className="text-center py-8 text-slate-400">
+                          <td colSpan={canManage ? 7 : 6} className="text-center py-8 text-slate-400">
+                            Đang tải danh sách sản phẩm...
+                          </td>
+                        </tr>
+                      ) : productsError ? (
+                        <tr>
+                          <td colSpan={canManage ? 7 : 6} className="text-center py-8 text-red-600">
+                            {productsError}{' '}
+                            <button
+                              type="button"
+                              onClick={() => setProductsReloadKey((k) => k + 1)}
+                              className="ml-1 underline font-bold cursor-pointer"
+                            >
+                              Thử lại
+                            </button>
+                          </td>
+                        </tr>
+                      ) : displayedProducts.length === 0 ? (
+                        <tr>
+                          <td colSpan={canManage ? 7 : 6} className="text-center py-8 text-slate-400">
                             Không có sản phẩm nào trong nhóm hàng này hoặc không khớp từ khoá tìm kiếm.
                           </td>
                         </tr>
                       ) : (
                         displayedProducts.map((prod) => {
                           const directCategory = categories.find((c) => c.id === prod.categoryId);
-                          const prodContribution = activeRollup && activeRollup.totalRevenue > 0
-                            ? ((prod.revenue / activeRollup.totalRevenue) * 100).toFixed(1)
-                            : '0.0';
 
                           return (
                             <tr key={prod.id} className="hover:bg-slate-50/80 transition-colors">
@@ -1184,15 +1032,13 @@ export const CategoryManagement: React.FC = () => {
                                   {directCategory?.name || 'Chưa phân nhóm'}
                                 </span>
                               </td>
-                              <td className="py-2.5 px-3 text-right font-mono font-medium text-slate-700">
-                                {formatNumber(prod.salesQuantity)}
+                              <td className="py-2.5 px-3 text-right font-mono font-medium text-slate-400" title={NO_SALES_DATA_NOTE}>
+                                —
                               </td>
-                              <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
-                                <div>{formatVND(prod.revenue)}</div>
-                                <span className="text-[10px] font-normal text-slate-400">
-                                  {prodContribution}% ngành
-                                </span>
+                              <td className="py-2.5 px-3 text-right font-mono text-slate-400" title={NO_SALES_DATA_NOTE}>
+                                —
                               </td>
+                              {canManage && (
                               <td className="py-2.5 px-3 text-center">
                                 <button
                                   type="button"
@@ -1206,6 +1052,7 @@ export const CategoryManagement: React.FC = () => {
                                   <span>Chuyển Nhóm</span>
                                 </button>
                               </td>
+                              )}
                             </tr>
                           );
                         })
@@ -1217,14 +1064,14 @@ export const CategoryManagement: React.FC = () => {
             </>
           ) : (
             <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400">
-              Vui lòng chọn một nhóm hàng ở cây bên trái để xem chi tiết doanh số.
+              {loadingTree ? 'Đang tải dữ liệu...' : 'Vui lòng chọn một nhóm hàng ở cây bên trái để xem chi tiết.'}
             </div>
           )}
         </div>
       </div>
 
       {/* MODAL 1: CHUYỂN SẢN PHẨM GIỮA CÁC NHÓM */}
-      {movingProduct && (
+      {canManage && movingProduct && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] overflow-y-auto animate-fadeIn">
           <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 relative">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -1262,10 +1109,6 @@ export const CategoryManagement: React.FC = () => {
                     {categories.find((c) => c.id === movingProduct.categoryId)?.name || 'Chưa rõ'}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Doanh số luỹ kế:</span>
-                  <span className="font-mono font-bold text-slate-900">{formatVND(movingProduct.revenue)}</span>
-                </div>
               </div>
 
               {/* Chọn nhóm hàng đích */}
@@ -1294,7 +1137,7 @@ export const CategoryManagement: React.FC = () => {
                   })}
                 </select>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Khi chuyển nhóm, doanh số của sản phẩm sẽ tự động trừ khỏi nhóm cũ và cộng dồn vào nhóm mới.
+                  Sau khi chuyển, số mã hàng của nhóm cũ và nhóm mới sẽ được cập nhật từ máy chủ.
                 </p>
               </div>
 
@@ -1308,9 +1151,10 @@ export const CategoryManagement: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-md shadow-orange-500/20 cursor-pointer"
+                  disabled={saving}
+                  className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-md shadow-orange-500/20 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
                 >
-                  Xác Nhận Chuyển Nhóm
+                  {saving ? 'Đang chuyển...' : 'Xác Nhận Chuyển Nhóm'}
                 </button>
               </div>
             </form>
@@ -1330,11 +1174,12 @@ export const CategoryManagement: React.FC = () => {
               </div>
               <div className="flex-1">
                 <h3 className="text-sm font-bold text-red-800">
-                  Không Thể Xoá Nhóm Hàng Còn Sản Phẩm!
+                  {deleteBlockedInfo.productCount > 0 ? 'Không Thể Xoá Nhóm Hàng Còn Sản Phẩm!' : 'Không Thể Xoá Nhóm Hàng Còn Nhóm Con!'}
                 </h3>
                 <p className="text-xs text-slate-600 mt-2 leading-relaxed">
                   {deleteBlockedInfo.reason}
                 </p>
+                {deleteBlockedInfo.productCount > 0 && (
                 <div className="mt-3 p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700 space-y-1">
                   <div className="font-semibold">Hành động khắc phục:</div>
                   <p>
@@ -1342,6 +1187,7 @@ export const CategoryManagement: React.FC = () => {
                     <span className="font-bold underline">{deleteBlockedInfo.productCount} sản phẩm</span> sang nhóm hàng khác trước khi thực hiện xoá nhóm.
                   </p>
                 </div>
+                )}
               </div>
             </div>
 
@@ -1359,7 +1205,7 @@ export const CategoryManagement: React.FC = () => {
       )}
 
       {/* MODAL 3: XÁC NHẬN XOÁ NHÓM TRỐNG (HỢP LỆ) */}
-      {confirmDeleteCategory && (
+      {canManage && confirmDeleteCategory && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] overflow-y-auto animate-fadeIn">
           <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 relative">
             <div className="flex items-start gap-3">
@@ -1388,10 +1234,11 @@ export const CategoryManagement: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={executeDeleteCategory}
-                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md shadow-red-600/20 cursor-pointer"
+                onClick={() => executeDeleteCategory()}
+                disabled={saving}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md shadow-red-600/20 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
               >
-                Xác Nhận Xoá
+                {saving ? 'Đang xoá...' : 'Xác Nhận Xoá'}
               </button>
             </div>
           </div>
@@ -1399,7 +1246,7 @@ export const CategoryManagement: React.FC = () => {
       )}
 
       {/* MODAL 4: THÊM / SỬA NHÓM HÀNG */}
-      {editingCategory && (
+      {canManage && editingCategory && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] overflow-y-auto animate-fadeIn">
           <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 relative">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -1435,10 +1282,17 @@ export const CategoryManagement: React.FC = () => {
                   onChange={(e) =>
                     setEditingCategory({ ...editingCategory, code: e.target.value.toUpperCase() })
                   }
-                  required
+                  required={editingCategory.isNew}
+                  disabled={!editingCategory.isNew}
+                  maxLength={30}
                   placeholder="Ví dụ: NH-BIA-LON"
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 text-xs font-mono uppercase text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200"
+                  className="w-full h-9 px-3 rounded-xl border border-slate-200 text-xs font-mono uppercase text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200 disabled:bg-slate-100 disabled:text-slate-500"
                 />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {editingCategory.isNew
+                    ? '2–30 ký tự: chữ, số, "-" hoặc "_". Không đổi được sau khi tạo.'
+                    : 'Mã nhóm và nhóm cha không thể thay đổi sau khi tạo.'}
+                </p>
               </div>
 
               <div>
@@ -1452,6 +1306,7 @@ export const CategoryManagement: React.FC = () => {
                     setEditingCategory({ ...editingCategory, name: e.target.value })
                   }
                   required
+                  maxLength={100}
                   placeholder="Ví dụ: Bia Lon Thương Mại"
                   className="w-full h-9 px-3 rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200"
                 />
@@ -1467,6 +1322,7 @@ export const CategoryManagement: React.FC = () => {
                   onChange={(e) =>
                     setEditingCategory({ ...editingCategory, description: e.target.value })
                   }
+                  maxLength={500}
                   placeholder="Mô tả phạm vi sản phẩm và tính chất ngành hàng..."
                   className="w-full p-2.5 rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200 resize-none"
                 />
@@ -1482,9 +1338,10 @@ export const CategoryManagement: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-md shadow-orange-500/20 cursor-pointer"
+                  disabled={saving}
+                  className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-md shadow-orange-500/20 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
                 >
-                  {editingCategory.isNew ? 'Lưu Nhóm Mới' : 'Cập Nhật Nhóm'}
+                  {saving ? 'Đang lưu...' : editingCategory.isNew ? 'Lưu Nhóm Mới' : 'Cập Nhật Nhóm'}
                 </button>
               </div>
             </form>

@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Icons } from '../common/Icons';
-import { CATALOG_PRODUCTS, CUSTOMER_GROUPS } from '../../types/pricing';
-import type { CustomerGroupType } from '../../types/pricing';
+import { CUSTOMER_GROUPS } from '../../types/pricing';
+import type { CustomerGroupType, CatalogProduct } from '../../types/pricing';
 import type { BestDealSimulationOutput } from '../../types/discount';
-import { simulateBestDeal, BEST_DEAL_RULE_STATEMENT } from '../../services/volumeDiscountApi';
+import {
+  simulateBestDeal,
+  BEST_DEAL_RULE_STATEMENT,
+  fetchDiscountProductOptions
+} from '../../services/volumeDiscountApi';
 
 interface BestDealSimulatorWidgetProps {
   initialSku?: string;
@@ -11,28 +15,65 @@ interface BestDealSimulatorWidgetProps {
 }
 
 export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = ({
-  initialSku = 'BIA-HN-330',
+  initialSku = '',
   onClose
 }) => {
+  const [products, setProducts] = useState<CatalogProduct[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(true);
   const [selectedSku, setSelectedSku] = useState<string>(initialSku);
   const [quantity, setQuantity] = useState<number>(60);
   const [customerGroup, setCustomerGroup] = useState<CustomerGroupType>('DEALER_LEVEL_1');
   const [customPrice, setCustomPrice] = useState<number>(0);
   const [simulationResult, setSimulationResult] = useState<BestDealSimulationOutput | null>(null);
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
+  const [simError, setSimError] = useState<string | null>(null);
+  const requestSeq = useRef<number>(0);
+
+  // Tải danh sách sản phẩm thật từ backend
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoadingProducts(true);
+    fetchDiscountProductOptions()
+      .then((list) => {
+        if (cancelled) return;
+        setProducts(list);
+        setSelectedSku((prev) =>
+          prev && list.some((p) => p.sku === prev) ? prev : list[0]?.sku || ''
+        );
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setSimError(err instanceof Error ? err.message : 'Không tải được danh sách sản phẩm!');
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingProducts(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Đồng bộ khi trang yêu cầu thử một SKU cụ thể
+  useEffect(() => {
+    if (initialSku) setSelectedSku(initialSku);
+  }, [initialSku]);
 
   // Lấy thông tin sản phẩm đang chọn
-  const currentProduct = CATALOG_PRODUCTS.find((p) => p.sku === selectedSku) || CATALOG_PRODUCTS[0];
+  const currentProduct: CatalogProduct = products.find((p) => p.sku === selectedSku) || {
+    sku: selectedSku,
+    name: selectedSku,
+    defaultCategory: '',
+    unit: 'đơn vị',
+    suggestedRetailPrice: 0
+  };
+  const displayUnitPrice = customPrice > 0 ? customPrice : simulationResult?.unitPrice || 0;
 
-  useEffect(() => {
-    if (currentProduct) {
-      setCustomPrice(currentProduct.suggestedRetailPrice);
-    }
-  }, [selectedSku, currentProduct]);
-
-  // Chạy mô phỏng
+  // Chạy mô phỏng (đơn giá trống = tự tra cứu theo bảng giá của nhóm khách hàng)
   const handleSimulate = async () => {
+    if (!selectedSku) return;
+    const seq = ++requestSeq.current;
     setIsCalculating(true);
+    setSimError(null);
     try {
       const result = await simulateBestDeal({
         productSku: selectedSku,
@@ -40,17 +81,25 @@ export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = (
         customerGroup,
         unitPrice: customPrice > 0 ? customPrice : undefined
       });
-      setSimulationResult(result);
-    } catch (err) {
-      console.error('Lỗi mô phỏng chiết khấu:', err);
+      if (seq === requestSeq.current) setSimulationResult(result);
+    } catch (err: unknown) {
+      if (seq === requestSeq.current) {
+        setSimulationResult(null);
+        setSimError(err instanceof Error ? err.message : 'Đã có lỗi xảy ra khi mô phỏng chiết khấu!');
+      }
     } finally {
-      setIsCalculating(false);
+      if (seq === requestSeq.current) setIsCalculating(false);
     }
   };
 
-  // Tự động mô phỏng khi thay đổi tham số
+  // Tự động mô phỏng khi thay đổi tham số (trễ nhẹ để tránh gọi API liên tục khi gõ)
   useEffect(() => {
-    handleSimulate();
+    if (!selectedSku) return;
+    const timer = setTimeout(() => {
+      handleSimulate();
+    }, 350);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSku, quantity, customerGroup, customPrice]);
 
   return (
@@ -113,9 +162,16 @@ export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = (
               onChange={(e) => setSelectedSku(e.target.value)}
               className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs sm:text-sm font-medium text-gray-900 shadow-2xs transition-colors focus:border-[#F85606] focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
             >
-              {CATALOG_PRODUCTS.map((prod) => (
+              {isLoadingProducts && products.length === 0 && (
+                <option value="">Đang tải danh sách sản phẩm...</option>
+              )}
+              {!isLoadingProducts && products.length === 0 && (
+                <option value="">-- Chưa có sản phẩm đang kinh doanh --</option>
+              )}
+              {products.map((prod) => (
                 <option key={prod.sku} value={prod.sku}>
-                  [{prod.sku}] {prod.name} ({prod.defaultCategory})
+                  [{prod.sku}] {prod.name}
+                  {prod.defaultCategory ? ` (${prod.defaultCategory})` : ''}
                 </option>
               ))}
             </select>
@@ -186,7 +242,8 @@ export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = (
                 type="number"
                 min="0"
                 step="1000"
-                value={customPrice}
+                placeholder="Tự tra theo bảng giá"
+                value={customPrice > 0 ? customPrice : ''}
                 onChange={(e) => setCustomPrice(Math.max(0, parseInt(e.target.value) || 0))}
                 className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 pr-10 text-sm font-semibold text-gray-900 shadow-2xs focus:border-[#F85606] focus:outline-none focus:ring-2 focus:ring-orange-500/20 font-mono"
               />
@@ -195,13 +252,21 @@ export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = (
               </span>
             </div>
             <p className="mt-1 text-[11px] text-gray-500">
+              {customPrice > 0 ? 'Đơn giá nhập tay. ' : 'Để trống = tự lấy giá theo bảng giá nhóm KH. '}
               Tổng tiền gốc:{' '}
               <strong className="text-gray-900 font-mono font-bold">
-                {((customPrice || 0) * quantity).toLocaleString('vi-VN')} đ
+                {(displayUnitPrice * quantity).toLocaleString('vi-VN')} đ
               </strong>
             </p>
           </div>
         </div>
+
+        {simError && (
+          <div className="mt-4 flex items-start space-x-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+            <Icons.ShieldAlert size={16} className="mt-0.5 shrink-0 text-red-500" />
+            <span className="font-semibold">{simError}</span>
+          </div>
+        )}
 
         {/* Kết quả so sánh Best-Deal */}
         {simulationResult && (
