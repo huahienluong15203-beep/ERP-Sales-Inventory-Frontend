@@ -111,13 +111,13 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
         );
       }
     } else {
-      // Create mode
-      const defaultProd = CATALOG_PRODUCTS[0];
-      setCode(`CK-${Date.now().toString().slice(-4)}`);
-      setName('');
+      // Giá trị mặc định khi tạo mới
+      const defaultProduct = CATALOG_PRODUCTS[0];
+      setCode(`CK-SL-${Date.now().toString().slice(-4)}`);
+      setName('Chính sách Chiết khấu Sản lượng Mới');
       setScopeType('SKU');
-      setTargetId(defaultProd.sku);
-      setTargetName(defaultProd.name);
+      setTargetId(defaultProduct.sku);
+      setTargetName(defaultProduct.name);
       setCustomerGroup('ALL');
       setStartDate(new Date().toISOString().slice(0, 10));
       setEndDate('');
@@ -136,18 +136,26 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
         },
         {
           minQuantity: 50,
+          maxQuantity: 99,
+          isUnlimited: false,
+          discountType: 'PERCENT',
+          discountValue: 5,
+          note: 'Bậc 2'
+        },
+        {
+          minQuantity: 100,
           maxQuantity: null,
           isUnlimited: true,
           discountType: 'PERCENT',
-          discountValue: 6,
-          note: 'Bậc 2'
+          discountValue: 8,
+          note: 'Bậc 3'
         }
       ]);
     }
     setErrorMsg(null);
   }, [initialData, mode, isOpen]);
 
-  // Cập nhật targetId và targetName khi đổi Scope
+  // Thay đổi phạm vi áp dụng
   const handleScopeChange = (newScope: DiscountScopeType) => {
     setScopeType(newScope);
     if (newScope === 'SKU') {
@@ -252,8 +260,8 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
         setErrorMsg(`Bậc ${i + 1}: Số lượng tối thiểu phải lớn hơn 0!`);
         return;
       }
-      if (!t.isUnlimited && t.maxQuantity !== null && t.maxQuantity < t.minQuantity) {
-        setErrorMsg(`Bậc ${i + 1}: Số lượng tối đa (${t.maxQuantity}) không được nhỏ hơn số lượng tối thiểu (${t.minQuantity})!`);
+      if (!t.isUnlimited && t.maxQuantity !== null && t.maxQuantity <= t.minQuantity) {
+        setErrorMsg(`Bậc ${i + 1}: Số lượng tối đa phải lớn hơn số lượng tối thiểu!`);
         return;
       }
       if (t.discountValue <= 0) {
@@ -261,11 +269,12 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
         return;
       }
       if (t.discountType === 'PERCENT' && t.discountValue > 100) {
-        setErrorMsg(`Bậc ${i + 1}: Mức chiết khấu phần trăm không được vượt quá 100%!`);
+        setErrorMsg(`Bậc ${i + 1}: Chiết khấu phần trăm không được vượt quá 100%!`);
         return;
       }
     }
 
+    // Chuẩn hóa payload
     const payload: VolumeDiscountPolicyRequest = {
       code: code.trim().toUpperCase(),
       name: name.trim(),
@@ -283,8 +292,8 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
         minQuantity: t.minQuantity,
         maxQuantity: t.isUnlimited ? null : t.maxQuantity,
         discountType: t.discountType,
-        discountValue: Number(t.discountValue),
-        note: t.note.trim()
+        discountValue: t.discountValue,
+        note: t.note.trim() || undefined
       }))
     };
 
@@ -306,54 +315,53 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-xs">
-      <div className="relative my-8 w-full max-w-4xl rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-black/60 p-3 sm:p-4 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative my-8 w-full max-w-4xl rounded-2xl border border-gray-100 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        {/* Header Modal - Cam Trắng */}
+        <div className="flex items-center justify-between bg-gradient-to-r from-orange-500 to-amber-500 px-5 sm:px-6 py-4 text-white">
           <div className="flex items-center space-x-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 text-white backdrop-blur-xs shadow-inner">
               <Icons.Percent size={22} />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              <h3 className="text-base sm:text-lg font-bold">
                 {mode === 'create'
-                  ? 'Khai báo Chính sách Chiết khấu theo Sản lượng'
-                  : 'Cập nhật Chính sách Chiết khấu'}
+                  ? 'Khai Báo Chính Sách Chiết Khấu Theo Sản Lượng'
+                  : 'Cập Nhật Chính Sách Chiết Khấu'}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Ticket S3-01 / SCRUM-12 (Tự động áp dụng chính sách có lợi nhất cho khách hàng)
+              <p className="text-xs text-orange-100">
+                Ticket S3-01 / SCRUM-12 (Tự động so sánh và áp dụng mức có lợi nhất cho khách hàng)
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            className="rounded-lg p-1.5 text-white/80 hover:bg-white/20 hover:text-white transition-colors cursor-pointer"
           >
-            <Icons.RotateCcw size={18} className="hidden" />
             <span className="text-xl font-bold leading-none">&times;</span>
           </button>
         </div>
 
         {/* Error Alert */}
         {errorMsg && (
-          <div className="mx-6 mt-4 flex items-center space-x-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
-            <Icons.ShieldAlert size={16} className="shrink-0" />
-            <span>{errorMsg}</span>
+          <div className="mx-6 mt-4 flex items-center space-x-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 animate-in fade-in">
+            <Icons.ShieldAlert size={16} className="shrink-0 text-red-500" />
+            <span className="font-semibold">{errorMsg}</span>
           </div>
         )}
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 max-h-[78vh] overflow-y-auto">
           <div className="space-y-6">
             {/* Nhóm 1: Thông tin cơ bản */}
             <div>
-              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">
                 1. Thông tin định danh & Phạm vi áp dụng
               </h4>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {/* Mã chính sách */}
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <label className="mb-1 block text-xs font-semibold text-gray-700">
                     Mã chính sách <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -362,13 +370,13 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                     placeholder="VD: CK-BIA-HN-Q4"
                     value={code}
                     onChange={(e) => setCode(e.target.value.toUpperCase())}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold uppercase tracking-wider text-slate-900 shadow-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 font-mono"
                   />
                 </div>
 
                 {/* Tên chính sách */}
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <label className="mb-1 block text-xs font-semibold text-gray-700">
                     Tên chính sách <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -377,23 +385,23 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                     placeholder="VD: Chiết khấu sản lượng Bia Hà Nội Quý 4"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20"
                   />
                 </div>
 
                 {/* Phạm vi áp dụng: SKU hay CATEGORY */}
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <label className="mb-1 block text-xs font-semibold text-gray-700">
                     Phạm vi áp dụng <span className="text-red-500">*</span>
                   </label>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => handleScopeChange('SKU')}
-                      className={`flex-1 rounded-xl border py-2 text-xs font-bold transition-all ${
+                      className={`flex-1 rounded-xl border py-2.5 text-xs font-bold transition-all cursor-pointer ${
                         scopeType === 'SKU'
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-xs dark:border-indigo-500 dark:bg-indigo-950/60 dark:text-indigo-300'
-                          : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          ? 'border-[#F85606] bg-orange-50 text-[#F85606] shadow-2xs'
+                          : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                       }`}
                     >
                       Theo SKU
@@ -401,10 +409,10 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                     <button
                       type="button"
                       onClick={() => handleScopeChange('CATEGORY')}
-                      className={`flex-1 rounded-xl border py-2 text-xs font-bold transition-all ${
+                      className={`flex-1 rounded-xl border py-2.5 text-xs font-bold transition-all cursor-pointer ${
                         scopeType === 'CATEGORY'
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-xs dark:border-indigo-500 dark:bg-indigo-950/60 dark:text-indigo-300'
-                          : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          ? 'border-[#F85606] bg-orange-50 text-[#F85606] shadow-2xs'
+                          : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                       }`}
                     >
                       Theo Nhóm hàng
@@ -414,14 +422,14 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
 
                 {/* Chọn đối tượng theo Scope */}
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <label className="mb-1 block text-xs font-semibold text-gray-700">
                     {scopeType === 'SKU' ? 'Chọn sản phẩm (SKU)' : 'Chọn nhóm hàng'} <span className="text-red-500">*</span>
                   </label>
                   {scopeType === 'SKU' ? (
                     <select
                       value={targetId}
                       onChange={(e) => handleProductSelect(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs sm:text-sm font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
                     >
                       {CATALOG_PRODUCTS.map((prod) => (
                         <option key={prod.sku} value={prod.sku}>
@@ -433,7 +441,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                     <select
                       value={targetId}
                       onChange={(e) => handleCategorySelect(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs sm:text-sm font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
                     >
                       {AVAILABLE_CATEGORIES.map((cat) => (
                         <option key={cat} value={cat}>
@@ -446,13 +454,13 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
 
                 {/* Đối tượng đại lý */}
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <label className="mb-1 block text-xs font-semibold text-gray-700">
                     Đối tượng đại lý / khách hàng
                   </label>
                   <select
                     value={customerGroup}
                     onChange={(e) => setCustomerGroup(e.target.value as DiscountCustomerScope)}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs sm:text-sm font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
                   >
                     <option value="ALL">Tất cả khách hàng & Đại lý</option>
                     {Object.entries(CUSTOMER_GROUPS).map(([key, info]) => (
@@ -465,7 +473,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
 
                 {/* Ngày bắt đầu */}
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <label className="mb-1 block text-xs font-semibold text-gray-700">
                     Ngày bắt đầu hiệu lực <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -473,17 +481,17 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                     required
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs sm:text-sm text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
                   />
                 </div>
 
                 {/* Ngày kết thúc */}
                 <div>
                   <div className="mb-1 flex items-center justify-between">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <label className="text-xs font-semibold text-gray-700">
                       Ngày kết thúc
                     </label>
-                    <label className="flex items-center space-x-1.5 text-[11px] text-slate-500">
+                    <label className="flex items-center space-x-1.5 text-[11px] text-gray-500 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={!hasEndDate}
@@ -491,7 +499,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                           setHasEndDate(!e.target.checked);
                           if (e.target.checked) setEndDate('');
                         }}
-                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                        className="rounded text-[#F85606] focus:ring-orange-500"
                       />
                       <span>Vô thời hạn</span>
                     </label>
@@ -501,27 +509,27 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                     disabled={!hasEndDate}
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-xs disabled:bg-slate-100 disabled:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:disabled:bg-slate-800/40"
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs sm:text-sm text-gray-900 shadow-2xs disabled:bg-gray-100 disabled:text-gray-400 focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
                   />
                 </div>
               </div>
             </div>
 
             {/* Nhóm 2: Cấu hình Bậc chiết khấu sản lượng */}
-            <div className="border-t border-slate-200 pt-5 dark:border-slate-800">
-              <div className="mb-3 flex items-center justify-between">
+            <div className="border-t border-gray-200 pt-5">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">
                     2. Cấu hình Bậc chiết khấu theo sản lượng (Tiered Tiers)
                   </h4>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-gray-500">
                     Chiết khấu tính theo phần trăm (%) hoặc theo số tiền trên đơn vị (VND/đơn vị)
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={handleAddTier}
-                  className="flex items-center space-x-1.5 rounded-xl bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-300 dark:hover:bg-indigo-900/80"
+                  className="flex items-center space-x-1.5 rounded-xl bg-orange-50 border border-orange-200 px-3 py-1.5 text-xs font-bold text-[#F85606] transition-colors hover:bg-orange-100 cursor-pointer"
                 >
                   <Icons.Receipt size={14} className="hidden" />
                   <span>+ Thêm bậc số lượng</span>
@@ -533,19 +541,19 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                 {tiers.map((tier, idx) => (
                   <div
                     key={idx}
-                    className="relative rounded-xl border border-slate-200 bg-slate-50/50 p-4 transition-all dark:border-slate-800 dark:bg-slate-800/40"
+                    className="relative rounded-xl border border-orange-200/80 bg-orange-50/30 p-4 transition-all"
                   >
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-12 sm:items-center">
                       {/* Bậc số */}
                       <div className="sm:col-span-2">
-                        <span className="inline-flex items-center rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-bold text-white shadow-2xs">
+                        <span className="inline-flex items-center rounded-lg bg-[#F85606] px-2.5 py-1 text-xs font-bold text-white shadow-2xs">
                           Bậc {idx + 1}
                         </span>
                       </div>
 
                       {/* Số lượng từ */}
                       <div className="sm:col-span-2">
-                        <label className="mb-1 block text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                        <label className="mb-1 block text-[11px] font-semibold text-gray-700">
                           Từ số lượng (≥)
                         </label>
                         <input
@@ -557,24 +565,24 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                           onChange={(e) =>
                             handleTierChange(idx, 'minQuantity', Math.max(1, parseInt(e.target.value) || 1))
                           }
-                          className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-900 shadow-2xs dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                          className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-bold text-gray-900 shadow-2xs focus:border-[#F85606] focus:outline-none font-mono"
                         />
                       </div>
 
                       {/* Số lượng đến */}
                       <div className="sm:col-span-2">
                         <div className="mb-1 flex items-center justify-between">
-                          <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                          <label className="text-[11px] font-semibold text-gray-700">
                             Đến số lượng (≤)
                           </label>
                         </div>
                         {tier.isUnlimited ? (
-                          <div className="flex h-[30px] items-center justify-between rounded-lg border border-dashed border-emerald-300 bg-emerald-50/50 px-2 text-xs font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                          <div className="flex h-[30px] items-center justify-between rounded-lg border border-dashed border-emerald-300 bg-emerald-50 px-2 text-xs font-semibold text-emerald-700">
                             <span>Không giới hạn</span>
                             <button
                               type="button"
                               onClick={() => handleTierChange(idx, 'isUnlimited', false)}
-                              className="text-[10px] text-slate-500 underline"
+                              className="text-[10px] text-gray-500 underline cursor-pointer"
                             >
                               Đặt hạn
                             </button>
@@ -593,13 +601,13 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                                   e.target.value ? parseInt(e.target.value) : null
                                 )
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 pr-8 text-xs font-bold text-slate-900 shadow-2xs dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                              className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 pr-8 text-xs font-bold text-gray-900 shadow-2xs focus:border-[#F85606] focus:outline-none font-mono"
                             />
                             <button
                               type="button"
                               onClick={() => handleTierChange(idx, 'isUnlimited', true)}
                               title="Chuyển thành không giới hạn trên"
-                              className="absolute right-1 top-1 rounded px-1 text-[10px] text-slate-400 hover:text-indigo-600"
+                              className="absolute right-1 top-1 rounded px-1 text-[10px] text-gray-400 hover:text-[#F85606] cursor-pointer"
                             >
                               &infin;
                             </button>
@@ -609,7 +617,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
 
                       {/* Loại chiết khấu */}
                       <div className="sm:col-span-2">
-                        <label className="mb-1 block text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                        <label className="mb-1 block text-[11px] font-semibold text-gray-700">
                           Hình thức CK
                         </label>
                         <select
@@ -617,7 +625,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                           onChange={(e) =>
                             handleTierChange(idx, 'discountType', e.target.value as DiscountCalculationType)
                           }
-                          className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-900 shadow-2xs dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                          className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-900 shadow-2xs focus:border-[#F85606] focus:outline-none cursor-pointer"
                         >
                           <option value="PERCENT">Phần trăm (%)</option>
                           <option value="FIXED_AMOUNT">Số tiền (đ/đv)</option>
@@ -626,7 +634,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
 
                       {/* Giá trị chiết khấu */}
                       <div className="sm:col-span-2">
-                        <label className="mb-1 block text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                        <label className="mb-1 block text-[11px] font-semibold text-gray-700">
                           Mức giảm ({tier.discountType === 'PERCENT' ? '%' : 'VND/đv'})
                         </label>
                         <div className="relative">
@@ -640,9 +648,9 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                             onChange={(e) =>
                               handleTierChange(idx, 'discountValue', parseFloat(e.target.value) || 0)
                             }
-                            className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 pr-8 text-xs font-bold text-slate-900 shadow-2xs dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                            className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 pr-8 text-xs font-bold text-gray-900 shadow-2xs focus:border-[#F85606] focus:outline-none font-mono"
                           />
-                          <span className="pointer-events-none absolute right-2.5 top-1.5 text-xs font-bold text-slate-400">
+                          <span className="pointer-events-none absolute right-2.5 top-1.5 text-xs font-bold text-gray-400">
                             {tier.discountType === 'PERCENT' ? '%' : 'đ'}
                           </span>
                         </div>
@@ -654,7 +662,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                           type="button"
                           disabled={tiers.length <= 1}
                           onClick={() => handleRemoveTier(idx)}
-                          className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-30 dark:hover:bg-red-950/40"
+                          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-30 cursor-pointer"
                           title="Xóa bậc này"
                         >
                           <Icons.ShieldAlert size={16} />
@@ -667,11 +675,11 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
             </div>
 
             {/* Nhóm 3: Banner cam kết quy tắc Best-Deal */}
-            <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-4 text-xs text-indigo-900 dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-200">
+            <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3.5 text-xs text-amber-900">
               <div className="flex items-start space-x-2">
-                <Icons.CheckSquare size={16} className="mt-0.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                <Icons.CheckSquare size={16} className="mt-0.5 shrink-0 text-amber-700" />
                 <p>
-                  <strong className="font-semibold">Quy tắc có lợi nhất cho khách (Best-deal rule): </strong>
+                  <strong className="font-bold">Quy tắc có lợi nhất cho khách (Best-deal rule): </strong>
                   {BEST_DEAL_RULE_STATEMENT}
                 </p>
               </div>
@@ -679,7 +687,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
 
             {/* Nhóm 4: Ghi chú mô tả thêm */}
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <label className="mb-1 block text-xs font-semibold text-gray-700">
                 Ghi chú / Thỏa thuận kinh doanh bổ sung
               </label>
               <textarea
@@ -687,24 +695,24 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                 placeholder="VD: Áp dụng hỗ trợ NPP dịp cao điểm, không cộng dồn với quà tặng hiện vật..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 shadow-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20"
               />
             </div>
           </div>
 
           {/* Footer Buttons */}
-          <div className="mt-6 flex items-center justify-end space-x-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+          <div className="mt-6 flex items-center justify-end space-x-3 border-t border-gray-200 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="rounded-xl border border-gray-200 px-4 py-2 text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
             >
               Hủy bỏ
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center space-x-2 rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/20 transition-all hover:bg-indigo-700 disabled:opacity-50"
+              className="flex items-center space-x-2 rounded-xl bg-[#F85606] hover:bg-[#E04D05] px-5 py-2 text-xs sm:text-sm font-bold text-white shadow-md transition-all disabled:opacity-50 cursor-pointer"
             >
               <Icons.CheckSquare size={16} />
               <span>{isSubmitting ? 'Đang lưu...' : mode === 'create' ? 'Tạo chính sách' : 'Lưu thay đổi'}</span>
