@@ -61,15 +61,15 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
 
     setLoadingPoints(true);
     fetchDeliveryPoints(selectedAgency.id)
-      .then((points) => {
+      .then((points: DeliveryPoint[]) => {
         setDeliveryPoints(points);
         // Tự động chọn điểm giao mặc định (isDefault) hoặc điểm đầu tiên
         if (points.length > 0) {
-          const defaultPt = points.find((p) => p.isDefault) || points[0];
+          const defaultPt = points.find((p: DeliveryPoint) => p.isDefault) || points[0];
           onSelectDeliveryPoint(defaultPt);
         }
       })
-      .catch((err) => console.error('Lỗi tải điểm giao:', err))
+      .catch((err: unknown) => console.error('Lỗi tải điểm giao:', err))
       .finally(() => setLoadingPoints(false));
   }, [selectedAgency?.id]);
 

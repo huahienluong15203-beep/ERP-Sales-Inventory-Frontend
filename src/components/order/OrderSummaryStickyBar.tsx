@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { formatCurrencyVND } from '../../services/orderService';
-import { ShoppingCart, Save, CheckCircle2, ChevronUp, ChevronDown, Tag } from '../common/Icons';
+import { Save, CheckCircle2, ChevronUp, ChevronDown, Tag } from '../common/Icons';
 
 interface OrderSummaryStickyBarProps {
   totalItemsCount: number;

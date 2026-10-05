@@ -673,6 +673,8 @@ export async function fetchDeliveryPointsByAgency(agencyId: string): Promise<Del
   });
 }
 
+export const fetchDeliveryPoints = fetchDeliveryPointsByAgency;
+
 /**
  * 8. Thêm mới một điểm giao hàng cho đại lý
  * Nghiệp vụ S3-04:

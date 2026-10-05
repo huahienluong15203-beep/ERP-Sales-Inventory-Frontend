@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { OrderProductCatalogItem } from '../../services/orderService';
 import { CATALOG_ORDERABLE_PRODUCTS, formatCurrencyVND } from '../../services/orderService';
-import { Search, X, Plus, Check, Package, Layers } from '../common/Icons';
+import { Search, X, Plus, Check, Package } from '../common/Icons';
 
 interface ProductPickerModalProps {
   isOpen: boolean;

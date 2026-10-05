@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Agency, DeliveryPoint } from '../../types/agency';
 import type { OrderDraft, OrderItem } from '../../types/order';
 import type { OrderProductCatalogItem } from '../../services/orderService';
@@ -24,16 +24,11 @@ import { OrderDraftsModal } from '../../components/order/OrderDraftsModal';
 import {
   ShoppingCart,
   Plus,
-  Save,
   CheckCircle2,
   FileText,
   Smartphone,
   Monitor,
-  RefreshCw,
-  AlertTriangle,
-  Lock,
-  Tag,
-  ArrowLeft
+  RefreshCw
 } from '../../components/common/Icons';
 
 export const OrderCreatePage: React.FC = () => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import type { OrderItem } from '../../types/order';
 import { formatCurrencyVND } from '../../services/orderService';
-import { Trash2, Plus, Minus, Tag, Package } from '../common/Icons';
+import { Trash2, Plus, Minus, Tag } from '../common/Icons';
 
 interface OrderItemRowProps {
   item: OrderItem;
