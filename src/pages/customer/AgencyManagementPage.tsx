@@ -24,6 +24,7 @@ import { TransferTerritoryModal } from '../../components/customer/TransferTerrit
 import { AssignmentHistoryModal } from '../../components/customer/AssignmentHistoryModal';
 import { CustomerTransactionLockModal } from '../../components/customer/CustomerTransactionLockModal';
 import { DeleteAgencyModal } from '../../components/customer/DeleteAgencyModal';
+import { AgencyCardView } from '../../components/customer/AgencyCardView';
 import { useAuth } from '../../contexts/AuthContext';
 import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
 import {
@@ -46,7 +47,8 @@ import {
   Truck,
   History,
   Lock,
-  Unlock
+  Unlock,
+  Navigation
 } from '../../components/common/Icons';
 
 export const AgencyManagementPage: React.FC = () => {
@@ -152,6 +154,11 @@ export const AgencyManagementPage: React.FC = () => {
   // Bộ lọc trạng thái khóa giao dịch (S3-07): '' (Tất cả), 'LOCKED' (Bị khóa), 'UNLOCKED' (Đang mở)
   const [selectedLockFilter, setSelectedLockFilter] = useState('');
 
+  // S3-08 / SCRUM-21: Chế độ xem: Bảng máy tính ('table') hoặc Thẻ tuyến ngoài đường ('cards')
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  // S3-08: Tab lọc nhanh trạng thái trong tuyến
+  const [routeQuickFilter, setRouteQuickFilter] = useState<'ALL' | 'ACTIVE' | 'LOCKED' | 'SUSPENDED'>('ALL');
+
   // State menu thả xuống thao tác khác trên từng dòng
   const [openMenuAgencyId, setOpenMenuAgencyId] = useState<string | null>(null);
 
@@ -222,12 +229,21 @@ export const AgencyManagementPage: React.FC = () => {
       )
     : roleFilteredAgencies;
 
-  // Mới gõ 1 ký tự: lọc tại chỗ trên danh sách đang hiển thị, không gọi API
+  // S3-08 / SCRUM-21: Tab lọc nhanh theo trạng thái tuyến đi đường
+  const quickTabFilteredAgencies = routeQuickFilter === 'ALL'
+    ? lockFilteredAgencies
+    : routeQuickFilter === 'LOCKED'
+    ? roleFilteredAgencies.filter((a) => Boolean(a.transactionLocked))
+    : routeQuickFilter === 'ACTIVE'
+    ? roleFilteredAgencies.filter((a) => a.status === 'ACTIVE' && !a.transactionLocked)
+    : roleFilteredAgencies.filter((a) => a.status === 'SUSPENDED');
+
+  // Mới gõ 1 ký tự: lọc tại chỗ trên danh sách đang hiển thị, không gọi API (hỗ trợ tìm cả địa chỉ khi đứng ngoài đường)
   const visibleAgencies = localKeyword
-    ? lockFilteredAgencies.filter((a) =>
-        matchesKeyword(localKeyword, a.code, a.name, a.taxCode, a.phone, a.assignedRepName)
+    ? quickTabFilteredAgencies.filter((a) =>
+        matchesKeyword(localKeyword, a.code, a.name, a.taxCode, a.phone, a.assignedRepName, a.address)
       )
-    : lockFilteredAgencies;
+    : quickTabFilteredAgencies;
 
   // Reset bộ lọc
   const handleResetFilter = () => {
@@ -236,6 +252,7 @@ export const AgencyManagementPage: React.FC = () => {
     setSelectedRegion('');
     setSelectedStatus('');
     setSelectedLockFilter('');
+    setRouteQuickFilter('ALL');
     setPage(0);
   };
 
@@ -563,9 +580,125 @@ export const AgencyManagementPage: React.FC = () => {
         </form>
       </div>
 
-      {/* 4. Bảng Dữ Liệu Hồ Sơ Đại Lý (Chuẩn DoR/DoD Story S3-03) */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+      {/* S3-08 / SCRUM-21: Thanh công cụ xem nhanh theo tuyến cho Nhân viên kinh doanh */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Tab lọc nhanh trạng thái */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none text-xs">
+          <button
+            type="button"
+            onClick={() => setRouteQuickFilter('ALL')}
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 ${
+              routeQuickFilter === 'ALL'
+                ? 'bg-gray-900 text-white shadow-xs'
+                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            Tất cả ({totalElements})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setRouteQuickFilter('ACTIVE')}
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
+              routeQuickFilter === 'ACTIVE'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50'
+            }`}
+          >
+            <CheckCircle2 size={13} />
+            <span>Đang hoạt động ({activeCount})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setRouteQuickFilter('LOCKED')}
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
+              routeQuickFilter === 'LOCKED'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
+            }`}
+          >
+            <Lock size={13} />
+            <span>Khóa giao dịch ({lockedCount})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setRouteQuickFilter('SUSPENDED')}
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
+              routeQuickFilter === 'SUSPENDED'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-white text-amber-700 border border-amber-200 hover:bg-amber-50'
+            }`}
+          >
+            <ShieldAlert size={13} />
+            <span>Dừng giao dịch ({suspendedCount})</span>
+          </button>
+        </div>
+
+        {/* Nút chuyển đổi giao diện: Dạng Bảng Máy Tính vs Dạng Thẻ Đi Đường (S3-08) */}
+        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-200 shadow-2xs self-end sm:self-auto shrink-0">
+          <button
+            type="button"
+            onClick={() => setViewMode('table')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              viewMode === 'table'
+                ? 'bg-orange-50 text-[#F85606] border border-orange-200/80 shadow-2xs'
+                : 'text-gray-500 hover:text-gray-800'
+            }`}
+            title="Xem dạng bảng chi tiết (Desktop Table)"
+          >
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+            <span>Dạng Bảng</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode('cards')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              viewMode === 'cards'
+                ? 'bg-orange-50 text-[#F85606] border border-orange-200/80 shadow-2xs'
+                : 'text-gray-500 hover:text-gray-800'
+            }`}
+            title="Chế độ danh thiếp / Tuyến ngoài đường cho Nhân viên kinh doanh (S3-08)"
+          >
+            <Navigation size={13} />
+            <span>Tuyến Đi Đường (Thẻ)</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 4. Nội Dung Danh Sách Đại Lý: Thẻ Tuyến Đi Đường (S3-08) hoặc Bảng Máy Tính (S3-03) */}
+      {viewMode === 'cards' ? (
+        visibleAgencies.length === 0 && !loading ? (
+          <div className="bg-white p-12 rounded-2xl border border-gray-100 shadow-xs text-center text-gray-400">
+            <div className="flex flex-col items-center justify-center gap-2">
+              <Building2 size={36} className="text-gray-300" />
+              <strong className="text-gray-700 text-sm">Không tìm thấy đại lý nào phù hợp trong tuyến</strong>
+              <span className="text-xs">Thử điều chỉnh lại từ khóa hoặc xóa bộ lọc</span>
+            </div>
+          </div>
+        ) : (
+          <AgencyCardView
+            agencies={visibleAgencies}
+            loading={loading}
+            canManageAgency={canManageAgency}
+            canManageAssignments={canManageAssignments}
+            onEdit={handleOpenEdit}
+            onAssignRep={handleOpenAssignRep}
+            onDeliveryPoints={handleOpenDeliveryPoints}
+            onCreditLimit={handleOpenCreditLimit}
+            onHistory={handleOpenHistory}
+            onLockModal={handleOpenLockModal}
+            onSuspendModal={handleOpenSuspendModal}
+            onDeleteModal={handleOpenDeleteModal}
+          />
+        )
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
@@ -941,40 +1074,41 @@ export const AgencyManagementPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
+      )}
 
-        {/* Phân trang */}
-        <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
-          <div>
-            Hiển thị{' '}
-            <strong className="text-gray-900">
-              {totalElements === 0 ? 0 : page * size + 1}
-            </strong>{' '}
-            -{' '}
-            <strong className="text-gray-900">
-              {Math.min((page + 1) * size, totalElements)}
-            </strong>{' '}
-            trên tổng <strong className="text-gray-900">{totalElements}</strong> hồ sơ đại lý
-          </div>
+      {/* Phân trang chung cho cả dạng Bảng và dạng Thẻ Tuyến */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
+        <div>
+          Hiển thị{' '}
+          <strong className="text-gray-900">
+            {totalElements === 0 ? 0 : page * size + 1}
+          </strong>{' '}
+          -{' '}
+          <strong className="text-gray-900">
+            {Math.min((page + 1) * size, totalElements)}
+          </strong>{' '}
+          trên tổng <strong className="text-gray-900">{totalElements}</strong> hồ sơ đại lý
+        </div>
 
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-              className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="px-3 py-1 font-semibold text-gray-700">
-              Trang {page + 1} / {totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1}
-              className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span className="px-3 py-1 font-semibold text-gray-700">
+            Trang {page + 1} / {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={page >= totalPages - 1}
+            className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+          >
+            <ChevronRight size={16} />
+          </button>
         </div>
       </div>
 
