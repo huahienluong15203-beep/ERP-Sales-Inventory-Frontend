@@ -26,9 +26,8 @@ import {
   Plus,
   CheckCircle2,
   FileText,
-  Smartphone,
-  Monitor,
-  RefreshCw
+  RefreshCw,
+  Tag
 } from '../../components/common/Icons';
 
 export const OrderCreatePage: React.FC = () => {
@@ -50,7 +49,6 @@ export const OrderCreatePage: React.FC = () => {
   const [isProductPickerOpen, setIsProductPickerOpen] = useState<boolean>(false);
   const [isDraftsModalOpen, setIsDraftsModalOpen] = useState<boolean>(false);
   const [savedDrafts, setSavedDrafts] = useState<OrderDraft[]>(() => getSavedDrafts());
-  const [isSimulating360Mobile, setIsSimulating360Mobile] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isSavingDraft, setIsSavingDraft] = useState<boolean>(false);
 
@@ -371,14 +369,9 @@ export const OrderCreatePage: React.FC = () => {
             <ShoppingCart size={22} />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
-                Tạo Đơn Hàng Cho Đại Lý
-              </h1>
-              <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 font-mono">
-                S3-09 / EP-04
-              </span>
-            </div>
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
+              Tạo Đơn Hàng Cho Đại Lý
+            </h1>
             <p className="text-xs text-gray-500 mt-0.5">
               Gõ đơn nhanh tại cửa hàng đại lý, tự động áp bảng giá & chiết khấu sản lượng
             </p>
@@ -387,21 +380,6 @@ export const OrderCreatePage: React.FC = () => {
 
         {/* Nút thao tác góc phải */}
         <div className="flex items-center gap-2 self-end sm:self-auto">
-          {/* Nút giả lập màn hình 360px cho Tester / Reviewer */}
-          <button
-            type="button"
-            onClick={() => setIsSimulating360Mobile(!isSimulating360Mobile)}
-            className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              isSimulating360Mobile
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-            title="Bật/Tắt chế độ mô phỏng khung nhìn di động 360px"
-          >
-            {isSimulating360Mobile ? <Smartphone size={15} /> : <Monitor size={15} />}
-            <span>{isSimulating360Mobile ? 'Đang bật 360px' : 'Mô phỏng 360px'}</span>
-          </button>
-
           {/* Nút Xem danh sách đơn nháp */}
           <button
             type="button"
@@ -430,20 +408,8 @@ export const OrderCreatePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Bọc trong khung mô phỏng 360px nếu người dùng kích hoạt */}
-      <div
-        className={`transition-all duration-300 mx-auto ${
-          isSimulating360Mobile
-            ? 'max-w-[360px] p-2 bg-slate-900/10 rounded-3xl border-4 border-slate-700 shadow-2xl space-y-4'
-            : 'space-y-5'
-        }`}
-      >
-        {isSimulating360Mobile && (
-          <div className="bg-slate-800 text-white text-center py-1 rounded-t-xl text-[11px] font-mono flex items-center justify-center gap-1">
-            <Smartphone size={12} />
-            <span>Khung nhìn điện thoại chuẩn 360px</span>
-          </div>
-        )}
+      {/* Nội dung tạo đơn */}
+      <div className="space-y-5">
 
         {/* 2. KHỐI 1: CHỌN ĐẠI LÝ & ĐIỂM GIAO HÀNG */}
         <OrderHeaderCard

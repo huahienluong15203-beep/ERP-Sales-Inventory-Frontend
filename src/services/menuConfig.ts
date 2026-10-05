@@ -122,7 +122,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     path: '/orders/create',
     icon: 'ShoppingCart',
     epic: 'Đặt hàng & Duyệt ngoại lệ',
-    description: 'Lên đơn nhanh tại điểm bán, tự động áp giá & chiết khấu sản lượng (S3-09)',
+    description: 'Lên đơn nhanh tại điểm bán, tự động áp giá & chiết khấu sản lượng',
     allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
   },
 

@@ -96,7 +96,7 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
               1. Thông Tin Khách Hàng & Điểm Giao
             </h2>
             <p className="text-[11px] text-gray-500">
-              Chọn đại lý đặt hàng và kho nhận hàng (S3-04 & S3-09)
+              Chọn đại lý đặt hàng và kho nhận hàng
             </p>
           </div>
         </div>
