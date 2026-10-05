@@ -30,6 +30,9 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
 
   if (!isOpen || !log) return null;
 
+  const cleanTargetCode = log.targetCode ? log.targetCode.split(':')[0] : '—';
+  const cleanUnitName = log.targetCode && log.targetCode.includes(':') ? log.targetCode.split(':')[1] : null;
+
   const moduleMeta = AUDIT_MODULE_OPTIONS.find((m) => m.value === log.module);
   const isDecrease = log.deltaType === 'decrease';
   const isIncrease = log.deltaType === 'increase';
@@ -41,7 +44,7 @@ Thời Điểm: ${formatDateTime(log.createdAt)}
 Người Thực Hiện: ${log.actorFullName} (@${log.actorUsername}) - ${log.actorRole || 'Nhân sự'}
 Phân Hệ: ${log.moduleLabel} (${log.module})
 Hành Động: ${log.actionLabel || log.action}
-Đối Tượng: ${log.targetCode} (${log.targetName || ''})
+Đối Tượng: ${cleanTargetCode} (${log.targetName || ''})
 Giá Trị Trước: ${log.oldValue}
 Giá Trị Sau: ${log.newValue}
 Chênh Lệch: ${log.deltaFormatted || 'N/A'}
@@ -126,8 +129,16 @@ Yêu Cầu HTTP: ${log.httpMethod || 'POST'} ${log.requestUri || ''}`;
               <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
                 <span>
                   Mã đối tượng:{' '}
-                  <strong className="font-mono text-orange-600">{log.targetCode}</strong>
+                  <strong className="font-mono text-orange-600">{cleanTargetCode}</strong>
                 </span>
+                {cleanUnitName && (
+                  <>
+                    <span>•</span>
+                    <span>
+                      Đơn vị quy cách: <strong className="text-slate-700">{cleanUnitName}</strong>
+                    </span>
+                  </>
+                )}
                 <span>•</span>
                 <span>
                   Loại thực thể: <strong className="text-slate-700">{log.targetType}</strong>

@@ -270,7 +270,20 @@ export function getLocalAuditLogs(): AuditLogItem[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return parsed.map((item: AuditLogItem) => {
+          if (item.targetCode && item.targetCode.includes(':')) {
+            const parts = item.targetCode.split(':');
+            return {
+              ...item,
+              targetCode: parts[0],
+              targetName:
+                item.targetName && item.targetName !== 'PRODUCT_UNIT'
+                  ? item.targetName
+                  : `Đơn vị: ${parts[1]}`
+            };
+          }
+          return item;
+        });
       }
     }
   } catch {
@@ -390,6 +403,19 @@ export async function fetchAuditLogs(
         if (json && Array.isArray(json.content) && json.content.length > 0) {
           const mappedContent: AuditLogItem[] = (json.content as BackendAuditLogItem[]).map((item) => {
             const moduleMeta = AUDIT_MODULE_OPTIONS.find((m) => m.value === item.module);
+            const rawCode = item.targetCode || `#${item.targetId || item.id}`;
+            const [skuPart, unitPart] = rawCode.includes(':') ? rawCode.split(':') : [rawCode, ''];
+
+            // Chuẩn hóa delta ngắn gọn nếu có thông tin hệ số
+            let displayDelta = item.oldValue && item.newValue ? `${item.oldValue} ➔ ${item.newValue}` : undefined;
+            if (item.oldValue && item.newValue && item.oldValue.includes('Hệ số:') && item.newValue.includes('Hệ số:')) {
+              const oldMatch = item.oldValue.match(/Hệ số:\s*(\d+(\.\d+)?)/);
+              const newMatch = item.newValue.match(/Hệ số:\s*(\d+(\.\d+)?)/);
+              if (oldMatch && newMatch) {
+                displayDelta = `${oldMatch[1]} ➔ ${newMatch[1]}`;
+              }
+            }
+
             return {
               id: item.id,
               module: item.module,
@@ -398,8 +424,11 @@ export async function fetchAuditLogs(
               actionLabel: item.action,
               targetType: item.targetType || 'TARGET',
               targetId: item.targetId,
-              targetCode: item.targetCode || `#${item.targetId || item.id}`,
-              targetName: item.targetType,
+              targetCode: skuPart,
+              targetName:
+                item.targetType === 'PRODUCT_UNIT'
+                  ? (unitPart ? `Đơn vị: ${unitPart}` : 'Quy cách sản phẩm')
+                  : (item.targetName || item.targetType),
               actorId: item.actorId,
               actorUsername: item.actorUsername || 'user',
               actorFullName: item.actorFullName || item.actorUsername || 'Người dùng',
@@ -411,7 +440,7 @@ export async function fetchAuditLogs(
               actorAvatarUrl: item.actorAvatarUrl,
               oldValue: item.oldValue || '—',
               newValue: item.newValue || '—',
-              deltaFormatted: item.oldValue && item.newValue ? `${item.oldValue} ➔ ${item.newValue}` : undefined,
+              deltaFormatted: displayDelta,
               deltaType: 'neutral',
               reason: item.reason || 'Cập nhật hệ thống',
               ipAddress: item.ipAddress || '127.0.0.1',
