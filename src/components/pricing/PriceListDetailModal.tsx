@@ -156,7 +156,7 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
             <div className="flex items-center gap-2 text-xs text-amber-800">
               <Icons.ShieldAlert size={18} className="shrink-0 text-amber-600" />
               <span>
-                <strong>Bảng giá đã phát sinh đơn hàng:</strong> Theo quy chuẩn kiểm toán S2-10, bảng giá này đã bị khóa chống sửa trực tiếp. Để áp dụng giá mới, vui lòng tạo phiên bản mới (v{(priceList.version || 1) + 1}).
+                <strong>Bảng giá đã phát sinh đơn hàng:</strong> Theo quy chuẩn kiểm toán hệ thống, bảng giá này đã bị khóa chống sửa trực tiếp. Để áp dụng giá mới, vui lòng tạo phiên bản mới (v{(priceList.version || 1) + 1}).
               </span>
             </div>
             {canManage && (

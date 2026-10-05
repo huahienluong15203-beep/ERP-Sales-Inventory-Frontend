@@ -215,7 +215,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-gray-900">
-                {isEdit ? 'Chỉnh sửa Bảng giá' : 'Khai báo Bảng giá mới (S2-10)'}
+                {isEdit ? 'Chỉnh sửa Bảng giá' : 'Khai báo Bảng giá mới'}
               </h2>
               <p className="text-xs text-gray-500">
                 Thiết lập theo nhóm khách hàng, thời hạn hiệu lực và giá sàn phê duyệt
@@ -340,7 +340,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                   Danh sách sản phẩm định giá ({items.length} mặt hàng)
                 </h3>
                 <p className="text-[11px] text-gray-500">
-                  Quy tắc S2-10: Mức giá sàn là ngưỡng tối thiểu. Nhân viên bán dưới giá sàn sẽ phải qua Quản lý kinh doanh duyệt ngoại lệ.
+                  Quy tắc nghiệp vụ: Mức giá sàn là ngưỡng tối thiểu. Nhân viên bán dưới giá sàn sẽ phải qua Quản lý kinh doanh duyệt ngoại lệ.
                 </p>
               </div>
 

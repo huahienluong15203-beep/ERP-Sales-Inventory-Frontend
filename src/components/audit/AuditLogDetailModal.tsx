@@ -35,7 +35,7 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
   const isIncrease = log.deltaType === 'increase';
 
   const handleCopyTrace = () => {
-    const traceText = `[BẰNG CHỨNG KIỂM TOÁN HỆ THỐNG ERP - S2-04]
+    const traceText = `[BẰNG CHỨNG KIỂM TOÁN HỆ THỐNG ERP]
 Mã Nhật Ký: #${log.id}
 Thời Điểm: ${formatDateTime(log.createdAt)}
 Người Thực Hiện: ${log.actorFullName} (@${log.actorUsername}) - ${log.actorRole || 'Nhân sự'}

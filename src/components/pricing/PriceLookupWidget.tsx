@@ -52,7 +52,7 @@ export const PriceLookupWidget: React.FC = () => {
               <Icons.BadgeDollarSign size={20} />
             </div>
             <h3 className="text-base font-semibold text-gray-900 tracking-wide">
-              Công cụ tra cứu giá & Mức giá sàn tức thời (S2-10)
+              Công cụ tra cứu giá & Mức giá sàn tức thời
             </h3>
           </div>
           <p className="text-xs text-gray-500 mt-1">
