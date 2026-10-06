@@ -10,8 +10,6 @@ import type {
   DiscountScopeType,
   DiscountPolicyStatus
 } from '../../types/discount';
-import type { CustomerGroupType } from '../../types/pricing';
-import { CUSTOMER_GROUPS } from '../../types/pricing';
 import {
   getVolumeDiscountPolicies,
   createVolumeDiscountPolicy,
@@ -46,14 +44,11 @@ export const VolumeDiscountPage: React.FC = () => {
   const { params: urlParams, setParams: setUrlParams, page, size, setPage, setSize, setFilters } = useUrlPaging({
     keyword: '',
     scope: 'ALL',
-    customer: 'ALL',
     status: 'ALL'
   });
   const scopeFilter = urlParams.scope as 'ALL' | DiscountScopeType;
-  const customerFilter = urlParams.customer as 'ALL' | CustomerGroupType;
   const statusFilter = urlParams.status as 'ALL' | DiscountPolicyStatus;
   const setScopeFilter = (value: 'ALL' | DiscountScopeType) => setFilters({ scope: value });
-  const setCustomerFilter = (value: 'ALL' | CustomerGroupType) => setFilters({ customer: value });
   const setStatusFilter = (value: 'ALL' | DiscountPolicyStatus) => setFilters({ status: value });
 
   // Ô tìm kiếm: đợi ngừng gõ 0,4 giây mới gọi API
@@ -85,7 +80,6 @@ export const VolumeDiscountPage: React.FC = () => {
       const res = await getVolumeDiscountPolicies({
         keyword: serverKeyword,
         scopeType: scopeFilter,
-        customerGroup: customerFilter,
         status: statusFilter,
         page,
         size
@@ -108,7 +102,7 @@ export const VolumeDiscountPage: React.FC = () => {
 
   useEffect(() => {
     loadPolicies();
-  }, [serverKeyword, scopeFilter, customerFilter, statusFilter, page, size]);
+  }, [serverKeyword, scopeFilter, statusFilter, page, size]);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMsg({ text, type });
@@ -228,7 +222,7 @@ export const VolumeDiscountPage: React.FC = () => {
   // Đặt lại bộ lọc
   const handleResetFilters = () => {
     setSearchKeyword('');
-    setFilters({ scope: 'ALL', customer: 'ALL', status: 'ALL' });
+    setFilters({ scope: 'ALL', status: 'ALL' });
   };
 
   // Đang ở trang vượt quá số trang -> tự lùi về trang cuối
@@ -334,7 +328,7 @@ export const VolumeDiscountPage: React.FC = () => {
 
       {/* Bộ lọc và Tìm kiếm */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* Tìm kiếm từ khóa */}
           <div className="lg:col-span-2">
             <label className="mb-1 block text-[11px] font-semibold text-gray-500">
@@ -375,25 +369,6 @@ export const VolumeDiscountPage: React.FC = () => {
             </select>
           </div>
 
-          {/* Lọc theo Đối tượng khách */}
-          <div>
-            <label className="mb-1 block text-[11px] font-semibold text-gray-500">
-              Đối tượng khách hàng
-            </label>
-            <select
-              value={customerFilter}
-              onChange={(e) => setCustomerFilter(e.target.value as 'ALL' | CustomerGroupType)}
-              className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:outline-none focus:ring-2 focus:ring-orange-500/20"
-            >
-              <option value="ALL">Tất cả đối tượng</option>
-              {Object.entries(CUSTOMER_GROUPS).map(([key, info]) => (
-                <option key={key} value={key}>
-                  {info.shortLabel}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Lọc theo Trạng thái & Reset */}
           <div>
             <label className="mb-1 block text-[11px] font-semibold text-gray-500">
@@ -410,7 +385,7 @@ export const VolumeDiscountPage: React.FC = () => {
                 <option value="INACTIVE">Tạm dừng</option>
                 <option value="EXPIRED">Đã hết hạn</option>
               </select>
-              {(searchKeyword || scopeFilter !== 'ALL' || customerFilter !== 'ALL' || statusFilter !== 'ALL') && (
+              {(searchKeyword || scopeFilter !== 'ALL' || statusFilter !== 'ALL') && (
                 <button
                   onClick={handleResetFilters}
                   title="Đặt lại bộ lọc"
