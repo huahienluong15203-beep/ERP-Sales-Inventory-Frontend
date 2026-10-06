@@ -414,21 +414,20 @@ export async function fetchPriceHistory(
   const page = params.page ?? 0;
   const size = params.size ?? 10;
 
-  // Thử gọi backend /api/audit-logs?module=PRICING nếu có token và backend sẵn sàng
+  // Gọi backend /api/price-history (S3-02) nếu có token
   if (token) {
     try {
       const queryParams = new URLSearchParams();
-      queryParams.set('module', 'PRICING');
-      if (params.keyword) queryParams.set('keyword', params.keyword);
-      if (params.startDate) queryParams.set('startDate', params.startDate);
-      if (params.endDate) queryParams.set('endDate', params.endDate);
+      if (params.keyword) queryParams.set('productSku', params.keyword);
+      if (params.startDate) queryParams.set('fromDate', params.startDate);
+      if (params.endDate) queryParams.set('toDate', params.endDate);
       queryParams.set('page', String(page));
       queryParams.set('size', String(size));
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-      const res = await fetch(`${API_BASE_URL}/api/audit-logs?${queryParams.toString()}`, {
+      const res = await fetch(`${API_BASE_URL}/api/price-history?${queryParams.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -438,56 +437,68 @@ export async function fetchPriceHistory(
 
       clearTimeout(timeoutId);
 
-interface BackendAuditItem {
-  id: number;
-  targetId?: number;
-  targetCode?: string;
-  targetType?: string;
-  oldValue?: string;
-  newValue?: string;
-  createdAt: string;
-  actorId?: number;
-  actorFullName?: string;
-  actorUsername?: string;
-  action?: string;
-  reason?: string;
-  ipAddress?: string;
-}
+      interface BackendPriceHistoryItem {
+        id: number;
+        priceListId?: number;
+        priceListCode?: string;
+        customerGroup?: string;
+        customerGroupLabel?: string;
+        productId?: number;
+        productSku?: string;
+        productName?: string;
+        changeType?: string;
+        changeTypeLabel?: string;
+        oldPrice?: number | null;
+        newPrice?: number;
+        oldFloorPrice?: number | null;
+        newFloorPrice?: number;
+        effectiveDate?: string;
+        changedByUsername?: string;
+        changedByName?: string;
+        changedAt?: string;
+      }
 
       if (res.ok) {
         const json = await res.json();
-        // Nếu backend trả về danh sách audit logs hợp lệ
         if (json && Array.isArray(json.content) && json.content.length > 0) {
-          const mappedContent: PriceChangeRecord[] = (json.content as BackendAuditItem[]).map((item) => {
-            const oldVal = parseFloat(item.oldValue || '0') || 0;
-            const newVal = parseFloat(item.newValue || '0') || 0;
-            const diff = newVal - oldVal;
-            const pct = oldVal > 0 ? (diff / oldVal) * 100 : 0;
+          const mappedContent: PriceChangeRecord[] = (json.content as BackendPriceHistoryItem[]).map((item) => {
+            const oldVal = item.oldPrice != null ? Number(item.oldPrice) : 0;
+            const newVal = item.newPrice != null ? Number(item.newPrice) : 0;
+            const diff = item.oldPrice != null ? newVal - oldVal : 0;
+            const pct = (item.oldPrice != null && oldVal > 0) ? Math.round(((diff / oldVal) * 100) * 100) / 100 : 0;
+
+            let pType: import('../types/pricing').PriceType = 'WHOLESALE_TIER1';
+            if (item.customerGroup === 'DEALER_LEVEL_2') pType = 'WHOLESALE_TIER2';
+            else if (item.customerGroup === 'RETAIL') pType = 'RETAIL_STANDARD';
 
             return {
               id: item.id,
-              productId: item.targetId || 1,
-              productSku: item.targetCode || 'SKU-GENERAL',
-              productName: item.targetType || 'Sản phẩm ERP',
+              productId: item.productId || 1,
+              productSku: item.productSku || 'SKU-GENERAL',
+              productName: item.productName || 'Sản phẩm ERP',
               category: 'Hàng hoá',
-              unit: 'Đơn vị chuẩn',
-              priceType: 'WHOLESALE_TIER1',
-              priceTypeName: 'Giá Đại lý',
+              unit: 'Đơn vị cơ sở',
+              priceType: pType,
+              priceTypeName: item.customerGroupLabel || 'Giá Đại lý',
               oldPrice: oldVal,
               newPrice: newVal,
               difference: diff,
-              percentageChange: Math.round(pct * 100) / 100,
-              effectiveDate: item.createdAt,
-              modifierId: item.actorId || 0,
-              modifierName: item.actorFullName || item.actorUsername || 'Quản lý',
-              modifierUsername: item.actorUsername || 'sales_manager',
+              percentageChange: pct,
+              effectiveDate: item.effectiveDate || item.changedAt || new Date().toISOString(),
+              modifierId: 2,
+              modifierName: item.changedByName || 'Trần Quản Lý Kinh Doanh',
+              modifierUsername: item.changedByUsername || 'sales_manager',
               modifierRole: 'Quản lý kinh doanh',
-              decisionCode: item.action || 'QD-GIA',
-              reason: item.reason || 'Điều chỉnh giá hệ thống',
-              explanationForAgency: item.reason || 'Thay đổi giá theo chính sách kinh doanh.',
+              decisionCode: item.priceListCode || 'BG-2026',
+              reason: item.changeType === 'CREATE'
+                ? `Thiết lập giá niêm yết theo ${item.priceListCode || 'bảng giá'}`
+                : `Điều chỉnh giá bán sản phẩm theo biểu giá ${item.priceListCode || ''}`,
+              explanationForAgency: item.changeType === 'CREATE'
+                ? `Khai báo giá mới cho nhóm ${item.customerGroupLabel || 'Đại lý'}.`
+                : `Giải thích đại lý: Cập nhật mức giá mới ${newVal.toLocaleString('vi-VN')} đ theo hợp đồng kinh doanh.`,
               isImmutable: true,
-              createdAt: item.createdAt,
-              ipAddress: item.ipAddress
+              createdAt: item.changedAt || new Date().toISOString(),
+              ipAddress: '127.0.0.1'
             };
           });
 
@@ -501,7 +512,7 @@ interface BackendAuditItem {
         }
       }
     } catch {
-      // Backend chưa chạy hoặc rỗng, tiếp tục xử lý với local dataset
+      // Backend chưa sẵn sàng, tiếp tục xử lý với local dataset
     }
   }
 
