@@ -141,32 +141,7 @@ export async function fetchSuppliers(params?: SupplierFilterParams): Promise<Sup
     if (res.ok) {
       const data: SupplierPageResponse = await res.json();
 
-      // Nếu backend đang rỗng (chưa có NCC nào) và không tìm kiếm gì, tự động nạp mẫu để người dùng test ngay
-      if (data.totalElements === 0 && !params?.keyword && (!params?.status || params.status === 'ALL')) {
-        for (const s of INITIAL_SUPPLIERS) {
-          try {
-            await authFetch(`${API_BASE_URL}/api/suppliers`, {
-              method: 'POST',
-              body: JSON.stringify({
-                code: s.code,
-                name: s.name,
-                taxCode: s.taxCode,
-                contactName: s.contactName,
-                phone: s.phone,
-                email: s.email,
-                address: s.address,
-                paymentTerms: s.paymentTerms,
-                note: s.note
-              })
-            });
-          } catch {
-            // bỏ qua nếu đã có
-          }
-        }
-        const refetch = await authFetch(url);
-        if (refetch.ok) return await refetch.json();
-      }
-
+      // Dữ liệu nhà cung cấp mẫu do Backend tự nạp khi khởi động (S2-09), Frontend không tự tạo nữa
       return data;
     }
   } catch (err) {

@@ -143,14 +143,17 @@ export async function fetchPriceLists(params?: {
   if (params?.customerGroup) query.set('customerGroup', params.customerGroup);
   if (params?.status) query.set('status', params.status);
   if (params?.keyword) query.set('keyword', params.keyword);
+  // Backend lọc + phân trang phía server (PageResponse). Tạm lấy tối đa 100 bảng giá/trang cho tới khi có thanh phân trang.
+  query.set('page', '0');
+  query.set('size', '100');
 
-  const url = `${API_BASE_URL}/api/price-lists${query.toString() ? `?${query.toString()}` : ''}`;
+  const url = `${API_BASE_URL}/api/price-lists?${query.toString()}`;
 
   try {
     const res = await authFetch(url);
     if (res.ok) {
       const data = await res.json();
-      return data;
+      return Array.isArray(data) ? data : (data?.content ?? []);
     }
   } catch (err) {
     console.warn('API error fetching price lists, fallback to local storage', err);

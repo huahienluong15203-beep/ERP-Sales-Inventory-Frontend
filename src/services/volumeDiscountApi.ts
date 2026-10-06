@@ -272,31 +272,32 @@ export async function fetchDiscountCategoryOptions(): Promise<DiscountCategoryOp
 export async function getVolumeDiscountPolicies(
   params: VolumeDiscountFilterParams = {}
 ): Promise<{ data: VolumeDiscountPolicy[]; total: number }> {
+  // Lọc + phân trang phía server (Backend trả PageResponse: content, totalElements...)
   const query = new URLSearchParams();
   if (params.keyword && params.keyword.trim() !== '') query.set('keyword', params.keyword.trim());
-  // Backend chỉ biết ACTIVE/INACTIVE; EXPIRED được suy ra từ ngày kết thúc nên lọc phía client
-  const qs = query.toString();
-  const raw = await requestJson<BePolicy[]>(
-    `${BASE}${qs ? `?${qs}` : ''}`,
+  if (params.status && params.status !== 'ALL') query.set('status', params.status);
+  if (params.scopeType && params.scopeType !== 'ALL') {
+    query.set('scope', params.scopeType === 'SKU' ? 'PRODUCT' : 'CATEGORY');
+  }
+  query.set('page', String(params.page ?? 0));
+  query.set('size', String(params.size ?? 100));
+  const raw = await requestJson<{ content: BePolicy[]; totalElements: number }>(
+    `${BASE}?${query.toString()}`,
     { method: 'GET' },
     'Không tải được danh sách chính sách chiết khấu'
   );
-  let list = (raw || []).map(mapPolicy);
+  let list = (raw?.content || []).map(mapPolicy);
+  let total = raw?.totalElements ?? list.length;
 
-  if (params.status && params.status !== 'ALL') {
-    list = list.filter((p) => p.status === params.status);
-  }
-  if (params.scopeType && params.scopeType !== 'ALL') {
-    list = list.filter((p) => p.scopeType === params.scopeType);
-  }
   if (params.targetCategory && params.targetCategory !== 'ALL') {
     const tc = params.targetCategory.toLowerCase();
     list = list.filter(
       (p) => p.targetId === params.targetCategory || p.targetName.toLowerCase().includes(tc)
     );
+    total = list.length;
   }
 
-  return { data: list, total: list.length };
+  return { data: list, total };
 }
 
 /**
