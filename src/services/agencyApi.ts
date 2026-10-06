@@ -125,43 +125,14 @@ export const SALES_REP_OPTIONS: SalesRepOption[] = [
  * Tự động đồng bộ với danh sách tài khoản thực tế trên hệ thống (User Management).
  */
 export async function fetchActiveSalesReps(): Promise<SalesRepOption[]> {
+  // Dùng /api/customers/form-options (Admin, QL kinh doanh, Kế toán, NV kinh doanh đều gọi được).
+  // Không gọi /api/admin/users vì chỉ Admin có quyền -> vai trò khác bị 403 và văng ra màn đăng nhập.
   try {
-    // 1. Thử gọi API admin/users để lấy đầy đủ user có ROLE_SALES_REP và status ACTIVE
-    const res = await authFetch(`${API_BASE_URL}/api/admin/users?role=ROLE_SALES_REP&status=ACTIVE&size=100`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.content && data.content.length > 0) {
-        return data.content.map((u: any) => ({
-          id: String(u.id),
-          username: u.username,
-          fullName: u.fullName,
-          phone: u.phone || '',
-          email: u.email || '',
-          regionId: u.regions?.[0]?.code || (u.regions?.[0]?.id ? String(u.regions[0].id) : '')
-        }));
-      }
-    }
-  } catch {}
-
-  try {
-    // 2. Thử gọi API customers/form-options
-    const res = await authFetch(`${API_BASE_URL}/api/customers/form-options`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.salesReps && data.salesReps.length > 0) {
-        return data.salesReps.map((u: any) => ({
-          id: String(u.id),
-          username: u.code || '',
-          fullName: u.name,
-          phone: '',
-          email: '',
-          regionId: ''
-        }));
-      }
-    }
-  } catch {}
-
-  // 3. Fallback: Lấy danh sách mẫu có sẵn
+    const options = await fetchAgencyFormOptions();
+    if (options.salesReps.length > 0) return options.salesReps;
+  } catch {
+    // dùng danh sách mẫu bên dưới
+  }
   return SALES_REP_OPTIONS;
 }
 
@@ -395,313 +366,335 @@ export function getPricingTierByGroup(groupId: CustomerGroupId) {
   return group ? group.defaultPricingTier : CUSTOMER_GROUP_OPTIONS[2].defaultPricingTier;
 }
 
+// ==========================================
+// HỒ SƠ ĐẠI LÝ — GỌI BACKEND /api/customers (không còn lưu tạm trong trình duyệt)
+// ==========================================
+
+const CUSTOMERS_URL = `${API_BASE_URL}/api/customers`;
+
+/** Nhóm khách hàng: Frontend (TIER_1...) <-> Backend (DEALER_LEVEL_1...) */
+const GROUP_TO_BACKEND: Record<CustomerGroupId, string> = {
+  TIER_1: 'DEALER_LEVEL_1',
+  TIER_2: 'DEALER_LEVEL_2',
+  RETAIL_SHOWROOM: 'RETAIL'
+};
+
+function groupFromBackend(value?: string | null): CustomerGroupId {
+  if (value === 'DEALER_LEVEL_1') return 'TIER_1';
+  if (value === 'DEALER_LEVEL_2') return 'TIER_2';
+  return 'RETAIL_SHOWROOM';
+}
+
+/** Trạng thái: Frontend dùng SUSPENDED, Backend dùng INACTIVE (Ngừng giao dịch) */
+function statusToBackend(value?: string): string | undefined {
+  if (!value) return undefined;
+  return value === 'SUSPENDED' ? 'INACTIVE' : value;
+}
+
+function formatBackendDate(value?: string | null): string {
+  return value ? value.replace('T', ' ').substring(0, 19) : '';
+}
+
+/** Đọc lỗi chuẩn { code, message, details } của Backend thành 1 câu tiếng Việt */
+async function readBackendError(res: Response, fallback: string): Promise<string> {
+  const data = await res.json().catch(() => null);
+  if (data?.details && typeof data.details === 'object') {
+    const first = Object.values(data.details as Record<string, string>)[0];
+    if (first) return String(first);
+  }
+  return data?.message || fallback;
+}
+
+/** Dữ liệu đại lý Backend trả về (CustomerResponse) */
+interface BackendCustomer {
+  id: number;
+  code: string;
+  name: string;
+  taxCode?: string | null;
+  customerGroup?: string | null;
+  customerGroupLabel?: string | null;
+  region?: { id: number; code: string; name: string } | null;
+  salesRep?: { id: number; code: string; name: string } | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  status?: string | null;
+  statusReason?: string | null;
+  creditLimit?: number | null;
+  maxDebtDays?: number | null;
+  transactionLocked?: boolean | null;
+  transactionLockReason?: string | null;
+  transactionLockedAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+function mapCustomer(c: BackendCustomer): Agency {
+  const groupId = groupFromBackend(c.customerGroup);
+  const groupOption = CUSTOMER_GROUP_OPTIONS.find((g) => g.id === groupId);
+  const suspended = c.status === 'INACTIVE';
+  return {
+    id: String(c.id),
+    code: c.code,
+    name: c.name,
+    taxCode: c.taxCode || '',
+    customerGroup: groupId,
+    customerGroupName: c.customerGroupLabel || groupOption?.name || groupId,
+    pricingTier: getPricingTierByGroup(groupId),
+    regionId: c.region?.id != null ? String(c.region.id) : '',
+    regionName: c.region?.name || 'Chưa xác định',
+    assignedRepId: c.salesRep?.id != null ? String(c.salesRep.id) : '',
+    assignedRepName: c.salesRep?.name || 'Chưa gán',
+    phone: c.phone || '',
+    email: c.email || '',
+    address: c.address || '',
+    status: (suspended ? 'SUSPENDED' : 'ACTIVE') as AgencyStatus,
+    suspendReason: suspended ? c.statusReason || undefined : undefined,
+    hasTransactions: false,
+    transactionCount: 0,
+    totalDebt: 0,
+    creditLimit: Number(c.creditLimit ?? 0),
+    maxDebtDays: c.maxDebtDays ?? undefined,
+    transactionLocked: Boolean(c.transactionLocked),
+    transactionLockReason: c.transactionLockReason || '',
+    transactionLockedAt: c.transactionLockedAt || undefined,
+    createdAt: formatBackendDate(c.createdAt),
+    updatedAt: formatBackendDate(c.updatedAt)
+  };
+}
+
+export interface AgencyFormOptions {
+  regions: RegionOption[];
+  salesReps: SalesRepOption[];
+}
+
+let formOptionsCache: Promise<AgencyFormOptions> | null = null;
+
+/** Khu vực + nhân viên kinh doanh thật từ Backend (GET /api/customers/form-options), tải 1 lần. */
+export function fetchAgencyFormOptions(): Promise<AgencyFormOptions> {
+  if (!formOptionsCache) {
+    formOptionsCache = authFetch(`${CUSTOMERS_URL}/form-options`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error(await readBackendError(res, 'Không tải được danh mục khu vực'));
+        const data = await res.json();
+        return {
+          regions: (data?.regions || []).map((r: { id: number; code: string; name: string }) => ({
+            id: String(r.id),
+            code: r.code,
+            name: r.name
+          })),
+          salesReps: (data?.salesReps || []).map((u: { id: number; code: string; name: string }) => ({
+            id: String(u.id),
+            username: u.code || '',
+            fullName: u.name,
+            phone: '',
+            email: '',
+            regionId: ''
+          }))
+        };
+      })
+      .catch((err) => {
+        formOptionsCache = null;
+        throw err;
+      });
+  }
+  return formOptionsCache;
+}
+
 /**
- * 1. Lấy danh sách hồ sơ đại lý kèm tìm kiếm và lọc
+ * 1. Lấy 1 trang hồ sơ đại lý: Backend tìm kiếm + lọc + phân trang (page đếm từ 0).
+ * Nhân viên kinh doanh chỉ thấy đại lý mình phụ trách (Backend tự lọc theo người đăng nhập).
  */
 export async function fetchAgencies(params: AgencyFilterParams): Promise<AgencyListResponse> {
-  // 1. Kết nối Backend API /api/customers nếu có
-  let backendAgencies: Agency[] = [];
-  try {
-    const res = await authFetch(`${API_BASE_URL}/api/customers?size=100`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data && Array.isArray(data.content) && data.content.length > 0) {
-        backendAgencies = data.content.map((c: any) => {
-          const grpId: CustomerGroupId =
-            c.customerGroup === 'DEALER_LEVEL_1'
-              ? 'TIER_1'
-              : c.customerGroup === 'DEALER_LEVEL_2'
-              ? 'TIER_2'
-              : 'RETAIL_SHOWROOM';
-          const pTier = getPricingTierByGroup(grpId);
-          return {
-            id: String(c.id),
-            code: c.code,
-            name: c.name,
-            taxCode: c.taxCode || '',
-            customerGroup: grpId,
-            customerGroupName: c.customerGroupLabel || (grpId === 'TIER_1' ? 'Đại lý Cấp 1' : 'Đại lý Cấp 2'),
-            pricingTier: pTier,
-            regionId: c.region?.id ? String(c.region.id) : 'REG_HN',
-            regionName: c.region?.name || 'Miền Bắc',
-            assignedRepId: c.salesRep?.id ? String(c.salesRep.id) : '',
-            assignedRepName: c.salesRep?.name || 'Chưa gán',
-            phone: c.phone || '',
-            email: c.email || '',
-            address: c.address || '',
-            status: (c.status === 'ACTIVE' ? 'ACTIVE' : 'SUSPENDED') as AgencyStatus,
-            creditLimit: Number(c.creditLimit || 50000000),
-            maxDebtDays: c.maxDebtDays || 30,
-            transactionLocked: Boolean(c.transactionLocked),
-            transactionLockReason: c.transactionLockReason || '',
-            transactionLockedAt: c.transactionLockedAt,
-            createdAt: c.createdAt || new Date().toISOString(),
-            updatedAt: c.updatedAt || new Date().toISOString(),
-            deliveryPointCount: 1
-          } as Agency;
-        });
-      }
-    }
-  } catch (err) {
-    // Không kết nối được hoặc offline -> dùng mock data
-  }
-
-  let list = getStoredAgencies();
-  // Nếu có đại lý từ backend, ưu tiên đặt lên đầu danh sách
-  if (backendAgencies.length > 0) {
-    const backendCodes = new Set(backendAgencies.map((b) => b.code.toUpperCase()));
-    list = [...backendAgencies, ...list.filter((a) => !backendCodes.has(a.code.toUpperCase()))];
-  }
-
-  const allPoints = getStoredDeliveryPoints();
-
-  // Đính kèm số lượng điểm giao hàng động
-  list = list.map((a) => ({
-    ...a,
-    deliveryPointCount: a.deliveryPointCount || allPoints.filter((dp) => dp.agencyId === a.id).length
-  }));
-
-  // Tìm kiếm từ khóa (Mã, Tên, Mã số thuế, SĐT)
-  if (params.keyword && params.keyword.trim()) {
-    const kw = params.keyword.trim().toLowerCase();
-    list = list.filter(
-      (a) =>
-        a.code.toLowerCase().includes(kw) ||
-        a.name.toLowerCase().includes(kw) ||
-        a.taxCode.toLowerCase().includes(kw) ||
-        a.phone.toLowerCase().includes(kw) ||
-        a.assignedRepName.toLowerCase().includes(kw)
-    );
-  }
-
-  // Lọc theo nhóm khách hàng
+  const page = params.page ?? 0;
+  const size = params.size ?? 20;
+  const query = new URLSearchParams();
+  if (params.keyword?.trim()) query.set('keyword', params.keyword.trim());
   if (params.customerGroup) {
-    list = list.filter((a) => a.customerGroup === params.customerGroup);
+    query.set('customerGroup', GROUP_TO_BACKEND[params.customerGroup as CustomerGroupId] || params.customerGroup);
   }
+  if (params.regionId && /^\d+$/.test(params.regionId)) query.set('regionId', params.regionId);
+  const status = statusToBackend(params.status);
+  if (status) query.set('status', status);
+  query.set('page', String(page));
+  query.set('size', String(size));
 
-  // Lọc theo khu vực
-  if (params.regionId) {
-    list = list.filter((a) => a.regionId === params.regionId);
+  const res = await authFetch(`${CUSTOMERS_URL}?${query.toString()}`);
+  if (!res.ok) {
+    throw new Error(await readBackendError(res, 'Không tải được danh sách đại lý'));
   }
-
-  // Lọc theo trạng thái (ACTIVE / SUSPENDED)
-  if (params.status) {
-    list = list.filter((a) => a.status === params.status);
-  }
-
-  const page = params.page || 0;
-  const size = params.size || 20;
-  const totalElements = list.length;
-  const totalPages = Math.ceil(totalElements / size) || 1;
-  const paginatedContent = list.slice(page * size, (page + 1) * size);
-
+  const data = await res.json();
   return {
-    content: paginatedContent,
-    totalElements,
-    totalPages,
+    content: (data?.content || []).map(mapCustomer),
+    totalElements: data?.totalElements ?? 0,
+    totalPages: data?.totalPages ?? 1,
     currentPage: page
   };
 }
 
-/**
- * 2. Thêm mới Hồ sơ đại lý
- * - Kiểm tra Mã đại lý duy nhất
- * - Tự động map Bảng giá từ Nhóm khách hàng
- */
-export async function createAgency(
-  payload: CreateAgencyPayload
-): Promise<{ success: boolean; message: string; agency?: Agency }> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const list = getStoredAgencies();
+/** Số liệu thẻ đầu trang, đếm trên TOÀN BỘ đại lý (gọi API với size=1 chỉ để lấy tổng). */
+export async function fetchAgencyStats(): Promise<{ total: number; active: number; suspended: number }> {
+  const [all, active, suspended] = await Promise.all([
+    fetchAgencies({ page: 0, size: 1 }),
+    fetchAgencies({ page: 0, size: 1, status: 'ACTIVE' }),
+    fetchAgencies({ page: 0, size: 1, status: 'SUSPENDED' })
+  ]);
+  return { total: all.totalElements, active: active.totalElements, suspended: suspended.totalElements };
+}
 
-  const cleanCode = payload.code.trim().toUpperCase();
+async function fetchCustomer(id: string): Promise<BackendCustomer | null> {
+  const res = await authFetch(`${CUSTOMERS_URL}/${id}`);
+  return res.ok ? res.json() : null;
+}
 
-  // Kiểm tra tính duy nhất của Mã đại lý
-  const existed = list.find((a) => a.code.toUpperCase() === cleanCode);
-  if (existed) {
-    return {
-      success: false,
-      message: `Mã đại lý "${cleanCode}" đã tồn tại trong hệ thống! Vui lòng chọn mã khác.`
-    };
-  }
+/** Hạn mức công nợ đổi qua API riêng vì Backend bắt buộc lý do để ghi nhật ký (S3-05). */
+async function saveCreditLimit(id: string, creditLimit: number, maxDebtDays: number, reason: string) {
+  const res = await authFetch(`${CUSTOMERS_URL}/${id}/debt-limit`, {
+    method: 'PUT',
+    body: JSON.stringify({ creditLimit, maxDebtDays, reason })
+  });
+  if (!res.ok) throw new Error(await readBackendError(res, 'Không lưu được hạn mức công nợ'));
+}
 
-  const group = CUSTOMER_GROUP_OPTIONS.find((g) => g.id === payload.customerGroup);
-  const region = REGION_OPTIONS.find((r) => r.id === payload.regionId);
-  const rep = SALES_REP_OPTIONS.find((r) => r.id === payload.assignedRepId);
-
-  const pricingTier = group ? group.defaultPricingTier : CUSTOMER_GROUP_OPTIONS[2].defaultPricingTier;
-
-  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
-
-  const newAgency: Agency = {
-    id: `AG-${Date.now().toString().slice(-4)}`,
-    code: cleanCode,
+function profileBody(payload: CreateAgencyPayload | UpdateAgencyPayload) {
+  return {
     name: payload.name.trim(),
     taxCode: payload.taxCode.trim(),
-    customerGroup: payload.customerGroup,
-    customerGroupName: group?.name || payload.customerGroup,
-    pricingTier,
-    regionId: payload.regionId,
-    regionName: region?.name || 'Chưa xác định',
-    assignedRepId: payload.assignedRepId,
-    assignedRepName: rep?.fullName || 'Chưa gán',
+    customerGroup: GROUP_TO_BACKEND[payload.customerGroup] || 'RETAIL',
+    regionId: /^\d+$/.test(payload.regionId) ? Number(payload.regionId) : null,
     phone: payload.phone.trim(),
     email: payload.email.trim(),
-    address: payload.address.trim(),
-    status: 'ACTIVE',
-    hasTransactions: false,
-    transactionCount: 0,
-    totalDebt: 0,
-    creditLimit: payload.creditLimit || 50000000,
-    createdAt: nowStr,
-    updatedAt: nowStr
-  };
-
-  list.unshift(newAgency);
-  saveStoredAgencies(list);
-
-  return {
-    success: true,
-    message: `Khai báo hồ sơ đại lý [${newAgency.code} - ${newAgency.name}] thành công! Bảng giá áp dụng: ${pricingTier.name}.`,
-    agency: newAgency
+    address: payload.address.trim()
   };
 }
 
 /**
- * 3. Cập nhật thông tin đại lý
- * - Tự động cập nhật Bảng giá nếu người dùng đổi Nhóm khách hàng
+ * 2. Thêm mới hồ sơ đại lý (POST /api/customers). Backend kiểm mã đại lý duy nhất.
+ */
+export async function createAgency(
+  payload: CreateAgencyPayload
+): Promise<{ success: boolean; message: string; agency?: Agency }> {
+  const res = await authFetch(CUSTOMERS_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      ...profileBody(payload),
+      code: payload.code.trim().toUpperCase(),
+      salesRepId: /^\d+$/.test(payload.assignedRepId) ? Number(payload.assignedRepId) : null
+    })
+  });
+  if (!res.ok) {
+    return { success: false, message: await readBackendError(res, 'Không thể tạo đại lý') };
+  }
+  const created: BackendCustomer = await res.json();
+  let message = `Đã tạo hồ sơ đại lý [${created.code}] thành công!`;
+
+  if (payload.creditLimit !== undefined && Number(payload.creditLimit) !== Number(created.creditLimit ?? 0)) {
+    try {
+      await saveCreditLimit(String(created.id), payload.creditLimit, created.maxDebtDays ?? 30, 'Khai báo hạn mức khi tạo đại lý');
+    } catch (err) {
+      message += ` Riêng hạn mức công nợ chưa lưu được: ${err instanceof Error ? err.message : ''}`;
+    }
+  }
+  const latest = (await fetchCustomer(String(created.id))) || created;
+  return { success: true, message, agency: mapCustomer(latest) };
+}
+
+/**
+ * 3. Cập nhật hồ sơ đại lý (PUT /api/customers/{id}).
+ * Đổi người phụ trách và hạn mức công nợ đi qua API riêng (có ghi nhật ký).
  */
 export async function updateAgency(
   id: string,
   payload: UpdateAgencyPayload
 ): Promise<{ success: boolean; message: string; agency?: Agency }> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const list = getStoredAgencies();
-  const index = list.findIndex((a) => a.id === id);
-
-  if (index === -1) {
+  const current = await fetchCustomer(id);
+  if (!current) {
     return { success: false, message: 'Không tìm thấy hồ sơ đại lý để cập nhật!' };
   }
 
-  const current = list[index];
-  const group = CUSTOMER_GROUP_OPTIONS.find((g) => g.id === payload.customerGroup);
-  const region = REGION_OPTIONS.find((r) => r.id === payload.regionId);
-  const rep = SALES_REP_OPTIONS.find((r) => r.id === payload.assignedRepId);
-  const pricingTier = group ? group.defaultPricingTier : current.pricingTier;
+  const res = await authFetch(`${CUSTOMERS_URL}/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(profileBody(payload))
+  });
+  if (!res.ok) {
+    return { success: false, message: await readBackendError(res, 'Không thể cập nhật đại lý') };
+  }
 
-  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const warnings: string[] = [];
+  const newRepId = payload.assignedRepId;
+  if (/^\d+$/.test(newRepId) && newRepId !== String(current.salesRep?.id ?? '')) {
+    const repRes = await authFetch(`${CUSTOMERS_URL}/${id}/sales-rep`, {
+      method: 'PUT',
+      body: JSON.stringify({ salesRepId: Number(newRepId), reason: 'Đổi người phụ trách từ form hồ sơ đại lý' })
+    });
+    if (!repRes.ok) warnings.push(await readBackendError(repRes, 'Chưa đổi được người phụ trách'));
+  }
 
-  const updatedAgency: Agency = {
-    ...current,
-    name: payload.name.trim(),
-    taxCode: payload.taxCode.trim(),
-    customerGroup: payload.customerGroup,
-    customerGroupName: group?.name || current.customerGroupName,
-    pricingTier,
-    regionId: payload.regionId,
-    regionName: region?.name || current.regionName,
-    assignedRepId: payload.assignedRepId,
-    assignedRepName: rep?.fullName || current.assignedRepName,
-    phone: payload.phone.trim(),
-    email: payload.email.trim(),
-    address: payload.address.trim(),
-    creditLimit: payload.creditLimit !== undefined ? payload.creditLimit : current.creditLimit,
-    updatedAt: nowStr
-  };
+  if (payload.creditLimit !== undefined && Number(payload.creditLimit) !== Number(current.creditLimit ?? 0)) {
+    try {
+      await saveCreditLimit(id, payload.creditLimit, current.maxDebtDays ?? 30, 'Cập nhật hạn mức từ form hồ sơ đại lý');
+    } catch (err) {
+      warnings.push(err instanceof Error ? err.message : 'Chưa lưu được hạn mức công nợ');
+    }
+  }
 
-  list[index] = updatedAgency;
-  saveStoredAgencies(list);
-
+  const latest = (await fetchCustomer(id)) || current;
   return {
     success: true,
-    message: `Cập nhật hồ sơ đại lý [${updatedAgency.code}] thành công!`,
-    agency: updatedAgency
+    message:
+      `Đã cập nhật hồ sơ đại lý [${latest.code}].` + (warnings.length ? ` Lưu ý: ${warnings.join('; ')}` : ''),
+    agency: mapCustomer(latest)
   };
 }
 
 /**
- * 4. Dừng giao dịch đại lý (S3-03: Đại lý có giao dịch KHÔNG ĐƯỢC XÓA, chỉ dừng giao dịch)
+ * 4. Dừng giao dịch đại lý (PATCH /api/customers/{id}/status -> INACTIVE, bắt buộc lý do)
  */
 export async function suspendAgency(
   id: string,
   reason: string
 ): Promise<{ success: boolean; message: string }> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const list = getStoredAgencies();
-  const target = list.find((a) => a.id === id);
-
-  if (!target) {
-    return { success: false, message: 'Không tìm thấy đại lý trong hệ thống.' };
-  }
-
   if (!reason || !reason.trim()) {
     return { success: false, message: 'Bắt buộc phải nhập lý do dừng giao dịch đại lý!' };
   }
-
-  target.status = 'SUSPENDED';
-  target.suspendReason = reason.trim();
-  target.suspendedAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
-  target.updatedAt = target.suspendedAt;
-
-  saveStoredAgencies(list);
-
+  const res = await authFetch(`${CUSTOMERS_URL}/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'INACTIVE', reason: reason.trim() })
+  });
+  if (!res.ok) {
+    return { success: false, message: await readBackendError(res, 'Không thể dừng giao dịch đại lý') };
+  }
+  const data: BackendCustomer = await res.json();
   return {
     success: true,
-    message: `Đã chuyển trạng thái đại lý [${target.code} - ${target.name}] sang "Dừng giao dịch". Lý do: ${target.suspendReason}`
+    message: `Đã chuyển đại lý [${data.code} - ${data.name}] sang "Dừng giao dịch". Lý do: ${reason.trim()}`
   };
 }
 
 /**
- * 5. Kích hoạt lại giao dịch cho đại lý
+ * 5. Mở lại giao dịch cho đại lý (PATCH status -> ACTIVE)
  */
 export async function reactivateAgency(id: string): Promise<{ success: boolean; message: string }> {
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  const list = getStoredAgencies();
-  const target = list.find((a) => a.id === id);
-
-  if (!target) {
-    return { success: false, message: 'Không tìm thấy đại lý trong hệ thống.' };
+  const res = await authFetch(`${CUSTOMERS_URL}/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'ACTIVE', reason: 'Mở lại giao dịch' })
+  });
+  if (!res.ok) {
+    return { success: false, message: await readBackendError(res, 'Không thể mở lại giao dịch') };
   }
-
-  target.status = 'ACTIVE';
-  target.suspendReason = undefined;
-  target.suspendedAt = undefined;
-  target.updatedAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
-
-  saveStoredAgencies(list);
-
-  return {
-    success: true,
-    message: `Đã mở lại hoạt động giao dịch bình thường cho đại lý [${target.code} - ${target.name}].`
-  };
+  const data: BackendCustomer = await res.json();
+  return { success: true, message: `Đã mở lại giao dịch bình thường cho đại lý [${data.code} - ${data.name}].` };
 }
 
 /**
- * 6. Kiểm tra xóa đại lý:
- * "Đại lý đã phát sinh giao dịch sẽ KHÔNG BỊ XÓA, chỉ dừng giao dịch"
+ * 6. Đại lý KHÔNG xoá cứng khỏi hệ thống (quy tắc 8: dữ liệu đã phát sinh giao dịch chỉ chuyển trạng thái).
  */
 export async function deleteAgency(id: string): Promise<{ success: boolean; message: string }> {
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  const list = getStoredAgencies();
-  const target = list.find((a) => a.id === id);
-
-  if (!target) {
-    return { success: false, message: 'Không tìm thấy đại lý để xóa.' };
-  }
-
-  if (target.hasTransactions || target.transactionCount > 0) {
-    return {
-      success: false,
-      message: `NGHIỆP VỤ BẢO VỆ: Đại lý [${target.code}] đã phát sinh ${target.transactionCount} giao dịch / đơn hàng. Hệ thống TUYỆT ĐỐI KHÔNG CHO PHÉP XÓA để bảo toàn lịch sử sổ sách kế toán, bạn chỉ có thể chuyển sang trạng thái "Dừng giao dịch"!`
-    };
-  }
-
-  const filtered = list.filter((a) => a.id !== id);
-  saveStoredAgencies(filtered);
-
+  void id;
   return {
-    success: true,
-    message: `Đã xóa hồ sơ đại lý mới [${target.code}] (chưa có lịch sử giao dịch).`
+    success: false,
+    message:
+      'Hồ sơ đại lý không xoá khỏi hệ thống để giữ lịch sử đơn hàng và công nợ. Vui lòng dùng "Dừng giao dịch" thay cho xoá.'
   };
 }
 
