@@ -1,5 +1,6 @@
 import { BrowserRouter } from './routes/Router';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { AppRoutes } from './routes/AppRoutes';
 import { ErrorBoundary } from './pages/common/ErrorBoundary';
 import './App.css';
@@ -7,11 +8,13 @@ import './App.css';
 export function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

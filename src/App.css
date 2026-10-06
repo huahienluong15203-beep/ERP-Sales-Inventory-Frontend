@@ -446,7 +446,7 @@
 .erp-header-fullname {
   font-size: 13px;
   font-weight: 700;
-  color: #111827;
+  color: var(--erp-text-main);
   line-height: 1.25;
   white-space: nowrap;
   max-width: 160px;
@@ -456,7 +456,7 @@
 
 .erp-header-username {
   font-size: 11px;
-  color: #9CA3AF;
+  color: var(--erp-text-muted);
   font-weight: 500;
 }
 
@@ -1015,7 +1015,7 @@
 .user-mgmt-title {
   font-size: 22px;
   font-weight: 800;
-  color: #111827;
+  color: var(--erp-text-main);
   letter-spacing: -0.3px;
   margin: 0;
   line-height: 1.2;
@@ -1023,7 +1023,7 @@
 
 .user-mgmt-subtitle {
   font-size: 13px;
-  color: #6B7280;
+  color: var(--erp-text-muted);
   margin: 3px 0 0;
 }
 
@@ -1794,4 +1794,304 @@
   color: #64748B;
   font-size: 12.5px;
   line-height: 1.45;
+}
+
+/* ==========================================================================
+   DARK MODE OVERRIDES (True Neutral Deep Dark, Ultra High Contrast)
+   ========================================================================== */
+html.dark .erp-sidebar,
+html.dark .erp-sidebar-header,
+html.dark .erp-topbar {
+  background-color: var(--erp-bg-surface) !important;
+  border-color: var(--erp-border-sidebar) !important;
+}
+
+html.dark .erp-brand-title,
+html.dark .erp-page-heading {
+  color: #FFFFFF !important;
+  font-weight: 800 !important;
+}
+
+html.dark .erp-brand-sub {
+  color: #F85606 !important;
+}
+
+html.dark .erp-page-subheading {
+  color: #D4D4D8 !important;
+}
+
+/* Sidebar Menu Items */
+html.dark .erp-menu-link {
+  color: #E4E4E7 !important;
+}
+
+html.dark .erp-menu-link:hover {
+  background-color: var(--erp-bg-sidebar-hover) !important;
+  color: #FFFFFF !important;
+}
+
+html.dark .erp-menu-link.active {
+  background: var(--erp-primary-gradient) !important;
+  color: #FFFFFF !important;
+}
+
+html.dark .erp-sidebar-role-badge {
+  border-bottom-color: var(--erp-border-sidebar) !important;
+}
+
+html.dark .erp-sidebar-role-title {
+  color: #B4B4BB !important;
+}
+
+html.dark .erp-sidebar-role-name,
+html.dark .erp-sidebar-role-name select {
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+html.dark .erp-sidebar-role-name option {
+  background-color: var(--erp-bg-surface) !important;
+  color: #FFFFFF !important;
+}
+
+/* Header User Profile Block */
+html.dark .erp-header-user-block {
+  border-left-color: var(--erp-border) !important;
+}
+
+html.dark .erp-header-user-block:hover {
+  background-color: var(--erp-bg-sidebar-hover) !important;
+}
+
+html.dark .erp-header-fullname {
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+html.dark .erp-header-username {
+  color: #D4D4D8 !important;
+}
+
+html.dark .erp-hamburger-btn {
+  color: #E4E4E7 !important;
+}
+
+html.dark .erp-hamburger-btn:hover {
+  background-color: var(--erp-bg-sidebar-hover) !important;
+  color: #FFFFFF !important;
+}
+
+/* User Management & All ERP Tables/Cards in Dark Mode */
+html.dark .user-mgmt-title {
+  color: #FFFFFF !important;
+}
+
+html.dark .user-mgmt-subtitle {
+  color: #D4D4D8 !important;
+}
+
+html.dark .user-mgmt-filter-card,
+html.dark .user-mgmt-table-card {
+  background-color: var(--erp-bg-surface) !important;
+  border-color: var(--erp-border) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark .user-mgmt-search-input,
+html.dark .user-mgmt-select {
+  background-color: #202024 !important;
+  color: #FFFFFF !important;
+  border-color: #38383E !important;
+}
+
+html.dark .user-mgmt-search-input::placeholder {
+  color: #A1A1AA !important;
+}
+
+html.dark .user-mgmt-btn-refresh,
+html.dark .user-mgmt-btn-reset {
+  background-color: #202024 !important;
+  color: #FFFFFF !important;
+  border-color: #38383E !important;
+}
+
+html.dark .user-mgmt-btn-refresh:hover,
+html.dark .user-mgmt-btn-reset:hover {
+  background-color: var(--erp-bg-sidebar-hover) !important;
+  color: #ffffff !important;
+}
+
+html.dark .user-mgmt-thead {
+  background-color: #202024 !important;
+  border-bottom-color: #38383E !important;
+}
+
+html.dark .user-mgmt-th {
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+html.dark .user-mgmt-tbody tr {
+  border-bottom-color: #2E2E33 !important;
+}
+
+html.dark .user-mgmt-tbody tr:hover {
+  background-color: #242428 !important;
+}
+
+html.dark .user-mgmt-tbody tr.row-locked {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+html.dark .user-mgmt-fullname {
+  color: #FFFFFF !important;
+}
+
+html.dark .user-mgmt-username {
+  color: #D4D4D8 !important;
+}
+
+html.dark .user-mgmt-contact-row {
+  color: #FFFFFF !important;
+}
+
+html.dark .user-mgmt-contact-row.phone {
+  color: #D4D4D8 !important;
+}
+
+html.dark .user-mgmt-assignment-note {
+  background-color: #202024 !important;
+  border-color: #38383E !important;
+  color: #D4D4D8 !important;
+}
+
+/* Global utility classes dark mode overrides (High-contrast pure white & crisp silver) */
+html.dark .bg-white {
+  background-color: var(--erp-bg-surface) !important;
+}
+
+html.dark .bg-gray-50,
+html.dark .bg-slate-50,
+html.dark .bg-gray-50\/50,
+html.dark .bg-gray-50\/70,
+html.dark .bg-gray-50\/80 {
+  background-color: #1f1f23 !important;
+}
+
+html.dark .bg-gray-100,
+html.dark .bg-slate-100 {
+  background-color: #27272a !important;
+  color: #FFFFFF !important;
+}
+
+html.dark .bg-gray-200,
+html.dark .bg-slate-200 {
+  background-color: #333338 !important;
+}
+
+/* HIGH CONTRAST TEXT RULES */
+html.dark .text-gray-900,
+html.dark .text-slate-900,
+html.dark .text-gray-800,
+html.dark .text-slate-800,
+html.dark .text-gray-700,
+html.dark .text-slate-700 {
+  color: #FFFFFF !important;
+}
+
+html.dark .text-gray-600,
+html.dark .text-slate-600,
+html.dark .text-gray-500,
+html.dark .text-slate-500 {
+  color: #E4E4E7 !important;
+}
+
+html.dark .text-gray-400,
+html.dark .text-slate-400 {
+  color: #D4D4D8 !important;
+}
+
+html.dark .text-gray-300,
+html.dark .text-slate-300 {
+  color: #B4B4BB !important;
+}
+
+/* HIGH CONTRAST BORDERS */
+html.dark .border-gray-100,
+html.dark .border-slate-100 {
+  border-color: #2E2E33 !important;
+}
+
+html.dark .border-gray-200,
+html.dark .border-slate-200,
+html.dark .border-gray-200\/80 {
+  border-color: #38383E !important;
+}
+
+html.dark .border-gray-300,
+html.dark .border-slate-300 {
+  border-color: #44444A !important;
+}
+
+html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #2E2E33 !important;
+}
+
+/* HIGH CONTRAST TABLES ACROSS ALL MODULES */
+html.dark table thead th {
+  background-color: #202024 !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  border-bottom: 2px solid #38383E !important;
+}
+
+html.dark table tbody td {
+  color: #FFFFFF !important;
+  border-bottom: 1px solid #2E2E33 !important;
+}
+
+html.dark table tbody tr:hover {
+  background-color: #242428 !important;
+}
+
+html.dark table th.sticky,
+html.dark table td.sticky {
+  background-color: #18181b !important;
+  border-color: #38383E !important;
+}
+
+/* HIGH CONTRAST FORM CONTROLS ACROSS ALL MODULES */
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark select,
+html.dark textarea {
+  background-color: #202024 !important;
+  color: #FFFFFF !important;
+  border-color: #38383E !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #A1A1AA !important;
+}
+
+html.dark select option {
+  background-color: #18181b !important;
+  color: #FFFFFF !important;
+}
+
+/* Action Icon Buttons */
+html.dark button:not(.btn-primary):not([class*="bg-gradient"]) {
+  color: inherit;
+}
+
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-50\/70:hover,
+html.dark .hover\:bg-gray-50\/80:hover {
+  background-color: var(--erp-bg-sidebar-hover) !important;
+}
+
+html.dark .hover\:text-gray-900:hover,
+html.dark .hover\:text-gray-800:hover {
+  color: #FFFFFF !important;
 }

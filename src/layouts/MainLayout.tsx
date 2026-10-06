@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import type { FC, ReactNode, FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation, Link } from '../routes/Router';
-import { ROLE_METADATA_MAP, getUserAvatarInitials } from '../types/user';
+import { ROLE_METADATA_MAP } from '../types/user';
 import type { RoleName } from '../types/user';
 import { Icons, DynamicIcon } from '../components/common/Icons';
-import { changePasswordApi, getAvatarFullUrl } from '../services/api';
+import { changePasswordApi } from '../services/api';
 import { LogoutConfirmModal } from '../components/common/LogoutConfirmModal';
+import { UserAvatarMenu } from '../components/common/UserAvatarMenu';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -17,11 +18,9 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Luôn đảm bảo "Hồ sơ cá nhân" (/profile) hiển thị ở cuối danh sách tính năng nghiệp vụ, ngay trên Đăng xuất
+  // Thanh điều hướng Sidebar (taskbar): loại bỏ "Hồ sơ cá nhân" (/profile) theo yêu cầu (chuyển sang menu ảnh đại diện)
   const displayedMenus = useMemo(() => {
-    const nonProfile = menus.filter((m) => m.path !== '/profile');
-    const profileItem = menus.find((m) => m.path === '/profile');
-    return profileItem ? [...nonProfile, profileItem] : nonProfile;
+    return menus.filter((m) => m.path !== '/profile');
   }, [menus]);
 
   // Trạng thái mở/đóng Sidebar trên Mobile (tối ưu hóa màn hình 360px)
@@ -43,13 +42,6 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
   // Hộp xác nhận đăng xuất
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
   const [loggingOut, setLoggingOut] = useState<boolean>(false);
-
-  // S2-03: Trạng thái hiển thị avatar trong Header
-  const [headerAvatarError, setHeaderAvatarError] = useState<boolean>(false);
-
-  useEffect(() => {
-    setHeaderAvatarError(false);
-  }, [user?.avatarThumbnailUrl, user?.avatarUrl]);
 
 
 
@@ -298,19 +290,6 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             </ul>
           )}
         </nav>
-
-        {/* Nút Đăng Xuất dạng Pill cố định góc dưới bên trái (như App ETC) */}
-        <div className="erp-sidebar-footer">
-          <button
-            type="button"
-            className="erp-sidebar-logout-btn"
-            onClick={() => setShowLogoutConfirm(true)}
-            title="Đăng xuất khỏi hệ thống"
-          >
-            <Icons.LogOut size={16} />
-            {!isSidebarCollapsed && <span>Đăng Xuất</span>}
-          </button>
-        </div>
       </aside>
 
       {/* 3. KHU VỰC NỘI DUNG CHÍNH (MAIN AREA) */}
@@ -342,33 +321,13 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
 
 
-          {/* Khối User Profile Avatar ở Header (như App ETC) - S2-03 Đồng bộ Avatar */}
-          <div
-            className="erp-header-user-block"
-            onClick={() => navigate('/profile')}
-            title="Xem hồ sơ cá nhân"
-          >
-            <div className="erp-header-avatar rounded-full overflow-hidden">
-              {(user?.avatarThumbnailUrl || user?.avatarUrl) && !headerAvatarError ? (
-                <img
-                  src={getAvatarFullUrl(user.avatarThumbnailUrl || user.avatarUrl)}
-                  alt={user?.fullName || user?.username || 'Avatar'}
-                  onError={() => setHeaderAvatarError(true)}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                getUserAvatarInitials(user?.fullName || user?.username, currentRole)
-              )}
-            </div>
-            <div className="erp-header-user-info">
-              <span className="erp-header-fullname">
-                {user?.fullName || 'Người Dùng'}
-              </span>
-              <span className="erp-header-username">
-                {user?.username || 'user'}
-              </span>
-            </div>
-          </div>
+          {/* Menu Ảnh đại diện với 3 tùy chọn: 1 là Hồ sơ cá nhân, 2 là Chủ đề, 3 là Đăng xuất (Ảnh 3 / Ảnh 2) */}
+          <UserAvatarMenu
+            user={user}
+            currentRole={effectiveRole}
+            onOpenProfile={() => navigate('/profile')}
+            onLogout={() => setShowLogoutConfirm(true)}
+          />
         </header>
 
         {/* Nội dung trang */}
