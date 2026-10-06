@@ -122,6 +122,8 @@ export interface CreateAgencyPayload {
 }
 
 export interface UpdateAgencyPayload {
+  /** true nếu người dùng chủ động đổi người phụ trách trên form (chỉ Admin, QL kinh doanh) */
+  changeSalesRep?: boolean;
   name: string;
   taxCode: string;
   customerGroup: CustomerGroupId;

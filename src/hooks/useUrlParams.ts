@@ -111,3 +111,20 @@ export function useUrlPaging<T extends Record<string, string>>(filterDefaults: T
 
   return { params, setParams, page, size, setPage, setSize, setFilters };
 }
+
+/**
+ * Trang đang xem vượt quá số trang (link cũ, vừa lọc bớt, vừa dừng dòng cuối của trang cuối...)
+ * -> tự lùi về trang cuối thay vì hiện bảng trống. Chỉ chạy khi đã tải xong dữ liệu.
+ */
+export function useClampPage(
+  page: number,
+  totalPages: number,
+  setPage: (page: number) => void,
+  loading: boolean
+) {
+  useEffect(() => {
+    if (!loading && totalPages > 0 && page > totalPages - 1) {
+      setPage(totalPages - 1);
+    }
+  }, [page, totalPages, setPage, loading]);
+}

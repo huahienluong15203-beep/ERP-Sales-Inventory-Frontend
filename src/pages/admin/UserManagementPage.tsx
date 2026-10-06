@@ -38,7 +38,7 @@ import {
 } from '../../components/common/Icons';
 import { UserImportModal } from './UserImportModal';
 import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
-import { useUrlPaging } from '../../hooks/useUrlParams';
+import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 import { Pagination } from '../../components/common/Pagination';
 import { fetchAuditLogs } from '../../services/auditLogApi';
 
@@ -517,6 +517,9 @@ export const UserManagementPage: React.FC = () => {
         return '';
     }
   };
+
+  // Đang ở trang vượt quá số trang -> tự lùi về trang cuối
+  useClampPage(page, totalPages, setPage, loading);
 
   return (
     <div className="user-mgmt-container">

@@ -415,9 +415,11 @@ interface BackendCustomer {
   customerGroupLabel?: string | null;
   region?: { id: number; code: string; name: string } | null;
   salesRep?: { id: number; code: string; name: string } | null;
+  contactName?: string | null;
   phone?: string | null;
   email?: string | null;
   address?: string | null;
+  note?: string | null;
   status?: string | null;
   statusReason?: string | null;
   creditLimit?: number | null;
@@ -568,8 +570,11 @@ async function saveCreditLimit(id: string, creditLimit: number, maxDebtDays: num
   if (!res.ok) throw new Error(await readBackendError(res, 'Không lưu được hạn mức công nợ'));
 }
 
-function profileBody(payload: CreateAgencyPayload | UpdateAgencyPayload) {
+/** current = hồ sơ hiện tại trên Backend: giữ nguyên các trường form không có (người liên hệ, ghi chú). */
+function profileBody(payload: CreateAgencyPayload | UpdateAgencyPayload, current?: BackendCustomer | null) {
   return {
+    contactName: current?.contactName ?? null,
+    note: current?.note ?? null,
     name: payload.name.trim(),
     taxCode: payload.taxCode.trim(),
     customerGroup: GROUP_TO_BACKEND[payload.customerGroup] || 'RETAIL',
@@ -626,15 +631,16 @@ export async function updateAgency(
 
   const res = await authFetch(`${CUSTOMERS_URL}/${id}`, {
     method: 'PUT',
-    body: JSON.stringify(profileBody(payload))
+    body: JSON.stringify(profileBody(payload, current))
   });
   if (!res.ok) {
     return { success: false, message: await readBackendError(res, 'Không thể cập nhật đại lý') };
   }
 
   const warnings: string[] = [];
+  // Chỉ đổi người phụ trách khi người dùng thực sự chọn người khác (API này chỉ Admin, QL kinh doanh được gọi)
   const newRepId = payload.assignedRepId;
-  if (/^\d+$/.test(newRepId) && newRepId !== String(current.salesRep?.id ?? '')) {
+  if (payload.changeSalesRep && /^\d+$/.test(newRepId) && newRepId !== String(current.salesRep?.id ?? '')) {
     const repRes = await authFetch(`${CUSTOMERS_URL}/${id}/sales-rep`, {
       method: 'PUT',
       body: JSON.stringify({ salesRepId: Number(newRepId), reason: 'Đổi người phụ trách từ form hồ sơ đại lý' })
@@ -714,296 +720,230 @@ export async function deleteAgency(id: string): Promise<{ success: boolean; mess
 // CÁC HÀM XỬ LÝ ĐIỂM GIAO HÀNG (S3-04 / SCRUM-15)
 // ==========================================
 
+interface BackendDeliveryAddress {
+  id: number;
+  customerId?: number;
+  label?: string | null;
+  address?: string | null;
+  receiverName?: string | null;
+  receiverPhone?: string | null;
+  note?: string | null;
+  isDefault?: boolean;
+  status?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+function mapDeliveryAddress(addr: BackendDeliveryAddress, agencyId: string): DeliveryPoint {
+  return {
+    id: String(addr.id),
+    agencyId: String(addr.customerId ?? agencyId),
+    name: addr.label || 'Kho nhận hàng',
+    address: addr.address || '',
+    contactPerson: addr.receiverName || '',
+    phone: addr.receiverPhone || '',
+    routeNotes: addr.note || '',
+    isDefault: Boolean(addr.isDefault),
+    createdAt: formatBackendDate(addr.createdAt),
+    updatedAt: formatBackendDate(addr.updatedAt || addr.createdAt)
+  };
+}
+
+function deliveryUrl(agencyId: string, suffix = ''): string {
+  return `${CUSTOMERS_URL}/${agencyId}/delivery-addresses${suffix}`;
+}
+
+function deliveryBody(payload: CreateDeliveryPointPayload | UpdateDeliveryPointPayload) {
+  return {
+    label: payload.name.trim(),
+    address: payload.address.trim(),
+    receiverName: payload.contactPerson.trim(),
+    receiverPhone: payload.phone.trim(),
+    note: payload.routeNotes?.trim() || null,
+    isDefault: Boolean(payload.isDefault)
+  };
+}
+
 /**
- * 7. Lấy danh sách điểm giao hàng của một đại lý
- * Sắp xếp: Điểm mặc định lên đầu, sau đó theo ngày tạo mới nhất
+ * 7. Lấy danh sách điểm giao hàng của một đại lý (GET /api/customers/{id}/delivery-addresses).
+ * Điểm mặc định lên đầu, sau đó theo ngày tạo mới nhất.
  */
 export async function fetchDeliveryPointsByAgency(agencyId: string): Promise<DeliveryPoint[]> {
-  // 1. Thử lấy từ Backend nếu agencyId là ID số
-  if (/^\d+$/.test(agencyId)) {
-    try {
-      const res = await authFetch(`${API_BASE_URL}/api/customers/${agencyId}/delivery-addresses`);
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          return data.map((addr: any) => ({
-            id: String(addr.id),
-            agencyId: String(addr.customerId || agencyId),
-            name: addr.label || 'Kho nhận hàng',
-            address: addr.address || '',
-            contactPerson: addr.receiverName || '',
-            phone: addr.receiverPhone || '',
-            isDefault: Boolean(addr.isDefault),
-            createdAt: addr.createdAt || new Date().toISOString(),
-            updatedAt: addr.updatedAt || addr.createdAt || new Date().toISOString()
-          }));
-        }
-      }
-    } catch (err) {
-      console.warn('Backend delivery addresses fetch failed, falling back:', err);
-    }
+  if (!/^\d+$/.test(agencyId)) return [];
+  const res = await authFetch(deliveryUrl(agencyId));
+  if (!res.ok) {
+    throw new Error(await readBackendError(res, 'Không tải được danh sách điểm giao hàng'));
   }
-
-  await new Promise((resolve) => setTimeout(resolve, 150));
-  const list = getStoredDeliveryPoints();
-  const agencyPoints = list.filter((p) => p.agencyId === agencyId);
-  return agencyPoints.sort((a, b) => {
-    if (a.isDefault && !b.isDefault) return -1;
-    if (!a.isDefault && b.isDefault) return 1;
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  const data: BackendDeliveryAddress[] = await res.json();
+  return (Array.isArray(data) ? data : [])
+    .filter((addr) => !addr.status || addr.status === 'ACTIVE')
+    .map((addr) => mapDeliveryAddress(addr, agencyId))
+    .sort((a, b) => {
+      if (a.isDefault && !b.isDefault) return -1;
+      if (!a.isDefault && b.isDefault) return 1;
+      return b.createdAt.localeCompare(a.createdAt);
+    });
 }
 
 export const fetchDeliveryPoints = fetchDeliveryPointsByAgency;
 
 /**
- * 8. Thêm mới một điểm giao hàng cho đại lý
- * Nghiệp vụ S3-04:
- * - Nếu là điểm giao hàng đầu tiên của đại lý, tự động gán isDefault = true.
- * - Nếu người dùng chọn đặt làm mặc định (isDefault = true), tự động hủy mặc định của các điểm khác.
+ * 8. Thêm điểm giao hàng (POST). Backend tự đặt điểm đầu tiên làm mặc định và bỏ mặc định các điểm khác.
  */
 export async function createDeliveryPoint(
   payload: CreateDeliveryPointPayload
 ): Promise<{ success: boolean; message: string; deliveryPoint?: DeliveryPoint }> {
-  await new Promise((resolve) => setTimeout(resolve, 200));
-
   if (!payload.name?.trim()) {
     return { success: false, message: 'Tên điểm giao hàng không được để trống!' };
   }
   if (!payload.address?.trim()) {
     return { success: false, message: 'Địa chỉ điểm giao hàng không được để trống!' };
   }
-  if (!payload.contactPerson?.trim()) {
-    return { success: false, message: 'Tên người nhận hàng không được để trống!' };
+  const res = await authFetch(deliveryUrl(payload.agencyId), {
+    method: 'POST',
+    body: JSON.stringify(deliveryBody(payload))
+  });
+  if (!res.ok) {
+    return { success: false, message: await readBackendError(res, 'Không thể thêm điểm giao hàng') };
   }
-  if (!payload.phone?.trim()) {
-    return { success: false, message: 'Số điện thoại người nhận không được để trống!' };
-  }
-
-  let list = getStoredDeliveryPoints();
-  const agencyPoints = list.filter((p) => p.agencyId === payload.agencyId);
-  const isFirstPoint = agencyPoints.length === 0;
-  const shouldBeDefault = isFirstPoint || !!payload.isDefault;
-
-  // Nếu điểm mới là mặc định, các điểm khác của cùng đại lý phải bỏ cờ mặc định
-  if (shouldBeDefault) {
-    list = list.map((p) => {
-      if (p.agencyId === payload.agencyId) {
-        return { ...p, isDefault: false };
-      }
-      return p;
-    });
-  }
-
-  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
-  const newPoint: DeliveryPoint = {
-    id: `DP-${Date.now().toString().slice(-4)}`,
-    agencyId: payload.agencyId,
-    name: payload.name.trim(),
-    address: payload.address.trim(),
-    contactPerson: payload.contactPerson.trim(),
-    phone: payload.phone.trim(),
-    routeNotes: payload.routeNotes?.trim() || undefined,
-    isDefault: shouldBeDefault,
-    createdAt: nowStr,
-    updatedAt: nowStr
-  };
-
-  list.push(newPoint);
-  saveStoredDeliveryPoints(list);
-
-  return {
-    success: true,
-    message: `Đã thêm điểm giao hàng "${newPoint.name}" thành công!${shouldBeDefault ? ' (Được đặt làm mặc định)' : ''}`,
-    deliveryPoint: newPoint
-  };
+  const point = mapDeliveryAddress(await res.json(), payload.agencyId);
+  return { success: true, message: `Đã thêm điểm giao hàng "${point.name}" thành công!`, deliveryPoint: point };
 }
 
 /**
- * 9. Cập nhật thông tin điểm giao hàng
+ * 9. Sửa điểm giao hàng (PUT /api/customers/{agencyId}/delivery-addresses/{id})
  */
 export async function updateDeliveryPoint(
   id: string,
-  payload: UpdateDeliveryPointPayload
+  payload: UpdateDeliveryPointPayload,
+  agencyId?: string
 ): Promise<{ success: boolean; message: string; deliveryPoint?: DeliveryPoint }> {
-  await new Promise((resolve) => setTimeout(resolve, 200));
-
-  let list = getStoredDeliveryPoints();
-  const index = list.findIndex((p) => p.id === id);
-  if (index === -1) {
-    return { success: false, message: 'Không tìm thấy điểm giao hàng để cập nhật!' };
+  if (!agencyId) {
+    return { success: false, message: 'Thiếu thông tin đại lý của điểm giao hàng!' };
   }
-
-  const current = list[index];
-  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
-
-  // Nếu đặt làm mặc định, hủy mặc định của các điểm khác thuộc cùng đại lý
-  if (payload.isDefault) {
-    list = list.map((p) => {
-      if (p.agencyId === current.agencyId && p.id !== id) {
-        return { ...p, isDefault: false };
-      }
-      return p;
-    });
+  const res = await authFetch(deliveryUrl(agencyId, `/${id}`), {
+    method: 'PUT',
+    body: JSON.stringify(deliveryBody(payload))
+  });
+  if (!res.ok) {
+    return { success: false, message: await readBackendError(res, 'Không thể cập nhật điểm giao hàng') };
   }
-
-  const updated: DeliveryPoint = {
-    ...current,
-    name: payload.name.trim(),
-    address: payload.address.trim(),
-    contactPerson: payload.contactPerson.trim(),
-    phone: payload.phone.trim(),
-    routeNotes: payload.routeNotes?.trim() || undefined,
-    isDefault: payload.isDefault !== undefined ? payload.isDefault : current.isDefault,
-    updatedAt: nowStr
-  };
-
-  list[index] = updated;
-  saveStoredDeliveryPoints(list);
-
-  return {
-    success: true,
-    message: `Cập nhật điểm giao hàng "${updated.name}" thành công!`,
-    deliveryPoint: updated
-  };
+  const point = mapDeliveryAddress(await res.json(), agencyId);
+  return { success: true, message: `Đã cập nhật điểm giao hàng "${point.name}".`, deliveryPoint: point };
 }
 
 /**
- * 10. Đặt một điểm giao hàng làm mặc định (S3-04 AC 2)
+ * 10. Đặt điểm giao hàng mặc định (PATCH .../{id}/default)
  */
 export async function setDefaultDeliveryPoint(
   id: string,
   agencyId: string
 ): Promise<{ success: boolean; message: string }> {
-  await new Promise((resolve) => setTimeout(resolve, 150));
-
-  let list = getStoredDeliveryPoints();
-  let found = false;
-
-  list = list.map((p) => {
-    if (p.agencyId === agencyId) {
-      if (p.id === id) {
-        found = true;
-        return { ...p, isDefault: true, updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 19) };
-      }
-      return { ...p, isDefault: false };
-    }
-    return p;
-  });
-
-  if (!found) {
-    return { success: false, message: 'Không tìm thấy điểm giao hàng cần đặt mặc định!' };
+  const res = await authFetch(deliveryUrl(agencyId, `/${id}/default`), { method: 'PATCH' });
+  if (!res.ok) {
+    return { success: false, message: await readBackendError(res, 'Không thể đặt điểm giao mặc định') };
   }
-
-  saveStoredDeliveryPoints(list);
-  return {
-    success: true,
-    message: 'Đã thay đổi điểm giao hàng mặc định cho đại lý thành công!'
-  };
+  const point = mapDeliveryAddress(await res.json(), agencyId);
+  return { success: true, message: `Đã đặt "${point.name}" làm điểm giao hàng mặc định.` };
 }
 
 /**
- * 11. Xóa một điểm giao hàng
- * Nếu xóa điểm mặc định mà đại lý vẫn còn các điểm khác, tự động chọn điểm đầu tiên còn lại làm mặc định
+ * 11. Ngừng sử dụng điểm giao hàng (PATCH .../{id}/deactivate). Không xoá cứng vì đơn hàng cũ còn tham chiếu.
  */
 export async function deleteDeliveryPoint(
   id: string,
   agencyId: string
 ): Promise<{ success: boolean; message: string }> {
-  await new Promise((resolve) => setTimeout(resolve, 200));
-
-  let list = getStoredDeliveryPoints();
-  const target = list.find((p) => p.id === id);
-  if (!target) {
-    return { success: false, message: 'Không tìm thấy điểm giao hàng để xóa!' };
+  const res = await authFetch(deliveryUrl(agencyId, `/${id}/deactivate`), { method: 'PATCH' });
+  if (!res.ok) {
+    return { success: false, message: await readBackendError(res, 'Không thể xoá điểm giao hàng') };
   }
-
-  const wasDefault = target.isDefault;
-  list = list.filter((p) => p.id !== id);
-
-  // Nếu điểm vừa xóa là mặc định, tự động chuyển mặc định cho điểm kế tiếp
-  if (wasDefault) {
-    const remainingForAgency = list.filter((p) => p.agencyId === agencyId);
-    if (remainingForAgency.length > 0) {
-      const newDefaultId = remainingForAgency[0].id;
-      list = list.map((p) => (p.id === newDefaultId ? { ...p, isDefault: true } : p));
-    }
-  }
-
-  saveStoredDeliveryPoints(list);
-  return {
-    success: true,
-    message: `Đã xóa điểm giao hàng "${target.name}".${wasDefault ? ' Điểm kế tiếp đã được tự động chọn làm mặc định.' : ''}`
-  };
+  return { success: true, message: 'Đã ngừng sử dụng điểm giao hàng.' };
 }
 
-const CREDIT_LIMIT_LOGS_KEY = 'erp_credit_limit_logs_v1';
-
-// Lấy danh sách lịch sử thay đổi của đại lý
-export async function fetchCreditLimitLogs(agencyId: string): Promise<CreditLimitAuditLog[]> {
-  await new Promise((resolve) => setTimeout(resolve, 150));
+/**
+ * Lịch sử thay đổi hạn mức công nợ của 1 đại lý: đọc Nhật ký thao tác (module DEBT_LIMIT) trên Backend.
+ */
+export async function fetchCreditLimitLogs(agencyId: string, agencyCode?: string): Promise<CreditLimitAuditLog[]> {
+  // Nhật ký chỉ Admin, Kế toán, QL kinh doanh, QL kho được xem; vai trò khác gọi sẽ bị 403 và bị đăng xuất -> bỏ qua
+  let role: string | null = null;
   try {
-    const raw = localStorage.getItem(CREDIT_LIMIT_LOGS_KEY);
-    const allLogs: CreditLimitAuditLog[] = raw ? JSON.parse(raw) : [];
-    return allLogs
-      .filter((log) => log.agencyId === agencyId)
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    role = localStorage.getItem('erp_active_role') || sessionStorage.getItem('erp_active_role');
   } catch {
+    role = null;
+  }
+  if (!role || !['ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER', 'ROLE_WH_MANAGER'].includes(role)) {
     return [];
   }
+  // Chỉ lấy thao tác đổi hạn mức (bỏ khoá/mở giao dịch cùng module), lọc theo mã đại lý để không bị đẩy mất bởi đại lý khác
+  const query = new URLSearchParams({
+    module: 'DEBT_LIMIT',
+    action: 'UPDATE_DEBT_LIMIT',
+    targetType: 'CUSTOMER',
+    page: '0',
+    size: '100'
+  });
+  if (agencyCode) query.set('keyword', agencyCode);
+  const res = await authFetch(`${API_BASE_URL}/api/audit-logs?${query.toString()}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  const parse = (value?: string | null): { creditLimit?: number; maxDebtDays?: number } => {
+    try {
+      return value ? JSON.parse(value) : {};
+    } catch {
+      return {};
+    }
+  };
+  return (data?.content || [])
+    .filter((log: { targetId?: number }) => String(log.targetId) === String(agencyId))
+    .map(
+      (log: {
+        id: number;
+        oldValue?: string;
+        newValue?: string;
+        reason?: string;
+        actorFullName?: string;
+        actorUsername?: string;
+        createdAt?: string;
+      }) => {
+        const oldV = parse(log.oldValue);
+        const newV = parse(log.newValue);
+        return {
+          id: String(log.id),
+          agencyId: String(agencyId),
+          oldCreditLimit: Number(oldV.creditLimit ?? 0),
+          newCreditLimit: Number(newV.creditLimit ?? 0),
+          oldMaxDebtDays: Number(oldV.maxDebtDays ?? 0),
+          newMaxDebtDays: Number(newV.maxDebtDays ?? 0),
+          reason: log.reason || '',
+          updatedBy: log.actorFullName || log.actorUsername || '',
+          updatedByRole: '',
+          updatedAt: formatBackendDate(log.createdAt)
+        } as CreditLimitAuditLog;
+      }
+    );
 }
 
-// Cập nhật hạn mức & Tự động ghi nhật ký
+/**
+ * Cập nhật hạn mức công nợ (PUT /api/customers/{id}/debt-limit). Backend bắt buộc lý do và tự ghi nhật ký.
+ */
 export async function updateCreditLimit(
   payload: UpdateCreditLimitPayload,
-  currentUser: { fullName: string; role: string }
+  currentUser?: { fullName: string; role: string }
 ): Promise<{ success: boolean; message: string }> {
-  await new Promise((resolve) => setTimeout(resolve, 200));
-
+  void currentUser;
   if (!payload.reason || !payload.reason.trim()) {
     return { success: false, message: 'Bắt buộc phải nhập lý do điều chỉnh hạn mức!' };
   }
   if (payload.creditLimit < 0 || payload.maxDebtDays < 0) {
     return { success: false, message: 'Hạn mức tiền và số ngày nợ không được âm!' };
   }
-
-  // 1. Cập nhật hồ sơ đại lý
-  const agencies = getStoredAgencies();
-  const agencyIndex = agencies.findIndex((a) => a.id === payload.agencyId);
-  if (agencyIndex === -1) {
-    return { success: false, message: 'Không tìm thấy hồ sơ đại lý!' };
+  try {
+    await saveCreditLimit(payload.agencyId, payload.creditLimit, payload.maxDebtDays, payload.reason.trim());
+  } catch (err) {
+    return { success: false, message: err instanceof Error ? err.message : 'Không lưu được hạn mức công nợ' };
   }
-
-  const agency = agencies[agencyIndex];
-  const oldLimit = agency.creditLimit;
-  const oldDays = agency.maxDebtDays || 30;
-
-  agency.creditLimit = payload.creditLimit;
-  agency.maxDebtDays = payload.maxDebtDays;
-  agency.updatedAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
-  saveStoredAgencies(agencies);
-
-  // 2. Ghi một dòng vào Nhật ký kiểm toán (Audit Log)
-  const rawLogs = localStorage.getItem(CREDIT_LIMIT_LOGS_KEY);
-  const allLogs: CreditLimitAuditLog[] = rawLogs ? JSON.parse(rawLogs) : [];
-
-  const newLog: CreditLimitAuditLog = {
-    id: `LOG-${Date.now()}`,
-    agencyId: payload.agencyId,
-    oldCreditLimit: oldLimit,
-    newCreditLimit: payload.creditLimit,
-    oldMaxDebtDays: oldDays,
-    newMaxDebtDays: payload.maxDebtDays,
-    reason: payload.reason.trim(),
-    updatedBy: currentUser.fullName || 'Kế toán viên',
-    updatedByRole: currentUser.role,
-    updatedAt: agency.updatedAt
-  };
-
-  allLogs.unshift(newLog);
-  localStorage.setItem(CREDIT_LIMIT_LOGS_KEY, JSON.stringify(allLogs));
-
-  return { success: true, message: `Đã cập nhật hạn mức cho đại lý [${agency.name}] thành công!` };
+  return { success: true, message: 'Đã cập nhật hạn mức công nợ thành công!' };
 }
 
 // ==========================================

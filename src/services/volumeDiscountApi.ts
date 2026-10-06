@@ -159,8 +159,9 @@ function toFeType(t: BeDiscountType): DiscountCalculationType {
 
 function mapPolicy(p: BePolicy): VolumeDiscountPolicy {
   const isSku = p.scope === 'PRODUCT';
+  // Cùng quy tắc với Backend: "Đã hết hạn" = đang bật nhưng đã qua ngày kết thúc; đã tắt thì luôn là "Tạm dừng"
   let status: DiscountPolicyStatus = p.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE';
-  if (p.endDate && p.endDate < todayVN()) status = 'EXPIRED';
+  if (status === 'ACTIVE' && p.endDate && p.endDate < todayVN()) status = 'EXPIRED';
 
   const sorted = [...(p.tiers || [])].sort((a, b) => Number(a.minQuantity) - Number(b.minQuantity));
   const tiers: VolumeDiscountTier[] = sorted.map((t, idx) => ({
@@ -286,18 +287,10 @@ export async function getVolumeDiscountPolicies(
     { method: 'GET' },
     'Không tải được danh sách chính sách chiết khấu'
   );
-  let list = (raw?.content || []).map(mapPolicy);
-  let total = raw?.totalElements ?? list.length;
-  let totalPages = raw?.totalPages ?? 1;
-
-  if (params.targetCategory && params.targetCategory !== 'ALL') {
-    const tc = params.targetCategory.toLowerCase();
-    list = list.filter(
-      (p) => p.targetId === params.targetCategory || p.targetName.toLowerCase().includes(tc)
-    );
-    total = list.length;
-    totalPages = 1;
-  }
+  // Lọc + phân trang hoàn toàn ở Backend, Frontend không lọc thêm trên trang đang xem
+  const list = (raw?.content || []).map(mapPolicy);
+  const total = raw?.totalElements ?? list.length;
+  const totalPages = raw?.totalPages ?? 1;
 
   return { data: list, total, totalPages };
 }
@@ -448,7 +441,8 @@ export async function simulateBestDeal(
   );
 
   const [policiesRes, products] = await Promise.all([
-    getVolumeDiscountPolicies().catch(() => ({ data: [] as VolumeDiscountPolicy[], total: 0 })),
+    // Lấy tối đa 100 chính sách (giới hạn của Backend) để tra thông tin đầy đủ của các chính sách ứng viên
+    getVolumeDiscountPolicies({ size: 100 }).catch(() => ({ data: [] as VolumeDiscountPolicy[], total: 0 })),
     getProductsCached()
   ]);
   const policyMap = new Map(policiesRes.data.map((p) => [String(p.id), p]));

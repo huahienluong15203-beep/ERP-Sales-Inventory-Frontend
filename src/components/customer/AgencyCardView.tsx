@@ -13,8 +13,7 @@ import {
   Users,
   CreditCard,
   Truck,
-  History,
-  X
+  History
 } from '../common/Icons';
 
 interface AgencyCardViewProps {
@@ -29,7 +28,8 @@ interface AgencyCardViewProps {
   onHistory: (agency: Agency) => void;
   onLockModal: (agency: Agency) => void;
   onSuspendModal: (agency: Agency) => void;
-  onDeleteModal: (agency: Agency) => void;
+  /** Không còn dùng: hồ sơ đại lý không xoá cứng (giữ để không phải sửa nơi gọi) */
+  onDeleteModal?: (agency: Agency) => void;
 }
 
 /**
@@ -47,8 +47,7 @@ export const AgencyCardView: React.FC<AgencyCardViewProps> = ({
   onCreditLimit,
   onHistory,
   onLockModal,
-  onSuspendModal,
-  onDeleteModal
+  onSuspendModal
 }) => {
   if (loading) {
     return (
@@ -331,17 +330,6 @@ export const AgencyCardView: React.FC<AgencyCardViewProps> = ({
                   </button>
                 )}
 
-                {/* Xóa đại lý */}
-                {canManageAgency && (
-                  <button
-                    type="button"
-                    onClick={() => onDeleteModal(agency)}
-                    className="p-1.5 rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                    title="Xóa đại lý"
-                  >
-                    <X size={13} />
-                  </button>
-                )}
               </div>
             </div>
           </div>

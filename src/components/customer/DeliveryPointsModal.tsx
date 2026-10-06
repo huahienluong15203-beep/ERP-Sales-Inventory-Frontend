@@ -189,7 +189,9 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
       setFormError('Vui lòng nhập Tên điểm giao hàng (ví dụ: Kho Tổng, Kho Phụ, Showroom...)');
       return;
     }
-    if (!addressComplete) {
+    // Địa chỉ cũ (chưa theo đơn vị hành chính mới) mà người dùng không sửa thì vẫn cho lưu các trường khác
+    const unchangedLegacyAddress = Boolean(editingPoint && address.trim() && address === editingPoint.address);
+    if (!addressComplete && !unchangedLegacyAddress) {
       setFormError('Vui lòng chọn Tỉnh/Thành, Xã/Phường và nhập số nhà, tên đường của điểm giao hàng');
       return;
     }
@@ -219,7 +221,7 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
           routeNotes: routeNotes.trim() || undefined,
           isDefault: isDefault || points.length === 1 // nếu chỉ có 1 điểm thì luôn là mặc định
         };
-        const res = await updateDeliveryPoint(editingPoint.id, payload);
+        const res = await updateDeliveryPoint(editingPoint.id, payload, agency.id);
         if (res.success) {
           setNotice({ type: 'success', message: res.message });
           await loadPoints();
