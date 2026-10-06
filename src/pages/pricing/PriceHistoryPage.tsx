@@ -159,39 +159,22 @@ export const PriceHistoryPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
-      {/* 1. Header Trang & Tiêu đề phân hệ */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-md bg-amber-50 text-amber-700 border border-amber-200">
-              <Lock size={12} />
-              Lịch sử bất biến (Không thể sửa/xóa)
-            </span>
-          </div>
-
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
-            Lịch Sử Thay Đổi Giá Sản Phẩm
-          </h1>
-          <p className="text-sm text-gray-500 mt-1 max-w-3xl">
-            Dành cho <strong>Quản lý kinh doanh</strong> tra cứu biến động giá cũ - giá mới, người phê duyệt và căn cứ pháp lý để đối thoại, giải thích minh bạch với Đại lý vì sao giá tháng này khác tháng trước.
-          </p>
-        </div>
-
-        {/* Nút hành động */}
-        <div className="flex items-center gap-2.5 self-start md:self-auto">
+      {/* 1. Nút hành động */}
+      <div className="flex items-center justify-end gap-2.5 p-4 ">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={loadData}
             disabled={loading}
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition shadow-xs"
-            title="Tải lại dữ liệu"
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 transition shadow-xs cursor-pointer min-h-[44px]"
+            title="Làm mới lịch sử thay đổi giá"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin text-blue-600' : ''} />
-            <span className="hidden sm:inline">Làm mới</span>
+            <RefreshCw size={16} className={loading ? 'animate-spin text-orange-600' : ''} />
+            <span>Làm mới</span>
           </button>
 
           <a
             href="/pricing/discounts"
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:text-indigo-600 hover:border-indigo-200 hover:bg-gray-50 transition shadow-xs"
+            className="min h-[44px] inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:text-indigo-600 hover:border-indigo-200 hover:bg-gray-50 transition shadow-xs"
             title="Khai báo chính sách chiết khấu theo sản lượng"
           >
             <span className="text-indigo-600 font-bold">%</span>
@@ -201,7 +184,7 @@ export const PriceHistoryPage: React.FC = () => {
 
           <button
             onClick={handleExportExcel}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition"
+            className="min h-[44px] inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition"
           >
 
             <FileSpreadsheet size={16} />
@@ -323,11 +306,10 @@ export const PriceHistoryPage: React.FC = () => {
                   setTrend('ALL');
                   setPage(0);
                 }}
-                className={`px-3 py-1 rounded-lg transition ${
-                  trend === 'ALL'
-                    ? 'bg-white text-gray-900 font-bold shadow-xs'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className={`px-3 py-1 rounded-lg transition ${trend === 'ALL'
+                  ? 'bg-white text-gray-900 font-bold shadow-xs'
+                  : 'text-gray-600 hover:text-gray-900'
+                  }`}
               >
                 Tất cả
               </button>
@@ -337,11 +319,10 @@ export const PriceHistoryPage: React.FC = () => {
                   setTrend('INCREASE');
                   setPage(0);
                 }}
-                className={`flex items-center gap-1 px-3 py-1 rounded-lg transition ${
-                  trend === 'INCREASE'
-                    ? 'bg-rose-600 text-white font-bold shadow-xs'
-                    : 'text-rose-600 hover:text-rose-700'
-                }`}
+                className={`flex items-center gap-1 px-3 py-1 rounded-lg transition ${trend === 'INCREASE'
+                  ? 'bg-rose-600 text-white font-bold shadow-xs'
+                  : 'text-rose-600 hover:text-rose-700'
+                  }`}
               >
                 <TrendingUp size={12} />
                 <span>Chỉ tăng giá</span>
@@ -352,11 +333,10 @@ export const PriceHistoryPage: React.FC = () => {
                   setTrend('DECREASE');
                   setPage(0);
                 }}
-                className={`flex items-center gap-1 px-3 py-1 rounded-lg transition ${
-                  trend === 'DECREASE'
-                    ? 'bg-emerald-600 text-white font-bold shadow-xs'
-                    : 'text-emerald-600 hover:text-emerald-700'
-                }`}
+                className={`flex items-center gap-1 px-3 py-1 rounded-lg transition ${trend === 'DECREASE'
+                  ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                  : 'text-emerald-600 hover:text-emerald-700'
+                  }`}
               >
                 <TrendingDown size={12} />
                 <span>Chỉ giảm giá</span>
@@ -516,13 +496,12 @@ export const PriceHistoryPage: React.FC = () => {
                       {/* Biến động (+ / - %) */}
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg ${
-                            isIncrease
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                              : isDecrease
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg ${isIncrease
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : isDecrease
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : 'bg-gray-100 text-gray-600'
-                          }`}
+                            }`}
                         >
                           {isIncrease ? <TrendingUp size={13} /> : isDecrease ? <TrendingDown size={13} /> : null}
                           <span>

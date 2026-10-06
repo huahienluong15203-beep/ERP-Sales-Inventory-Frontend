@@ -983,7 +983,7 @@
   flex-direction: column;
   gap: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid var(--erp-border);
+
 }
 
 @media (min-width: 640px) {
@@ -1034,15 +1034,18 @@
 }
 
 .user-mgmt-btn-refresh {
-  width: 38px;
-  height: 38px;
+  min-height: 40px;
+  padding: 0 14px;
   border-radius: 10px;
   border: 1px solid var(--erp-border);
   background: #FFFFFF;
   color: #4B5563;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   box-shadow: var(--erp-shadow-sm);
@@ -2072,8 +2075,8 @@ html.dark .border-slate-300 {
   border-color: #44444A !important;
 }
 
-html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
-html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+html.dark .divide-gray-100> :not([hidden])~ :not([hidden]),
+html.dark .divide-gray-200> :not([hidden])~ :not([hidden]) {
   border-color: #2E2E33 !important;
 }
 

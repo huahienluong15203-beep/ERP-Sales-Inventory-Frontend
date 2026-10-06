@@ -332,18 +332,12 @@ export const OrderCreatePage: React.FC = () => {
   return (
     <div className="space-y-5 animate-in fade-in duration-300 pb-10">
       {/* 1. Header Trang & Các Phím Thao Tác Nhanh */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className=" p-4 sm:p-5 rounded-2xl  flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-orange-500 to-[#EE4D2D] text-white flex items-center justify-center shadow-md shadow-orange-500/25 shrink-0">
-            <ShoppingCart size={22} />
-          </div>
+
           <div>
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
-              Tạo Đơn Hàng Cho Đại Lý
-            </h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Gõ đơn nhanh tại cửa hàng đại lý, tự động áp bảng giá & chiết khấu sản lượng
-            </p>
+
+
           </div>
         </div>
 

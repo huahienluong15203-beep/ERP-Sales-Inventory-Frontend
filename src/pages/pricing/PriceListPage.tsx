@@ -154,32 +154,23 @@ export const PriceListPage: React.FC = () => {
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      {/* Tiêu đề trang & Nút thao tác chính */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2.5">
-            <Icons.Tags className="text-[#F85606]" size={28} />
-            Quản lý Bảng giá theo Nhóm Khách hàng
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-3xl">
-            Khai báo nhiều bảng giá song song theo nhóm khách hàng (Đại lý cấp 1, cấp 2, khách lẻ) và thời gian hiệu lực. Thiết lập giá sàn để kiểm soát ngoại lệ duyệt đơn bán hàng.
-          </p>
-        </div>
-
+      {/* Nút thao tác chính */}
+      <div className="flex items-center justify-end gap-2.5  p-4 ">
         {/* Thanh tác vụ */}
-        <div className="flex items-center gap-2.5 self-start md:self-center">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={loadData}
             disabled={loading}
-            title="Tải lại danh sách"
-            className="p-2.5 bg-white border border-gray-200 text-gray-600 hover:text-[#F85606] rounded-xl hover:bg-gray-50 transition-colors cursor-pointer shadow-xs"
+            title="Làm mới danh sách bảng giá"
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:text-[#F85606] hover:border-orange-200 rounded-xl hover:bg-gray-50 text-xs sm:text-sm font-semibold transition-colors cursor-pointer shadow-xs min-h-[44px]"
           >
-            <Icons.RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            <Icons.RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <span>Làm mới</span>
           </button>
 
           <a
             href="/pricing/discounts"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-300 rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition-colors"
+            className="min h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-300 rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition-colors"
           >
             <Icons.Percent size={16} className="text-indigo-600" />
             <span className="hidden sm:inline">Chiết khấu sản lượng</span>
@@ -189,7 +180,7 @@ export const PriceListPage: React.FC = () => {
           {canManage && (
             <button
               onClick={handleOpenCreate}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#F85606] hover:bg-[#E04D05] text-white text-xs sm:text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+              className="min h-[43px] inline-flex items-center gap-2 px-4 py-2.5 bg-[#F85606] hover:bg-[#E04D05] text-white text-xs sm:text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
             >
               <Icons.Plus size={18} />
               <span>Khai báo bảng giá mới</span>
@@ -200,25 +191,7 @@ export const PriceListPage: React.FC = () => {
       </div>
 
       {/* Thông tin vai trò & phạm vi nghiệp vụ */}
-      <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-100/80 border border-gray-200 text-xs">
-        <div className="flex items-center gap-2 text-gray-600">
-          <Icons.ShieldCheck size={16} className="text-[#F85606]" />
-          <span>
-            Vai trò hiện tại: <strong>{currentRole}</strong>
-          </span>
-          <span className="text-gray-400">•</span>
-          <span>
-            {canManage
-              ? 'Toàn quyền thiết lập bảng giá, mức giá sàn và nhân bản phiên bản'
-              : 'Quyền tra cứu và áp dụng giá bán khi tạo đơn hàng'}
-          </span>
-        </div>
-        <div className="hidden sm:flex items-center gap-2 text-[11px] text-gray-500">
-          <span>Tiền tệ: <strong>VND</strong></span>
-          <span>•</span>
-          <span>Múi giờ: <strong>UTC+7</strong></span>
-        </div>
-      </div>
+
 
       {/* KPI Thống kê bảng giá */}
       <PriceListStats stats={stats} />

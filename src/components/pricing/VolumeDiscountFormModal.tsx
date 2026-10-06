@@ -464,22 +464,20 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                     <button
                       type="button"
                       onClick={() => handleScopeChange('SKU')}
-                      className={`flex-1 rounded-xl border py-2.5 text-xs font-bold transition-all cursor-pointer ${
-                        scopeType === 'SKU'
+                      className={`flex-1 rounded-xl border py-2.5 text-xs font-bold transition-all cursor-pointer ${scopeType === 'SKU'
                           ? 'border-[#F85606] bg-orange-50 text-[#F85606] shadow-2xs'
                           : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
-                      }`}
+                        }`}
                     >
                       Theo SKU
                     </button>
                     <button
                       type="button"
                       onClick={() => handleScopeChange('CATEGORY')}
-                      className={`flex-1 rounded-xl border py-2.5 text-xs font-bold transition-all cursor-pointer ${
-                        scopeType === 'CATEGORY'
+                      className={`flex-1 rounded-xl border py-2.5 text-xs font-bold transition-all cursor-pointer ${scopeType === 'CATEGORY'
                           ? 'border-[#F85606] bg-orange-50 text-[#F85606] shadow-2xs'
                           : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
-                      }`}
+                        }`}
                     >
                       Theo Nhóm hàng
                     </button>
@@ -763,7 +761,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
               <div className="flex items-start space-x-2">
                 <Icons.CheckSquare size={16} className="mt-0.5 shrink-0 text-amber-700" />
                 <p>
-                  <strong className="font-bold">Quy tắc có lợi nhất cho khách (Best-deal rule): </strong>
+                  <strong className="font-bold">Quy tắc có lợi nhất cho khách </strong>
                   {BEST_DEAL_RULE_STATEMENT}
                 </p>
               </div>

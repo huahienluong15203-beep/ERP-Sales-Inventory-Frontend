@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Icons } from '../../components/common/Icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { VolumeDiscountStats } from '../../components/pricing/VolumeDiscountStats';
-import { BestDealSimulatorWidget } from '../../components/pricing/BestDealSimulatorWidget';
 import { VolumeDiscountFormModal } from '../../components/pricing/VolumeDiscountFormModal';
 import type {
   VolumeDiscountPolicy,
@@ -59,9 +58,7 @@ export const VolumeDiscountPage: React.FC = () => {
     setUrlParams({ keyword: serverKeyword });
   }, [serverKeyword, setUrlParams]);
 
-  // Điều khiển UI Modals & Simulator
-  const [showSimulator, setShowSimulator] = useState<boolean>(true);
-  const [simulatorInitialSku, setSimulatorInitialSku] = useState<string>('');
+  // Điều khiển UI Modals
   const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedPolicy, setSelectedPolicy] = useState<VolumeDiscountPolicy | null>(null);
@@ -177,8 +174,7 @@ export const VolumeDiscountPage: React.FC = () => {
     try {
       const updated = await togglePolicyStatus(policy.id);
       showToast(
-        `Đã chuyển trạng thái chính sách "${policy.code}" sang ${
-          updated.status === 'ACTIVE' ? 'Đang hiệu lực' : 'Tạm dừng'
+        `Đã chuyển trạng thái chính sách "${policy.code}" sang ${updated.status === 'ACTIVE' ? 'Đang hiệu lực' : 'Tạm dừng'
         }`
       );
       loadPolicies();
@@ -198,15 +194,6 @@ export const VolumeDiscountPage: React.FC = () => {
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Ngừng áp dụng chính sách thất bại!', 'error');
     }
-  };
-
-  // Chạy mô phỏng cho sản phẩm của chính sách này
-  const handleTestInSimulator = (policy: VolumeDiscountPolicy) => {
-    if (policy.scopeType === 'SKU') {
-      setSimulatorInitialSku(policy.targetId);
-    }
-    setShowSimulator(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Xuất file CSV/Excel
@@ -233,9 +220,8 @@ export const VolumeDiscountPage: React.FC = () => {
       {/* Toast thông báo */}
       {toastMsg && (
         <div
-          className={`fixed right-6 top-20 z-[10000] flex max-w-sm items-center space-x-2 rounded-xl border bg-white px-4 py-3 text-xs font-semibold shadow-lg ${
-            toastMsg.type === 'success' ? 'border-emerald-200 text-emerald-800' : 'border-red-200 text-red-700'
-          }`}
+          className={`fixed right-6 top-20 z-[10000] flex max-w-sm items-center space-x-2 rounded-xl border bg-white px-4 py-3 text-xs font-semibold shadow-lg ${toastMsg.type === 'success' ? 'border-emerald-200 text-emerald-800' : 'border-red-200 text-red-700'
+            }`}
         >
           {toastMsg.type === 'success' ? (
             <Icons.CheckSquare size={16} className="shrink-0 text-emerald-500" />
@@ -246,41 +232,24 @@ export const VolumeDiscountPage: React.FC = () => {
         </div>
       )}
 
-      {/* Header & Tiêu đề trang */}
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <div className="flex items-center space-x-2 text-xs text-gray-500">
-            <span>Quản lý Bảng giá & Chiết khấu</span>
-            <span>/</span>
-            <span className="font-semibold text-[#F85606]">
-              Chiết khấu theo Sản lượng
-            </span>
-          </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900">
-            <span>Chính sách Chiết khấu theo Sản lượng</span>
-          </h1>
-          <p className="mt-1 text-xs text-gray-500">
-            Khai báo bậc số lượng theo từng SKU hoặc nhóm hàng. Tự động áp dụng chính sách có lợi nhất cho khách hàng.
-          </p>
-        </div>
-
-        {/* Nút hành động chính */}
+      {/* Nút hành động chính */}
+      <div className="flex items-center justify-end gap-2.5 p-4">
         <div className="flex flex-wrap items-center gap-2.5">
           <button
-            onClick={() => setShowSimulator(!showSimulator)}
-            className={`flex items-center space-x-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition-all ${
-              showSimulator
-                ? 'border-[#F85606] bg-orange-50 text-[#F85606]'
-                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-            }`}
+            type="button"
+            onClick={loadPolicies}
+            disabled={isLoading}
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-gray-700 shadow-xs transition-colors hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 min-h-[44px] cursor-pointer"
+            title="Làm mới danh sách chính sách chiết khấu"
           >
-            <Icons.ShieldCheck size={16} className={showSimulator ? 'text-[#F85606]' : 'text-gray-500'} />
-            <span>{showSimulator ? 'Ẩn công cụ Best-Deal' : 'Mô phỏng Best-Deal'}</span>
+            <Icons.RefreshCw size={16} className={isLoading ? 'animate-spin text-orange-600' : ''} />
+            <span>Làm mới</span>
           </button>
 
           <button
+            type="button"
             onClick={handleExportCsv}
-            className="flex items-center space-x-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-2xs transition-colors hover:bg-gray-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-gray-700 shadow-xs transition-colors hover:bg-gray-50 min-h-[44px] cursor-pointer"
           >
             <Icons.ClipboardList size={16} className="text-gray-500" />
             <span>Xuất CSV / Excel</span>
@@ -288,8 +257,9 @@ export const VolumeDiscountPage: React.FC = () => {
 
           {canManage && (
             <button
+              type="button"
               onClick={handleOpenCreateModal}
-              className="flex items-center space-x-2 rounded-xl bg-[#F85606] px-4 py-2 text-xs font-bold text-white shadow-md shadow-orange-500/20 transition-all hover:bg-[#E04D05]"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#F85606] px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-orange-500/20 transition-all hover:bg-[#E04D05] min-h-[44px] cursor-pointer"
             >
               <span className="text-sm font-bold">+</span>
               <span>Khai báo chính sách mới</span>
@@ -297,14 +267,6 @@ export const VolumeDiscountPage: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Interactive Simulator (Công cụ mô phỏng Best-Deal Rule) */}
-      {showSimulator && (
-        <BestDealSimulatorWidget
-          initialSku={simulatorInitialSku}
-          onClose={() => setShowSimulator(false)}
-        />
-      )}
 
       {/* KPI Cards Thống kê */}
       <VolumeDiscountStats policies={policies} stats={stats} />
@@ -317,7 +279,7 @@ export const VolumeDiscountPage: React.FC = () => {
           </div>
           <div>
             <h4 className="font-bold text-orange-950">
-              Cam kết quy tắc bán buôn minh bạch (Best-Deal Rule)
+              Cam kết quy tắc bán buôn minh bạch
             </h4>
             <p className="mt-0.5 text-gray-600 leading-relaxed">
               {BEST_DEAL_RULE_STATEMENT}
@@ -473,11 +435,10 @@ export const VolumeDiscountPage: React.FC = () => {
                     <td className="px-4 py-4">
                       <div className="flex flex-col space-y-1">
                         <span
-                          className={`inline-flex w-fit items-center rounded-md px-2 py-0.5 text-[10px] font-bold ${
-                            policy.scopeType === 'SKU'
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}
+                          className={`inline-flex w-fit items-center rounded-md px-2 py-0.5 text-[10px] font-bold ${policy.scopeType === 'SKU'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}
                         >
                           {policy.scopeType === 'SKU' ? 'Theo SKU' : 'Theo Nhóm hàng'}
                         </span>
@@ -534,30 +495,28 @@ export const VolumeDiscountPage: React.FC = () => {
                       <button
                         onClick={() => handleToggleStatus(policy)}
                         disabled={!canManage}
-                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold transition-all disabled:cursor-default ${
-                          policy.status === 'ACTIVE'
-                            ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-                            : policy.status === 'EXPIRED'
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold transition-all disabled:cursor-default ${policy.status === 'ACTIVE'
+                          ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                          : policy.status === 'EXPIRED'
                             ? 'bg-gray-200 text-gray-700'
                             : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-                        }`}
+                          }`}
                         title={canManage ? 'Bấm để bật / tắt trạng thái' : undefined}
                       >
                         <span
-                          className={`mr-1.5 h-1.5 w-1.5 rounded-full ${
-                            policy.status === 'ACTIVE'
-                              ? 'bg-emerald-500 animate-pulse'
-                              : policy.status === 'EXPIRED'
+                          className={`mr-1.5 h-1.5 w-1.5 rounded-full ${policy.status === 'ACTIVE'
+                            ? 'bg-emerald-500 animate-pulse'
+                            : policy.status === 'EXPIRED'
                               ? 'bg-gray-400'
                               : 'bg-amber-500'
-                          }`}
+                            }`}
                         />
                         <span>
                           {policy.status === 'ACTIVE'
                             ? 'Đang hiệu lực'
                             : policy.status === 'EXPIRED'
-                            ? 'Đã hết hạn'
-                            : 'Tạm dừng'}
+                              ? 'Đã hết hạn'
+                              : 'Tạm dừng'}
                         </span>
                       </button>
                     </td>
@@ -565,15 +524,6 @@ export const VolumeDiscountPage: React.FC = () => {
                     {/* Thao tác */}
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end space-x-1.5">
-                        {/* Nút test trong simulator */}
-                        <button
-                          onClick={() => handleTestInSimulator(policy)}
-                          title="Thử nghiệm chính sách này trong bộ tính Best-Deal"
-                          className="rounded-lg p-1.5 text-[#F85606] hover:bg-orange-50"
-                        >
-                          <Icons.ShieldCheck size={16} />
-                        </button>
-
                         {/* Nút xem chi tiết */}
                         <button
                           onClick={() => setDetailPolicy(policy)}

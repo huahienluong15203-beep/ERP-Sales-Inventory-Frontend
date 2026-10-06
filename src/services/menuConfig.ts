@@ -118,7 +118,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
 
   // 6c. Đặt hàng đại lý (Sprint 3: S3-09 / SCRUM-14 / EP-04: Đặt hàng & Duyệt ngoại lệ)
   {
-    title: 'Đặt hàng đại lý',
+    title: 'Đơn hàng đại lý',
     path: '/orders/create',
     icon: 'ShoppingCart',
     epic: 'Đặt hàng & Duyệt ngoại lệ',
@@ -191,7 +191,7 @@ export function getAuthorizedMenus(roles: RoleName | RoleName[]): MenuItem[] {
 export function checkPathPermission(path: string, roles: RoleName | RoleName[]): boolean {
   const roleList = Array.isArray(roles) ? roles : [roles];
   const cleanPath = path.split('?')[0].replace(/\/+$/, '') || '/';
-  
+
   if (cleanPath === '/' || cleanPath === '/dashboard' || cleanPath === '/profile') {
     return true;
   }
@@ -222,7 +222,7 @@ export function checkPathPermission(path: string, roles: RoleName | RoleName[]):
  */
 export function getAllowedRolesForPath(path: string): RoleName[] {
   const cleanPath = path.split('?')[0].replace(/\/+$/, '') || '/';
-  
+
   if (cleanPath === '/admin/users' || cleanPath.startsWith('/admin/users/')) {
     return ['ROLE_ADMIN'];
   }

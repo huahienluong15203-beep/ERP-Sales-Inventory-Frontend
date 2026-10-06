@@ -167,8 +167,7 @@ export const SupplierManagementPage: React.FC = () => {
     const isNowActive = updated.status === 'ACTIVE';
     showToast?.(
       'Cập nhật trạng thái thành công',
-      `Nhà cung cấp ${updated.code} đã được chuyển sang ${
-        isNowActive ? 'ĐANG GIAO DỊCH' : 'NGỪNG GIAO DỊCH'
+      `Nhà cung cấp ${updated.code} đã được chuyển sang ${isNowActive ? 'ĐANG GIAO DỊCH' : 'NGỪNG GIAO DỊCH'
       }`,
       'success'
     );
@@ -181,33 +180,17 @@ export const SupplierManagementPage: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-200">
       {/* Tiêu đề trang & Nút thao tác chính */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-orange-50 text-orange-600 border border-orange-200">
-              Quản trị Nguồn hàng
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-[#F85606] shrink-0">
-              <Icons.Truck size={22} />
-            </div>
-            <span>Đối Tác Cung Ứng</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-2xl">
-            Hồ sơ pháp nhân, mã số thuế và điều khoản thanh toán phục vụ nhập kho, truy nguyên lô lỗi.
-          </p>
-        </div>
-
+      <div className="flex items-center justify-end gap-2.5  p-4 ">
         {/* Thanh tác vụ */}
-        <div className="flex items-center gap-2.5 self-start md:self-center">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={loadData}
             disabled={loading}
-            title="Tải lại danh sách"
-            className="p-2.5 bg-white border border-gray-200 text-gray-600 hover:text-[#F85606] hover:border-orange-300 rounded-xl hover:bg-orange-50/40 transition-all cursor-pointer shadow-xs min-h-[44px]"
+            title="Làm mới danh sách nhà cung cấp"
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:text-[#F85606] hover:border-orange-300 rounded-xl hover:bg-orange-50/40 text-sm font-semibold transition-all cursor-pointer shadow-xs min-h-[44px]"
           >
-            <Icons.RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            <Icons.RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <span>Làm mới</span>
           </button>
 
           {canManage && (
