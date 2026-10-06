@@ -26,6 +26,7 @@ import {
   ShoppingCart,
   Info
 } from '../common/Icons';
+import { AddressPicker } from '../common/AddressPicker';
 
 interface DeliveryPointsModalProps {
   isOpen: boolean;
@@ -55,6 +56,7 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
   const [editingPoint, setEditingPoint] = useState<DeliveryPoint | null>(null);
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
+  const [addressComplete, setAddressComplete] = useState(false);
   const [contactPerson, setContactPerson] = useState('');
   const [phone, setPhone] = useState('');
   const [routeNotes, setRouteNotes] = useState('');
@@ -187,8 +189,8 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
       setFormError('Vui lòng nhập Tên điểm giao hàng (ví dụ: Kho Tổng, Kho Phụ, Showroom...)');
       return;
     }
-    if (!address.trim()) {
-      setFormError('Vui lòng nhập Địa chỉ chi tiết điểm giao hàng');
+    if (!addressComplete) {
+      setFormError('Vui lòng chọn Tỉnh/Thành, Xã/Phường và nhập số nhà, tên đường của điểm giao hàng');
       return;
     }
     if (!contactPerson.trim()) {
@@ -596,12 +598,13 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
                 <label className="block text-xs font-bold text-gray-700 mb-1">
                   Địa Chỉ Nhận Hàng Chi Tiết <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <AddressPicker
+                  compact
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Số nhà, ngõ/đường, phường/xã, quận/huyện, tỉnh/thành phố..."
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200 focus:border-[#F85606] focus:ring-1 focus:ring-[#F85606] outline-none"
+                  onChange={(value, complete) => {
+                    setAddress(value);
+                    setAddressComplete(complete);
+                  }}
                 />
               </div>
 
