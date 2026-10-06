@@ -320,6 +320,7 @@
 /* 3. MAIN AREA & TOPBAR (CHUẨN APP ETC) */
 .erp-main-area {
   flex: 1;
+  min-width: 0;
   margin-left: var(--erp-sidebar-width);
   display: flex;
   flex-direction: column;
@@ -463,8 +464,8 @@
 /* 4. PAGE CONTENT */
 .erp-page-content {
   flex: 1;
+  min-width: 0;
   padding: 24px 28px;
-  max-width: 1600px;
   width: 100%;
 }
 

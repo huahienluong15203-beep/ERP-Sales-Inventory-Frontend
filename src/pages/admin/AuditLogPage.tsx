@@ -139,7 +139,7 @@ export const AuditLogPage: React.FC = () => {
   useClampPage(page, totalPages, setPage, loading);
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       {/* 1. Nút tác vụ chính */}
       <div className="flex items-center justify-end gap-2.5">
           <button

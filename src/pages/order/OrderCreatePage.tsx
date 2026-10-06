@@ -330,19 +330,11 @@ export const OrderCreatePage: React.FC = () => {
   const money = preview.status === 'ok' ? preview.order : null;
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-300 pb-10">
+    <div className="w-full min-w-0 space-y-5 animate-in fade-in duration-300 pb-10">
       {/* 1. Header Trang & Các Phím Thao Tác Nhanh */}
-      <div className=" p-4 sm:p-5 rounded-2xl  flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-
-          <div>
-
-
-          </div>
-        </div>
-
+      <div className="flex items-center justify-end gap-2 pb-1">
         {/* Nút thao tác góc phải */}
-        <div className="flex items-center gap-2 self-end sm:self-auto">
+        <div className="flex items-center gap-2">
           {/* Nút Xem danh sách đơn nháp */}
           <button
             type="button"

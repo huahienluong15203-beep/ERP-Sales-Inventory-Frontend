@@ -158,9 +158,9 @@ export const PriceHistoryPage: React.FC = () => {
   useClampPage(page, totalPages, setPage, loading);
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="w-full min-w-0 space-y-6 animate-fadeIn pb-12">
       {/* 1. Nút hành động */}
-      <div className="flex items-center justify-end gap-2.5 p-4 ">
+      <div className="flex items-center justify-end gap-2.5">
         <div className="flex items-center gap-2.5">
           <button
             onClick={loadData}
@@ -174,19 +174,17 @@ export const PriceHistoryPage: React.FC = () => {
 
           <a
             href="/pricing/discounts"
-            className="min h-[44px] inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:text-indigo-600 hover:border-indigo-200 hover:bg-gray-50 transition shadow-xs"
+            className="min-h-[44px] inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:text-indigo-600 hover:border-indigo-200 hover:bg-gray-50 transition shadow-xs"
             title="Khai báo chính sách chiết khấu theo sản lượng"
           >
             <span className="text-indigo-600 font-bold">%</span>
             <span className="hidden sm:inline">Chiết khấu sản lượng</span>
           </a>
 
-
           <button
             onClick={handleExportExcel}
-            className="min h-[44px] inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition"
+            className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition cursor-pointer"
           >
-
             <FileSpreadsheet size={16} />
             <span>Xuất Excel (.xlsx)</span>
           </button>
@@ -402,8 +400,8 @@ export const PriceHistoryPage: React.FC = () => {
         </div>
 
         {/* Nội dung bảng */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left text-sm border-collapse min-w-[900px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
                 <th className="py-3.5 px-4">Thời Điểm Áp Dụng</th>

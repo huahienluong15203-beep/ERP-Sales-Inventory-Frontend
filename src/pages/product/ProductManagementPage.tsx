@@ -143,7 +143,7 @@ export const ProductManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       {/* Toast thông báo */}
       {toastMessage && (
         <div
@@ -160,7 +160,7 @@ export const ProductManagementPage: React.FC = () => {
       )}
 
       {/* Header Phân hệ - Nút tác vụ */}
-      <div className="flex items-center justify-end gap-2.5 p-4">
+      <div className="flex items-center justify-end gap-2.5">
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <button
             type="button"

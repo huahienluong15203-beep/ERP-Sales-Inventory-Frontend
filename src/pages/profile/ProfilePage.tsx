@@ -337,7 +337,7 @@ export const ProfilePage: FC = () => {
       : 'Chưa có';
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
+    <div className="w-full min-w-0">
 
       {/* ─────────────────────────────────────────────────────────────
           BỐ CỤC 2 CỘT CÂN BẰNG CHIỀU CAO (ITEMS-STRETCH)
