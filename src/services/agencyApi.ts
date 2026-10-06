@@ -516,6 +516,7 @@ export async function fetchAgencies(params: AgencyFilterParams): Promise<AgencyL
     query.set('customerGroup', GROUP_TO_BACKEND[params.customerGroup as CustomerGroupId] || params.customerGroup);
   }
   if (params.regionId && /^\d+$/.test(params.regionId)) query.set('regionId', params.regionId);
+  if (params.salesRepId && /^\d+$/.test(params.salesRepId)) query.set('salesRepId', params.salesRepId);
   const status = statusToBackend(params.status);
   if (status) query.set('status', status);
   if (params.transactionLocked !== undefined) query.set('transactionLocked', String(params.transactionLocked));
@@ -1171,7 +1172,9 @@ export async function transferAgencyTerritory(
       });
       if (res.ok) {
         const data = await res.json();
-        return { success: true, message: data.message, count: data.count };
+        // Backend trả TransferCustomersResponse { transferredCount, message }
+        const count = Number(data.transferredCount ?? data.count ?? 0);
+        return { success: true, message: data.message || `Đã chuyển giao ${count} đại lý.`, count };
       }
       const err = await res.json().catch(() => null);
       return { success: false, message: err?.message || 'Chuyển giao thất bại', count: 0 };
