@@ -8,7 +8,8 @@ interface OrderDraftsModalProps {
   onClose: () => void;
   drafts: OrderDraft[];
   onSelectDraft: (draft: OrderDraft) => void;
-  onDeleteDraft: (draftId: string) => void;
+  /** Không truyền = ẩn nút xoá (Backend chưa có API xoá đơn nháp) */
+  onDeleteDraft?: (draftId: string) => void;
 }
 
 export const OrderDraftsModal: React.FC<OrderDraftsModalProps> = ({
@@ -86,19 +87,21 @@ export const OrderDraftsModal: React.FC<OrderDraftsModalProps> = ({
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => onDeleteDraft(draft.id)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                    title="Xóa đơn nháp này"
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  {onDeleteDraft && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteDraft(draft.id)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                      title="Xóa đơn nháp này"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-100">
                   <span className="text-gray-500 text-[11px]">
-                    {draft.totalItemsCount} mặt hàng ({draft.totalQuantity} kiện)
+                    {draft.totalItemsCount} mặt hàng{draft.totalQuantity > 0 ? ` (${draft.totalQuantity} kiện)` : ''}
                   </span>
                   <div className="flex items-center gap-2">
                     <strong className="font-mono font-bold text-[#F85606]">
