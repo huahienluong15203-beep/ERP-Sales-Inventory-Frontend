@@ -24,7 +24,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { OrderHeaderCard } from '../../components/order/OrderHeaderCard';
 import { OrderItemRow } from '../../components/order/OrderItemRow';
 import { ProductPickerModal } from '../../components/order/ProductPickerModal';
-import { OrderSummaryStickyBar } from '../../components/order/OrderSummaryStickyBar';
 import { OrderDraftsModal } from '../../components/order/OrderDraftsModal';
 import {
   ShoppingCart,
@@ -33,7 +32,8 @@ import {
   FileText,
   RefreshCw,
   Tag,
-  AlertTriangle
+  AlertTriangle,
+  Save
 } from '../../components/common/Icons';
 
 export const OrderCreatePage: React.FC = () => {
@@ -487,7 +487,7 @@ export const OrderCreatePage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-300 pb-28">
+    <div className="space-y-5 animate-in fade-in duration-300 pb-10">
       {/* 1. Header Trang & Các Phím Thao Tác Nhanh */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -638,66 +638,93 @@ export const OrderCreatePage: React.FC = () => {
           )}
         </div>
 
-        {/* 4. KHỐI 3: TỔNG KẾT TÀI CHÍNH & QUY TẮC CHIẾT KHẤU REAL-TIME */}
-        {items.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-4 sm:p-5 space-y-3">
-            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-              3. Bảng Tóm Tắt Thanh Toán Đơn Hàng
+        {/* 4. KHỐI 3: TỔNG KẾT TÀI CHÍNH & XÁC NHẬN ĐƠN HÀNG (TRONG TRANG, KHÔNG ĂN THEO TASKBAR) */}
+        <div className="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-4 sm:p-5 space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+              <span>3. Bảng Tóm Tắt Thanh Toán & Xác Nhận Đơn Hàng</span>
             </h3>
+            <span className="text-xs text-gray-500">
+              {totals.totalItemsCount} mặt hàng ({totals.totalQuantity} kiện)
+            </span>
+          </div>
 
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between text-gray-600">
-                <span>Tổng tiền hàng (niêm yết):</span>
-                <span className="font-mono font-medium">{formatCurrencyVND(totals.subtotalAmount)}</span>
-              </div>
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between text-gray-600">
+              <span>Tổng tiền hàng (niêm yết):</span>
+              <span className="font-mono font-medium">{formatCurrencyVND(totals.subtotalAmount)}</span>
+            </div>
 
+            {totals.discountAmount > 0 && (
               <div className="flex justify-between text-emerald-700 font-medium">
                 <span className="flex items-center gap-1">
                   <Tag size={12} />
-                  <span>Chiết khấu sản lượng (Best-Deal Rule S3-01):</span>
+                  <span>Chiết khấu sản lượng (Best-Deal Rule):</span>
                 </span>
                 <span className="font-mono font-bold">
                   -{formatCurrencyVND(totals.discountAmount)}
                 </span>
               </div>
+            )}
 
-              <div className="flex justify-between items-baseline text-sm sm:text-base font-bold text-gray-900 pt-2 border-t border-gray-100">
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[#F85606]">●</span>
-                  <span>Tổng tiền phải thu:</span>
-                </span>
-                <strong className="text-lg sm:text-xl font-black text-[#F85606] font-mono">
-                  {formatCurrencyVND(totals.totalPayable)}
-                </strong>
-              </div>
-            </div>
-
-            {/* Banner quy chuẩn Best-Deal */}
-            <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-[11px] leading-relaxed flex items-start gap-2">
-              <Tag size={14} className="shrink-0 text-amber-600 mt-0.5" />
-              <div>
-                <strong>Quy chuẩn chiết khấu sản lượng</strong>
-                Hệ thống tự động áp dụng bậc chiết khấu cao nhất theo tổng số lượng cơ sở (≥20: 3%, ≥50: 5%, ≥100: 8%). Không cần thương lượng miệng từng lần.
-              </div>
+            <div className="flex justify-between items-baseline text-sm sm:text-base font-bold text-gray-900 pt-2 border-t border-gray-100">
+              <span className="flex items-center gap-1.5">
+                <span className="text-[#F85606]">●</span>
+                <span>Tổng tiền phải thu:</span>
+              </span>
+              <strong className="text-lg sm:text-xl font-black text-[#F85606] font-mono">
+                {formatCurrencyVND(totals.totalPayable)}
+              </strong>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* 5. THANH STICKY ACTION BAR Ở ĐÁY MÀN HÌNH (Tối ưu 360px) */}
-      <OrderSummaryStickyBar
-        totalItemsCount={totals.totalItemsCount}
-        totalQuantity={totals.totalQuantity}
-        subtotalAmount={totals.subtotalAmount}
-        discountAmount={totals.discountAmount}
-        totalPayable={totals.totalPayable}
-        isSavingDraft={isSavingDraft}
-        isSubmittingOrder={isSubmitting}
-        onSaveDraft={handleSaveDraft}
-        onSubmitOrder={handleSubmitOrder}
-        disabledSubmit={Boolean(disabledReason)}
-        disabledReason={disabledReason}
-      />
+          {/* Banner quy chuẩn Best-Deal */}
+          <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-[11px] leading-relaxed flex items-start gap-2">
+            <Tag size={14} className="shrink-0 text-amber-600 mt-0.5" />
+            <div>
+              <strong>Quy chuẩn chiết khấu sản lượng: </strong>
+              Hệ thống tự động áp dụng bậc chiết khấu cao nhất theo tổng số lượng cơ sở (≥20: 3%, ≥50: 5%, ≥100: 8%). Không cần thương lượng miệng từng lần.
+            </div>
+          </div>
+
+          {/* Hàng nút bấm Lưu Nháp & Chốt Đơn (Nằm gọn trong trang, không bám theo taskbar/sidebar) */}
+          <div className="pt-3 border-t border-gray-100 flex flex-wrap items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={isSavingDraft}
+              className="h-10 px-4 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50"
+              title="Lưu nháp đơn hàng để tiếp tục sau"
+            >
+              <Save size={15} className="text-gray-600" />
+              <span>{isSavingDraft ? 'Đang lưu...' : 'Lưu Nháp'}</span>
+            </button>
+
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={handleSubmitOrder}
+                disabled={Boolean(disabledReason) || isSubmitting}
+                className={`h-10 px-5 rounded-xl font-bold text-xs sm:text-sm text-white flex items-center gap-1.5 transition-all shadow-md ${
+                  disabledReason
+                    ? 'bg-gray-400 cursor-not-allowed opacity-70'
+                    : 'bg-gradient-to-r from-[#FF6A00] to-[#EE4D2D] hover:opacity-95 shadow-orange-500/25 active:scale-98'
+                }`}
+              >
+                <CheckCircle2 size={16} />
+                <span>{isSubmitting ? 'Đang xử lý...' : 'Chốt Đơn Đặt Hàng'}</span>
+              </button>
+
+              {disabledReason && (
+                <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-[11px] py-1 px-2.5 rounded-lg whitespace-nowrap shadow-lg z-50">
+                  {disabledReason}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* MODAL 1: CHỌN SẢN PHẨM */}
       <ProductPickerModal

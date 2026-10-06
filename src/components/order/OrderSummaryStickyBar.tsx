@@ -32,7 +32,7 @@ export const OrderSummaryStickyBar: React.FC<OrderSummaryStickyBarProps> = ({
   const [showDetailOnMobile, setShowDetailOnMobile] = useState(false);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200/90 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
+    <div className="erp-order-sticky-bar">
       {/* Chi tiết sổ ra trên mobile nếu người dùng bấm xem */}
       {showDetailOnMobile && (
         <div className="p-3.5 bg-gray-50 border-b border-gray-200 text-xs space-y-2 max-w-7xl mx-auto animate-in slide-in-from-bottom duration-150">

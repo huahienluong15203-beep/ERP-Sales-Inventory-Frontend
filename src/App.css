@@ -1797,6 +1797,45 @@
 }
 
 /* ==========================================================================
+   ORDER SUMMARY STICKY BAR (S3-09): Căn chuẩn theo Sidebar & Main Area
+   ========================================================================== */
+.erp-order-sticky-bar {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  z-index: 40;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(229, 231, 235, 0.9);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+  transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (min-width: 769px) {
+  .erp-order-sticky-bar {
+    left: var(--erp-sidebar-width, 260px) !important;
+  }
+
+  .erp-main-area.sidebar-collapsed .erp-order-sticky-bar,
+  .sidebar-collapsed .erp-order-sticky-bar {
+    left: var(--erp-sidebar-width-collapsed, 72px) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .erp-order-sticky-bar {
+    left: 0 !important;
+  }
+}
+
+html.dark .erp-order-sticky-bar {
+  background-color: rgba(24, 24, 27, 0.95);
+  border-top-color: rgba(63, 63, 70, 0.6);
+}
+
+/* ==========================================================================
    DARK MODE OVERRIDES (True Neutral Deep Dark, Ultra High Contrast)
    ========================================================================== */
 html.dark .erp-sidebar,
