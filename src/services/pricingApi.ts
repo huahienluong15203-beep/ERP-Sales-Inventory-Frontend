@@ -131,21 +131,39 @@ function saveLocalData(data: PriceList[]): void {
   }
 }
 
+export interface PriceListPageResult {
+  content: PriceList[];
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface PriceListStatsData {
+  total: number;
+  active: number;
+  dealerLevel1: number;
+  dealerLevel2: number;
+  retail: number;
+  locked: number;
+}
+
 /**
- * Lấy danh sách bảng giá (có bộ lọc nhóm khách hàng, trạng thái, từ khóa)
+ * Lấy 1 trang bảng giá: Backend lọc (nhóm khách hàng, trạng thái, từ khoá) + phân trang (page đếm từ 0).
  */
-export async function fetchPriceLists(params?: {
+export async function fetchPriceLists(params: {
   customerGroup?: CustomerGroupType;
   status?: string;
   keyword?: string;
-}): Promise<PriceList[]> {
+  page?: number;
+  size?: number;
+} = {}): Promise<PriceListPageResult> {
+  const page = params.page ?? 0;
+  const size = params.size ?? 20;
   const query = new URLSearchParams();
-  if (params?.customerGroup) query.set('customerGroup', params.customerGroup);
-  if (params?.status) query.set('status', params.status);
-  if (params?.keyword) query.set('keyword', params.keyword);
-  // Backend lọc + phân trang phía server (PageResponse). Tạm lấy tối đa 100 bảng giá/trang cho tới khi có thanh phân trang.
-  query.set('page', '0');
-  query.set('size', '100');
+  if (params.customerGroup) query.set('customerGroup', params.customerGroup);
+  if (params.status) query.set('status', params.status);
+  if (params.keyword) query.set('keyword', params.keyword);
+  query.set('page', String(page));
+  query.set('size', String(size));
 
   const url = `${API_BASE_URL}/api/price-lists?${query.toString()}`;
 
@@ -153,21 +171,28 @@ export async function fetchPriceLists(params?: {
     const res = await authFetch(url);
     if (res.ok) {
       const data = await res.json();
-      return Array.isArray(data) ? data : (data?.content ?? []);
+      if (Array.isArray(data)) {
+        return { content: data, totalElements: data.length, totalPages: 1 };
+      }
+      return {
+        content: data?.content ?? [],
+        totalElements: data?.totalElements ?? 0,
+        totalPages: data?.totalPages ?? 1
+      };
     }
   } catch (err) {
     console.warn('API error fetching price lists, fallback to local storage', err);
   }
 
-  // Fallback lọc dữ liệu local
+  // Fallback lọc + phân trang dữ liệu local
   let list = getLocalData();
-  if (params?.customerGroup) {
+  if (params.customerGroup) {
     list = list.filter((p) => p.customerGroup === params.customerGroup);
   }
-  if (params?.status) {
+  if (params.status) {
     list = list.filter((p) => p.status === params.status);
   }
-  if (params?.keyword) {
+  if (params.keyword) {
     const kw = params.keyword.toLowerCase().trim();
     list = list.filter(
       (p) =>
@@ -176,7 +201,34 @@ export async function fetchPriceLists(params?: {
         (p.note && p.note.toLowerCase().includes(kw))
     );
   }
-  return list;
+  return {
+    content: list.slice(page * size, (page + 1) * size),
+    totalElements: list.length,
+    totalPages: Math.max(1, Math.ceil(list.length / size))
+  };
+}
+
+/**
+ * Số liệu thẻ đầu trang, đếm trên TOÀN BỘ bảng giá (không phụ thuộc trang đang xem).
+ */
+export async function fetchPriceListStats(): Promise<PriceListStatsData> {
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/price-lists/stats`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('API error fetching price list stats, fallback to local storage', err);
+  }
+  const list = getLocalData();
+  return {
+    total: list.length,
+    active: list.filter((p) => p.status === 'ACTIVE').length,
+    dealerLevel1: list.filter((p) => p.customerGroup === 'DEALER_LEVEL_1').length,
+    dealerLevel2: list.filter((p) => p.customerGroup === 'DEALER_LEVEL_2').length,
+    retail: list.filter((p) => p.customerGroup === 'RETAIL').length,
+    locked: list.filter((p) => p.hasOrders).length
+  };
 }
 
 /**

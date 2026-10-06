@@ -25,32 +25,46 @@ import {
   TrendingUp,
   TrendingDown,
   Lock,
-  ChevronLeft,
-  ChevronRight,
   Info,
   SlidersHorizontal
 } from '../../components/common/Icons';
+import { useUrlPaging } from '../../hooks/useUrlParams';
+import { Pagination } from '../../components/common/Pagination';
 
 export const PriceHistoryPage: React.FC = () => {
   // Dữ liệu bảng lịch sử
   const [records, setRecords] = useState<PriceChangeRecord[]>([]);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [page, setPage] = useState(0);
-  const [size] = useState(10);
   const [loading, setLoading] = useState(true);
 
   // Danh mục sản phẩm tổng hợp
   const [products, setProducts] = useState<ProductPricingSummary[]>([]);
 
-  // Bộ lọc
-  const [keyword, setKeyword] = useState('');
-  const [selectedSku, setSelectedSku] = useState('ALL');
-  const [selectedPriceType, setSelectedPriceType] = useState('ALL');
-  const [timeRange, setTimeRange] = useState<TimeRangeFilter>('ALL');
-  const [trend, setTrend] = useState<TrendFilter>('ALL');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  // Bộ lọc + trang lưu trên URL, vd: /pricing/history?sku=BIA-HN&trend=UP&page=2
+  const { params: urlParams, page, size, setPage, setSize, setFilters } = useUrlPaging({
+    keyword: '',
+    sku: 'ALL',
+    priceType: 'ALL',
+    timeRange: 'ALL',
+    trend: 'ALL',
+    from: '',
+    to: ''
+  });
+  const keyword = urlParams.keyword;
+  const selectedSku = urlParams.sku;
+  const selectedPriceType = urlParams.priceType;
+  const timeRange = urlParams.timeRange as TimeRangeFilter;
+  const trend = urlParams.trend as TrendFilter;
+  const startDate = urlParams.from;
+  const endDate = urlParams.to;
+  const setKeyword = (value: string) => setFilters({ keyword: value });
+  const setSelectedSku = (value: string) => setFilters({ sku: value });
+  const setSelectedPriceType = (value: string) => setFilters({ priceType: value });
+  const setTimeRange = (value: TimeRangeFilter) => setFilters({ timeRange: value });
+  const setTrend = (value: TrendFilter) => setFilters({ trend: value });
+  const setStartDate = (value: string) => setFilters({ from: value });
+  const setEndDate = (value: string) => setFilters({ to: value });
 
   // Modal chi tiết
   const [selectedRecord, setSelectedRecord] = useState<PriceChangeRecord | null>(null);
@@ -557,36 +571,17 @@ export const PriceHistoryPage: React.FC = () => {
           </table>
         </div>
 
-        {/* Phân trang */}
-        <div className="px-6 py-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 bg-gray-50/30">
-          <div>
-            Hiển thị <strong>{records.length}</strong> / <strong>{totalElements}</strong> bản ghi lịch sử
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-              className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-              title="Trang trước"
-            >
-              <ChevronLeft size={16} />
-            </button>
-
-            <span className="px-3 py-1 rounded-lg bg-white border border-gray-200 font-semibold text-gray-800">
-              Trang {page + 1} / {totalPages}
-            </span>
-
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1}
-              className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-              title="Trang kế tiếp"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
+        {/* Phân trang: ‹ 1 2 … n › */}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalElements={totalElements}
+          size={size}
+          onPageChange={setPage}
+          onSizeChange={setSize}
+          itemLabel="bản ghi lịch sử"
+          disabled={loading}
+        />
       </div>
 
       {/* Modal chi tiết bản ghi & kịch bản giải thích đại lý */}

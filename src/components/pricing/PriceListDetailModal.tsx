@@ -295,7 +295,7 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
           )}
 
           {/* Bảng các dòng giá */}
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <div className="border border-gray-200 rounded-xl overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-[11px] uppercase tracking-wider text-gray-500 font-semibold">

@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import type { PriceList } from '../../types/pricing';
+import type { PriceList, CustomerGroupType } from '../../types/pricing';
 import {
   fetchPriceLists,
+  fetchPriceListStats,
   changePriceListStatus
 } from '../../services/pricingApi';
+import type { PriceListStatsData } from '../../services/pricingApi';
+import { useUrlPaging } from '../../hooks/useUrlParams';
+import { useServerSearch } from '../../hooks/useServerSearch';
 import { PriceListStats } from '../../components/pricing/PriceListStats';
 import { PriceLookupWidget } from '../../components/pricing/PriceLookupWidget';
 import { PriceListTable } from '../../components/pricing/PriceListTable';
@@ -24,8 +28,33 @@ export const PriceListPage: React.FC = () => {
     (user?.roles || []).some((r) => String(r).includes('ADMIN') || String(r).includes('MANAGER'));
 
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
+  const [totalElements, setTotalElements] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [stats, setStats] = useState<PriceListStatsData>({
+    total: 0,
+    active: 0,
+    dealerLevel1: 0,
+    dealerLevel2: 0,
+    retail: 0,
+    locked: 0
+  });
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadedOnce, setLoadedOnce] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Bộ lọc + trang lưu trên URL, vd: /price-lists?group=DEALER_LEVEL_1&status=ACTIVE&page=2
+  const { params: urlParams, setParams: setUrlParams, page, size, setPage, setSize, setFilters } = useUrlPaging({
+    keyword: '',
+    group: 'ALL',
+    status: 'ALL'
+  });
+  const [keywordInput, setKeywordInput] = useState<string>(urlParams.keyword);
+  const resetToFirstPage = useCallback(() => setPage(0), [setPage]);
+  // Đợi ngừng gõ 0,4 giây mới gọi API tìm kiếm
+  const { serverKeyword } = useServerSearch(keywordInput, resetToFirstPage, urlParams.keyword);
+  useEffect(() => {
+    setUrlParams({ keyword: serverKeyword });
+  }, [serverKeyword, setUrlParams]);
 
   // Trạng thái các Modal
   const [detailModalItem, setDetailModalItem] = useState<PriceList | null>(null);
@@ -33,42 +62,42 @@ export const PriceListPage: React.FC = () => {
   const [editingItem, setEditingItem] = useState<PriceList | null>(null);
   const [cloneModalItem, setCloneModalItem] = useState<PriceList | null>(null);
 
-  // Tải danh sách bảng giá từ API
+  // Tải 1 trang bảng giá (Backend lọc + phân trang) và số liệu thẻ đầu trang
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchPriceLists();
-      setPriceLists(data);
-      return data;
+      const [res, statData] = await Promise.all([
+        fetchPriceLists({
+          customerGroup: urlParams.group !== 'ALL' ? (urlParams.group as CustomerGroupType) : undefined,
+          status: urlParams.status !== 'ALL' ? urlParams.status : undefined,
+          keyword: serverKeyword || undefined,
+          page,
+          size
+        }),
+        fetchPriceListStats()
+      ]);
+      setPriceLists(res.content);
+      setTotalElements(res.totalElements);
+      setTotalPages(res.totalPages);
+      setStats(statData);
+      // Trang hiện tại vượt quá số trang (vd: vừa lọc bớt) -> về trang cuối
+      if (res.totalPages > 0 && page > res.totalPages - 1) {
+        setPage(res.totalPages - 1);
+      }
+      return res.content;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Lỗi khi tải danh sách bảng giá');
       return [];
     } finally {
       setLoading(false);
+      setLoadedOnce(true);
     }
-  }, []);
+  }, [urlParams.group, urlParams.status, serverKeyword, page, size, setPage]);
 
   useEffect(() => {
-    let ignore = false;
-    fetchPriceLists()
-      .then((data) => {
-        if (!ignore) {
-          setPriceLists(data);
-          setLoading(false);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!ignore) {
-          setError(err instanceof Error ? err.message : 'Lỗi khi tải danh sách bảng giá');
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+    loadData();
+  }, [loadData]);
 
   // Xử lý bật/tắt trạng thái
   const handleToggleStatus = async (item: PriceList) => {
@@ -192,7 +221,7 @@ export const PriceListPage: React.FC = () => {
       </div>
 
       {/* KPI Thống kê bảng giá */}
-      <PriceListStats priceLists={priceLists} />
+      <PriceListStats stats={stats} />
 
       {/* Widget Tra cứu giá & Giá sàn tức thời (S2-10) */}
       <PriceLookupWidget />
@@ -214,7 +243,7 @@ export const PriceListPage: React.FC = () => {
       )}
 
       {/* Bảng danh sách bảng giá */}
-      {loading ? (
+      {loading && !loadedOnce ? (
         <div className="p-16 flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-gray-200">
           <div className="w-8 h-8 border-3 border-orange-600 border-t-transparent rounded-full animate-spin" />
           <p className="text-xs text-gray-500">
@@ -229,6 +258,19 @@ export const PriceListPage: React.FC = () => {
           onEdit={handleOpenEdit}
           onCloneVersion={handleOpenClone}
           onToggleStatus={handleToggleStatus}
+          keyword={keywordInput}
+          onKeywordChange={setKeywordInput}
+          selectedGroup={urlParams.group}
+          onGroupChange={(value) => setFilters({ group: value })}
+          selectedStatus={urlParams.status}
+          onStatusChange={(value) => setFilters({ status: value })}
+          page={page}
+          size={size}
+          totalPages={totalPages}
+          totalElements={totalElements}
+          onPageChange={setPage}
+          onSizeChange={setSize}
+          loading={loading}
         />
       )}
 

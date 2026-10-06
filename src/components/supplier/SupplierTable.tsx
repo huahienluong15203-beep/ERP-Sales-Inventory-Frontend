@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Supplier } from '../../types/supplier';
 import { Icons } from '../common/Icons';
+import { Pagination } from '../common/Pagination';
 
 interface SupplierTableProps {
   suppliers: Supplier[];
@@ -319,37 +320,17 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
         </table>
       </div>
 
-      {/* Phân trang */}
+      {/* Phân trang: ‹ 1 2 … n › */}
       {!loading && totalElements > 0 && (
-        <div className="p-4 sm:px-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
-          <div>
-            Hiển thị <strong>{currentPage * pageSize + 1}</strong> -{' '}
-            <strong>{Math.min((currentPage + 1) * pageSize, totalElements)}</strong> trong tổng số{' '}
-            <strong>{totalElements}</strong> đối tác
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage === 0}
-              className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-            >
-              <Icons.ChevronLeft size={16} />
-            </button>
-
-            <span className="px-3 py-1 font-semibold text-gray-700">
-              Trang {currentPage + 1} / {totalPages}
-            </span>
-
-            <button
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage >= totalPages - 1}
-              className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-            >
-              <Icons.ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
+        <Pagination
+          page={currentPage}
+          totalPages={totalPages}
+          totalElements={totalElements}
+          size={pageSize}
+          onPageChange={onPageChange}
+          onSizeChange={onPageSizeChange}
+          itemLabel="đối tác"
+        />
       )}
     </div>
   );

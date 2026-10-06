@@ -32,14 +32,14 @@ import {
   CheckCircle2,
   AlertTriangle,
   X,
-  ChevronLeft,
-  ChevronRight,
   Filter,
   Info,
   FileSpreadsheet
 } from '../../components/common/Icons';
 import { UserImportModal } from './UserImportModal';
 import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
+import { useUrlPaging } from '../../hooks/useUrlParams';
+import { Pagination } from '../../components/common/Pagination';
 import { fetchAuditLogs } from '../../services/auditLogApi';
 
 /**
@@ -66,18 +66,32 @@ export const UserManagementPage: React.FC = () => {
   // Danh sách người dùng & phân trang
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [page, setPage] = useState<number>(0);
-  const [size] = useState<number>(20); // Mặc định 20 dòng theo tiêu chuẩn S1-09
   const [totalElements, setTotalElements] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
 
+  // Bộ lọc + trang lưu trên URL (vd: /users?role=ROLE_ADMIN&page=2). Mặc định 20 dòng/trang (S1-08)
+  const { params: urlParams, setParams: setUrlParams, page, size, setPage, setSize, setFilters } = useUrlPaging({
+    keyword: '',
+    role: '',
+    status: ''
+  });
+  const selectedRole = urlParams.role;
+  const selectedStatus = urlParams.status;
+  const setSelectedRole = (value: string) => setFilters({ role: value });
+  const setSelectedStatus = (value: string) => setFilters({ status: value });
+
   // Bộ lọc tìm kiếm
-  const [keyword, setKeyword] = useState<string>('');
-  const [selectedRole, setSelectedRole] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [keyword, setKeyword] = useState<string>(urlParams.keyword);
   // Gõ từ 2 ký tự mới gọi API (đợi ngừng gõ 0,4 giây); 1 ký tự thì lọc tại chỗ
-  const resetToFirstPage = useCallback(() => setPage(0), []);
-  const { serverKeyword, localKeyword, flush: flushSearch } = useServerSearch(keyword, resetToFirstPage);
+  const resetToFirstPage = useCallback(() => setPage(0), [setPage]);
+  const { serverKeyword, localKeyword, flush: flushSearch } = useServerSearch(
+    keyword,
+    resetToFirstPage,
+    urlParams.keyword
+  );
+  useEffect(() => {
+    setUrlParams({ keyword: serverKeyword });
+  }, [serverKeyword, setUrlParams]);
 
   // Tùy chọn form (vai trò, kho, địa bàn)
   const [formOptions, setFormOptions] = useState<AdminFormOptions>({
@@ -215,9 +229,7 @@ export const UserManagementPage: React.FC = () => {
   // Reset bộ lọc
   const handleResetFilters = () => {
     setKeyword('');
-    setSelectedRole('');
-    setSelectedStatus('');
-    setPage(0);
+    setFilters({ role: '', status: '' });
   };
 
   // Mở modal tạo tài khoản
@@ -586,10 +598,7 @@ export const UserManagementPage: React.FC = () => {
           <div>
             <select
               value={selectedRole}
-              onChange={(e) => {
-                setSelectedRole(e.target.value);
-                setPage(0);
-              }}
+              onChange={(e) => setSelectedRole(e.target.value)}
               className="user-mgmt-select"
             >
               <option value="">Tất cả vai trò</option>
@@ -605,10 +614,7 @@ export const UserManagementPage: React.FC = () => {
           <div>
             <select
               value={selectedStatus}
-              onChange={(e) => {
-                setSelectedStatus(e.target.value);
-                setPage(0);
-              }}
+              onChange={(e) => setSelectedStatus(e.target.value)}
               className="user-mgmt-select"
             >
               <option value="">Tất cả trạng thái</option>
@@ -859,46 +865,16 @@ export const UserManagementPage: React.FC = () => {
         </div>
 
         {/* Phân Trang (S1-09: Mặc định 20 dòng / trang) */}
-        <div className="user-mgmt-pagination">
-          <div>
-            Hiển thị{' '}
-            <strong style={{ color: '#111827' }}>
-              {totalElements === 0 ? 0 : page * size + 1}
-            </strong>{' '}
-            -{' '}
-            <strong style={{ color: '#111827' }}>
-              {Math.min((page + 1) * size, totalElements)}
-            </strong>{' '}
-            trên tổng <strong style={{ color: '#111827' }}>{totalElements}</strong> tài khoản{' '}
-            <span style={{ color: '#9CA3AF', fontWeight: 'normal' }}>
-              (Mặc định 20 dòng/trang)
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0 || loading}
-              className="user-mgmt-pagination-btn"
-            >
-              <ChevronLeft size={14} />
-              <span>Trước</span>
-            </button>
-
-            <span style={{ padding: '0 8px', fontWeight: 600, color: '#111827' }}>
-              Trang {page + 1} / {totalPages || 1}
-            </span>
-
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1 || loading}
-              className="user-mgmt-pagination-btn"
-            >
-              <span>Sau</span>
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalElements={totalElements}
+          size={size}
+          onPageChange={setPage}
+          onSizeChange={setSize}
+          itemLabel="tài khoản"
+          disabled={loading}
+        />
       </div>
 
       {/* ======================================================== */}

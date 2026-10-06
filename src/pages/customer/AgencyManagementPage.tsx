@@ -27,6 +27,8 @@ import { DeleteAgencyModal } from '../../components/customer/DeleteAgencyModal';
 import { AgencyCardView } from '../../components/customer/AgencyCardView';
 import { useAuth } from '../../contexts/AuthContext';
 import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
+import { useUrlPaging } from '../../hooks/useUrlParams';
+import { Pagination } from '../../components/common/Pagination';
 import {
   Building2,
   Search,
@@ -35,8 +37,6 @@ import {
   Edit,
   CheckCircle2,
   X,
-  ChevronLeft,
-  ChevronRight,
   Users,
   ShieldCheck,
   ShieldAlert,
@@ -58,17 +58,35 @@ export const AgencyManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [page, setPage] = useState(0);
-  const [size] = useState(10);
 
-  // Bộ lọc
-  const [keyword, setKeyword] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
+  // Bộ lọc + trang lưu trên URL (vd: /customers?group=TIER_1&status=ACTIVE&page=2), mặc định 20 dòng/trang
+  const { params: urlParams, setParams: setUrlParams, page, size, setPage, setSize, setFilters } = useUrlPaging({
+    keyword: '',
+    group: '',
+    region: '',
+    status: '',
+    lock: ''
+  });
+  const selectedGroup = urlParams.group;
+  const selectedRegion = urlParams.region;
+  const selectedStatus = urlParams.status;
+  const selectedLockFilter = urlParams.lock;
+  const setSelectedGroup = (value: string) => setFilters({ group: value });
+  const setSelectedRegion = (value: string) => setFilters({ region: value });
+  const setSelectedStatus = (value: string) => setFilters({ status: value });
+  const setSelectedLockFilter = (value: string) => setFilters({ lock: value });
+
+  const [keyword, setKeyword] = useState(urlParams.keyword);
   // Gõ từ 2 ký tự mới gọi API (đợi ngừng gõ 0,4 giây); 1 ký tự thì lọc tại chỗ
-  const resetToFirstPage = useCallback(() => setPage(0), []);
-  const { serverKeyword, localKeyword, flush: flushSearch } = useServerSearch(keyword, resetToFirstPage);
+  const resetToFirstPage = useCallback(() => setPage(0), [setPage]);
+  const { serverKeyword, localKeyword, flush: flushSearch } = useServerSearch(
+    keyword,
+    resetToFirstPage,
+    urlParams.keyword
+  );
+  useEffect(() => {
+    setUrlParams({ keyword: serverKeyword });
+  }, [serverKeyword, setUrlParams]);
 
   // Phân quyền người dùng hiện tại
   const { currentRole, user, showToast } = useAuth();
@@ -151,8 +169,7 @@ export const AgencyManagementPage: React.FC = () => {
     setIsLockModalOpen(true);
   };
 
-  // Bộ lọc trạng thái khóa giao dịch (S3-07): '' (Tất cả), 'LOCKED' (Bị khóa), 'UNLOCKED' (Đang mở)
-  const [selectedLockFilter, setSelectedLockFilter] = useState('');
+  // Bộ lọc trạng thái khóa giao dịch (S3-07): '' (Tất cả), 'LOCKED' (Bị khóa), 'UNLOCKED' (Đang mở) — lưu trên URL (?lock=)
 
   // S3-08 / SCRUM-21: Chế độ xem: Bảng máy tính ('table') hoặc Thẻ tuyến ngoài đường ('cards')
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
@@ -248,12 +265,8 @@ export const AgencyManagementPage: React.FC = () => {
   // Reset bộ lọc
   const handleResetFilter = () => {
     setKeyword('');
-    setSelectedGroup('');
-    setSelectedRegion('');
-    setSelectedStatus('');
-    setSelectedLockFilter('');
+    setFilters({ group: '', region: '', status: '', lock: '' });
     setRouteQuickFilter('ALL');
-    setPage(0);
   };
 
   // Mở modal tạo mới
@@ -501,10 +514,7 @@ export const AgencyManagementPage: React.FC = () => {
           <div>
             <select
               value={selectedGroup}
-              onChange={(e) => {
-                setSelectedGroup(e.target.value);
-                setPage(0);
-              }}
+              onChange={(e) => setSelectedGroup(e.target.value)}
               className="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-200 bg-white focus:border-[#F85606] outline-none"
             >
               <option value="">Tất cả Nhóm Khách Hàng</option>
@@ -520,10 +530,7 @@ export const AgencyManagementPage: React.FC = () => {
           <div>
             <select
               value={selectedRegion}
-              onChange={(e) => {
-                setSelectedRegion(e.target.value);
-                setPage(0);
-              }}
+              onChange={(e) => setSelectedRegion(e.target.value)}
               className="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-200 bg-white focus:border-[#F85606] outline-none"
             >
               <option value="">Tất cả Khu vực</option>
@@ -539,10 +546,7 @@ export const AgencyManagementPage: React.FC = () => {
           <div>
             <select
               value={selectedLockFilter}
-              onChange={(e) => {
-                setSelectedLockFilter(e.target.value);
-                setPage(0);
-              }}
+              onChange={(e) => setSelectedLockFilter(e.target.value)}
               className="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-200 bg-white focus:border-[#F85606] outline-none"
             >
               <option value="">Tất cả giao dịch</option>
@@ -555,10 +559,7 @@ export const AgencyManagementPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <select
               value={selectedStatus}
-              onChange={(e) => {
-                setSelectedStatus(e.target.value);
-                setPage(0);
-              }}
+              onChange={(e) => setSelectedStatus(e.target.value)}
               className="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-200 bg-white focus:border-[#F85606] outline-none"
             >
               <option value="">Tất cả trạng thái</option>
@@ -1078,38 +1079,17 @@ export const AgencyManagementPage: React.FC = () => {
       )}
 
       {/* Phân trang chung cho cả dạng Bảng và dạng Thẻ Tuyến */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
-        <div>
-          Hiển thị{' '}
-          <strong className="text-gray-900">
-            {totalElements === 0 ? 0 : page * size + 1}
-          </strong>{' '}
-          -{' '}
-          <strong className="text-gray-900">
-            {Math.min((page + 1) * size, totalElements)}
-          </strong>{' '}
-          trên tổng <strong className="text-gray-900">{totalElements}</strong> hồ sơ đại lý
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <span className="px-3 py-1 font-semibold text-gray-700">
-            Trang {page + 1} / {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page >= totalPages - 1}
-            className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalElements={totalElements}
+          size={size}
+          onPageChange={setPage}
+          onSizeChange={setSize}
+          itemLabel="đại lý"
+          disabled={loading}
+        />
       </div>
 
       {/* Modal Thêm Mới / Cập Nhật */}

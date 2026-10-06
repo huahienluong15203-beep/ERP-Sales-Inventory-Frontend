@@ -9,10 +9,9 @@ import {
   RefreshCw,
   Info,
   TrendingUp,
-  TrendingDown,
-  ChevronLeft,
-  ChevronRight
+  TrendingDown
 } from '../common/Icons';
+import { Pagination } from '../common/Pagination';
 
 interface AuditLogTableProps {
   logs: AuditLogItem[];
@@ -22,6 +21,7 @@ interface AuditLogTableProps {
   page: number;
   size: number;
   onPageChange: (newPage: number) => void;
+  onSizeChange?: (newSize: number) => void;
   onSelectLog: (log: AuditLogItem) => void;
 }
 
@@ -33,6 +33,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
   page,
   size,
   onPageChange,
+  onSizeChange,
   onSelectLog
 }) => {
   return (
@@ -260,38 +261,17 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
         </table>
       </div>
 
-      {/* Phân trang */}
-      <div className="px-6 py-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 bg-slate-50/40">
-        <div>
-          Hiển thị <strong>{logs.length}</strong> / <strong>{totalElements}</strong> lượt thao tác hệ thống ({size} mục/trang)
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={page === 0 || loading}
-            onClick={() => onPageChange(page - 1)}
-            className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-            title="Trang trước"
-          >
-            <ChevronLeft size={16} />
-          </button>
-
-          <span className="font-semibold text-slate-700 px-2">
-            Trang {page + 1} / {Math.max(1, totalPages)}
-          </span>
-
-          <button
-            type="button"
-            disabled={page >= totalPages - 1 || loading}
-            onClick={() => onPageChange(page + 1)}
-            className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-            title="Trang tiếp theo"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
+      {/* Phân trang: ‹ 1 2 … n › */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalElements={totalElements}
+        size={size}
+        onPageChange={onPageChange}
+        onSizeChange={onSizeChange}
+        itemLabel="lượt thao tác"
+        disabled={loading}
+      />
     </div>
   );
 };

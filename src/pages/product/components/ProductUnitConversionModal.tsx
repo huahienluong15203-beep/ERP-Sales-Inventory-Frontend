@@ -1041,7 +1041,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
               )}
 
               {/* Bảng danh sách đơn vị tính */}
-              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xs">
+              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-xs">
                 <table className="w-full text-left text-xs">
                   <thead className="border-b border-gray-200 bg-gray-100 text-[11px] font-bold uppercase tracking-wider text-gray-700">
                     <tr>

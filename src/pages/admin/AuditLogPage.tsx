@@ -20,30 +20,38 @@ import {
   FileSpreadsheet,
   ShieldCheck
 } from '../../components/common/Icons';
+import { useUrlPaging } from '../../hooks/useUrlParams';
 
 export const AuditLogPage: React.FC = () => {
   // Trạng thái dữ liệu nhật ký
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [page, setPage] = useState(0);
-  const [size] = useState(15);
   const [loading, setLoading] = useState(true);
 
   // Thống kê toàn cục
   const [allLogsForStats] = useState<AuditLogItem[]>(() => getLocalAuditLogs());
 
-  // Bộ lọc
-  const [filters, setFilters] = useState<AuditLogFilterParams>({
+  // Bộ lọc + trang lưu trên URL, vd: /audit-logs?module=PRICING&range=TODAY&page=2
+  const { params: urlParams, page, size, setPage, setSize, setFilters: setUrlFilters } = useUrlPaging({
     keyword: '',
     module: 'ALL',
-    actorUsername: 'ALL',
-    quickTimeRange: 'ALL',
-    startDate: undefined,
-    endDate: undefined,
-    page: 0,
-    size: 15
+    actor: 'ALL',
+    range: 'ALL',
+    from: '',
+    to: ''
   });
+  const filters: AuditLogFilterParams = useMemo(
+    () => ({
+      keyword: urlParams.keyword,
+      module: urlParams.module as AuditLogFilterParams['module'],
+      actorUsername: urlParams.actor,
+      quickTimeRange: urlParams.range as AuditLogFilterParams['quickTimeRange'],
+      startDate: urlParams.from || undefined,
+      endDate: urlParams.to || undefined
+    }),
+    [urlParams.keyword, urlParams.module, urlParams.actor, urlParams.range, urlParams.from, urlParams.to]
+  );
 
   // Modal chi tiết
   const [selectedLog, setSelectedLog] = useState<AuditLogItem | null>(null);
@@ -102,23 +110,19 @@ export const AuditLogPage: React.FC = () => {
 
   // Thay đổi bộ lọc
   const handleFilterChange = (updated: Partial<AuditLogFilterParams>) => {
-    setFilters((prev) => ({ ...prev, ...updated }));
-    setPage(0);
+    const patch: Record<string, string> = {};
+    if ('keyword' in updated) patch.keyword = updated.keyword ?? '';
+    if ('module' in updated) patch.module = String(updated.module ?? 'ALL');
+    if ('actorUsername' in updated) patch.actor = updated.actorUsername ?? 'ALL';
+    if ('quickTimeRange' in updated) patch.range = updated.quickTimeRange ?? 'ALL';
+    if ('startDate' in updated) patch.from = updated.startDate ?? '';
+    if ('endDate' in updated) patch.to = updated.endDate ?? '';
+    setUrlFilters(patch);
   };
 
   // Đặt lại bộ lọc
   const handleResetFilter = () => {
-    setFilters({
-      keyword: '',
-      module: 'ALL',
-      actorUsername: 'ALL',
-      quickTimeRange: 'ALL',
-      startDate: undefined,
-      endDate: undefined,
-      page: 0,
-      size: 15
-    });
-    setPage(0);
+    setUrlFilters({ keyword: '', module: 'ALL', actor: 'ALL', range: 'ALL', from: '', to: '' });
   };
 
   // Mở modal chi tiết
@@ -199,6 +203,7 @@ export const AuditLogPage: React.FC = () => {
         page={page}
         size={size}
         onPageChange={setPage}
+        onSizeChange={setSize}
         onSelectLog={handleOpenDetail}
       />
 

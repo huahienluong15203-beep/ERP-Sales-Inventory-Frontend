@@ -14,6 +14,7 @@ import { ChangeStatusModal } from '../../components/supplier/ChangeStatusModal';
 import { SupplierDetailModal } from '../../components/supplier/SupplierDetailModal';
 import { DeleteSupplierModal } from '../../components/supplier/DeleteSupplierModal';
 import { Icons } from '../../components/common/Icons';
+import { useUrlPaging } from '../../hooks/useUrlParams';
 
 export const SupplierManagementPage: React.FC = () => {
   const { currentRole, user, showToast } = useAuth();
@@ -36,10 +37,17 @@ export const SupplierManagementPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Phân trang & Bộ lọc
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [currentPage, setCurrentPage] = useState<number>(0);
-  const [pageSize, setPageSize] = useState<number>(20);
+  // Lưu trên URL, vd: /suppliers?keyword=bia&status=ACTIVE&page=2
+  const {
+    params: urlParams,
+    page: currentPage,
+    size: pageSize,
+    setPage: setCurrentPage,
+    setSize: setPageSize,
+    setFilters
+  } = useUrlPaging({ keyword: '', status: 'ALL' });
+  const searchTerm = urlParams.keyword;
+  const statusFilter = urlParams.status;
   const [totalElements, setTotalElements] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
 
@@ -239,20 +247,11 @@ export const SupplierManagementPage: React.FC = () => {
         pageSize={pageSize}
         totalPages={totalPages}
         onPageChange={setCurrentPage}
-        onPageSizeChange={(newSize) => {
-          setPageSize(newSize);
-          setCurrentPage(0);
-        }}
+        onPageSizeChange={setPageSize}
         searchTerm={searchTerm}
-        onSearchChange={(val) => {
-          setSearchTerm(val);
-          setCurrentPage(0);
-        }}
+        onSearchChange={(val) => setFilters({ keyword: val })}
         statusFilter={statusFilter}
-        onStatusFilterChange={(val) => {
-          setStatusFilter(val);
-          setCurrentPage(0);
-        }}
+        onStatusFilterChange={(val) => setFilters({ status: val })}
         onViewDetail={handleOpenDetail}
         onEdit={handleOpenEdit}
         onToggleStatus={handleOpenToggleStatus}
