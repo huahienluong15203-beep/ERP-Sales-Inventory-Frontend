@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ==========================================================================
    ERP SALES & INVENTORY - DESIGN SYSTEM & CORE FOUNDATION
    Tone chủ đạo: Cam Lazada rực rỡ & Trắng sạch sẽ (Lazada Orange & Crisp White)
@@ -81,6 +83,29 @@
   --erp-shadow-lg: 0 10px 24px -4px rgba(0, 0, 0, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.04);
   --erp-shadow-orange: 0 6px 18px rgba(238, 77, 45, 0.28);
   --erp-shadow-drawer: 0 20px 40px -10px rgba(0, 0, 0, 0.25);
+}
+
+html.dark,
+[data-theme="dark"] {
+  /* Nền tối sâu thẳm, trung tính thuần túy, độ tương phản cao sắc nét */
+  --erp-bg-app: #0d0d0e;
+  --erp-bg-surface: #18181b;
+  --erp-bg-sidebar: #141416;
+  --erp-bg-sidebar-hover: #27272a;
+  --erp-bg-sidebar-active: #F85606;
+
+  /* Độ tương phản cao tối đa cho văn bản (High-contrast pure white & crisp silver) */
+  --erp-text-main: #FFFFFF;
+  --erp-text-muted: #E4E4E7;
+  --erp-text-light: #B4B4BB;
+  --erp-text-white: #FFFFFF;
+
+  --erp-border: #333338;
+  --erp-border-orange: #9A3412;
+  --erp-border-subtle: #222226;
+  --erp-border-sidebar: #2C2C30;
+
+  color-scheme: dark;
 }
 
 *,
