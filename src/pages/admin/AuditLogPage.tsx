@@ -20,7 +20,7 @@ import {
   FileSpreadsheet,
   ShieldCheck
 } from '../../components/common/Icons';
-import { useUrlPaging } from '../../hooks/useUrlParams';
+import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 
 export const AuditLogPage: React.FC = () => {
   // Trạng thái dữ liệu nhật ký
@@ -135,6 +135,9 @@ export const AuditLogPage: React.FC = () => {
   const handleExportExcel = () => {
     exportAuditLogsToExcel(logs, 'Nhat_Ky_Thao_Tac_Ton_Kho_Cong_No_S2_04');
   };
+
+  // Đang ở trang vượt quá số trang -> tự lùi về trang cuối
+  useClampPage(page, totalPages, setPage, loading);
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">

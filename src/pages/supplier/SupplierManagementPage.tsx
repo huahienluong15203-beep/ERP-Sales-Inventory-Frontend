@@ -14,7 +14,7 @@ import { ChangeStatusModal } from '../../components/supplier/ChangeStatusModal';
 import { SupplierDetailModal } from '../../components/supplier/SupplierDetailModal';
 import { DeleteSupplierModal } from '../../components/supplier/DeleteSupplierModal';
 import { Icons } from '../../components/common/Icons';
-import { useUrlPaging } from '../../hooks/useUrlParams';
+import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 
 export const SupplierManagementPage: React.FC = () => {
   const { currentRole, user, showToast } = useAuth();
@@ -174,6 +174,9 @@ export const SupplierManagementPage: React.FC = () => {
     );
     loadData();
   };
+
+  // Đang ở trang vượt quá số trang -> tự lùi về trang cuối
+  useClampPage(currentPage, totalPages, setCurrentPage, loading);
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-200">

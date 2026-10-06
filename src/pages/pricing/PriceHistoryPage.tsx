@@ -28,7 +28,7 @@ import {
   Info,
   SlidersHorizontal
 } from '../../components/common/Icons';
-import { useUrlPaging } from '../../hooks/useUrlParams';
+import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 import { Pagination } from '../../components/common/Pagination';
 
 export const PriceHistoryPage: React.FC = () => {
@@ -153,6 +153,9 @@ export const PriceHistoryPage: React.FC = () => {
     setEndDate('');
     setPage(0);
   };
+
+  // Đang ở trang vượt quá số trang -> tự lùi về trang cuối
+  useClampPage(page, totalPages, setPage, loading);
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">

@@ -84,7 +84,9 @@ export function AddressPicker({ value, onChange, compact = false, streetPlacehol
     const w = p?.wards.find((x) => x.code === nextWardCode);
     const address = composeAddress(nextStreet, w?.name, p?.name);
     lastEmitted.current = address;
-    onChange(address, Boolean(p && w && nextStreet.trim()));
+    // Không tải được danh sách tỉnh/xã -> cho nhập tay cả địa chỉ, chỉ cần không để trống
+    const complete = loadError ? Boolean(nextStreet.trim()) : Boolean(p && w && nextStreet.trim());
+    onChange(address, complete);
   };
 
   const wardSuggestions = useMemo(() => {
@@ -190,7 +192,7 @@ export function AddressPicker({ value, onChange, compact = false, streetPlacehol
           setStreet(e.target.value);
           emit(provinceCode, wardCode, e.target.value);
         }}
-        placeholder={streetPlaceholder || 'Số nhà, ngõ/hẻm, tên đường, thôn/ấp...'}
+        placeholder={loadError ? 'Nhập đầy đủ địa chỉ (số nhà, đường, xã/phường, tỉnh/thành)' : streetPlaceholder || 'Số nhà, ngõ/hẻm, tên đường, thôn/ấp...'}
         className={field}
         aria-label="Số nhà, tên đường"
       />

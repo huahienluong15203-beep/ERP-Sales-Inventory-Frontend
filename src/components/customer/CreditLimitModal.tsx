@@ -57,7 +57,7 @@ export const CreditLimitModal: React.FC<CreditLimitModalProps> = ({
         if (!agency) return;
         setLoadingLogs(true);
         try {
-            const data = await fetchCreditLimitLogs(agency.id);
+            const data = await fetchCreditLimitLogs(agency.id, agency.code);
             setLogs(data);
         } catch {
             console.error('Không thể tải nhật ký hạn mức');
@@ -213,13 +213,14 @@ export const CreditLimitModal: React.FC<CreditLimitModalProps> = ({
                                 <label className="block text-xs font-bold text-gray-700 mb-1">
                                     Hạn Mức Nợ Tối Đa (VND) <span className="text-red-500">*</span>
                                 </label>
+                                {/* Ô chữ có dấu chấm ngăn cách hàng nghìn (1.000.000), không hiện số 0 thừa ở đầu */}
                                 <input
-                                    type="number"
+                                    type="text"
+                                    inputMode="numeric"
                                     disabled={!canEdit || submitting}
-                                    value={creditLimit}
-                                    onChange={(e) => setCreditLimit(Number(e.target.value))}
-                                    step={1000000}
-                                    min={0}
+                                    value={creditLimit ? creditLimit.toLocaleString('vi-VN') : ''}
+                                    onChange={(e) => setCreditLimit(Number(e.target.value.replace(/\D/g, '').slice(0, 15)) || 0)}
+                                    placeholder="0"
                                     className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border border-gray-200 bg-white focus:border-[#F85606] outline-none disabled:bg-gray-100"
                                 />
                                 <span className="text-[10px] text-gray-500 mt-0.5 block">
@@ -235,12 +236,11 @@ export const CreditLimitModal: React.FC<CreditLimitModalProps> = ({
                                 </label>
                                 <div className="relative">
                                     <input
-                                        type="number"
+                                        type="text"
+                                        inputMode="numeric"
                                         disabled={!canEdit || submitting}
-                                        value={maxDebtDays}
-                                        onChange={(e) => setMaxDebtDays(Number(e.target.value))}
-                                        min={1}
-                                        max={180}
+                                        value={maxDebtDays ? String(maxDebtDays) : ''}
+                                        onChange={(e) => setMaxDebtDays(Number(e.target.value.replace(/\D/g, '').slice(0, 4)) || 0)}
                                         className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-gray-200 bg-white focus:border-[#F85606] outline-none pr-12 disabled:bg-gray-100"
                                     />
                                     <span className="absolute right-3 top-2 text-xs text-gray-400 font-semibold">ngày</span>
@@ -315,7 +315,7 @@ export const CreditLimitModal: React.FC<CreditLimitModalProps> = ({
                                                 <Clock size={12} />
                                                 {log.updatedAt}
                                             </span>
-                                            <span>Người sửa: <strong className="text-gray-700">{log.updatedBy}</strong> ({log.updatedByRole})</span>
+                                            <span>Người sửa: <strong className="text-gray-700">{log.updatedBy}</strong>{log.updatedByRole ? ` (${log.updatedByRole})` : ''}</span>
                                         </div>
 
                                         <div className="flex flex-wrap items-center gap-3 pt-0.5">

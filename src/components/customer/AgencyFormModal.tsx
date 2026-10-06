@@ -15,6 +15,7 @@ import {
 } from '../../services/agencyApi';
 import { X, Building2, AlertTriangle, CheckCircle2, Info } from '../common/Icons';
 import { AddressPicker } from '../common/AddressPicker';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface AgencyFormModalProps {
   isOpen: boolean;
@@ -30,6 +31,9 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
   initialData
 }) => {
   const isEdit = Boolean(initialData);
+  // Đổi người phụ trách chỉ Admin, QL kinh doanh được làm (Backend cũng chặn); Kế toán chỉ xem
+  const { currentRole } = useAuth();
+  const canChangeSalesRep = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER';
   const formRef = useRef<HTMLFormElement>(null);
 
   // Khu vực + nhân viên kinh doanh lấy từ Backend (id thật trong DB)
@@ -55,9 +59,12 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
         .then((options) => {
           setRegions(options.regions);
           setSalesReps(options.salesReps);
-          // Thêm mới: chọn sẵn khu vực / người phụ trách đầu tiên
-          setRegionId((prev) => prev || options.regions[0]?.id || '');
-          setAssignedRepId((prev) => prev || options.salesReps[0]?.id || '');
+          // Chỉ khi THÊM MỚI mới chọn sẵn khu vực / người phụ trách đầu tiên.
+          // Sửa đại lý chưa có người phụ trách thì giữ trống, không tự gán người khác.
+          if (!initialData) {
+            setRegionId((prev) => prev || options.regions[0]?.id || '');
+            setAssignedRepId((prev) => prev || options.salesReps[0]?.id || '');
+          }
         })
         .catch(() => setError('Không tải được danh mục khu vực và nhân viên kinh doanh. Vui lòng thử lại!'));
     }
@@ -78,7 +85,8 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
       setPhone(initialData.phone || '');
       setEmail(initialData.email || '');
       setAddress(initialData.address || '');
-      setCreditLimit(initialData.creditLimit || 50000000);
+      // Hạn mức 0 là giá trị thật (chưa cấp nợ), không được tự đổi thành 50 triệu
+      setCreditLimit(initialData.creditLimit ?? 0);
     } else {
       setCode('');
       setName('');
@@ -144,6 +152,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
       let res;
       if (isEdit) {
         res = await onSubmit({
+          changeSalesRep: canChangeSalesRep && assignedRepId !== (initialData?.assignedRepId || ''),
           name: name.trim(),
           taxCode: taxCode.trim(),
           customerGroup,
@@ -151,8 +160,8 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
           assignedRepId,
           phone: cleanPhone,
           email: email.trim(),
-          address: address.trim(),
-          creditLimit
+          address: address.trim()
+          // Không gửi hạn mức khi sửa: đổi hạn mức phải qua "Hạn mức công nợ" có lý do thật để ghi nhật ký
         });
       } else {
         res = await onSubmit({
@@ -361,9 +370,13 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
               <select
                 value={assignedRepId}
                 onChange={(e) => setAssignedRepId(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:border-[#F85606] outline-none font-medium"
+                disabled={isEdit && !canChangeSalesRep}
+                title={isEdit && !canChangeSalesRep ? 'Chỉ Admin hoặc Quản lý kinh doanh được đổi người phụ trách' : undefined}
+                className="w-full px-3.5 py-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:border-[#F85606] outline-none font-medium disabled:bg-gray-50 disabled:text-gray-500"
               >
-                {!assignedRepId && <option value="">— Chọn người phụ trách —</option>}
+                {!assignedRepId && (
+                  <option value="">{isEdit ? '— Chưa gán người phụ trách —' : '— Chọn người phụ trách —'}</option>
+                )}
                 {salesReps.map((rep) => (
                   <option key={rep.id} value={rep.id}>
                     {rep.fullName} {rep.phone ? `(${rep.phone})` : ''}
@@ -421,15 +434,17 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
               Hạn Mức Công Nợ Cấp Cho Đại Lý (VND)
             </label>
             <input
-              type="number"
-              step={5000000}
-              value={creditLimit}
-              onChange={(e) => setCreditLimit(Number(e.target.value))}
+              type="text"
+              inputMode="numeric"
+              value={creditLimit ? creditLimit.toLocaleString('vi-VN') : ''}
+              onChange={(e) => setCreditLimit(Number(e.target.value.replace(/\D/g, '').slice(0, 15)) || 0)}
               placeholder="50000000"
-              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-gray-200 focus:border-[#F85606] outline-none font-mono"
+              disabled={isEdit}
+              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-gray-200 focus:border-[#F85606] outline-none font-mono disabled:bg-gray-50 disabled:text-gray-500"
             />
             <span className="text-[11px] text-gray-400 mt-1 block">
               Quy đổi: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(creditLimit || 0)}
+              {isEdit && ' • Muốn đổi hạn mức, dùng chức năng "Hạn mức công nợ" (bắt buộc nhập lý do).'}
             </span>
           </div>
         </form>

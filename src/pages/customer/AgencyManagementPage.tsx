@@ -29,7 +29,7 @@ import { DeleteAgencyModal } from '../../components/customer/DeleteAgencyModal';
 import { AgencyCardView } from '../../components/customer/AgencyCardView';
 import { useAuth } from '../../contexts/AuthContext';
 import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
-import { useUrlPaging } from '../../hooks/useUrlParams';
+import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 import { Pagination } from '../../components/common/Pagination';
 import {
   Building2,
@@ -135,7 +135,7 @@ export const AgencyManagementPage: React.FC = () => {
     const res = await deleteAgency(agency.id);
     if (res.success) {
       showToast('Đã xóa đại lý', res.message || 'Xóa đại lý thành công', 'success');
-      loadData();
+      reloadAll();
     } else {
       showToast('Không thể xóa đại lý', res.message || 'Có lỗi xảy ra khi xóa đại lý', 'error');
     }
@@ -228,9 +228,6 @@ export const AgencyManagementPage: React.FC = () => {
         params.status = 'SUSPENDED';
       }
       const res = await fetchAgencies(params);
-      fetchAgencyStats()
-        .then(setAgencyStats)
-        .catch(() => undefined);
       setAgencies(res.content);
       setTotalElements(res.totalElements);
       setTotalPages(res.totalPages);
@@ -250,6 +247,22 @@ export const AgencyManagementPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
   }, [loadData]);
+
+  // Số liệu thẻ đầu trang: chỉ tải khi mở trang và sau khi thêm/sửa/khoá/dừng giao dịch (không tải lại mỗi lần đổi trang)
+  const loadStats = useCallback(() => {
+    fetchAgencyStats()
+      .then(setAgencyStats)
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
+  const reloadAll = () => {
+    loadData();
+    loadStats();
+  };
 
   // Submit form tìm kiếm
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -307,7 +320,7 @@ export const AgencyManagementPage: React.FC = () => {
       const res = await updateAgency(editingAgency.id, payload as UpdateAgencyPayload);
       if (res.success) {
         showToast('Thành công', res.message || 'Cập nhật đại lý thành công', 'success');
-        loadData();
+        reloadAll();
       } else {
         showToast('Không thể cập nhật', res.message || 'Có lỗi xảy ra', 'error');
       }
@@ -317,7 +330,7 @@ export const AgencyManagementPage: React.FC = () => {
       if (res.success) {
         showToast('Thành công', res.message || 'Tạo mới đại lý thành công', 'success');
         setPage(0);
-        loadData();
+        reloadAll();
       } else {
         showToast('Không thể tạo mới', res.message || 'Có lỗi xảy ra', 'error');
       }
@@ -336,7 +349,7 @@ export const AgencyManagementPage: React.FC = () => {
     const res = await suspendAgency(agencyId, reason);
     if (res.success) {
       showToast('Thành công', res.message, 'success');
-      loadData();
+      reloadAll();
     } else {
       showToast('Lỗi', res.message, 'error');
     }
@@ -348,7 +361,7 @@ export const AgencyManagementPage: React.FC = () => {
     const res = await reactivateAgency(agencyId);
     if (res.success) {
       showToast('Thành công', res.message, 'success');
-      loadData();
+      reloadAll();
     } else {
       showToast('Lỗi', res.message, 'error');
     }
@@ -360,6 +373,9 @@ export const AgencyManagementPage: React.FC = () => {
   const suspendedCount = agencyStats.suspended;
   const totalDebtSum = agencies.reduce((acc, a) => acc + (a.totalDebt || 0), 0);
   const lockedCount = agencyStats.locked;
+
+  // Đang ở trang vượt quá số trang -> tự lùi về trang cuối
+  useClampPage(page, totalPages, setPage, loading);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -1068,20 +1084,7 @@ export const AgencyManagementPage: React.FC = () => {
                                     </button>
                                   )}
 
-                                  {/* Xóa đại lý */}
-                                  {canManageAgency && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenMenuAgencyId(null);
-                                        handleOpenDeleteModal(agency);
-                                      }}
-                                      className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                                    >
-                                      <X size={14} className="text-red-500" />
-                                      <span>Xóa đại lý</span>
-                                    </button>
-                                  )}
+                                  {/* Không có "Xóa đại lý": hồ sơ đại lý không xoá cứng, dùng Dừng giao dịch */}
                                 </div>
                               </div>
                             )}
@@ -1151,7 +1154,7 @@ export const AgencyManagementPage: React.FC = () => {
         onClose={() => setIsAssignRepModalOpen(false)}
         agency={selectedAgencyForAssign}
         onSuccess={() => {
-          loadData();
+          reloadAll();
           showToast('Thành công', 'Đã phân công lại nhân viên phụ trách đại lý thành công!', 'success');
         }}
       />
@@ -1162,7 +1165,7 @@ export const AgencyManagementPage: React.FC = () => {
         onClose={() => setIsTransferModalOpen(false)}
         agencies={agencies}
         onSuccess={() => {
-          loadData();
+          reloadAll();
           showToast('Thành công', 'Đã chuyển giao địa bàn hàng loạt thành công!', 'success');
         }}
       />
@@ -1180,7 +1183,7 @@ export const AgencyManagementPage: React.FC = () => {
         onClose={() => setIsLockModalOpen(false)}
         agency={selectedAgencyForLock}
         onSuccess={() => {
-          loadData();
+          reloadAll();
           showToast(
             'Thành công',
             selectedAgencyForLock?.transactionLocked

@@ -23,7 +23,7 @@ import {
   BEST_DEAL_RULE_STATEMENT
 } from '../../services/volumeDiscountApi';
 import type { VolumeDiscountStatsData } from '../../services/volumeDiscountApi';
-import { useUrlPaging } from '../../hooks/useUrlParams';
+import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 import { useServerSearch } from '../../hooks/useServerSearch';
 import { Pagination } from '../../components/common/Pagination';
 
@@ -230,6 +230,9 @@ export const VolumeDiscountPage: React.FC = () => {
     setSearchKeyword('');
     setFilters({ scope: 'ALL', customer: 'ALL', status: 'ALL' });
   };
+
+  // Đang ở trang vượt quá số trang -> tự lùi về trang cuối
+  useClampPage(page, totalPages, setPage, isLoading);
 
   return (
     <div className="space-y-6 pb-12">
