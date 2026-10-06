@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import type { Agency, SalesRepOption } from '../../types/agency';
+import type { Agency, SalesRepOption, RegionOption } from '../../types/agency';
 import {
   SALES_REP_OPTIONS,
-  REGION_OPTIONS,
-  fetchActiveSalesReps,
+  fetchAgencyFormOptions,
+  fetchAgencies,
   transferAgencyTerritory
 } from '../../services/agencyApi';
 import { useAuth } from '../../contexts/AuthContext';
@@ -20,14 +20,14 @@ import {
 interface TransferTerritoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  agencies: Agency[];
+  /** Không còn dùng: danh sách đại lý bị ảnh hưởng lấy thẳng từ Backend (toàn bộ, không chỉ trang đang xem) */
+  agencies?: Agency[];
   onSuccess: () => void;
 }
 
 export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
   isOpen,
   onClose,
-  agencies,
   onSuccess
 }) => {
   const { user } = useAuth();
@@ -38,30 +38,59 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Khu vực thật trong DB (id số) thay cho danh sách khu vực giả trước đây
+  const [regions, setRegions] = useState<RegionOption[]>([]);
+  // Đại lý sẽ bị chuyển giao: hỏi Backend theo người bàn giao + khu vực (toàn bộ DB)
+  const [affectedAgencies, setAffectedAgencies] = useState<Agency[]>([]);
+  const [affectedTotal, setAffectedTotal] = useState(0);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      fetchActiveSalesReps().then((reps) => {
-        if (reps && reps.length > 0) {
-          setSalesReps(reps);
-          setFromRepId(reps[0]?.id || '');
-          setToRepId(reps[1]?.id || reps[0]?.id || '');
-        }
-      });
+      fetchAgencyFormOptions()
+        .then((options) => {
+          setRegions(options.regions);
+          if (options.salesReps.length > 0) {
+            setSalesReps(options.salesReps);
+            setFromRepId(options.salesReps[0]?.id || '');
+            setToRepId(options.salesReps[1]?.id || options.salesReps[0]?.id || '');
+          }
+        })
+        .catch(() => setError('Không tải được danh sách khu vực và nhân viên kinh doanh.'));
       setSelectedRegionId('');
       setReason('');
       setError(null);
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (!isOpen || !/^\d+$/.test(fromRepId)) {
+      setAffectedAgencies([]);
+      setAffectedTotal(0);
+      return;
+    }
+    let ignore = false;
+    setLoadingPreview(true);
+    fetchAgencies({ salesRepId: fromRepId, regionId: selectedRegionId || undefined, page: 0, size: 100 })
+      .then((res) => {
+        if (ignore) return;
+        setAffectedAgencies(res.content);
+        setAffectedTotal(res.totalElements);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setAffectedAgencies([]);
+        setAffectedTotal(0);
+      })
+      .finally(() => {
+        if (!ignore) setLoadingPreview(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [isOpen, fromRepId, selectedRegionId]);
 
-  // Lọc preview các đại lý sẽ được chuyển giao
-  const affectedAgencies = agencies.filter((a) => {
-    if (a.assignedRepId !== fromRepId) return false;
-    if (selectedRegionId && a.regionId !== selectedRegionId) return false;
-    return true;
-  });
+  if (!isOpen) return null;
 
   const fromRep = salesReps.find((r) => r.id === fromRepId) || SALES_REP_OPTIONS.find((r) => r.id === fromRepId);
   const isSameRep = fromRepId === toRepId;
@@ -80,7 +109,7 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
       return;
     }
 
-    if (affectedAgencies.length === 0) {
+    if (affectedTotal === 0) {
       setError('Không có đại lý nào thỏa mãn điều kiện để chuyển giao.');
       return;
     }
@@ -195,7 +224,7 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
               className="w-full px-3.5 py-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 outline-none font-medium"
             >
               <option value="">-- Tất cả các khu vực (Chuyển giao toàn bộ đại lý) --</option>
-              {REGION_OPTIONS.map((r) => (
+              {regions.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
                 </option>
@@ -211,7 +240,7 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
                 <span>Số đại lý sẽ được chuyển giao:</span>
               </div>
               <span className="px-2.5 py-0.5 rounded-full bg-[#F85606] text-white font-bold text-xs">
-                {affectedAgencies.length} đại lý
+                {loadingPreview ? '…' : `${affectedTotal} đại lý`}
               </span>
             </div>
 
@@ -262,7 +291,7 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={submitting || isSameRep || affectedAgencies.length === 0}
+              disabled={submitting || isSameRep || loadingPreview || affectedTotal === 0}
               className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-[#F85606] hover:bg-[#d64700] rounded-xl shadow-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {submitting ? (
@@ -273,7 +302,7 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
               ) : (
                 <>
                   <ArrowRight size={14} />
-                  <span>Xác Nhận Chuyển Giao ({affectedAgencies.length})</span>
+                  <span>Xác Nhận Chuyển Giao ({affectedTotal})</span>
                 </>
               )}
             </button>

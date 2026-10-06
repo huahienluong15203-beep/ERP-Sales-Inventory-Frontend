@@ -144,6 +144,8 @@ export interface AgencyFilterParams {
   keyword?: string;           // Tìm theo Mã, Tên, MST, SĐT
   customerGroup?: string;
   regionId?: string;
+  /** S3-06: lọc đại lý theo nhân viên phụ trách (id nhân viên) */
+  salesRepId?: string;
   status?: string;
   /** S3-07: true = bị khoá giao dịch, false = đang mở, bỏ trống = tất cả */
   transactionLocked?: boolean;
