@@ -220,7 +220,7 @@ export const PriceHistoryPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Ô tìm kiếm từ khóa */}
           <div className="relative">
-            <Search size={16} className="absolute left-3.5 top-1/2 -trangray-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
               type="text"
               value={keyword}

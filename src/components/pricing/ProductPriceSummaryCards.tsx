@@ -62,7 +62,7 @@ export const ProductPriceSummaryCards: React.FC<ProductPriceSummaryCardsProps> =
           </span>
         </div>
         <div className="mt-2 text-xs text-gray-500">
-          Chủ yếu do giá vỏ lon & nguyên vật liệu quý 4
+          Theo biến động chi phí đầu vào & thị trường
         </div>
       </div>
 
