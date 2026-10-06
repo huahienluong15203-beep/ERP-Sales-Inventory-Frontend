@@ -193,7 +193,7 @@ export const AgencyManagementPage: React.FC = () => {
   }, []);
 
   // Số liệu thẻ đầu trang (toàn bộ đại lý, không phụ thuộc trang đang xem)
-  const [agencyStats, setAgencyStats] = useState({ total: 0, active: 0, suspended: 0 });
+  const [agencyStats, setAgencyStats] = useState({ total: 0, active: 0, suspended: 0, locked: 0 });
 
   // Khu vực thật từ Backend cho ô lọc
   const [regionOptions, setRegionOptions] = useState<RegionOption[]>([]);
@@ -212,9 +212,21 @@ export const AgencyManagementPage: React.FC = () => {
         customerGroup: selectedGroup || undefined,
         regionId: selectedRegion || undefined,
         status: selectedStatus || undefined,
+        // S3-07: lọc khoá giao dịch ở Backend (toàn bộ DB), không lọc trên trang đang xem
+        transactionLocked:
+          selectedLockFilter === 'LOCKED' ? true : selectedLockFilter === 'UNLOCKED' ? false : undefined,
         page,
         size
       };
+      // Tab lọc nhanh (S3-08) cũng gửi lên Backend
+      if (routeQuickFilter === 'LOCKED') {
+        params.transactionLocked = true;
+      } else if (routeQuickFilter === 'ACTIVE') {
+        params.status = 'ACTIVE';
+        params.transactionLocked = false;
+      } else if (routeQuickFilter === 'SUSPENDED') {
+        params.status = 'SUSPENDED';
+      }
       const res = await fetchAgencies(params);
       fetchAgencyStats()
         .then(setAgencyStats)
@@ -232,7 +244,7 @@ export const AgencyManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [serverKeyword, selectedGroup, selectedRegion, selectedStatus, page, size]);
+  }, [serverKeyword, selectedGroup, selectedRegion, selectedStatus, selectedLockFilter, routeQuickFilter, page, size]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -260,21 +272,8 @@ export const AgencyManagementPage: React.FC = () => {
       )
     : agencies;
 
-  // S3-07: Lọc theo trạng thái khóa giao dịch rủi ro công nợ
-  const lockFilteredAgencies = selectedLockFilter
-    ? roleFilteredAgencies.filter((a) =>
-        selectedLockFilter === 'LOCKED' ? Boolean(a.transactionLocked) : !a.transactionLocked
-      )
-    : roleFilteredAgencies;
-
-  // S3-08 / SCRUM-21: Tab lọc nhanh theo trạng thái tuyến đi đường
-  const quickTabFilteredAgencies = routeQuickFilter === 'ALL'
-    ? lockFilteredAgencies
-    : routeQuickFilter === 'LOCKED'
-    ? roleFilteredAgencies.filter((a) => Boolean(a.transactionLocked))
-    : routeQuickFilter === 'ACTIVE'
-    ? roleFilteredAgencies.filter((a) => a.status === 'ACTIVE' && !a.transactionLocked)
-    : roleFilteredAgencies.filter((a) => a.status === 'SUSPENDED');
+  // Lọc khoá giao dịch và tab lọc nhanh đã làm ở Backend (xem loadData)
+  const quickTabFilteredAgencies = roleFilteredAgencies;
 
   // Mới gõ 1 ký tự: lọc tại chỗ trên danh sách đang hiển thị, không gọi API (hỗ trợ tìm cả địa chỉ khi đứng ngoài đường)
   const visibleAgencies = localKeyword
@@ -360,7 +359,7 @@ export const AgencyManagementPage: React.FC = () => {
   const activeCount = agencyStats.active;
   const suspendedCount = agencyStats.suspended;
   const totalDebtSum = agencies.reduce((acc, a) => acc + (a.totalDebt || 0), 0);
-  const lockedCount = agencies.filter((a) => a.transactionLocked).length;
+  const lockedCount = agencyStats.locked;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -608,7 +607,7 @@ export const AgencyManagementPage: React.FC = () => {
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none text-xs">
           <button
             type="button"
-            onClick={() => setRouteQuickFilter('ALL')}
+            onClick={() => { setRouteQuickFilter('ALL'); setPage(0); }}
             className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 ${
               routeQuickFilter === 'ALL'
                 ? 'bg-gray-900 text-white shadow-xs'
@@ -620,7 +619,7 @@ export const AgencyManagementPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setRouteQuickFilter('ACTIVE')}
+            onClick={() => { setRouteQuickFilter('ACTIVE'); setPage(0); }}
             className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
               routeQuickFilter === 'ACTIVE'
                 ? 'bg-emerald-600 text-white shadow-xs'
@@ -633,7 +632,7 @@ export const AgencyManagementPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setRouteQuickFilter('LOCKED')}
+            onClick={() => { setRouteQuickFilter('LOCKED'); setPage(0); }}
             className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
               routeQuickFilter === 'LOCKED'
                 ? 'bg-rose-600 text-white shadow-xs'
@@ -646,7 +645,7 @@ export const AgencyManagementPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setRouteQuickFilter('SUSPENDED')}
+            onClick={() => { setRouteQuickFilter('SUSPENDED'); setPage(0); }}
             className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
               routeQuickFilter === 'SUSPENDED'
                 ? 'bg-amber-600 text-white shadow-xs'

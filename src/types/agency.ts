@@ -143,6 +143,8 @@ export interface AgencyFilterParams {
   customerGroup?: string;
   regionId?: string;
   status?: string;
+  /** S3-07: true = bị khoá giao dịch, false = đang mở, bỏ trống = tất cả */
+  transactionLocked?: boolean;
   page?: number;
   size?: number;
 }

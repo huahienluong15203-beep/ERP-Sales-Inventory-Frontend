@@ -516,6 +516,7 @@ export async function fetchAgencies(params: AgencyFilterParams): Promise<AgencyL
   if (params.regionId && /^\d+$/.test(params.regionId)) query.set('regionId', params.regionId);
   const status = statusToBackend(params.status);
   if (status) query.set('status', status);
+  if (params.transactionLocked !== undefined) query.set('transactionLocked', String(params.transactionLocked));
   query.set('page', String(page));
   query.set('size', String(size));
 
@@ -533,13 +534,24 @@ export async function fetchAgencies(params: AgencyFilterParams): Promise<AgencyL
 }
 
 /** Số liệu thẻ đầu trang, đếm trên TOÀN BỘ đại lý (gọi API với size=1 chỉ để lấy tổng). */
-export async function fetchAgencyStats(): Promise<{ total: number; active: number; suspended: number }> {
-  const [all, active, suspended] = await Promise.all([
+export async function fetchAgencyStats(): Promise<{
+  total: number;
+  active: number;
+  suspended: number;
+  locked: number;
+}> {
+  const [all, active, suspended, locked] = await Promise.all([
     fetchAgencies({ page: 0, size: 1 }),
     fetchAgencies({ page: 0, size: 1, status: 'ACTIVE' }),
-    fetchAgencies({ page: 0, size: 1, status: 'SUSPENDED' })
+    fetchAgencies({ page: 0, size: 1, status: 'SUSPENDED' }),
+    fetchAgencies({ page: 0, size: 1, transactionLocked: true })
   ]);
-  return { total: all.totalElements, active: active.totalElements, suspended: suspended.totalElements };
+  return {
+    total: all.totalElements,
+    active: active.totalElements,
+    suspended: suspended.totalElements,
+    locked: locked.totalElements
+  };
 }
 
 async function fetchCustomer(id: string): Promise<BackendCustomer | null> {
