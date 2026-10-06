@@ -147,9 +147,8 @@ export const ProductManagementPage: React.FC = () => {
       {/* Toast thông báo */}
       {toastMessage && (
         <div
-          className={`fixed bottom-6 right-6 z-[9999] max-w-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm font-medium border bg-white animate-in fade-in slide-in-from-bottom-2 ${
-            toastMessage.type === 'error' ? 'border-red-200 text-red-700' : 'border-emerald-200 text-emerald-800'
-          }`}
+          className={`fixed bottom-6 right-6 z-[9999] max-w-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm font-medium border bg-white animate-in fade-in slide-in-from-bottom-2 ${toastMessage.type === 'error' ? 'border-red-200 text-red-700' : 'border-emerald-200 text-emerald-800'
+            }`}
         >
           {toastMessage.type === 'error' ? (
             <Icons.AlertCircle size={18} className="text-red-500 shrink-0" />
@@ -160,44 +159,43 @@ export const ProductManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Header Phân hệ S2-05 */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">
-              Danh mục Sản phẩm
-            </h1>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
-              Chuẩn hóa SKU toàn công ty
-            </span>
-          </div>
-          <p className="mt-1 text-xs sm:text-sm text-gray-500">
-            Quản lý mã SKU duy nhất, quy cách đóng gói, đơn vị cơ sở và bảo mật giá vốn theo phân quyền RBAC.
-          </p>
+      {/* Header Phân hệ - Nút tác vụ */}
+      <div className="flex items-center justify-end gap-2.5 p-4">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={reloadAll}
+            disabled={isLoading}
+            className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 transition shadow-xs cursor-pointer min-h-[44px]"
+            title="Làm mới danh sách sản phẩm"
+          >
+            <Icons.RefreshCw size={16} className={isLoading ? 'animate-spin text-orange-600' : ''} />
+            <span>Làm mới</span>
+          </button>
+
+          {canManageProducts && (
+            <>
+              <button
+                type="button"
+                onClick={() => navigate('/products/import')}
+                className="inline-flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-sm font-semibold px-4 py-2.5 rounded-xl shadow-2xs hover:shadow-xs transition-all duration-200 min-h-[44px]"
+                title="Nhập danh mục sản phẩm từ file Excel"
+              >
+                <Icons.ClipboardList size={18} className="text-emerald-700" />
+                <span>Nhập từ Excel</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenCreate}
+                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow transition-all duration-200 min-h-[44px]"
+              >
+                <Icons.Plus size={18} />
+                <span>Thêm sản phẩm mới</span>
+              </button>
+            </>
+          )}
         </div>
-
-        {canManageProducts && (
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => navigate('/products/import')}
-              className="inline-flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-sm font-semibold px-4 py-2.5 rounded-xl shadow-2xs hover:shadow-xs transition-all duration-200 min-h-[44px]"
-              title="Nhập danh mục sản phẩm từ file Excel"
-            >
-              <Icons.ClipboardList size={18} className="text-emerald-700" />
-              <span>Nhập từ Excel</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleOpenCreate}
-              className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow transition-all duration-200 min-h-[44px]"
-            >
-              <Icons.Plus size={18} />
-              <span>Thêm sản phẩm mới</span>
-            </button>
-          </div>
-        )}
       </div>
 
 
@@ -328,9 +326,8 @@ export const ProductManagementPage: React.FC = () => {
                   return (
                     <tr
                       key={p.id}
-                      className={`transition-colors hover:bg-orange-50/40 ${
-                        isInactive ? 'bg-gray-50/60' : 'bg-white'
-                      }`}
+                      className={`transition-colors hover:bg-orange-50/40 ${isInactive ? 'bg-gray-50/60' : 'bg-white'
+                        }`}
                     >
                       {/* 1. Ảnh với fallback an toàn */}
                       <td className="py-3 px-4 text-center">

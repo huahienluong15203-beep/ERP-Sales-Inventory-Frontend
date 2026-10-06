@@ -17,8 +17,7 @@ import { AuditLogTable } from '../../components/audit/AuditLogTable';
 import { AuditLogDetailModal } from '../../components/audit/AuditLogDetailModal';
 import {
   RefreshCw,
-  FileSpreadsheet,
-  ShieldCheck
+  FileSpreadsheet
 } from '../../components/common/Icons';
 import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 
@@ -141,33 +140,17 @@ export const AuditLogPage: React.FC = () => {
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      {/* 1. Header phân hệ & Thao tác chính */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-bold tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-200">
-              Kiểm Toán & Giám Sát Hệ Thống
-            </span>
-          </div>
-          <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2.5">
-            <ShieldCheck className="text-orange-600" size={28} />
-            Nhật Ký Thao Tác Tồn Kho & Công Nợ
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-3xl">
-            Lưu vết tự động mọi hành động điều chỉnh tồn kho, kiểm kê cuối tháng bị lệch, biến động hạn mức công nợ và giá niêm yết. Dữ liệu chỉ đọc và bất biến phục vụ đối soát kiểm toán.
-          </p>
-        </div>
-
-        {/* Nút tác vụ: Tải lại & Xuất Excel */}
-        <div className="flex items-center gap-2.5 self-start md:self-center">
+      {/* 1. Nút tác vụ chính */}
+      <div className="flex items-center justify-end gap-2.5">
           <button
             type="button"
             onClick={loadData}
             disabled={loading}
-            title="Tải lại nhật ký"
-            className="p-2.5 bg-white border border-slate-200 text-slate-600 hover:text-orange-600 rounded-xl hover:bg-slate-50 transition shadow-xs cursor-pointer"
+            title="Làm mới nhật ký thao tác"
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white border border-slate-200 text-slate-700 hover:text-orange-600 rounded-xl hover:bg-slate-50 text-xs sm:text-sm font-semibold transition shadow-xs cursor-pointer min-h-[44px]"
           >
-            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <span>Làm mới</span>
           </button>
 
           <button
@@ -179,7 +162,6 @@ export const AuditLogPage: React.FC = () => {
             <span>Xuất Excel Kiểm Toán</span>
           </button>
         </div>
-      </div>
 
       {/* 2. Thẻ KPI thống kê biến động */}
       <AuditLogStats

@@ -489,18 +489,12 @@ export const OrderCreatePage: React.FC = () => {
   return (
     <div className="space-y-5 animate-in fade-in duration-300 pb-10">
       {/* 1. Header Trang & Các Phím Thao Tác Nhanh */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className=" p-4 sm:p-5 rounded-2xl  flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-orange-500 to-[#EE4D2D] text-white flex items-center justify-center shadow-md shadow-orange-500/25 shrink-0">
-            <ShoppingCart size={22} />
-          </div>
+
           <div>
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
-              Tạo Đơn Hàng Cho Đại Lý
-            </h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Gõ đơn nhanh tại cửa hàng đại lý, tự động áp bảng giá & chiết khấu sản lượng
-            </p>
+
+
           </div>
         </div>
 
@@ -660,7 +654,7 @@ export const OrderCreatePage: React.FC = () => {
               <div className="flex justify-between text-emerald-700 font-medium">
                 <span className="flex items-center gap-1">
                   <Tag size={12} />
-                  <span>Chiết khấu sản lượng (Best-Deal Rule):</span>
+                  <span>Chiết khấu sản lượng </span>
                 </span>
                 <span className="font-mono font-bold">
                   -{formatCurrencyVND(totals.discountAmount)}
@@ -706,11 +700,10 @@ export const OrderCreatePage: React.FC = () => {
                 type="button"
                 onClick={handleSubmitOrder}
                 disabled={Boolean(disabledReason) || isSubmitting}
-                className={`h-10 px-5 rounded-xl font-bold text-xs sm:text-sm text-white flex items-center gap-1.5 transition-all shadow-md ${
-                  disabledReason
-                    ? 'bg-gray-400 cursor-not-allowed opacity-70'
-                    : 'bg-gradient-to-r from-[#FF6A00] to-[#EE4D2D] hover:opacity-95 shadow-orange-500/25 active:scale-98'
-                }`}
+                className={`h-10 px-5 rounded-xl font-bold text-xs sm:text-sm text-white flex items-center gap-1.5 transition-all shadow-md ${disabledReason
+                  ? 'bg-gray-400 cursor-not-allowed opacity-70'
+                  : 'bg-gradient-to-r from-[#FF6A00] to-[#EE4D2D] hover:opacity-95 shadow-orange-500/25 active:scale-98'
+                  }`}
               >
                 <CheckCircle2 size={16} />
                 <span>{isSubmitting ? 'Đang xử lý...' : 'Chốt Đơn Đặt Hàng'}</span>

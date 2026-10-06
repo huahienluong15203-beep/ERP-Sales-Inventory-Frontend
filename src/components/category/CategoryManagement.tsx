@@ -12,6 +12,7 @@ import {
   updateCategory,
   type CategoryWithCount
 } from '../../services/categoryApi';
+import { RefreshCw } from '../common/Icons';
 
 // Chỉ ADMIN và SALES_MANAGER được ghi (backend @PreAuthorize). Các vai trò khác chỉ xem.
 const WRITE_ROLES = new Set(['ADMIN', 'SALES_MANAGER']);
@@ -441,11 +442,10 @@ export const CategoryManagement: React.FC = () => {
             <div key={cat.id} className="group">
               <div
                 onClick={() => setSelectedCategoryId(cat.id)}
-                className={`flex items-center justify-between p-2 rounded-xl cursor-pointer transition-all text-xs select-none ${
-                  isSelected
-                    ? 'bg-orange-50 border border-orange-200 text-orange-950 font-semibold shadow-xs'
-                    : 'hover:bg-slate-100 text-slate-700'
-                }`}
+                className={`flex items-center justify-between p-2 rounded-xl cursor-pointer transition-all text-xs select-none ${isSelected
+                  ? 'bg-orange-50 border border-orange-200 text-orange-950 font-semibold shadow-xs'
+                  : 'hover:bg-slate-100 text-slate-700'
+                  }`}
               >
                 {/* Phần bên trái: Nút expand + Icon + Tên nhóm + Badge Cấp */}
                 <div className="flex items-center gap-1.5 min-w-0 flex-1 pr-2">
@@ -476,13 +476,12 @@ export const CategoryManagement: React.FC = () => {
 
                   {/* Icon phân biệt cấp độ */}
                   <span
-                    className={`inline-flex items-center justify-center w-5 h-5 rounded-md text-[10px] font-bold ${
-                      cat.level === 1
-                        ? 'bg-orange-600 text-white shadow-xs'
-                        : cat.level === 2
+                    className={`inline-flex items-center justify-center w-5 h-5 rounded-md text-[10px] font-bold ${cat.level === 1
+                      ? 'bg-orange-600 text-white shadow-xs'
+                      : cat.level === 2
                         ? 'bg-amber-100 text-amber-800'
                         : 'bg-slate-100 text-slate-600'
-                    }`}
+                      }`}
                     title={`Cấp ${cat.level}: ${levelLabel(cat.level)}`}
                   >
                     L{cat.level}
@@ -502,9 +501,8 @@ export const CategoryManagement: React.FC = () => {
                   {/* Số SKU tổng hợp của nhánh (doanh số chưa có dữ liệu) */}
                   <div className="text-right">
                     <span
-                      className={`text-[11px] font-bold font-mono block ${
-                        isSelected ? 'text-orange-600' : 'text-slate-700'
-                      }`}
+                      className={`text-[11px] font-bold font-mono block ${isSelected ? 'text-orange-600' : 'text-slate-700'
+                        }`}
                       title="Số mã hàng cộng dồn của toàn bộ ngành/nhóm"
                     >
                       {rollup.totalProductCount} SKU
@@ -516,63 +514,62 @@ export const CategoryManagement: React.FC = () => {
 
                   {/* Menu thao tác nhanh (chỉ ADMIN / SALES_MANAGER) */}
                   {canManage && (
-                  <div className="flex items-center gap-0.5 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                    {/* Nút thêm nhóm con (tối đa CATEGORY_MAX_LEVEL cấp) */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenAddChild(cat);
-                      }}
-                      disabled={!canAddChild}
-                      className="p-1 hover:bg-slate-200 text-slate-600 hover:text-orange-600 rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                      title={canAddChild ? 'Thêm nhóm con cấp dưới' : `Đã đạt tối đa ${CATEGORY_MAX_LEVEL} cấp`}
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                      </svg>
-                    </button>
+                    <div className="flex items-center gap-0.5 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* Nút thêm nhóm con (tối đa CATEGORY_MAX_LEVEL cấp) */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenAddChild(cat);
+                        }}
+                        disabled={!canAddChild}
+                        className="p-1 hover:bg-slate-200 text-slate-600 hover:text-orange-600 rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={canAddChild ? 'Thêm nhóm con cấp dưới' : `Đã đạt tối đa ${CATEGORY_MAX_LEVEL} cấp`}
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                        </svg>
+                      </button>
 
-                    {/* Sửa thông tin nhóm */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenEdit(cat);
-                      }}
-                      className="p-1 hover:bg-slate-200 text-slate-600 hover:text-blue-600 rounded cursor-pointer"
-                      title="Chỉnh sửa nhóm hàng"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
+                      {/* Sửa thông tin nhóm */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEdit(cat);
+                        }}
+                        className="p-1 hover:bg-slate-200 text-slate-600 hover:text-blue-600 rounded cursor-pointer"
+                        title="Chỉnh sửa nhóm hàng"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
 
-                    {/* Xoá nhóm (Quy tắc: còn sản phẩm thì chặn) */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteCategoryClick(cat);
-                      }}
-                      className={`p-1 rounded cursor-pointer ${
-                        deleteBlocked
+                      {/* Xoá nhóm (Quy tắc: còn sản phẩm thì chặn) */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteCategoryClick(cat);
+                        }}
+                        className={`p-1 rounded cursor-pointer ${deleteBlocked
                           ? 'text-slate-300 hover:text-red-500 hover:bg-red-50'
                           : 'text-red-500 hover:bg-red-100'
-                      }`}
-                      title={
-                        rollup.totalProductCount > 0
-                          ? `Không thể xoá: Nhóm còn ${rollup.totalProductCount} sản phẩm`
-                          : childCount > 0
-                          ? `Không thể xoá: Nhóm còn ${childCount} nhóm con`
-                          : 'Xoá nhóm hàng trống'
-                      }
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
+                          }`}
+                        title={
+                          rollup.totalProductCount > 0
+                            ? `Không thể xoá: Nhóm còn ${rollup.totalProductCount} sản phẩm`
+                            : childCount > 0
+                              ? `Không thể xoá: Nhóm còn ${childCount} nhóm con`
+                              : 'Xoá nhóm hàng trống'
+                        }
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -599,13 +596,12 @@ export const CategoryManagement: React.FC = () => {
       {/* Toast thông báo nhanh */}
       {toastMessage && (
         <div
-          className={`fixed top-4 right-4 z-[10000] px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 border text-xs font-medium animate-bounce transition-all ${
-            toastMessage.type === 'error'
-              ? 'bg-red-50 border-red-200 text-red-700'
-              : toastMessage.type === 'info'
+          className={`fixed top-4 right-4 z-[10000] px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 border text-xs font-medium animate-bounce transition-all ${toastMessage.type === 'error'
+            ? 'bg-red-50 border-red-200 text-red-700'
+            : toastMessage.type === 'info'
               ? 'bg-blue-50 border-blue-200 text-blue-700'
               : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-          }`}
+            }`}
         >
           <div className="w-2 h-2 rounded-full bg-current" />
           <span>{toastMessage.text}</span>
@@ -619,53 +615,39 @@ export const CategoryManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Header chỉ dẫn vai trò Quản lý kinh doanh */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-800">
-            Quản Lý Nhóm Hàng Nhiều Cấp & Phân Tích Doanh Số Ngành Hàng
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Theo dõi doanh số theo ngành hàng, phân nhóm sản phẩm, điều chuyển mã hàng và bảo toàn toàn vẹn dữ liệu danh mục.
-          </p>
-          {!canManage && (
-            <p className="text-[11px] text-amber-700 mt-1">
-              Bạn đang ở chế độ chỉ xem. Chỉ Quản trị viên và Quản lý kinh doanh được thêm/sửa/xoá nhóm và chuyển sản phẩm.
-            </p>
-          )}
-        </div>
-
-        {/* Nút thêm Ngành hàng cấp 1 mới */}
+      {/* Nút thao tác */}
+      <div className="p-4 rounded-2xl flex items-center justify-end gap-2">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => refreshAll()}
             disabled={loadingTree}
-            className="px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all cursor-pointer disabled:opacity-50"
-            title="Tải lại dữ liệu từ máy chủ"
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:text-[#F85606] text-slate-700 font-semibold text-xs sm:text-sm transition-all cursor-pointer shadow-xs min-h-[44px] disabled:opacity-50"
+            title="Làm mới dữ liệu từ máy chủ"
           >
-            {loadingTree ? 'Đang tải...' : 'Tải lại'}
+            <RefreshCw size={16} className={loadingTree ? 'animate-spin text-orange-600' : ''} />
+            <span>Làm mới</span>
           </button>
           {canManage && (
-          <button
-            type="button"
-            onClick={() =>
-              setEditingCategory({
-                isNew: true,
-                parentId: null,
-                level: 1,
-                code: '',
-                name: '',
-                description: ''
-              })
-            }
-            className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-md shadow-orange-500/20 flex items-center gap-1.5 transition-all cursor-pointer"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>Tạo Ngành Hàng Mới (Cấp 1)</span>
-          </button>
+            <button
+              type="button"
+              onClick={() =>
+                setEditingCategory({
+                  isNew: true,
+                  parentId: null,
+                  level: 1,
+                  code: '',
+                  name: '',
+                  description: ''
+                })
+              }
+              className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-md shadow-orange-500/20 flex items-center gap-1.5 transition-all cursor-pointer min-h-[42px]"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Tạo Ngành Hàng Mới (Cấp 1)</span>
+            </button>
           )}
         </div>
       </div>
@@ -763,11 +745,10 @@ export const CategoryManagement: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setSelectedCategoryId(crumb.id)}
-                        className={`font-medium hover:underline cursor-pointer ${
-                          crumb.id === selectedCategory.id
-                            ? 'text-orange-600 font-bold'
-                            : 'text-slate-600'
-                        }`}
+                        className={`font-medium hover:underline cursor-pointer ${crumb.id === selectedCategory.id
+                          ? 'text-orange-600 font-bold'
+                          : 'text-slate-600'
+                          }`}
                       >
                         {crumb.name}
                       </button>
@@ -795,52 +776,51 @@ export const CategoryManagement: React.FC = () => {
                   </div>
 
                   {canManage && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEdit(selectedCategory)}
-                      className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
-                      title="Sửa tên và mô tả nhóm"
-                    >
-                      <span>Sửa</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenAddChild(selectedCategory)}
-                      disabled={selectedCategory.level >= CATEGORY_MAX_LEVEL}
-                      className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                      title={
-                        selectedCategory.level >= CATEGORY_MAX_LEVEL
-                          ? `Đã đạt tối đa ${CATEGORY_MAX_LEVEL} cấp`
-                          : 'Thêm nhóm con dưới nhóm này'
-                      }
-                    >
-                      <svg className="w-3.5 h-3.5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                      </svg>
-                      <span>Thêm Nhóm Con</span>
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(selectedCategory)}
+                        className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
+                        title="Sửa tên và mô tả nhóm"
+                      >
+                        <span>Sửa</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenAddChild(selectedCategory)}
+                        disabled={selectedCategory.level >= CATEGORY_MAX_LEVEL}
+                        className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={
+                          selectedCategory.level >= CATEGORY_MAX_LEVEL
+                            ? `Đã đạt tối đa ${CATEGORY_MAX_LEVEL} cấp`
+                            : 'Thêm nhóm con dưới nhóm này'
+                        }
+                      >
+                        <svg className="w-3.5 h-3.5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span>Thêm Nhóm Con</span>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteCategoryClick(selectedCategory)}
-                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                        activeDeleteBlocked
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCategoryClick(selectedCategory)}
+                        className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${activeDeleteBlocked
                           ? 'border-slate-200 text-slate-400 hover:bg-slate-50'
                           : 'border-red-200 text-red-600 hover:bg-red-50'
-                      }`}
-                      title={
-                        activeDeleteBlocked
-                          ? 'Chặn xoá vì nhóm đang có sản phẩm hoặc nhóm con'
-                          : 'Xoá nhóm hàng này'
-                      }
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      <span>Xoá Nhóm</span>
-                    </button>
-                  </div>
+                          }`}
+                        title={
+                          activeDeleteBlocked
+                            ? 'Chặn xoá vì nhóm đang có sản phẩm hoặc nhóm con'
+                            : 'Xoá nhóm hàng này'
+                        }
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>Xoá Nhóm</span>
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -926,11 +906,10 @@ export const CategoryManagement: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setViewScope('BRANCH')}
-                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                          viewScope === 'BRANCH'
-                            ? 'bg-white text-slate-900 font-bold shadow-xs'
-                            : 'text-slate-500 hover:text-slate-800'
-                        }`}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${viewScope === 'BRANCH'
+                          ? 'bg-white text-slate-900 font-bold shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                          }`}
                         title="Bao gồm cả sản phẩm ở các phân nhóm con"
                       >
                         Toàn bộ nhánh ({activeRollup?.totalProductCount || 0})
@@ -938,11 +917,10 @@ export const CategoryManagement: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setViewScope('DIRECT')}
-                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                          viewScope === 'DIRECT'
-                            ? 'bg-white text-slate-900 font-bold shadow-xs'
-                            : 'text-slate-500 hover:text-slate-800'
-                        }`}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${viewScope === 'DIRECT'
+                          ? 'bg-white text-slate-900 font-bold shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                          }`}
                         title="Chỉ sản phẩm gắn trực tiếp tại node này"
                       >
                         Gắn trực tiếp ({activeRollup?.directProductCount || 0})
@@ -1039,19 +1017,19 @@ export const CategoryManagement: React.FC = () => {
                                 —
                               </td>
                               {canManage && (
-                              <td className="py-2.5 px-3 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenMoveModal(prod)}
-                                  className="px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold text-[11px] border border-orange-200 transition-all cursor-pointer inline-flex items-center gap-1"
-                                  title="Chuyển sản phẩm sang nhóm hàng khác"
-                                >
-                                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                                  </svg>
-                                  <span>Chuyển Nhóm</span>
-                                </button>
-                              </td>
+                                <td className="py-2.5 px-3 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenMoveModal(prod)}
+                                    className="px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold text-[11px] border border-orange-200 transition-all cursor-pointer inline-flex items-center gap-1"
+                                    title="Chuyển sản phẩm sang nhóm hàng khác"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                    </svg>
+                                    <span>Chuyển Nhóm</span>
+                                  </button>
+                                </td>
                               )}
                             </tr>
                           );
@@ -1180,13 +1158,13 @@ export const CategoryManagement: React.FC = () => {
                   {deleteBlockedInfo.reason}
                 </p>
                 {deleteBlockedInfo.productCount > 0 && (
-                <div className="mt-3 p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700 space-y-1">
-                  <div className="font-semibold">Hành động khắc phục:</div>
-                  <p>
-                    Vui lòng sử dụng tính năng <strong>"Chuyển nhóm"</strong> để di chuyển toàn bộ{' '}
-                    <span className="font-bold underline">{deleteBlockedInfo.productCount} sản phẩm</span> sang nhóm hàng khác trước khi thực hiện xoá nhóm.
-                  </p>
-                </div>
+                  <div className="mt-3 p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700 space-y-1">
+                    <div className="font-semibold">Hành động khắc phục:</div>
+                    <p>
+                      Vui lòng sử dụng tính năng <strong>"Chuyển nhóm"</strong> để di chuyển toàn bộ{' '}
+                      <span className="font-bold underline">{deleteBlockedInfo.productCount} sản phẩm</span> sang nhóm hàng khác trước khi thực hiện xoá nhóm.
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

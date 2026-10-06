@@ -275,14 +275,14 @@ export const AgencyManagementPage: React.FC = () => {
   // S3-06: Nhân viên kinh doanh chỉ nhìn thấy đại lý mình phụ trách
   const roleFilteredAgencies = isSalesRep
     ? agencies.filter(
-        (a) =>
-          (user?.id != null && String(a.assignedRepId) === String(user.id)) ||
-          (user?.fullName && a.assignedRepName?.toLowerCase() === user.fullName.toLowerCase()) ||
-          (user?.username === 'sales_rep' ? a.assignedRepId === 'REP_001' : false) ||
-          (user?.username === 'sales_rep_1' && a.assignedRepId === 'REP_001') ||
-          (user?.username === 'sales_rep_2' && a.assignedRepId === 'REP_002') ||
-          (user?.username === 'sales_rep_3' && a.assignedRepId === 'REP_003')
-      )
+      (a) =>
+        (user?.id != null && String(a.assignedRepId) === String(user.id)) ||
+        (user?.fullName && a.assignedRepName?.toLowerCase() === user.fullName.toLowerCase()) ||
+        (user?.username === 'sales_rep' ? a.assignedRepId === 'REP_001' : false) ||
+        (user?.username === 'sales_rep_1' && a.assignedRepId === 'REP_001') ||
+        (user?.username === 'sales_rep_2' && a.assignedRepId === 'REP_002') ||
+        (user?.username === 'sales_rep_3' && a.assignedRepId === 'REP_003')
+    )
     : agencies;
 
   // Lọc khoá giao dịch và tab lọc nhanh đã làm ở Backend (xem loadData)
@@ -291,8 +291,8 @@ export const AgencyManagementPage: React.FC = () => {
   // Mới gõ 1 ký tự: lọc tại chỗ trên danh sách đang hiển thị, không gọi API (hỗ trợ tìm cả địa chỉ khi đứng ngoài đường)
   const visibleAgencies = localKeyword
     ? quickTabFilteredAgencies.filter((a) =>
-        matchesKeyword(localKeyword, a.code, a.name, a.taxCode, a.phone, a.assignedRepName, a.address)
-      )
+      matchesKeyword(localKeyword, a.code, a.name, a.taxCode, a.phone, a.assignedRepName, a.address)
+    )
     : quickTabFilteredAgencies;
 
   // Reset bộ lọc
@@ -379,23 +379,9 @@ export const AgencyManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* 1. Header Trang */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-xs">
-        <div className="flex items-center gap-4">
-          <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-orange-500 to-[#EE4D2D] text-white flex items-center justify-center shadow-lg shadow-orange-500/25">
-            <Building2 size={28} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-gray-900">Quản Lý Hồ Sơ Đại Lý</h1>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Danh sách khách hàng & đại lý chuẩn hóa tập trung cho Kế toán công nợ & Quản lý bán hàng
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 self-end sm:self-auto">
+      {/* 1. Header Trang - Nút tác vụ */}
+      <div className="flex items-center justify-end gap-2.5  p-4">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => loadData()}
             disabled={loading}
@@ -453,11 +439,10 @@ export const AgencyManagementPage: React.FC = () => {
           </div>
           <button
             onClick={() => setSelectedLockFilter(selectedLockFilter === 'LOCKED' ? '' : 'LOCKED')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer ${
-              selectedLockFilter === 'LOCKED'
-                ? 'bg-rose-600 text-white hover:bg-rose-700 shadow-rose-200'
-                : 'bg-white text-rose-700 border border-rose-300 hover:bg-rose-100/50'
-            }`}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer ${selectedLockFilter === 'LOCKED'
+              ? 'bg-rose-600 text-white hover:bg-rose-700 shadow-rose-200'
+              : 'bg-white text-rose-700 border border-rose-300 hover:bg-rose-100/50'
+              }`}
           >
             {selectedLockFilter === 'LOCKED' ? '✕ Bỏ lọc khóa' : '🔍 Lọc đại lý bị khóa'}
           </button>
@@ -624,11 +609,10 @@ export const AgencyManagementPage: React.FC = () => {
           <button
             type="button"
             onClick={() => { setRouteQuickFilter('ALL'); setPage(0); }}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 ${
-              routeQuickFilter === 'ALL'
-                ? 'bg-gray-900 text-white shadow-xs'
-                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-            }`}
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 ${routeQuickFilter === 'ALL'
+              ? 'bg-gray-900 text-white shadow-xs'
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
           >
             Tất cả ({totalElements})
           </button>
@@ -636,11 +620,10 @@ export const AgencyManagementPage: React.FC = () => {
           <button
             type="button"
             onClick={() => { setRouteQuickFilter('ACTIVE'); setPage(0); }}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-              routeQuickFilter === 'ACTIVE'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50'
-            }`}
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${routeQuickFilter === 'ACTIVE'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50'
+              }`}
           >
             <CheckCircle2 size={13} />
             <span>Đang hoạt động ({activeCount})</span>
@@ -649,11 +632,10 @@ export const AgencyManagementPage: React.FC = () => {
           <button
             type="button"
             onClick={() => { setRouteQuickFilter('LOCKED'); setPage(0); }}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-              routeQuickFilter === 'LOCKED'
-                ? 'bg-rose-600 text-white shadow-xs'
-                : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
-            }`}
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${routeQuickFilter === 'LOCKED'
+              ? 'bg-rose-600 text-white shadow-xs'
+              : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
+              }`}
           >
             <Lock size={13} />
             <span>Khóa giao dịch ({lockedCount})</span>
@@ -662,11 +644,10 @@ export const AgencyManagementPage: React.FC = () => {
           <button
             type="button"
             onClick={() => { setRouteQuickFilter('SUSPENDED'); setPage(0); }}
-            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-              routeQuickFilter === 'SUSPENDED'
-                ? 'bg-amber-600 text-white shadow-xs'
-                : 'bg-white text-amber-700 border border-amber-200 hover:bg-amber-50'
-            }`}
+            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${routeQuickFilter === 'SUSPENDED'
+              ? 'bg-amber-600 text-white shadow-xs'
+              : 'bg-white text-amber-700 border border-amber-200 hover:bg-amber-50'
+              }`}
           >
             <ShieldAlert size={13} />
             <span>Dừng giao dịch ({suspendedCount})</span>
@@ -678,11 +659,10 @@ export const AgencyManagementPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setViewMode('table')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              viewMode === 'table'
-                ? 'bg-orange-50 text-[#F85606] border border-orange-200/80 shadow-2xs'
-                : 'text-gray-500 hover:text-gray-800'
-            }`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${viewMode === 'table'
+              ? 'bg-orange-50 text-[#F85606] border border-orange-200/80 shadow-2xs'
+              : 'text-gray-500 hover:text-gray-800'
+              }`}
             title="Xem dạng bảng chi tiết (Desktop Table)"
           >
             <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -694,11 +674,10 @@ export const AgencyManagementPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setViewMode('cards')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              viewMode === 'cards'
-                ? 'bg-orange-50 text-[#F85606] border border-orange-200/80 shadow-2xs'
-                : 'text-gray-500 hover:text-gray-800'
-            }`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${viewMode === 'cards'
+              ? 'bg-orange-50 text-[#F85606] border border-orange-200/80 shadow-2xs'
+              : 'text-gray-500 hover:text-gray-800'
+              }`}
             title="Chế độ danh thiếp / Tuyến ngoài đường cho Nhân viên kinh doanh (S3-08)"
           >
             <Navigation size={13} />
@@ -736,369 +715,365 @@ export const AgencyManagementPage: React.FC = () => {
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                <th className="py-3.5 px-4">Mã & Tên Đại Lý</th>
-                <th className="py-3.5 px-4">Nhóm Khách Hàng / Bảng Giá</th>
-                <th className="py-3.5 px-4">Khu Vực & Phụ Trách</th>
-                <th className="py-3.5 px-4">Giao Dịch & Công Nợ</th>
-                <th className="py-3.5 px-4 text-center">Trạng Thái</th>
-                <th className="py-3.5 px-4 text-right">Thao Tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 text-xs">
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-gray-400">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <RefreshCw size={24} className="animate-spin text-[#F85606]" />
-                      <span>Đang tải danh sách hồ sơ đại lý...</span>
-                    </div>
-                  </td>
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  <th className="py-3.5 px-4">Mã & Tên Đại Lý</th>
+                  <th className="py-3.5 px-4">Nhóm Khách Hàng / Bảng Giá</th>
+                  <th className="py-3.5 px-4">Khu Vực & Phụ Trách</th>
+                  <th className="py-3.5 px-4">Giao Dịch & Công Nợ</th>
+                  <th className="py-3.5 px-4 text-center">Trạng Thái</th>
+                  <th className="py-3.5 px-4 text-right">Thao Tác</th>
                 </tr>
-              ) : visibleAgencies.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-gray-400">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Building2 size={36} className="text-gray-300" />
-                      <strong className="text-gray-700 text-sm">Không tìm thấy đại lý nào phù hợp</strong>
-                      <span className="text-xs">Thử điều chỉnh lại từ khóa hoặc xóa bộ lọc</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                visibleAgencies.map((agency, index) => {
-                  const isSuspended = agency.status === 'SUSPENDED';
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-xs">
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-gray-400">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <RefreshCw size={24} className="animate-spin text-[#F85606]" />
+                        <span>Đang tải danh sách hồ sơ đại lý...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : visibleAgencies.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-gray-400">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Building2 size={36} className="text-gray-300" />
+                        <strong className="text-gray-700 text-sm">Không tìm thấy đại lý nào phù hợp</strong>
+                        <span className="text-xs">Thử điều chỉnh lại từ khóa hoặc xóa bộ lọc</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  visibleAgencies.map((agency, index) => {
+                    const isSuspended = agency.status === 'SUSPENDED';
 
-                  return (
-                    <tr
-                      key={agency.id}
-                      className={`hover:bg-gray-50/70 transition-colors ${isSuspended ? 'bg-amber-50/20' : ''
-                        }`}
-                    >
-                      {/* Cột 1: Mã & Tên đại lý */}
-                      <td className="py-4 px-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-md font-mono font-bold text-[11px] bg-gray-100 text-gray-800 border border-gray-200">
-                              {agency.code}
-                            </span>
-                            <strong className="text-gray-900 text-sm font-semibold">
-                              {agency.name}
-                            </strong>
-                          </div>
-                          <div className="flex items-center gap-3 text-gray-500 text-[11px]">
-                            <span>MST: <strong className="text-gray-700 font-mono">{agency.taxCode}</strong></span>
-                            {agency.phone && (
-                              <span className="flex items-center gap-1">
-                                <Phone size={12} className="text-gray-400" />
-                                {agency.phone}
+                    return (
+                      <tr
+                        key={agency.id}
+                        className={`hover:bg-gray-50/70 transition-colors ${isSuspended ? 'bg-amber-50/20' : ''
+                          }`}
+                      >
+                        {/* Cột 1: Mã & Tên đại lý */}
+                        <td className="py-4 px-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-0.5 rounded-md font-mono font-bold text-[11px] bg-gray-100 text-gray-800 border border-gray-200">
+                                {agency.code}
                               </span>
-                            )}
-                          </div>
-                          {agency.address && (
-                            <p className="text-[11px] text-gray-400 line-clamp-1 max-w-sm">
-                              {agency.address}
-                            </p>
-                          )}
-                          <div className="pt-0.5">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenDeliveryPoints(agency)}
-                              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-orange-50 text-[#F85606] hover:bg-orange-100 border border-orange-200 transition-colors cursor-pointer"
-                              title="Xem và quản lý các điểm giao hàng của đại lý"
-                            >
-                              <Truck size={12} />
-                              <span>{agency.deliveryPointCount ?? 0} kho / điểm giao</span>
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Cột 2: Nhóm khách hàng & Bảng giá áp dụng tự động */}
-                      <td className="py-4 px-4">
-                        <div className="space-y-1.5">
-                          <div className="text-gray-800 font-medium text-[11px]">
-                            {agency.customerGroupName}
-                          </div>
-
-                          {/* Bảng giá tự động ánh xạ */}
-                          <div
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border"
-                            style={{
-                              backgroundColor: agency.pricingTier.badgeBg,
-                              color: agency.pricingTier.badgeColor,
-                              borderColor: 'currentColor'
-                            }}
-                          >
-                            <BadgeDollarSign size={13} />
-                            <span>{agency.pricingTier.name}</span>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Cột 3: Khu vực & Người phụ trách (S3-06) */}
-                      <td className="py-4 px-4">
-                        <div className="space-y-1.5 text-[11px]">
-                          <div className="flex items-center gap-1.5 text-gray-700 font-medium">
-                            <MapPin size={13} className="text-blue-500 shrink-0" />
-                            <span>{agency.regionName}</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-1 text-gray-500 bg-gray-50/80 px-2 py-1 rounded-lg border border-gray-100">
-                            <div className="flex items-center gap-1.5">
-                              <Users size={12} className="text-[#F85606] shrink-0" />
-                              <span>Sales: <strong className="text-gray-800">{agency.assignedRepName || 'Chưa gán'}</strong></span>
+                              <strong className="text-gray-900 text-sm font-semibold">
+                                {agency.name}
+                              </strong>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenHistory(agency)}
-                              className="text-[10px] text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5 cursor-pointer font-medium"
-                              title="Xem lịch sử phân công người phụ trách"
-                            >
-                              <History size={11} />
-                              <span>Lịch sử</span>
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Cột 4: Lịch sử giao dịch & Công nợ */}
-                      <td className="py-4 px-4">
-                        <div className="space-y-1 text-[11px]">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-gray-500">Đơn hàng:</span>
-                            <span className={`font-bold ${agency.transactionCount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
-                              {agency.transactionCount} giao dịch
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Công nợ: </span>
-                            <strong className="text-red-600 font-mono">
-                              {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(agency.totalDebt)}
-                            </strong>
-                          </div>
-                          <div className="pt-0.5">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenCreditLimit(agency)}
-                              className="inline-flex items-center gap-1 text-[10px] text-gray-500 hover:text-[#F85606] cursor-pointer hover:underline text-left"
-                              title="Nhấn để xem lịch sử và điều chỉnh hạn mức nợ"
-                            >
-                              <span>Hạn mức: <strong className="font-mono text-gray-700">{new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(agency.creditLimit)}đ</strong></span>
-                              <span>•</span>
-                              <span>Tối đa: <strong className="text-blue-600 font-semibold">{agency.maxDebtDays || 30} ngày</strong></span>
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Cột 5: Trạng thái (S3-03 & S3-07) */}
-                      <td className="py-4 px-4 text-center">
-                        {agency.transactionLocked ? (
-                          <div className="inline-flex flex-col items-center gap-1">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs">
-                              <Lock size={12} className="text-rose-600" />
-                              Khóa Giao Dịch
-                            </span>
-                            {agency.transactionLockReason && (
-                              <span
-                                className="text-[10px] text-rose-700 italic max-w-40 truncate block font-medium"
-                                title={`Lý do khóa: ${agency.transactionLockReason}`}
-                              >
-                                "{agency.transactionLockReason}"
-                              </span>
+                            <div className="flex items-center gap-3 text-gray-500 text-[11px]">
+                              <span>MST: <strong className="text-gray-700 font-mono">{agency.taxCode}</strong></span>
+                              {agency.phone && (
+                                <span className="flex items-center gap-1">
+                                  <Phone size={12} className="text-gray-400" />
+                                  {agency.phone}
+                                </span>
+                              )}
+                            </div>
+                            {agency.address && (
+                              <p className="text-[11px] text-gray-400 line-clamp-1 max-w-sm">
+                                {agency.address}
+                              </p>
                             )}
-                          </div>
-                        ) : isSuspended ? (
-                          <div className="inline-flex flex-col items-center gap-1">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                              <ShieldAlert size={12} />
-                              Dừng Giao Dịch
-                            </span>
-                            {agency.suspendReason && (
-                              <span
-                                className="text-[10px] text-amber-700 italic max-w-36 truncate block"
-                                title={agency.suspendReason}
+                            <div className="pt-0.5">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDeliveryPoints(agency)}
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-orange-50 text-[#F85606] hover:bg-orange-100 border border-orange-200 transition-colors cursor-pointer"
+                                title="Xem và quản lý các điểm giao hàng của đại lý"
                               >
-                                "{agency.suspendReason}"
-                              </span>
-                            )}
+                                <Truck size={12} />
+                                <span>{agency.deliveryPointCount ?? 0} kho / điểm giao</span>
+                              </button>
+                            </div>
                           </div>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            <CheckCircle2 size={12} />
-                            Đang Hoạt Động
-                          </span>
-                        )}
-                      </td>
+                        </td>
 
-                      {/* Cột 6: Thao tác - Rút gọn chỉ còn 2-3 nút gọn gàng */}
-                      <td className="py-4 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5 agency-action-dropdown relative">
-                          {/* 1. Nút Sửa thông tin hồ sơ */}
-                          {canManageAgency && (
-                            <button
-                              onClick={() => handleOpenEdit(agency)}
-                              title="Sửa thông tin hồ sơ đại lý"
-                              className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:text-[#F85606] hover:border-orange-300 hover:bg-orange-50 transition-colors cursor-pointer"
+                        {/* Cột 2: Nhóm khách hàng & Bảng giá áp dụng tự động */}
+                        <td className="py-4 px-4">
+                          <div className="space-y-1.5">
+                            <div className="text-gray-800 font-medium text-[11px]">
+                              {agency.customerGroupName}
+                            </div>
+
+                            {/* Bảng giá tự động ánh xạ */}
+                            <div
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border"
+                              style={{
+                                backgroundColor: agency.pricingTier.badgeBg,
+                                color: agency.pricingTier.badgeColor,
+                                borderColor: 'currentColor'
+                              }}
                             >
-                              <Edit size={15} />
-                            </button>
-                          )}
+                              <BadgeDollarSign size={13} />
+                              <span>{agency.pricingTier.name}</span>
+                            </div>
+                          </div>
+                        </td>
 
-                          {/* 2. Nút Phân công người phụ trách (S3-06) */}
-                          {canManageAssignments && (
-                            <button
-                              onClick={() => handleOpenAssignRep(agency)}
-                              title="Phân công / Đổi nhân viên kinh doanh phụ trách"
-                              className="p-1.5 rounded-lg border border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300 transition-colors cursor-pointer"
-                            >
-                              <Users size={15} />
-                            </button>
-                          )}
+                        {/* Cột 3: Khu vực & Người phụ trách (S3-06) */}
+                        <td className="py-4 px-4">
+                          <div className="space-y-1.5 text-[11px]">
+                            <div className="flex items-center gap-1.5 text-gray-700 font-medium">
+                              <MapPin size={13} className="text-blue-500 shrink-0" />
+                              <span>{agency.regionName}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-1 text-gray-500 bg-gray-50/80 px-2 py-1 rounded-lg border border-gray-100">
+                              <div className="flex items-center gap-1.5">
+                                <Users size={12} className="text-[#F85606] shrink-0" />
+                                <span>Sales: <strong className="text-gray-800">{agency.assignedRepName || 'Chưa gán'}</strong></span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenHistory(agency)}
+                                className="text-[10px] text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5 cursor-pointer font-medium"
+                                title="Xem lịch sử phân công người phụ trách"
+                              >
+                                <History size={11} />
+                                <span>Lịch sử</span>
+                              </button>
+                            </div>
+                          </div>
+                        </td>
 
-                          {/* 3. Nút Menu Thao Tác Khác (...) */}
-                          <div className="relative">
-                            <button
-                              type="button"
-                              onClick={() => setOpenMenuAgencyId(openMenuAgencyId === agency.id ? null : agency.id)}
-                              title="Thao tác khác"
-                              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                                openMenuAgencyId === agency.id
+                        {/* Cột 4: Lịch sử giao dịch & Công nợ */}
+                        <td className="py-4 px-4">
+                          <div className="space-y-1 text-[11px]">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-gray-500">Đơn hàng:</span>
+                              <span className={`font-bold ${agency.transactionCount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+                                {agency.transactionCount} giao dịch
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Công nợ: </span>
+                              <strong className="text-red-600 font-mono">
+                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(agency.totalDebt)}
+                              </strong>
+                            </div>
+                            <div className="pt-0.5">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenCreditLimit(agency)}
+                                className="inline-flex items-center gap-1 text-[10px] text-gray-500 hover:text-[#F85606] cursor-pointer hover:underline text-left"
+                                title="Nhấn để xem lịch sử và điều chỉnh hạn mức nợ"
+                              >
+                                <span>Hạn mức: <strong className="font-mono text-gray-700">{new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(agency.creditLimit)}đ</strong></span>
+                                <span>•</span>
+                                <span>Tối đa: <strong className="text-blue-600 font-semibold">{agency.maxDebtDays || 30} ngày</strong></span>
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Cột 5: Trạng thái (S3-03 & S3-07) */}
+                        <td className="py-4 px-4 text-center">
+                          {agency.transactionLocked ? (
+                            <div className="inline-flex flex-col items-center gap-1">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs">
+                                <Lock size={12} className="text-rose-600" />
+                                Khóa Giao Dịch
+                              </span>
+                              {agency.transactionLockReason && (
+                                <span
+                                  className="text-[10px] text-rose-700 italic max-w-40 truncate block font-medium"
+                                  title={`Lý do khóa: ${agency.transactionLockReason}`}
+                                >
+                                  "{agency.transactionLockReason}"
+                                </span>
+                              )}
+                            </div>
+                          ) : isSuspended ? (
+                            <div className="inline-flex flex-col items-center gap-1">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                <ShieldAlert size={12} />
+                                Dừng Giao Dịch
+                              </span>
+                              {agency.suspendReason && (
+                                <span
+                                  className="text-[10px] text-amber-700 italic max-w-36 truncate block"
+                                  title={agency.suspendReason}
+                                >
+                                  "{agency.suspendReason}"
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              <CheckCircle2 size={12} />
+                              Đang Hoạt Động
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Cột 6: Thao tác - Rút gọn chỉ còn 2-3 nút gọn gàng */}
+                        <td className="py-4 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5 agency-action-dropdown relative">
+                            {/* 1. Nút Sửa thông tin hồ sơ */}
+                            {canManageAgency && (
+                              <button
+                                onClick={() => handleOpenEdit(agency)}
+                                title="Sửa thông tin hồ sơ đại lý"
+                                className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:text-[#F85606] hover:border-orange-300 hover:bg-orange-50 transition-colors cursor-pointer"
+                              >
+                                <Edit size={15} />
+                              </button>
+                            )}
+
+                            {/* 2. Nút Phân công người phụ trách (S3-06) */}
+                            {canManageAssignments && (
+                              <button
+                                onClick={() => handleOpenAssignRep(agency)}
+                                title="Phân công / Đổi nhân viên kinh doanh phụ trách"
+                                className="p-1.5 rounded-lg border border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300 transition-colors cursor-pointer"
+                              >
+                                <Users size={15} />
+                              </button>
+                            )}
+
+                            {/* 3. Nút Menu Thao Tác Khác (...) */}
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={() => setOpenMenuAgencyId(openMenuAgencyId === agency.id ? null : agency.id)}
+                                title="Thao tác khác"
+                                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${openMenuAgencyId === agency.id
                                   ? 'bg-orange-50 border-orange-300 text-[#F85606]'
                                   : 'border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-800'
-                              }`}
-                            >
-                              <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="12" cy="12" r="1.5" />
-                                <circle cx="19" cy="12" r="1.5" />
-                                <circle cx="5" cy="12" r="1.5" />
-                              </svg>
-                            </button>
-
-                            {/* Dropdown menu nổi */}
-                            {openMenuAgencyId === agency.id && (
-                              <div
-                                className={`absolute right-0 ${
-                                  index >= visibleAgencies.length - 2 ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
-                                } w-52 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 text-xs divide-y divide-gray-100 text-left animate-in fade-in duration-100`}
+                                  }`}
                               >
-                                <div className="py-1">
-                                  {/* Quản lý điểm giao hàng */}
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenMenuAgencyId(null);
-                                      handleOpenDeliveryPoints(agency);
-                                    }}
-                                    className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-orange-50/60 hover:text-[#F85606] transition-colors cursor-pointer"
-                                  >
-                                    <Truck size={14} className="text-[#F85606]" />
-                                    <span>Điểm giao hàng ({agency.deliveryPointCount ?? 0})</span>
-                                  </button>
+                                <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="12" cy="12" r="1.5" />
+                                  <circle cx="19" cy="12" r="1.5" />
+                                  <circle cx="5" cy="12" r="1.5" />
+                                </svg>
+                              </button>
 
-                                  {/* Lịch sử phân công */}
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenMenuAgencyId(null);
-                                      handleOpenHistory(agency);
-                                    }}
-                                    className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-blue-50/60 hover:text-blue-600 transition-colors cursor-pointer"
-                                  >
-                                    <History size={14} className="text-blue-500" />
-                                    <span>Lịch sử phân công</span>
-                                  </button>
-
-                                  {/* Thiết lập hạn mức công nợ */}
-                                  {canManageAgency && (
+                              {/* Dropdown menu nổi */}
+                              {openMenuAgencyId === agency.id && (
+                                <div
+                                  className={`absolute right-0 ${index >= visibleAgencies.length - 2 ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+                                    } w-52 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 text-xs divide-y divide-gray-100 text-left animate-in fade-in duration-100`}
+                                >
+                                  <div className="py-1">
+                                    {/* Quản lý điểm giao hàng */}
                                     <button
                                       type="button"
                                       onClick={() => {
                                         setOpenMenuAgencyId(null);
-                                        handleOpenCreditLimit(agency);
+                                        handleOpenDeliveryPoints(agency);
+                                      }}
+                                      className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-orange-50/60 hover:text-[#F85606] transition-colors cursor-pointer"
+                                    >
+                                      <Truck size={14} className="text-[#F85606]" />
+                                      <span>Điểm giao hàng ({agency.deliveryPointCount ?? 0})</span>
+                                    </button>
+
+                                    {/* Lịch sử phân công */}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenMenuAgencyId(null);
+                                        handleOpenHistory(agency);
                                       }}
                                       className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-blue-50/60 hover:text-blue-600 transition-colors cursor-pointer"
                                     >
-                                      <CreditCard size={14} className="text-blue-500" />
-                                      <span>Hạn mức công nợ</span>
+                                      <History size={14} className="text-blue-500" />
+                                      <span>Lịch sử phân công</span>
                                     </button>
-                                  )}
-                                </div>
 
-                                <div className="py-1">
-                                  {/* Khóa / Mở giao dịch (S3-07 / SCRUM-19 - Kế toán & Quản lý) */}
-                                  {canManageAgency && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenMenuAgencyId(null);
-                                        handleOpenLockModal(agency);
-                                      }}
-                                      className={`w-full px-3 py-2 text-left flex items-center gap-2.5 transition-colors cursor-pointer ${
-                                        agency.transactionLocked
+                                    {/* Thiết lập hạn mức công nợ */}
+                                    {canManageAgency && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setOpenMenuAgencyId(null);
+                                          handleOpenCreditLimit(agency);
+                                        }}
+                                        className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-blue-50/60 hover:text-blue-600 transition-colors cursor-pointer"
+                                      >
+                                        <CreditCard size={14} className="text-blue-500" />
+                                        <span>Hạn mức công nợ</span>
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  <div className="py-1">
+                                    {/* Khóa / Mở giao dịch (S3-07 / SCRUM-19 - Kế toán & Quản lý) */}
+                                    {canManageAgency && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setOpenMenuAgencyId(null);
+                                          handleOpenLockModal(agency);
+                                        }}
+                                        className={`w-full px-3 py-2 text-left flex items-center gap-2.5 transition-colors cursor-pointer ${agency.transactionLocked
                                           ? 'text-emerald-700 hover:bg-emerald-50'
                                           : 'text-rose-700 hover:bg-rose-50'
-                                      }`}
-                                    >
-                                      {agency.transactionLocked ? (
-                                        <>
-                                          <Unlock size={14} className="text-emerald-600" />
-                                          <span className="font-semibold">Mở khóa giao dịch</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Lock size={14} className="text-rose-600" />
-                                          <span className="font-semibold">Khóa giao dịch (Nợ)</span>
-                                        </>
-                                      )}
-                                    </button>
-                                  )}
+                                          }`}
+                                      >
+                                        {agency.transactionLocked ? (
+                                          <>
+                                            <Unlock size={14} className="text-emerald-600" />
+                                            <span className="font-semibold">Mở khóa giao dịch</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Lock size={14} className="text-rose-600" />
+                                            <span className="font-semibold">Khóa giao dịch (Nợ)</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    )}
 
-                                  {/* Dừng / Mở lại giao dịch */}
-                                  {canManageAgency && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenMenuAgencyId(null);
-                                        handleOpenSuspendModal(agency);
-                                      }}
-                                      className={`w-full px-3 py-2 text-left flex items-center gap-2.5 transition-colors cursor-pointer ${
-                                        isSuspended
+                                    {/* Dừng / Mở lại giao dịch */}
+                                    {canManageAgency && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setOpenMenuAgencyId(null);
+                                          handleOpenSuspendModal(agency);
+                                        }}
+                                        className={`w-full px-3 py-2 text-left flex items-center gap-2.5 transition-colors cursor-pointer ${isSuspended
                                           ? 'text-emerald-700 hover:bg-emerald-50'
                                           : 'text-amber-700 hover:bg-amber-50'
-                                      }`}
-                                    >
-                                      {isSuspended ? (
-                                        <>
-                                          <CheckCircle2 size={14} className="text-emerald-600" />
-                                          <span>Mở lại giao dịch</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <ShieldAlert size={14} className="text-amber-600" />
-                                          <span>Dừng giao dịch</span>
-                                        </>
-                                      )}
-                                    </button>
-                                  )}
+                                          }`}
+                                      >
+                                        {isSuspended ? (
+                                          <>
+                                            <CheckCircle2 size={14} className="text-emerald-600" />
+                                            <span>Mở lại giao dịch</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <ShieldAlert size={14} className="text-amber-600" />
+                                            <span>Dừng giao dịch</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    )}
 
-                                  {/* Không có "Xóa đại lý": hồ sơ đại lý không xoá cứng, dùng Dừng giao dịch */}
+                                    {/* Không có "Xóa đại lý": hồ sơ đại lý không xoá cứng, dùng Dừng giao dịch */}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
       )}
 
       {/* Phân trang chung cho cả dạng Bảng và dạng Thẻ Tuyến */}

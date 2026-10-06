@@ -123,8 +123,8 @@ export const DashboardPage: React.FC = () => {
             const cogs = Math.round(revenue * 0.7);
             setTotalCogs(cogs);
 
-            // Chuyển đổi danh sách đơn hàng thật gần đây
-            const formattedRecent: RecentOrderItem[] = combinedOrders.slice(0, 5).map((o) => {
+            // Chuyển đổi danh sách đơn hàng thật gần đây (lấy tối đa 10 đơn gần nhất)
+            const formattedRecent: RecentOrderItem[] = combinedOrders.slice(0, 10).map((o) => {
               const status = o.status || 'DRAFT';
               let step = '1/4 bước (Đơn nháp)';
               let percent = 25;
@@ -391,30 +391,8 @@ export const DashboardPage: React.FC = () => {
                 <span style={{ fontSize: '15px', fontWeight: 700, color: '#1E3A8A' }}>
                   Lịch Sử Thay Đổi Giá Sản Phẩm
                 </span>
-                <span
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    background: '#1D4ED8',
-                    color: '#FFFFFF'
-                  }}
-                >
-                  Mới
-                </span>
-                <span
-                  style={{
-                    fontSize: '11px',
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    background: '#FEF3C7',
-                    color: '#92400E',
-                    border: '1px solid #FCD34D'
-                  }}
-                >
-                  🔒 Lịch sử bất biến
-                </span>
+
+
               </div>
               <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#1E40AF' }}>
                 Cơ sở giải thích biến động giá tháng này so với tháng trước cho Đại lý • Xem giá cũ, giá mới, người sửa và căn cứ áp dụng
@@ -443,88 +421,66 @@ export const DashboardPage: React.FC = () => {
         currentRole === 'ROLE_ACCOUNTANT' ||
         currentRole === 'ROLE_WH_MANAGER' ||
         currentRole === 'ROLE_SALES_MANAGER') && (
-        <div
-          onClick={() => navigate('/audit-logs')}
-          style={{
-            cursor: 'pointer',
-            marginBottom: '20px',
-            padding: '16px 20px',
-            background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
-            borderRadius: '16px',
-            border: '1px solid #FED7AA',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '16px'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '12px',
-                background: '#EA580C',
-                color: '#FFFFFF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}
-            >
-              <ShieldCheck size={22} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '15px', fontWeight: 700, color: '#9A3412' }}>
-                  Nhật Ký Thao Tác Tồn Kho & Công Nợ
-                </span>
-                <span
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    background: '#C2410C',
-                    color: '#FFFFFF'
-                  }}
-                >
-                  Kiểm toán
-                </span>
-                <span
-                  style={{
-                    fontSize: '11px',
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    background: '#FEF3C7',
-                    color: '#92400E',
-                    border: '1px solid #FCD34D'
-                  }}
-                >
-                  🔍 Truy vết kiểm kê lệch cuối tháng
-                </span>
-              </div>
-              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#9A3412' }}>
-                Tra cứu ai đã điều chỉnh tồn kho, kiểm kê cuối tháng bị lệch, thay đổi hạn mức công nợ và giá niêm yết
-              </p>
-            </div>
-          </div>
           <div
+            onClick={() => navigate('/audit-logs')}
             style={{
+              cursor: 'pointer',
+              marginBottom: '20px',
+              padding: '16px 20px',
+              background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
+              borderRadius: '16px',
+              border: '1px solid #FED7AA',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              color: '#EA580C',
-              fontSize: '13px',
-              fontWeight: 600,
-              whiteSpace: 'nowrap'
+              justifyContent: 'space-between',
+              gap: '16px'
             }}
           >
-            <span>Vào sổ nhật ký</span>
-            <ChevronRight size={16} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '12px',
+                  background: '#EA580C',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}
+              >
+                <ShieldCheck size={22} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#9A3412' }}>
+                    Nhật Ký Thao Tác Tồn Kho & Công Nợ
+                  </span>
+
+
+                </div>
+                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#9A3412' }}>
+                  Tra cứu ai đã điều chỉnh tồn kho, kiểm kê cuối tháng bị lệch, thay đổi hạn mức công nợ và giá niêm yết
+                </p>
+              </div>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#EA580C',
+                fontSize: '13px',
+                fontWeight: 600,
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <span>Vào sổ nhật ký</span>
+              <ChevronRight size={16} />
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* 3. KHU VỰC TIẾN ĐỘ ĐƠN HÀNG (FULL WIDTH, ĐÃ BỎ PHẦN TỶ LỆ ĐẠT KẾ HOẠCH) */}
       <div style={{ width: '100%', marginBottom: '24px' }}>
@@ -605,7 +561,15 @@ export const DashboardPage: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                maxHeight: '380px',
+                overflowY: 'auto',
+                paddingRight: '6px'
+              }}
+            >
               {recentOrders.map((order) => (
                 <div
                   key={order.id}

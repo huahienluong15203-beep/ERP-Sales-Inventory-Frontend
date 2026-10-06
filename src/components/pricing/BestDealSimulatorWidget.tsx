@@ -114,7 +114,7 @@ export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = (
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="text-base sm:text-lg font-bold text-gray-900">
-                  Mô phỏng quy tắc Chiết khấu tối ưu (Best-Deal Rule)
+                  Mô phỏng quy tắc Chiết khấu tối ưu
                 </h3>
                 {isCalculating && (
                   <span className="inline-flex items-center text-xs text-[#F85606] animate-pulse font-medium">
@@ -202,11 +202,10 @@ export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = (
                   key={quickQty}
                   type="button"
                   onClick={() => setQuantity(quickQty)}
-                  className={`rounded-md px-2 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
-                    quantity === quickQty
+                  className={`rounded-md px-2 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${quantity === quickQty
                       ? 'bg-[#F85606] text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-[#F85606]'
-                  }`}
+                    }`}
                 >
                   {quickQty}
                 </button>
@@ -387,11 +386,10 @@ export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = (
                       {simulationResult.candidatePolicies.map((cand, idx) => (
                         <tr
                           key={idx}
-                          className={`transition-colors ${
-                            cand.isBestDeal
+                          className={`transition-colors ${cand.isBestDeal
                               ? 'bg-emerald-50/60 font-semibold'
                               : 'hover:bg-orange-50/30'
-                          }`}
+                            }`}
                         >
                           <td className="px-4 py-3">
                             <div className="font-semibold text-gray-900">
@@ -403,11 +401,10 @@ export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = (
                           </td>
                           <td className="px-3 py-3">
                             <span
-                              className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold ${
-                                cand.policy.scopeType === 'SKU'
+                              className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold ${cand.policy.scopeType === 'SKU'
                                   ? 'bg-blue-50 text-blue-700 border border-blue-200'
                                   : 'bg-amber-50 text-amber-700 border border-amber-200'
-                              }`}
+                                }`}
                             >
                               {cand.policy.scopeType === 'SKU' ? 'Theo SKU' : 'Theo Nhóm hàng'}
                             </span>

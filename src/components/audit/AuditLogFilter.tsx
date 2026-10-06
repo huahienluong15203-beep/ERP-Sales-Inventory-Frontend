@@ -169,40 +169,9 @@ export const AuditLogFilter: React.FC<AuditLogFilterProps> = ({
           </div>
         </div>
 
-        {/* Nút lọc nhanh trọng tâm S2-04 */}
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() =>
-              onChange({
-                module: 'INVENTORY',
-                quickTimeRange: 'LAST_MONTH',
-                startDate: '2026-09-01',
-                endDate: '2026-09-30',
-                page: 0
-              })
-            }
-            className="px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-semibold cursor-pointer transition"
-            title="Lọc nhanh toàn bộ thao tác chỉnh tồn kho trong kỳ kiểm kê tháng 9"
-          >
-            ⚡ Lệch kiểm kê kho tháng 9/2026
-          </button>
 
-          <button
-            type="button"
-            onClick={() =>
-              onChange({
-                module: 'DEBT_LIMIT',
-                quickTimeRange: 'ALL',
-                page: 0
-              })
-            }
-            className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-semibold cursor-pointer transition"
-            title="Lọc nhanh toàn bộ điều chỉnh hạn mức nợ & số ngày nợ"
-          >
-            ⚡ Biến động công nợ đại lý
-          </button>
-        </div>
+
+
       </div>
     </div>
   );
