@@ -29,7 +29,7 @@ export const ProductManagementPage: React.FC = () => {
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, categoryCount: 0 });
   const [categoryOptions, setCategoryOptions] = useState<string[]>([...PRODUCT_CATEGORIES]);
   const [isLoading, setIsLoading] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Bộ lọc + trang lưu trên URL, vd: /products?category=Bia&status=ACTIVE&page=3
   const { params: urlParams, setParams: setUrlParams, page, size, setPage, setSize, setFilters } = useUrlPaging({
@@ -75,7 +75,7 @@ export const ProductManagementPage: React.FC = () => {
       }
     } catch (err: unknown) {
       setProducts([]);
-      showToast(err instanceof Error ? err.message : 'Không tải được danh sách sản phẩm!');
+      showToast(err instanceof Error ? err.message : 'Không tải được danh sách sản phẩm!', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -112,8 +112,8 @@ export const ProductManagementPage: React.FC = () => {
     loadStats();
   };
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage({ text: msg, type });
     setTimeout(() => setToastMessage(null), 3500);
   };
 
@@ -132,13 +132,13 @@ export const ProductManagementPage: React.FC = () => {
     if (!deactivateTarget) return;
     const res = await productService.deactivateProduct(deactivateTarget.id);
     setDeactivateTarget(null);
-    showToast(res.message);
+    showToast(res.message, res.success ? 'success' : 'error');
     if (res.success) reloadAll();
   };
 
   const handleActivate = async (p: Product) => {
     const res = await productService.activateProduct(p.id);
-    showToast(res.message);
+    showToast(res.message, res.success ? 'success' : 'error');
     if (res.success) reloadAll();
   };
 
@@ -146,9 +146,17 @@ export const ProductManagementPage: React.FC = () => {
     <div className="w-full p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Toast thông báo */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-[9999] bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm border border-gray-800 animate-in fade-in slide-in-from-bottom-2">
-          <Icons.CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
-          <span>{toastMessage}</span>
+        <div
+          className={`fixed bottom-6 right-6 z-[9999] max-w-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm font-medium border bg-white animate-in fade-in slide-in-from-bottom-2 ${
+            toastMessage.type === 'error' ? 'border-red-200 text-red-700' : 'border-emerald-200 text-emerald-800'
+          }`}
+        >
+          {toastMessage.type === 'error' ? (
+            <Icons.AlertCircle size={18} className="text-red-500 shrink-0" />
+          ) : (
+            <Icons.CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
+          )}
+          <span>{toastMessage.text}</span>
         </div>
       )}
 

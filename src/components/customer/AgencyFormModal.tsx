@@ -15,6 +15,7 @@ import {
   getPricingTierByGroup
 } from '../../services/agencyApi';
 import { X, Building2, AlertTriangle, CheckCircle2, Info } from '../common/Icons';
+import { AddressPicker } from '../common/AddressPicker';
 
 interface AgencyFormModalProps {
   isOpen: boolean;
@@ -395,12 +396,10 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
               Địa Chỉ Trụ Sở & Kho Nhận Hàng
             </label>
-            <input
-              type="text"
+            <AddressPicker
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="VD: Số 123 Đường Trần Phú, Quận Ba Đình, Hà Nội"
-              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-gray-200 focus:border-[#F85606] outline-none"
+              onChange={(value) => setAddress(value)}
+              streetPlaceholder="VD: Số 123 Trần Phú"
             />
           </div>
 
