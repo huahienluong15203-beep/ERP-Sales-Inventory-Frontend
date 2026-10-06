@@ -6,6 +6,7 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { DashboardPage } from '../pages/dashboard/DashboardPage';
 import { ProfilePage } from '../pages/profile/ProfilePage';
 import { UserManagementPage } from '../pages/admin/UserManagementPage';
+import { UserImportPage } from '../pages/admin/UserImportPage';
 import { AgencyManagementPage } from '../pages/customer/AgencyManagementPage';
 import { ProductManagementPage } from '../pages/product/ProductManagementPage';
 import { ProductImportPage } from '../pages/product/ProductImportPage';
@@ -61,6 +62,15 @@ export const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
               <UserManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* S2-01: Trang riêng nhập người dùng hàng loạt từ Excel (chỉ Quản trị viên) */}
+        <Route
+          path="/users/import"
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
+              <UserImportPage />
             </ProtectedRoute>
           }
         />
