@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from '../../routes/Router';
 import {
   fetchAdminUsers,
   fetchAdminFormOptions,
@@ -36,7 +37,6 @@ import {
   Info,
   FileSpreadsheet
 } from '../../components/common/Icons';
-import { UserImportModal } from './UserImportModal';
 import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
 import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 import { Pagination } from '../../components/common/Pagination';
@@ -62,6 +62,7 @@ function sanitizePhoneInput(raw: string): string {
 
 export const UserManagementPage: React.FC = () => {
   const { user: currentUser, refreshContext, showToast } = useAuth();
+  const navigate = useNavigate();
 
   // Danh sách người dùng & phân trang
   const [users, setUsers] = useState<AdminUserItem[]>([]);
@@ -142,7 +143,6 @@ export const UserManagementPage: React.FC = () => {
   // Modal Thêm Tài Khoản (S1-08)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   // Modal Nhập Tài Khoản Hàng Loạt Từ Excel (S2-01 / SCRUM-18)
-  const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
   const [createLoading, setCreateLoading] = useState<boolean>(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createForm, setCreateForm] = useState<CreateAdminUserPayload>({
@@ -548,7 +548,7 @@ export const UserManagementPage: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setIsImportModalOpen(true)}
+            onClick={() => navigate('/users/import')}
             className="user-mgmt-btn-create"
             style={{
               background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
@@ -1773,19 +1773,6 @@ export const UserManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Nhập Người Dùng Hàng Loạt Từ Excel (SCRUM-18 / S2-01) */}
-      <UserImportModal
-        isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
-        existingUsers={users}
-        onSuccess={(msg) => {
-          loadUsers();
-          showToast(
-            'Nhập dữ liệu thành công!',
-            msg || 'Đã hoàn tất nhập danh sách người dùng từ tệp Excel!'
-          );
-        }}
-      />
     </div>
   );
 };
