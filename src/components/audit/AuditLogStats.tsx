@@ -25,25 +25,47 @@ export const AuditLogStats: React.FC<AuditLogStatsProps> = ({
         onClick={() => onSelectModuleFilter?.('ALL')}
         className={`p-4 rounded-2xl border transition-all cursor-pointer ${
           selectedModule === 'ALL'
-            ? 'bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-slate-900/20'
-            : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800 shadow-xs'
+            ? 'bg-orange-600 text-white border-orange-600 shadow-md ring-2 ring-orange-600/20'
+            : 'bg-white hover:bg-orange-50/50 border-orange-200 text-slate-800 shadow-xs'
         }`}
       >
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <span
+            className={`text-xs font-semibold uppercase tracking-wider ${
+              selectedModule === 'ALL' ? 'text-orange-100' : 'text-orange-700'
+            }`}
+          >
             Tổng Lượt Thao Tác
           </span>
-          <div className="p-2 rounded-xl bg-slate-800 text-slate-200">
+          <div
+            className={`p-2 rounded-xl ${
+              selectedModule === 'ALL'
+                ? 'bg-orange-700 text-white'
+                : 'bg-orange-100 text-orange-800'
+            }`}
+          >
             <Lock size={16} />
           </div>
         </div>
-        <div className="mt-2 text-2xl font-black tracking-tight">
+        <div className="mt-2 text-2xl font-black tracking-tight text-orange-950 dark:text-inherit">
           {stats.totalCount.toLocaleString('vi-VN')}
         </div>
-        <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
+        <div
+          className={`mt-1 flex items-center gap-1.5 text-xs ${
+            selectedModule === 'ALL' ? 'text-orange-100' : 'text-slate-500'
+          }`}
+        >
           <span>Ghi nhận từ {stats.actorCount} nhân sự</span>
           <span>•</span>
-          <span className="text-emerald-400 font-medium">Bất biến 100%</span>
+          <span
+            className={
+              selectedModule === 'ALL'
+                ? 'text-white/90 font-semibold'
+                : 'text-emerald-600 font-medium'
+            }
+          >
+            Bất biến 100%
+          </span>
         </div>
       </div>
 

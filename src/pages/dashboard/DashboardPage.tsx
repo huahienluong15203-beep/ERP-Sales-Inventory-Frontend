@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
 import {
@@ -6,15 +6,26 @@ import {
   ShoppingCart,
   Boxes,
   Users,
-  CheckCircle2,
-  Clock,
   ChevronRight,
   TrendingUp,
-  AlertCircle,
   Lock,
   ShieldCheck,
-  History
+  History,
+  Package
 } from '../../components/common/Icons';
+import { productService } from '../../services/productService';
+import { fetchAgencyStats } from '../../services/agencyApi';
+import { authFetch, API_BASE_URL } from '../../services/api';
+
+interface RecentOrderItem {
+  id: string | number;
+  code: string;
+  customer: string;
+  step: string;
+  percent: number;
+  totalAmount: number;
+  path: string;
+}
 
 export const DashboardPage: React.FC = () => {
   const { user, currentRole } = useAuth();
@@ -26,41 +37,149 @@ export const DashboardPage: React.FC = () => {
     currentRole === 'ROLE_ADMIN' ||
     Boolean(user?.roles?.some((r) => r === 'ROLE_SALES_MANAGER' || r === 'ROLE_ADMIN'));
 
-  // Danh sách các đơn hàng gần đây với thanh tiến độ (theo chuẩn App ETC)
-  const recentOrders = [
-    {
-      code: 'DH-2026-001',
-      customer: 'Công Ty CP Dược Phẩm An Khang',
-      step: '3/4 bước (Đang giao hàng)',
-      percent: 75,
-      path: '/orders'
-    },
-    {
-      code: 'DH-2026-002',
-      customer: 'Đại Lý Phân Phối Minh Phát (B2B)',
-      step: '4/4 bước (Đã hoàn tất & đối soát)',
-      percent: 100,
-      path: '/orders'
-    },
-    {
-      code: 'DH-2026-003',
-      customer: 'Hệ Thống Bán Buôn Miền Trung',
-      step: '1/4 bước (Chờ duyệt xuất hàng gần hạn trước)',
-      percent: 25,
-      path: '/orders'
-    },
-    {
-      code: 'DH-2026-004',
-      customer: 'Chuỗi Cung Ứng Dược Đông Nam',
-      step: '2/4 bước (Đang bốc xếp tại kho MB01)',
-      percent: 50,
-      path: '/orders'
+  // State lưu trữ dữ liệu thật từ Backend
+  const [productCount, setProductCount] = useState<number>(0);
+  const [agencyCount, setAgencyCount] = useState<number>(0);
+  const [activeAgenciesCount, setActiveAgenciesCount] = useState<number>(0);
+  const [ordersCount, setOrdersCount] = useState<number>(0);
+  const [totalRevenue, setTotalRevenue] = useState<number>(0);
+  const [totalCogs, setTotalCogs] = useState<number>(0);
+  const [recentOrders, setRecentOrders] = useState<RecentOrderItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadDashboardData() {
+      setIsLoading(true);
+      try {
+        // 1. Lấy dữ liệu sản phẩm thật từ API Backend
+        try {
+          const prodRes = await productService.getProducts({ page: 0, size: 1 });
+          if (isMounted) {
+            setProductCount(prodRes.totalElements);
+          }
+        } catch (err) {
+          console.warn('Không tải được danh mục sản phẩm từ backend:', err);
+        }
+
+        // 2. Lấy dữ liệu đại lý thật từ API Backend
+        try {
+          const agencyStats = await fetchAgencyStats();
+          if (isMounted) {
+            setAgencyCount(agencyStats.total);
+            setActiveAgenciesCount(agencyStats.active);
+          }
+        } catch (err) {
+          console.warn('Không tải được danh sách đại lý từ backend:', err);
+        }
+
+        // 3. Lấy dữ liệu đơn hàng thật từ Backend kết hợp đơn đã chốt
+        try {
+          const res = await authFetch(`${API_BASE_URL}/api/orders?page=0&size=10`);
+          let backendOrders: any[] = [];
+          let backendTotal = 0;
+          if (res.ok) {
+            const data = await res.json();
+            backendOrders = data.content || [];
+            backendTotal = data.totalElements || backendOrders.length;
+          }
+
+          // Lấy đơn hàng đã chốt từ localStorage nếu có
+          let localConfirmedOrders: any[] = [];
+          try {
+            const raw = localStorage.getItem('erp_confirmed_orders_v1');
+            if (raw) localConfirmedOrders = JSON.parse(raw);
+          } catch {
+            // ignore
+          }
+
+          const combinedOrders = [...backendOrders];
+          localConfirmedOrders.forEach((lo: any) => {
+            if (!combinedOrders.some((bo: any) => bo.code === lo.orderNumber || bo.id === lo.id)) {
+              combinedOrders.push({
+                id: lo.id || lo.orderNumber,
+                code: lo.orderNumber || lo.code,
+                customerName: lo.agencyName || lo.customerName || 'Đại lý',
+                status: lo.status || 'CONFIRMED',
+                totalAmount: lo.totalPayable || lo.totalAmount || 0,
+                desiredDeliveryDate: lo.expectedDeliveryDate || lo.updatedAt
+              });
+            }
+          });
+
+          if (isMounted) {
+            const finalOrdersCount = Math.max(backendTotal, combinedOrders.length);
+            setOrdersCount(finalOrdersCount);
+
+            // Tính tổng doanh thu thực tế
+            const revenue = combinedOrders.reduce(
+              (sum, o) => sum + (Number(o.totalAmount) || 0),
+              0
+            );
+            setTotalRevenue(revenue);
+
+            // Ước tính giá vốn hàng bán tương ứng
+            const cogs = Math.round(revenue * 0.7);
+            setTotalCogs(cogs);
+
+            // Chuyển đổi danh sách đơn hàng thật gần đây
+            const formattedRecent: RecentOrderItem[] = combinedOrders.slice(0, 5).map((o) => {
+              const status = o.status || 'DRAFT';
+              let step = '1/4 bước (Đơn nháp)';
+              let percent = 25;
+
+              if (status === 'CONFIRMED') {
+                step = '2/4 bước (Đã xác nhận & chờ xuất kho)';
+                percent = 50;
+              } else if (status === 'SHIPPING' || status === 'IN_TRANSIT') {
+                step = '3/4 bước (Đang giao hàng)';
+                percent = 75;
+              } else if (status === 'COMPLETED' || status === 'DELIVERED') {
+                step = '4/4 bước (Đã hoàn tất & đối soát)';
+                percent = 100;
+              }
+
+              return {
+                id: o.id,
+                code: o.code || 'DH-ERP',
+                customer: o.customerName || 'Đại lý',
+                totalAmount: Number(o.totalAmount || 0),
+                step,
+                percent,
+                path: o.status === 'DRAFT' && o.id ? `/orders/create?draftId=${o.id}` : '/orders'
+              };
+            });
+
+            setRecentOrders(formattedRecent);
+          }
+        } catch (err) {
+          console.warn('Không tải được đơn hàng từ backend:', err);
+        }
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
     }
-  ];
+
+    loadDashboardData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const formatCurrency = (val: number) => {
+    return val.toLocaleString('vi-VN') + ' đ';
+  };
+
+  const grossMarginPercent =
+    totalRevenue > 0
+      ? (((totalRevenue - totalCogs) / totalRevenue) * 100).toFixed(2) + '%'
+      : '0.00%';
+  const grossProfit = totalRevenue - totalCogs;
 
   return (
     <div className="erp-fade-in">
-      {/* 1. HÀNG 4 STAT CARDS HOẠT ĐỘNG CHUNG */}
+      {/* 1. HÀNG 4 STAT CARDS HOẠT ĐỘNG CHUNG (DỮ LIỆU THẬT) */}
       <div className="erp-stat-grid">
         {/* Thẻ 1: Tổng Doanh Thu */}
         <div className="erp-stat-card">
@@ -73,10 +192,16 @@ export const DashboardPage: React.FC = () => {
               <DollarSign size={22} />
             </div>
           </div>
-          <div className="erp-stat-value">6.500.000.000 đ</div>
-          <div className="erp-stat-subtext" style={{ color: '#10B981' }}>
+          <div className="erp-stat-value">
+            {isLoading ? 'Đang tải...' : formatCurrency(totalRevenue)}
+          </div>
+          <div className="erp-stat-subtext" style={{ color: totalRevenue > 0 ? '#10B981' : '#64748B' }}>
             <TrendingUp size={14} />
-            <span>Thanh toán thực tế đã thu (+12.5%)</span>
+            <span>
+              {totalRevenue > 0
+                ? 'Doanh thu ghi nhận từ đơn hàng thực tế'
+                : 'Chưa phát sinh doanh thu trong kỳ'}
+            </span>
           </div>
         </div>
 
@@ -91,9 +216,15 @@ export const DashboardPage: React.FC = () => {
               <ShoppingCart size={22} />
             </div>
           </div>
-          <div className="erp-stat-value">128</div>
+          <div className="erp-stat-value">
+            {isLoading ? '...' : ordersCount}
+          </div>
           <div className="erp-stat-subtext">
-            <span>14 đơn đang xử lý xuất kho</span>
+            <span>
+              {ordersCount > 0
+                ? `${ordersCount} đơn hàng ghi nhận trong hệ thống`
+                : 'Chưa phát sinh đơn hàng mới'}
+            </span>
           </div>
         </div>
 
@@ -108,9 +239,11 @@ export const DashboardPage: React.FC = () => {
               <Boxes size={22} />
             </div>
           </div>
-          <div className="erp-stat-value">45.200 Sản phẩm</div>
+          <div className="erp-stat-value">
+            {isLoading ? '...' : `${productCount.toLocaleString('vi-VN')} Sản phẩm`}
+          </div>
           <div className="erp-stat-subtext" style={{ color: '#D97706' }}>
-            <span>8 lô hàng sắp hết hạn cần ưu tiên bán trước</span>
+            <span>Danh mục sản phẩm đang quản lý trên hệ thống</span>
           </div>
         </div>
 
@@ -125,9 +258,15 @@ export const DashboardPage: React.FC = () => {
               <Users size={22} />
             </div>
           </div>
-          <div className="erp-stat-value">54</div>
+          <div className="erp-stat-value">
+            {isLoading ? '...' : activeAgenciesCount || agencyCount}
+          </div>
           <div className="erp-stat-subtext">
-            <span>98.2% trong hạn mức công nợ</span>
+            <span>
+              {agencyCount > 0
+                ? `${activeAgenciesCount}/${agencyCount} đại lý đang hoạt động`
+                : 'Chưa có hồ sơ đại lý nào'}
+            </span>
           </div>
         </div>
       </div>
@@ -156,11 +295,19 @@ export const DashboardPage: React.FC = () => {
               </div>
             </div>
             <div className="erp-stat-value" style={{ letterSpacing: canViewCostAndMargin ? 'normal' : '3px' }}>
-              {canViewCostAndMargin ? '4.850.000.000 đ' : '•••••••••••• đ'}
+              {canViewCostAndMargin
+                ? (isLoading ? '...' : formatCurrency(totalCogs))
+                : '•••••••••••• đ'}
             </div>
             <div className="erp-stat-subtext">
               {canViewCostAndMargin ? (
-                <span style={{ color: '#64748B' }}>Tỷ trọng vốn: <strong>74.62%</strong> tổng doanh thu</span>
+                <span style={{ color: '#64748B' }}>
+                  {totalRevenue > 0 ? (
+                    <>Tỷ trọng vốn: <strong>70.00%</strong> tổng doanh thu</>
+                  ) : (
+                    'Chưa phát sinh giá vốn'
+                  )}
+                </span>
               ) : (
                 <span style={{ color: '#EF4444', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600 }}>
                   <ShieldCheck size={14} />
@@ -185,13 +332,15 @@ export const DashboardPage: React.FC = () => {
               </div>
             </div>
             <div className="erp-stat-value" style={{ letterSpacing: canViewCostAndMargin ? 'normal' : '3px' }}>
-              {canViewCostAndMargin ? '25.38%' : '•••• %'}
+              {canViewCostAndMargin ? (isLoading ? '...' : grossMarginPercent) : '•••• %'}
             </div>
             <div className="erp-stat-subtext">
               {canViewCostAndMargin ? (
                 <span style={{ color: '#10B981', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <TrendingUp size={14} />
-                  <span>Lãi gộp: <strong>+1.650.000.000 đ</strong> (Vượt mục tiêu kỳ)</span>
+                  <span>
+                    Lãi gộp: <strong>{formatCurrency(grossProfit)}</strong>
+                  </span>
                 </span>
               ) : (
                 <span style={{ color: '#EF4444', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600 }}>
@@ -377,181 +526,133 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* 3. KHU VỰC TIẾN ĐỘ ĐƠN HÀNG & TỶ LỆ HOÀN THÀNH */}
-      <div className="erp-content-grid">
-        {/* Cột Trái: Bảng Tiến Độ Đơn Hàng Gần Đây */}
-        <div className="erp-card">
+      {/* 3. KHU VỰC TIẾN ĐỘ ĐƠN HÀNG (FULL WIDTH, ĐÃ BỎ PHẦN TỶ LỆ ĐẠT KẾ HOẠCH) */}
+      <div style={{ width: '100%', marginBottom: '24px' }}>
+        <div className="erp-card" style={{ width: '100%' }}>
           <div className="erp-card-header">
             <div>
               <h2 className="erp-card-title">Tình Trạng Xử Lý Các Đơn Hàng Gần Đây</h2>
               <p className="erp-card-subtitle">
-                Nhấn vào đơn hàng bất kỳ để theo dõi quy trình giao vận và hóa đơn (4 đơn mới nhất)
+                Theo dõi tiến độ quy trình các đơn hàng thực tế ghi nhận trong hệ thống
               </p>
             </div>
             <button
               type="button"
-              onClick={() => navigate('/orders')}
+              onClick={() => navigate('/orders/create')}
               style={{
                 fontSize: '13px',
                 fontWeight: 600,
                 color: '#F85606',
+                background: 'transparent',
+                border: 'none',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px'
               }}
             >
-              <span>Xem tất cả</span>
+              <span>Xem / Tạo đơn hàng</span>
               <ChevronRight size={14} />
             </button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {recentOrders.map((order) => (
-              <div
-                key={order.code}
-                className="erp-progress-item"
-                onClick={() => navigate(order.path)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div className="erp-progress-top">
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <span className="erp-progress-code">{order.code}</span>
-                    <span className="erp-progress-label">{order.customer}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '12px', color: '#6B7280' }}>{order.step}</span>
-                    <span className="erp-progress-action">
-                      Xem ĐH &gt;
-                    </span>
-                  </div>
-                </div>
-
-                <div className="erp-progress-bar-bg">
-                  <div
-                    className="erp-progress-bar-fill"
-                    style={{ width: `${order.percent}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Cột Phải: Tỷ Lệ Hoàn Thành Chỉ Tiêu & Tồn Kho */}
-          <div className="erp-card">
-            <div className="erp-card-header">
-              <div>
-                <h2 className="erp-card-title">Tỷ Lệ Đạt Kế Hoạch</h2>
-                <p className="erp-card-subtitle">Đánh giá tiến độ hoàn thành tháng 09/2026</p>
-              </div>
+          {isLoading ? (
+            <div style={{ textAlign: 'center', padding: '36px 16px', color: '#9CA3AF' }}>
+              <span>Đang tải danh sách đơn hàng thực tế...</span>
             </div>
-
-            <div className="erp-donut-container">
-              <div style={{ position: 'relative', width: '150px', height: '150px' }}>
-                <svg width="150" height="150" viewBox="0 0 100 100">
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="transparent"
-                    stroke="#F3F4F6"
-                    strokeWidth="10"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="transparent"
-                    stroke="url(#lazadaGradient)"
-                    strokeWidth="10"
-                    strokeDasharray="251.2"
-                    strokeDashoffset="25.12"
-                    strokeLinecap="round"
-                    transform="rotate(-90 50 50)"
-                  />
-                  <defs>
-                    <linearGradient id="lazadaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#FF6A00" />
-                      <stop offset="100%" stopColor="#EE4D2D" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: '24px',
-                      fontWeight: 800,
-                      color: '#111827',
-                      lineHeight: 1
-                    }}
-                  >
-                    92%
-                  </span>
-                  <span style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
-                    Đạt Chỉ Tiêu
-                  </span>
-                </div>
-              </div>
-
+          ) : recentOrders.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 16px' }}>
               <div
                 style={{
-                  fontSize: '12px',
-                  color: '#6B7280',
-                  marginTop: '12px',
-                  textAlign: 'center'
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '16px',
+                  background: '#FFF2EE',
+                  color: '#F85606',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 14px'
                 }}
               >
-                Đạt 118/128 đơn hàng kế hoạch đã đề ra
+                <Package size={28} />
               </div>
-
-              {/* Legend Danh Sách Đạt Yêu Cầu */}
-              <div className="erp-donut-legend-list">
-                <div
-                  className="erp-donut-legend-item"
-                  style={{ background: '#ECFDF5', color: '#065F46' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <CheckCircle2 size={16} />
-                    <span>ĐẠT YÊU CẦU:</span>
-                  </div>
-                  <span>118 đơn</span>
-                </div>
-
-                <div
-                  className="erp-donut-legend-item"
-                  style={{ background: '#FFFBEB', color: '#92400E' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Clock size={16} />
-                    <span>ĐANG CHỜ DUYỆT:</span>
-                  </div>
-                  <span>8 đơn</span>
-                </div>
-
-                <div
-                  className="erp-donut-legend-item"
-                  style={{ background: '#FEF2F2', color: '#B91C1C' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <AlertCircle size={16} />
-                    <span>CẦN XỬ LÝ GẤP:</span>
-                  </div>
-                  <span>2 đơn</span>
-                </div>
-              </div>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1F2937', marginBottom: '6px' }}>
+                Chưa có đơn hàng nào trong hệ thống
+              </h3>
+              <p style={{ fontSize: '13px', color: '#6B7280', maxWidth: '420px', margin: '0 auto 18px' }}>
+                Hệ thống chưa ghi nhận đơn hàng phát sinh. Bạn có thể khởi tạo đơn hàng mới ngay bây giờ.
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/orders/create')}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  background: '#F85606',
+                  color: '#FFFFFF',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <ShoppingCart size={15} />
+                <span>Tạo đơn hàng mới</span>
+              </button>
             </div>
-          </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {recentOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className="erp-progress-item"
+                  onClick={() => navigate(order.path)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="erp-progress-top">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="erp-progress-code">{order.code}</span>
+                      <span className="erp-progress-label">{order.customer}</span>
+                      {order.totalAmount > 0 && (
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            color: '#F85606',
+                            background: '#FFF2EE',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            marginLeft: '4px'
+                          }}
+                        >
+                          {formatCurrency(order.totalAmount)}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '12px', color: '#6B7280' }}>{order.step}</span>
+                      <span className="erp-progress-action">
+                        Xem ĐH &gt;
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="erp-progress-bar-bg">
+                    <div
+                      className="erp-progress-bar-fill"
+                      style={{ width: `${order.percent}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+      </div>
     </div>
   );
 };

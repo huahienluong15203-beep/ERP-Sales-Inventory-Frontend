@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Icons } from '../../components/common/Icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { VolumeDiscountStats } from '../../components/pricing/VolumeDiscountStats';
-import { BestDealSimulatorWidget } from '../../components/pricing/BestDealSimulatorWidget';
 import { VolumeDiscountFormModal } from '../../components/pricing/VolumeDiscountFormModal';
 import type {
   VolumeDiscountPolicy,
@@ -59,9 +58,7 @@ export const VolumeDiscountPage: React.FC = () => {
     setUrlParams({ keyword: serverKeyword });
   }, [serverKeyword, setUrlParams]);
 
-  // Điều khiển UI Modals & Simulator
-  const [showSimulator, setShowSimulator] = useState<boolean>(true);
-  const [simulatorInitialSku, setSimulatorInitialSku] = useState<string>('');
+  // Điều khiển UI Modals
   const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedPolicy, setSelectedPolicy] = useState<VolumeDiscountPolicy | null>(null);
@@ -200,15 +197,6 @@ export const VolumeDiscountPage: React.FC = () => {
     }
   };
 
-  // Chạy mô phỏng cho sản phẩm của chính sách này
-  const handleTestInSimulator = (policy: VolumeDiscountPolicy) => {
-    if (policy.scopeType === 'SKU') {
-      setSimulatorInitialSku(policy.targetId);
-    }
-    setShowSimulator(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   // Xuất file CSV/Excel
   const handleExportCsv = () => {
     if (policies.length === 0) {
@@ -267,18 +255,6 @@ export const VolumeDiscountPage: React.FC = () => {
         {/* Nút hành động chính */}
         <div className="flex flex-wrap items-center gap-2.5">
           <button
-            onClick={() => setShowSimulator(!showSimulator)}
-            className={`flex items-center space-x-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition-all ${
-              showSimulator
-                ? 'border-[#F85606] bg-orange-50 text-[#F85606]'
-                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <Icons.ShieldCheck size={16} className={showSimulator ? 'text-[#F85606]' : 'text-gray-500'} />
-            <span>{showSimulator ? 'Ẩn công cụ Best-Deal' : 'Mô phỏng Best-Deal'}</span>
-          </button>
-
-          <button
             onClick={handleExportCsv}
             className="flex items-center space-x-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-2xs transition-colors hover:bg-gray-50"
           >
@@ -297,14 +273,6 @@ export const VolumeDiscountPage: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Interactive Simulator (Công cụ mô phỏng Best-Deal Rule) */}
-      {showSimulator && (
-        <BestDealSimulatorWidget
-          initialSku={simulatorInitialSku}
-          onClose={() => setShowSimulator(false)}
-        />
-      )}
 
       {/* KPI Cards Thống kê */}
       <VolumeDiscountStats policies={policies} stats={stats} />
@@ -565,15 +533,6 @@ export const VolumeDiscountPage: React.FC = () => {
                     {/* Thao tác */}
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end space-x-1.5">
-                        {/* Nút test trong simulator */}
-                        <button
-                          onClick={() => handleTestInSimulator(policy)}
-                          title="Thử nghiệm chính sách này trong bộ tính Best-Deal"
-                          className="rounded-lg p-1.5 text-[#F85606] hover:bg-orange-50"
-                        >
-                          <Icons.ShieldCheck size={16} />
-                        </button>
-
                         {/* Nút xem chi tiết */}
                         <button
                           onClick={() => setDetailPolicy(policy)}
