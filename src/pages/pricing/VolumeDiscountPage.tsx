@@ -216,7 +216,7 @@ export const VolumeDiscountPage: React.FC = () => {
   useClampPage(page, totalPages, setPage, isLoading);
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="w-full min-w-0 space-y-6 pb-12">
       {/* Toast thông báo */}
       {toastMsg && (
         <div
@@ -233,7 +233,7 @@ export const VolumeDiscountPage: React.FC = () => {
       )}
 
       {/* Nút hành động chính */}
-      <div className="flex items-center justify-end gap-2.5 p-4">
+      <div className="flex items-center justify-end gap-2.5">
         <div className="flex flex-wrap items-center gap-2.5">
           <button
             type="button"

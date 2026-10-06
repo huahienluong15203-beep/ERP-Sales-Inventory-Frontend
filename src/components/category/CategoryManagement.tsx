@@ -592,7 +592,7 @@ export const CategoryManagement: React.FC = () => {
   const activeDeleteBlocked = (activeRollup?.totalProductCount || 0) > 0 || activeChildCount > 0;
 
   return (
-    <div className="space-y-5">
+    <div className="w-full min-w-0 space-y-5">
       {/* Toast thông báo nhanh */}
       {toastMessage && (
         <div
@@ -616,7 +616,7 @@ export const CategoryManagement: React.FC = () => {
       )}
 
       {/* Nút thao tác */}
-      <div className="p-4 rounded-2xl flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-2">
         <div className="flex items-center gap-2">
           <button
             type="button"

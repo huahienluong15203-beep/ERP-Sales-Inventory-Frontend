@@ -378,9 +378,9 @@ export const AgencyManagementPage: React.FC = () => {
   useClampPage(page, totalPages, setPage, loading);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="w-full min-w-0 space-y-6 animate-in fade-in duration-300">
       {/* 1. Header Trang - Nút tác vụ */}
-      <div className="flex items-center justify-end gap-2.5  p-4">
+      <div className="flex items-center justify-end gap-2.5">
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => loadData()}

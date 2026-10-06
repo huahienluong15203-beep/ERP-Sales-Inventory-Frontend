@@ -205,7 +205,7 @@ export const ProductImportPage: React.FC = () => {
   );
 
   return (
-    <div className="w-full p-4 sm:p-6 lg:p-8 space-y-5">
+    <div className="w-full min-w-0 space-y-5">
       {/* Tiêu đề trang */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs">
         <div className="flex items-start gap-3">
