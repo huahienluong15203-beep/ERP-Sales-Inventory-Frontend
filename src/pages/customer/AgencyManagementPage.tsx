@@ -3,7 +3,8 @@ import type {
   Agency,
   AgencyFilterParams,
   CreateAgencyPayload,
-  UpdateAgencyPayload
+  UpdateAgencyPayload,
+  RegionOption
 } from '../../types/agency';
 import {
   fetchAgencies,
@@ -13,7 +14,8 @@ import {
   reactivateAgency,
   deleteAgency,
   CUSTOMER_GROUP_OPTIONS,
-  REGION_OPTIONS
+  fetchAgencyFormOptions,
+  fetchAgencyStats
 } from '../../services/agencyApi';
 import { AgencyFormModal } from '../../components/customer/AgencyFormModal';
 import { SuspendAgencyModal } from '../../components/customer/SuspendAgencyModal';
@@ -190,7 +192,18 @@ export const AgencyManagementPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Tải dữ liệu danh sách đại lý
+  // Số liệu thẻ đầu trang (toàn bộ đại lý, không phụ thuộc trang đang xem)
+  const [agencyStats, setAgencyStats] = useState({ total: 0, active: 0, suspended: 0 });
+
+  // Khu vực thật từ Backend cho ô lọc
+  const [regionOptions, setRegionOptions] = useState<RegionOption[]>([]);
+  useEffect(() => {
+    fetchAgencyFormOptions()
+      .then((options) => setRegionOptions(options.regions))
+      .catch(() => setRegionOptions([]));
+  }, []);
+
+  // Tải dữ liệu danh sách đại lý (Backend lọc + phân trang)
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -203,11 +216,19 @@ export const AgencyManagementPage: React.FC = () => {
         size
       };
       const res = await fetchAgencies(params);
+      fetchAgencyStats()
+        .then(setAgencyStats)
+        .catch(() => undefined);
       setAgencies(res.content);
       setTotalElements(res.totalElements);
       setTotalPages(res.totalPages);
-    } catch {
-      showToast('Lỗi tải dữ liệu', 'Không thể tải danh sách đại lý. Vui lòng thử lại!', 'error');
+    } catch (err: unknown) {
+      setAgencies([]);
+      showToast(
+        'Lỗi tải dữ liệu',
+        err instanceof Error ? err.message : 'Không thể tải danh sách đại lý. Vui lòng thử lại!',
+        'error'
+      );
     } finally {
       setLoading(false);
     }
@@ -336,8 +357,8 @@ export const AgencyManagementPage: React.FC = () => {
   };
 
   // Thống kê nhanh
-  const activeCount = agencies.filter((a) => a.status === 'ACTIVE').length;
-  const suspendedCount = agencies.filter((a) => a.status === 'SUSPENDED').length;
+  const activeCount = agencyStats.active;
+  const suspendedCount = agencyStats.suspended;
   const totalDebtSum = agencies.reduce((acc, a) => acc + (a.totalDebt || 0), 0);
   const lockedCount = agencies.filter((a) => a.transactionLocked).length;
 
@@ -437,7 +458,7 @@ export const AgencyManagementPage: React.FC = () => {
               Tổng số đại lý
             </span>
             <span className="text-2xl font-black text-gray-900 mt-1 block font-mono">
-              {totalElements}
+              {agencyStats.total}
             </span>
             <span className="text-[11px] text-gray-500 mt-0.5 block">Hồ sơ đã chuẩn hóa</span>
           </div>
@@ -534,7 +555,7 @@ export const AgencyManagementPage: React.FC = () => {
               className="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-200 bg-white focus:border-[#F85606] outline-none"
             >
               <option value="">Tất cả Khu vực</option>
-              {REGION_OPTIONS.map((r) => (
+              {regionOptions.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
                 </option>
