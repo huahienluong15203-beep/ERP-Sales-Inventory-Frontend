@@ -1,15 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { Agency, DeliveryPoint } from '../../types/agency';
-import type { OrderDraft, OrderItem, OrderDraftBackendRequest } from '../../types/order';
+import type { OrderDraft, OrderItem, OrderBackendResponse } from '../../types/order';
 import type { OrderProductCatalogItem } from '../../services/orderService';
 import {
   createOrderItemFromCatalog,
   recalculateOrderItem,
   calculateOrderTotals,
-  saveDraft,
-  getSavedDrafts,
-  deleteDraft,
-  confirmOrder,
+  applyBackendLines,
+  buildBackendRequest,
   getActiveDraft,
   setActiveDraft,
   clearActiveDraft,
@@ -33,8 +31,18 @@ import {
   RefreshCw,
   Tag,
   AlertTriangle,
+  AlertCircle,
   Save
 } from '../../components/common/Icons';
+
+/** Kết quả Backend tính tiền cho đơn đang gõ (S3-09: tiền hàng, chiết khấu, tổng phải thu) */
+type PreviewState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'ok'; order: OrderBackendResponse }
+  | { status: 'error'; message: string };
+
+const isBackendId = (id?: string | null) => Boolean(id && /^\d+$/.test(id));
 
 export const OrderCreatePage: React.FC = () => {
   const { user, showToast } = useAuth();
@@ -56,91 +64,103 @@ export const OrderCreatePage: React.FC = () => {
   // Trạng thái giao diện
   const [isProductPickerOpen, setIsProductPickerOpen] = useState<boolean>(false);
   const [isDraftsModalOpen, setIsDraftsModalOpen] = useState<boolean>(false);
-  const [savedDrafts, setSavedDrafts] = useState<OrderDraft[]>(() => getSavedDrafts());
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [savedDrafts, setSavedDrafts] = useState<OrderDraft[]>([]);
   const [isSavingDraft, setIsSavingDraft] = useState<boolean>(false);
+  const [preview, setPreview] = useState<PreviewState>({ status: 'idle' });
 
-  // Modal thông báo chốt đơn thành công
-  const [confirmedOrderResult, setConfirmedOrderResult] = useState<{
-    orderNumber: string;
-    agencyName: string;
-    totalPayable: number;
-  } | null>(null);
-
-  // Tính tổng kết tài chính tức thì (Real-time)
+  // Đếm số mặt hàng / số lượng (tiền lấy từ Backend, xem `preview`)
   const totals = useMemo(() => calculateOrderTotals(items), [items]);
 
   // Danh sách SKU đã có trong đơn
   const addedSkuList = useMemo(() => items.map((i) => i.sku), [items]);
 
-  // Khôi phục đơn dở (Auto-restore) khi vào trang
+  /** Khôi phục đại lý (và điểm giao) thật từ Backend theo mã đã lưu */
+  const restoreAgency = async (agencyId: string, agencyCode: string, agencyName: string, deliveryPointId?: string) => {
+    if (!isBackendId(agencyId)) return;
+    try {
+      const agencyRes = await fetchAgencies({ keyword: agencyCode || agencyName });
+      const matched = agencyRes.content.find((a) => a.id === agencyId || a.code === agencyCode);
+      if (!matched) return;
+      setSelectedAgency(matched);
+      if (deliveryPointId) {
+        const points = await fetchDeliveryPointsByAgency(matched.id);
+        const p = points.find((pt: DeliveryPoint) => pt.id === deliveryPointId);
+        if (p) setSelectedDeliveryPoint(p);
+      }
+    } catch (err) {
+      console.warn('Không khôi phục được đại lý:', err);
+    }
+  };
+
+  // Khôi phục đơn đang gõ dở trên máy này khi vào lại trang (giá sẽ được Backend tính lại)
   useEffect(() => {
     const active = getActiveDraft();
     if (active && active.items && active.items.length > 0) {
       setCurrentDraftId(active.id);
+      setBackendDraftId(active.backendDraftId || null);
       setExpectedDeliveryDate(active.expectedDeliveryDate || expectedDeliveryDate);
       setOrderNote(active.note || '');
       setItems(active.items || []);
+      restoreAgency(active.agencyId, active.agencyCode, active.agencyName, active.deliveryPointId);
     }
+    // Số đơn nháp trên máy chủ (hiện ở nút "Đơn Nháp")
+    fetchBackendDrafts()
+      .then(setSavedDrafts)
+      .catch(() => setSavedDrafts([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Tự động lưu tạm thời khi gõ dở (Auto-save tiến trình)
+  const buildDraftObj = (): OrderDraft => {
+    const money = preview.status === 'ok' ? preview.order : null;
+    return {
+      id: currentDraftId,
+      backendDraftId: backendDraftId || undefined,
+      status: 'DRAFT',
+      agencyId: selectedAgency?.id || '',
+      agencyCode: selectedAgency?.code || '',
+      agencyName: selectedAgency?.name || '',
+      customerGroup: selectedAgency?.customerGroup || 'RETAIL_SHOWROOM',
+      customerGroupName: selectedAgency?.customerGroupName || '',
+      pricingTierCode: selectedAgency?.pricingTier?.code || '',
+      pricingTierName: selectedAgency?.pricingTier?.name || '',
+      deliveryPointId: selectedDeliveryPoint?.id || '',
+      deliveryPointName: selectedDeliveryPoint?.name || '',
+      deliveryAddress: selectedDeliveryPoint?.address || selectedAgency?.address || '',
+      expectedDeliveryDate,
+      note: orderNote,
+      items,
+      totalItemsCount: totals.totalItemsCount,
+      totalQuantity: totals.totalQuantity,
+      subtotalAmount: Number(money?.subtotal ?? 0),
+      discountAmount: Number(money?.discountTotal ?? 0),
+      totalPayable: Number(money?.totalAmount ?? 0),
+      salesRepId: String(user?.id || ''),
+      salesRepName: user?.fullName || '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+  };
+
+  // Tự động giữ tạm đơn đang gõ trên máy này (chưa phải lưu nháp, mất khi xoá dữ liệu trình duyệt)
   useEffect(() => {
     if (items.length > 0 || selectedAgency) {
-      const draftObj: OrderDraft = {
-        id: currentDraftId,
-        status: 'DRAFT',
-        agencyId: selectedAgency?.id || '',
-        agencyCode: selectedAgency?.code || '',
-        agencyName: selectedAgency?.name || '',
-        customerGroup: selectedAgency?.customerGroup || 'RETAIL_SHOWROOM',
-        customerGroupName: selectedAgency?.customerGroupName || '',
-        pricingTierCode: selectedAgency?.pricingTier?.code || '',
-        pricingTierName: selectedAgency?.pricingTier?.name || '',
-        deliveryPointId: selectedDeliveryPoint?.id || '',
-        deliveryPointName: selectedDeliveryPoint?.name || '',
-        deliveryAddress: selectedDeliveryPoint?.address || selectedAgency?.address || '',
-        expectedDeliveryDate,
-        note: orderNote,
-        items,
-        totalItemsCount: totals.totalItemsCount,
-        totalQuantity: totals.totalQuantity,
-        subtotalAmount: totals.subtotalAmount,
-        discountAmount: totals.discountAmount,
-        totalPayable: totals.totalPayable,
-        salesRepId: String(user?.id || 'REP_001'),
-        salesRepName: user?.fullName || 'Nhân viên kinh doanh',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      setActiveDraft(draftObj);
+      setActiveDraft(buildDraftObj());
     }
-  }, [selectedAgency, selectedDeliveryPoint, expectedDeliveryDate, orderNote, items, totals, currentDraftId, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAgency, selectedDeliveryPoint, expectedDeliveryDate, orderNote, items, currentDraftId, backendDraftId]);
 
-  // Cập nhật lại giá cho toàn bộ items khi thay đổi đại lý (theo bảng giá S2-10)
+  // Đổi đại lý: giữ các dòng hàng, Backend sẽ tính lại giá theo bảng giá của nhóm khách hàng mới
   const handleSelectAgency = (agency: Agency) => {
     setSelectedAgency(agency);
     setSelectedDeliveryPoint(null);
+  };
 
-    // Cập nhật lại đơn giá theo nhóm khách hàng mới
-    if (items.length > 0) {
-      setItems((prev) =>
-        prev.map((item) => {
-          // Tìm sản phẩm gốc tương ứng để lấy lại đơn giá
-          const productMock: OrderProductCatalogItem = {
-            id: String(item.productId),
-            sku: item.sku,
-            name: item.name,
-            category: item.category || '',
-            baseUnit: item.baseUnit,
-            basePrice: item.availableUnits.find((u) => u.isBaseUnit)?.unitPrice || item.unitPrice,
-            stockAvailable: 1000,
-            availableUnits: item.availableUnits
-          };
-          return createOrderItemFromCatalog(productMock, agency.customerGroup, item.quantity);
-        })
-      );
+  const openProductPicker = () => {
+    if (!selectedAgency) {
+      showToast('Chưa chọn đại lý', 'Vui lòng chọn đại lý trước để lấy đúng bảng giá', 'error');
+      return;
     }
+    setIsProductPickerOpen(true);
   };
 
   // Thêm sản phẩm từ picker vào đơn hàng
@@ -153,15 +173,8 @@ export const OrderCreatePage: React.FC = () => {
         const curr = updated[existingIdx];
         updated[existingIdx] = recalculateOrderItem(curr, curr.quantity + 1, curr.selectedUnit);
         return updated;
-      } else {
-        // Chưa có -> Tạo mới dòng hàng theo nhóm khách hàng của đại lý
-        const newItem = createOrderItemFromCatalog(
-          product,
-          selectedAgency?.customerGroup,
-          1
-        );
-        return [...prev, newItem];
       }
+      return [...prev, createOrderItemFromCatalog(product, 1)];
     });
 
     showToast('Đã thêm sản phẩm vào đơn', `Đã thêm ${product.name} vào danh sách`, 'success');
@@ -169,9 +182,7 @@ export const OrderCreatePage: React.FC = () => {
 
   // Cập nhật số lượng
   const handleUpdateQuantity = (id: string, newQty: number) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? recalculateOrderItem(item, newQty) : item))
-    );
+    setItems((prev) => prev.map((item) => (item.id === id ? recalculateOrderItem(item, newQty) : item)));
   };
 
   // Cập nhật đơn vị tính
@@ -189,6 +200,7 @@ export const OrderCreatePage: React.FC = () => {
   // Tạo mới hoàn toàn (reset form)
   const handleResetOrder = () => {
     setCurrentDraftId(`DRAFT-${Date.now()}`);
+    setBackendDraftId(null);
     setSelectedAgency(null);
     setSelectedDeliveryPoint(null);
     setOrderNote('');
@@ -197,294 +209,125 @@ export const OrderCreatePage: React.FC = () => {
     showToast('Tạo đơn mới', 'Đã khởi tạo form đặt hàng mới', 'info');
   };
 
-  // Kết nối Backend Real-time Preview khi có đại lý backend và sản phẩm
-  useEffect(() => {
-    if (selectedAgency?.id && /^\d+$/.test(selectedAgency.id) && items.length > 0) {
-      const backendReq: OrderDraftBackendRequest = {
+  // Yêu cầu tính tiền gửi Backend: chỉ đổi khi đại lý / điểm giao / ngày / ghi chú / SKU-ĐVT-số lượng đổi
+  const previewKey = useMemo(() => {
+    if (!selectedAgency || !isBackendId(selectedAgency.id) || items.length === 0) return '';
+    return JSON.stringify(
+      buildBackendRequest({
         draftId: backendDraftId,
-        customerId: Number(selectedAgency.id),
-        deliveryAddressId:
-          selectedDeliveryPoint?.id && /^\d+$/.test(selectedDeliveryPoint.id)
-            ? Number(selectedDeliveryPoint.id)
-            : null,
-        desiredDeliveryDate: expectedDeliveryDate || null,
-        note: orderNote || null,
-        lines: items.map((it) => ({
-          productSku: it.sku,
-          unitName: it.selectedUnit,
-          quantity: it.quantity
-        }))
-      };
+        agencyId: selectedAgency.id,
+        deliveryPointId: selectedDeliveryPoint?.id,
+        expectedDeliveryDate,
+        note: orderNote,
+        items
+      })
+    );
+  }, [selectedAgency, selectedDeliveryPoint?.id, expectedDeliveryDate, orderNote, items, backendDraftId]);
 
-      previewOrderOnBackend(backendReq).then((res) => {
-        if (res && res.warnings) {
-          setBackendWarnings(res.warnings);
-        } else {
-          setBackendWarnings([]);
-        }
-      });
-    } else {
+  // S3-09: Backend tính tiền hàng, chiết khấu, tổng phải thu ngay khi thêm / sửa dòng (chờ 350ms sau lần gõ cuối)
+  const previewSeq = useRef(0);
+  useEffect(() => {
+    if (!previewKey) {
+      setPreview({ status: 'idle' });
       setBackendWarnings([]);
+      return;
     }
-  }, [selectedAgency?.id, selectedDeliveryPoint?.id, expectedDeliveryDate, orderNote, items, backendDraftId]);
+    const seq = ++previewSeq.current;
+    setPreview({ status: 'loading' });
+    const timer = setTimeout(() => {
+      previewOrderOnBackend(JSON.parse(previewKey))
+        .then((order) => {
+          if (seq !== previewSeq.current) return;
+          setPreview({ status: 'ok', order });
+          setBackendWarnings(order.warnings || []);
+          setItems((prev) => applyBackendLines(prev, order));
+        })
+        .catch((err: unknown) => {
+          if (seq !== previewSeq.current) return;
+          setPreview({
+            status: 'error',
+            message: err instanceof Error ? err.message : 'Không tính được tiền đơn hàng'
+          });
+          setBackendWarnings([]);
+        });
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [previewKey]);
 
-  // Xử lý Lưu Nháp (Draft)
+  // Xử lý Lưu Nháp lên máy chủ (không còn lưu tạm trên trình duyệt rồi báo "đã lưu")
   const handleSaveDraft = async () => {
-    if (!selectedAgency && items.length === 0) {
-      showToast('Chưa có thông tin', 'Vui lòng chọn đại lý hoặc thêm sản phẩm trước khi lưu nháp', 'error');
+    if (!selectedAgency) {
+      showToast('Chưa chọn đại lý', 'Vui lòng chọn đại lý trước khi lưu nháp', 'error');
+      return;
+    }
+    if (items.length === 0) {
+      showToast('Chưa có sản phẩm', 'Vui lòng thêm ít nhất 1 sản phẩm trước khi lưu nháp', 'error');
       return;
     }
 
     setIsSavingDraft(true);
-    const draftObj: OrderDraft = {
-      id: currentDraftId,
-      backendDraftId: backendDraftId || undefined,
-      status: 'DRAFT',
-      agencyId: selectedAgency?.id || '',
-      agencyCode: selectedAgency?.code || '',
-      agencyName: selectedAgency?.name || 'Đơn chưa gán đại lý',
-      customerGroup: selectedAgency?.customerGroup || 'RETAIL_SHOWROOM',
-      customerGroupName: selectedAgency?.customerGroupName || '',
-      pricingTierCode: selectedAgency?.pricingTier?.code || '',
-      pricingTierName: selectedAgency?.pricingTier?.name || '',
-      deliveryPointId: selectedDeliveryPoint?.id || '',
-      deliveryPointName: selectedDeliveryPoint?.name || '',
-      deliveryAddress: selectedDeliveryPoint?.address || selectedAgency?.address || '',
-      expectedDeliveryDate,
-      note: orderNote,
-      items,
-      totalItemsCount: totals.totalItemsCount,
-      totalQuantity: totals.totalQuantity,
-      subtotalAmount: totals.subtotalAmount,
-      discountAmount: totals.discountAmount,
-      totalPayable: totals.totalPayable,
-      salesRepId: String(user?.id || 'REP_001'),
-      salesRepName: user?.fullName || 'Nhân viên kinh doanh',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    // Nếu là đại lý backend và có sản phẩm, lưu trực tiếp lên Backend API
-    if (selectedAgency?.id && /^\d+$/.test(selectedAgency.id) && items.length > 0) {
-      const backendReq: OrderDraftBackendRequest = {
+    try {
+      const request = buildBackendRequest({
         draftId: backendDraftId,
-        customerId: Number(selectedAgency.id),
-        deliveryAddressId:
-          selectedDeliveryPoint?.id && /^\d+$/.test(selectedDeliveryPoint.id)
-            ? Number(selectedDeliveryPoint.id)
-            : null,
-        desiredDeliveryDate: expectedDeliveryDate || null,
-        note: orderNote || null,
-        lines: items.map((it) => ({
-          productSku: it.sku,
-          unitName: it.selectedUnit,
-          quantity: it.quantity
-        }))
-      };
-
-      try {
-        const beRes = await saveDraftToBackend(backendReq, backendDraftId);
-        if (beRes && beRes.id) {
-          draftObj.backendDraftId = beRes.id;
-          draftObj.orderNumber = beRes.code || undefined;
-          setBackendDraftId(beRes.id);
-          saveDraft(draftObj);
-          setSavedDrafts(getSavedDrafts());
-          setIsSavingDraft(false);
-          showToast('Đã lưu nháp máy chủ', `Đã lưu đơn nháp lên máy chủ thành công [Mã: ${beRes.code}]`, 'success');
-          return;
-        }
-      } catch (err) {
-        console.warn('Lỗi lưu nháp backend:', err);
+        agencyId: selectedAgency.id,
+        deliveryPointId: selectedDeliveryPoint?.id,
+        expectedDeliveryDate,
+        note: orderNote,
+        items
+      });
+      const saved = await saveDraftToBackend(request, backendDraftId);
+      if (saved.id) {
+        setBackendDraftId(saved.id);
+        setCurrentDraftId(`BACKEND-DRAFT-${saved.id}`);
       }
+      setItems((prev) => applyBackendLines(prev, saved));
+      showToast('Đã lưu nháp', `Đã lưu đơn nháp lên máy chủ [Mã: ${saved.code}]`, 'success');
+      fetchBackendDrafts()
+        .then(setSavedDrafts)
+        .catch(() => undefined);
+    } catch (err: unknown) {
+      showToast('Lưu nháp thất bại', err instanceof Error ? err.message : 'Không lưu được đơn nháp', 'error');
+    } finally {
+      setIsSavingDraft(false);
     }
-
-    saveDraft(draftObj);
-    setSavedDrafts(getSavedDrafts());
-    setIsSavingDraft(false);
-    showToast('Đã lưu nháp', `Đã lưu đơn nháp [${draftObj.id}]. Bạn có thể mở lại gõ bất cứ lúc nào!`, 'success');
   };
 
-  // Mở danh sách đơn nháp (Đồng bộ từ Backend + Local)
+  // Mở danh sách đơn nháp trên máy chủ
   const handleOpenDraftsModal = async () => {
     setIsDraftsModalOpen(true);
     try {
-      const beDrafts = await fetchBackendDrafts();
-      const localDrafts = getSavedDrafts();
-      if (beDrafts.length > 0) {
-        const beIds = new Set(beDrafts.map((d) => d.backendDraftId));
-        const merged = [...beDrafts, ...localDrafts.filter((d) => !d.backendDraftId || !beIds.has(d.backendDraftId))];
-        setSavedDrafts(merged);
-      } else {
-        setSavedDrafts(localDrafts);
-      }
-    } catch {
-      setSavedDrafts(getSavedDrafts());
+      setSavedDrafts(await fetchBackendDrafts());
+    } catch (err: unknown) {
+      showToast('Lỗi tải đơn nháp', err instanceof Error ? err.message : 'Không tải được danh sách đơn nháp', 'error');
     }
   };
 
-  // Mở lại đơn nháp đã lưu
+  // Mở lại đơn nháp đã lưu trên máy chủ
   const handleSelectSavedDraft = async (draft: OrderDraft) => {
-    // Nếu là đơn nháp từ Backend, tải chi tiết đầy đủ từ API
-    if (draft.backendDraftId) {
+    if (!draft.backendDraftId) return;
+    try {
       const full = await fetchBackendDraftById(draft.backendDraftId);
-      if (full) {
-        setBackendDraftId(full.backendDraftId || null);
-        setCurrentDraftId(full.id);
-        setExpectedDeliveryDate(full.expectedDeliveryDate || expectedDeliveryDate);
-        setOrderNote(full.note || '');
-        setItems(full.items || []);
-
-        // Khôi phục đại lý từ API
-        try {
-          const agencyRes = await fetchAgencies({ keyword: full.agencyCode || full.agencyName });
-          const matched = agencyRes.content.find((a) => a.id === full.agencyId || a.code === full.agencyCode);
-          if (matched) {
-            setSelectedAgency(matched);
-            if (full.deliveryPointId) {
-              const points = await fetchDeliveryPointsByAgency(matched.id);
-              const p = points.find((pt: DeliveryPoint) => pt.id === full.deliveryPointId) || points[0];
-              if (p) setSelectedDeliveryPoint(p);
-            }
-          }
-        } catch (err) {
-          console.warn('Lỗi phục hồi đại lý từ backend:', err);
-        }
-
-        showToast('Đã mở đơn nháp', `Đã tải lại đơn nháp [${full.orderNumber || full.id}] từ máy chủ`, 'info');
-        setIsDraftsModalOpen(false);
-        return;
-      }
-    }
-
-    setBackendDraftId(draft.backendDraftId || null);
-    setCurrentDraftId(draft.id);
-    setExpectedDeliveryDate(draft.expectedDeliveryDate || expectedDeliveryDate);
-    setOrderNote(draft.note || '');
-    setItems(draft.items || []);
-
-    // Khôi phục đại lý
-    if (draft.agencyId) {
-      setSelectedAgency({
-        id: draft.agencyId,
-        code: draft.agencyCode,
-        name: draft.agencyName,
-        taxCode: '',
-        customerGroup: draft.customerGroup,
-        customerGroupName: draft.customerGroupName,
-        pricingTier: {
-          id: 'tier',
-          code: draft.pricingTierCode,
-          name: draft.pricingTierName,
-          discountPercent: 0,
-          description: '',
-          badgeBg: '#FFF7ED',
-          badgeColor: '#C2410C'
-        },
-        regionId: '',
-        regionName: '',
-        assignedRepId: '',
-        assignedRepName: '',
-        phone: '',
-        email: '',
-        address: draft.deliveryAddress,
-        status: 'ACTIVE',
-        hasTransactions: true,
-        transactionCount: 1,
-        totalDebt: 0,
-        creditLimit: 100000000,
-        createdAt: '',
-        updatedAt: ''
-      });
-    }
-
-    if (draft.deliveryPointId) {
-      setSelectedDeliveryPoint({
-        id: draft.deliveryPointId,
-        agencyId: draft.agencyId,
-        name: draft.deliveryPointName,
-        address: draft.deliveryAddress,
-        contactPerson: '',
-        phone: '',
-        isDefault: true,
-        createdAt: '',
-        updatedAt: ''
-      });
-    }
-
-    showToast('Đã mở đơn nháp', `Đã tải lại đơn nháp [${draft.id}]`, 'info');
-  };
-
-  // Xóa đơn nháp
-  const handleDeleteDraft = (draftId: string) => {
-    deleteDraft(draftId);
-    setSavedDrafts(getSavedDrafts());
-    showToast('Đã xóa nháp', 'Đã xóa đơn nháp thành công', 'info');
-  };
-
-  // Điều kiện kiểm tra trước khi chốt đơn
-  const isAgencyLocked = Boolean(selectedAgency?.transactionLocked);
-  const hasNoItems = items.length === 0;
-  const hasNoAgency = !selectedAgency;
-
-  let disabledReason = '';
-  if (hasNoAgency) disabledReason = 'Vui lòng chọn đại lý đặt hàng';
-  else if (isAgencyLocked) disabledReason = 'Đại lý bị khóa nợ xấu - Chặn tạo đơn mới (S3-07)';
-  else if (hasNoItems) disabledReason = 'Vui lòng thêm ít nhất 1 sản phẩm';
-
-  // Chốt đơn hàng chính thức
-  const handleSubmitOrder = () => {
-    if (disabledReason) {
-      showToast('Chưa thể chốt đơn', disabledReason, 'error');
-      return;
-    }
-
-    setIsSubmitting(true);
-    const draftObj: OrderDraft = {
-      id: currentDraftId,
-      status: 'CONFIRMED',
-      agencyId: selectedAgency!.id,
-      agencyCode: selectedAgency!.code,
-      agencyName: selectedAgency!.name,
-      customerGroup: selectedAgency!.customerGroup,
-      customerGroupName: selectedAgency!.customerGroupName,
-      pricingTierCode: selectedAgency!.pricingTier.code,
-      pricingTierName: selectedAgency!.pricingTier.name,
-      deliveryPointId: selectedDeliveryPoint?.id || '',
-      deliveryPointName: selectedDeliveryPoint?.name || 'Kho chính đại lý',
-      deliveryAddress: selectedDeliveryPoint?.address || selectedAgency!.address,
-      expectedDeliveryDate,
-      note: orderNote,
-      items,
-      totalItemsCount: totals.totalItemsCount,
-      totalQuantity: totals.totalQuantity,
-      subtotalAmount: totals.subtotalAmount,
-      discountAmount: totals.discountAmount,
-      totalPayable: totals.totalPayable,
-      salesRepId: String(user?.id || 'REP_001'),
-      salesRepName: user?.fullName || 'Nhân viên kinh doanh',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    const result = confirmOrder(draftObj);
-    setIsSubmitting(false);
-
-    if (result.success) {
-      setConfirmedOrderResult({
-        orderNumber: result.orderNumber,
-        agencyName: draftObj.agencyName,
-        totalPayable: draftObj.totalPayable
-      });
-      // Reset form sau khi chốt
-      setCurrentDraftId(`DRAFT-${Date.now()}`);
+      setBackendDraftId(full.backendDraftId || null);
+      setCurrentDraftId(full.id);
+      setExpectedDeliveryDate(full.expectedDeliveryDate || expectedDeliveryDate);
+      setOrderNote(full.note || '');
+      setItems(full.items || []);
       setSelectedAgency(null);
       setSelectedDeliveryPoint(null);
-      setOrderNote('');
-      setItems([]);
-      setSavedDrafts(getSavedDrafts());
+      await restoreAgency(full.agencyId, full.agencyCode, full.agencyName, full.deliveryPointId);
+      showToast('Đã mở đơn nháp', `Đã tải lại đơn nháp [${full.orderNumber || full.id}] từ máy chủ`, 'info');
+      setIsDraftsModalOpen(false);
+    } catch (err: unknown) {
+      showToast('Không mở được đơn nháp', err instanceof Error ? err.message : 'Vui lòng thử lại', 'error');
     }
   };
+
+  // Chốt đơn chính thức (giữ chỗ tồn, kiểm hạn mức, duyệt giá sàn) thuộc Sprint 4 (S4-02, S4-03, S4-05, S4-06):
+  // Backend chưa có API chốt đơn nên KHÔNG giả lập "tạo đơn thành công" ở trình duyệt.
+  const submitBlockedReason = 'Chốt đơn chính thức làm ở Sprint 4 (kiểm tồn, hạn mức công nợ, duyệt giá sàn). Hiện tại hãy bấm Lưu Nháp.';
+
+  const isAgencyLocked = Boolean(selectedAgency?.transactionLocked);
+  const money = preview.status === 'ok' ? preview.order : null;
 
   return (
     <div className="space-y-5 animate-in fade-in duration-300 pb-10">
@@ -573,7 +416,7 @@ export const OrderCreatePage: React.FC = () => {
             {/* Nút mở Picker thêm sản phẩm */}
             <button
               type="button"
-              onClick={() => setIsProductPickerOpen(true)}
+              onClick={openProductPicker}
               className="px-3.5 py-2 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 active:scale-98 transition cursor-pointer shrink-0"
             >
               <Plus size={16} />
@@ -597,7 +440,7 @@ export const OrderCreatePage: React.FC = () => {
               </div>
               <button
                 type="button"
-                onClick={() => setIsProductPickerOpen(true)}
+                onClick={openProductPicker}
                 className="px-4 py-2 rounded-xl bg-orange-100 hover:bg-orange-200 text-[#F85606] font-bold text-xs inline-flex items-center gap-1.5 transition"
               >
                 <Plus size={15} />
@@ -621,7 +464,7 @@ export const OrderCreatePage: React.FC = () => {
               <div className="pt-2 flex justify-center">
                 <button
                   type="button"
-                  onClick={() => setIsProductPickerOpen(true)}
+                  onClick={openProductPicker}
                   className="w-full py-2.5 rounded-xl border border-dashed border-orange-300 hover:border-[#F85606] bg-orange-50/40 hover:bg-orange-50 text-[#F85606] text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
                 >
                   <Plus size={15} />
@@ -644,41 +487,53 @@ export const OrderCreatePage: React.FC = () => {
             </span>
           </div>
 
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between text-gray-600">
-              <span>Tổng tiền hàng (niêm yết):</span>
-              <span className="font-mono font-medium">{formatCurrencyVND(totals.subtotalAmount)}</span>
-            </div>
-
-            {totals.discountAmount > 0 && (
-              <div className="flex justify-between text-emerald-700 font-medium">
-                <span className="flex items-center gap-1">
-                  <Tag size={12} />
-                  <span>Chiết khấu sản lượng </span>
-                </span>
-                <span className="font-mono font-bold">
-                  -{formatCurrencyVND(totals.discountAmount)}
-                </span>
+          {/* Tiền do Backend tính theo bảng giá + chính sách chiết khấu sản lượng đang hiệu lực */}
+          {!selectedAgency ? (
+            <p className="text-xs text-gray-500">Chọn đại lý và thêm sản phẩm để hệ thống tính tiền.</p>
+          ) : items.length === 0 ? (
+            <p className="text-xs text-gray-500">Thêm sản phẩm để hệ thống tính tiền.</p>
+          ) : preview.status === 'error' ? (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2">
+              <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-600" />
+              <div>
+                <strong className="block">Chưa tính được tiền đơn hàng</strong>
+                <span>{preview.message}</span>
               </div>
-            )}
-
-            <div className="flex justify-between items-baseline text-sm sm:text-base font-bold text-gray-900 pt-2 border-t border-gray-100">
-              <span className="flex items-center gap-1.5">
-                <span className="text-[#F85606]">●</span>
-                <span>Tổng tiền phải thu:</span>
-              </span>
-              <strong className="text-lg sm:text-xl font-black text-[#F85606] font-mono">
-                {formatCurrencyVND(totals.totalPayable)}
-              </strong>
             </div>
-          </div>
+          ) : (
+            <div className={`space-y-2 text-xs ${preview.status === 'loading' ? 'opacity-60' : ''}`}>
+              <div className="flex justify-between text-gray-600">
+                <span>Tổng tiền hàng (theo bảng giá):</span>
+                <span className="font-mono font-medium">{money ? formatCurrencyVND(Number(money.subtotal)) : '—'}</span>
+              </div>
 
-          {/* Banner quy chuẩn Best-Deal */}
+              {money && Number(money.discountTotal) > 0 && (
+                <div className="flex justify-between text-emerald-700 font-medium">
+                  <span className="flex items-center gap-1">
+                    <Tag size={12} />
+                    <span>Chiết khấu sản lượng:</span>
+                  </span>
+                  <span className="font-mono font-bold">-{formatCurrencyVND(Number(money.discountTotal))}</span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-baseline text-sm sm:text-base font-bold text-gray-900 pt-2 border-t border-gray-100">
+                <span className="flex items-center gap-1.5">
+                  <span className="text-[#F85606]">●</span>
+                  <span>Tổng tiền phải thu:</span>
+                </span>
+                <strong className="text-lg sm:text-xl font-black text-[#F85606] font-mono">
+                  {money ? formatCurrencyVND(Number(money.totalAmount)) : 'Đang tính...'}
+                </strong>
+              </div>
+            </div>
+          )}
+
           <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-[11px] leading-relaxed flex items-start gap-2">
             <Tag size={14} className="shrink-0 text-amber-600 mt-0.5" />
             <div>
-              <strong>Quy chuẩn chiết khấu sản lượng: </strong>
-              Hệ thống tự động áp dụng bậc chiết khấu cao nhất theo tổng số lượng cơ sở (≥20: 3%, ≥50: 5%, ≥100: 8%). Không cần thương lượng miệng từng lần.
+              Đơn giá lấy từ <strong>bảng giá đang hiệu lực</strong> của nhóm khách hàng mà đại lý thuộc về; chiết khấu sản lượng
+              theo <strong>chính sách chiết khấu</strong> đang áp dụng. Hệ thống tự tính lại mỗi khi đổi số lượng hoặc đơn vị tính.
             </div>
           </div>
 
@@ -695,27 +550,20 @@ export const OrderCreatePage: React.FC = () => {
               <span>{isSavingDraft ? 'Đang lưu...' : 'Lưu Nháp'}</span>
             </button>
 
-            <div className="relative group">
-              <button
-                type="button"
-                onClick={handleSubmitOrder}
-                disabled={Boolean(disabledReason) || isSubmitting}
-                className={`h-10 px-5 rounded-xl font-bold text-xs sm:text-sm text-white flex items-center gap-1.5 transition-all shadow-md ${disabledReason
-                  ? 'bg-gray-400 cursor-not-allowed opacity-70'
-                  : 'bg-gradient-to-r from-[#FF6A00] to-[#EE4D2D] hover:opacity-95 shadow-orange-500/25 active:scale-98'
-                  }`}
-              >
-                <CheckCircle2 size={16} />
-                <span>{isSubmitting ? 'Đang xử lý...' : 'Chốt Đơn Đặt Hàng'}</span>
-              </button>
-
-              {disabledReason && (
-                <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-[11px] py-1 px-2.5 rounded-lg whitespace-nowrap shadow-lg z-50">
-                  {disabledReason}
-                </div>
-              )}
-            </div>
+            <button
+              type="button"
+              disabled
+              title={submitBlockedReason}
+              className="h-10 px-5 rounded-xl font-bold text-xs sm:text-sm text-white flex items-center gap-1.5 bg-gray-400 cursor-not-allowed opacity-70"
+            >
+              <CheckCircle2 size={16} />
+              <span>Chốt Đơn Đặt Hàng</span>
+            </button>
           </div>
+          <p className="text-[11px] text-gray-500 text-right">
+            {isAgencyLocked ? 'Đại lý đang bị khóa giao dịch - chặn tạo đơn mới (S3-07). ' : ''}
+            {submitBlockedReason}
+          </p>
         </div>
       </div>
 
@@ -734,57 +582,8 @@ export const OrderCreatePage: React.FC = () => {
         onClose={() => setIsDraftsModalOpen(false)}
         drafts={savedDrafts}
         onSelectDraft={handleSelectSavedDraft}
-        onDeleteDraft={handleDeleteDraft}
       />
 
-      {/* MODAL 3: CHÚC MỪNG CHỐT ĐƠN THÀNH CÔNG */}
-      {confirmedOrderResult && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-md bg-white rounded-2xl p-6 text-center shadow-2xl border border-gray-100 space-y-4">
-            <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-xs">
-              <CheckCircle2 size={32} />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">
-                Tạo Đơn Hàng Thành Công!
-              </h3>
-              <p className="text-xs text-gray-500 mt-1">
-                Đơn hàng đã được lưu chính thức vào hệ thống phân phối
-              </p>
-            </div>
-
-            <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200 text-xs space-y-1.5 text-left">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Số hiệu đơn:</span>
-                <span className="font-mono font-bold text-blue-600">
-                  {confirmedOrderResult.orderNumber}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Đại lý:</span>
-                <strong className="text-gray-800">{confirmedOrderResult.agencyName}</strong>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Tổng phải thu:</span>
-                <strong className="font-mono font-bold text-[#F85606]">
-                  {formatCurrencyVND(confirmedOrderResult.totalPayable)}
-                </strong>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setConfirmedOrderResult(null)}
-                className="w-full py-2.5 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white font-bold text-xs shadow-md shadow-orange-500/25 transition"
-              >
-                Tiếp Tục Lên Đơn Mới
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

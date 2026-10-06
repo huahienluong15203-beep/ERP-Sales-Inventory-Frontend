@@ -1,11 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Agency } from '../../types/agency';
 import type { OrderProductCatalogItem } from '../../services/orderService';
-import {
-  CATALOG_ORDERABLE_PRODUCTS,
-  fetchBackendProductOptions,
-  formatCurrencyVND
-} from '../../services/orderService';
+import { fetchBackendProductOptions, formatCurrencyVND } from '../../services/orderService';
 import { Search, X, Plus, Check, Package, AlertCircle } from '../common/Icons';
 
 interface ProductPickerModalProps {
@@ -24,50 +20,43 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
   agency
 }) => {
   const [keyword, setKeyword] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [backendProducts, setBackendProducts] = useState<OrderProductCatalogItem[]>([]);
+  const [products, setProducts] = useState<OrderProductCatalogItem[]>([]);
   const [loadingBackend, setLoadingBackend] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Tự động tìm kiếm backend khi có đại lý và từ khóa >= 2 ký tự
+  // Tìm trên Backend (giá theo bảng giá của nhóm khách hàng mà đại lý thuộc về), gõ >= 2 ký tự, chờ 300ms
   useEffect(() => {
     if (!isOpen) return;
-
-    if (agency?.id && keyword.trim().length >= 2) {
-      setLoadingBackend(true);
-      fetchBackendProductOptions(agency.id, keyword.trim())
-        .then((items) => {
-          setBackendProducts(items);
-        })
-        .catch(() => setBackendProducts([]))
-        .finally(() => setLoadingBackend(false));
-    } else {
-      setBackendProducts([]);
+    const kw = keyword.trim();
+    setLoadError(null);
+    if (!agency?.id || kw.length < 2) {
+      setProducts([]);
+      setLoadingBackend(false);
+      return;
     }
+    let alive = true;
+    setLoadingBackend(true);
+    const timer = setTimeout(() => {
+      fetchBackendProductOptions(agency.id, kw)
+        .then((items) => {
+          if (alive) setProducts(items);
+        })
+        .catch((err: unknown) => {
+          if (!alive) return;
+          setProducts([]);
+          setLoadError(err instanceof Error ? err.message : 'Không tải được danh sách sản phẩm');
+        })
+        .finally(() => {
+          if (alive) setLoadingBackend(false);
+        });
+    }, 300);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
   }, [isOpen, agency?.id, keyword]);
 
-  // Danh sách danh mục độc nhất
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    CATALOG_ORDERABLE_PRODUCTS.forEach((p) => set.add(p.category));
-    return Array.from(set);
-  }, []);
-
-  // Lọc sản phẩm (ghép kết quả backend và mẫu)
-  const filteredProducts = useMemo(() => {
-    const sourceList =
-      backendProducts.length > 0
-        ? backendProducts
-        : CATALOG_ORDERABLE_PRODUCTS;
-
-    return sourceList.filter((p) => {
-      const matchCat = selectedCategory === 'ALL' || p.category === selectedCategory;
-      const matchKeyword =
-        !keyword.trim() ||
-        p.name.toLowerCase().includes(keyword.toLowerCase()) ||
-        p.sku.toLowerCase().includes(keyword.toLowerCase());
-      return matchCat && matchKeyword;
-    });
-  }, [keyword, selectedCategory, backendProducts]);
+  const keywordTooShort = keyword.trim().length < 2;
 
   if (!isOpen) return null;
 
@@ -129,47 +118,34 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
               )}
             </div>
           </div>
-
-          {/* Tab danh mục nhanh */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
-            <button
-              type="button"
-              onClick={() => setSelectedCategory('ALL')}
-              className={`px-2.5 py-1 rounded-lg shrink-0 font-medium transition ${
-                selectedCategory === 'ALL'
-                  ? 'bg-orange-500 text-white font-bold'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Tất cả ({CATALOG_ORDERABLE_PRODUCTS.length})
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-2.5 py-1 rounded-lg shrink-0 font-medium transition ${
-                  selectedCategory === cat
-                    ? 'bg-orange-500 text-white font-bold'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Danh sách sản phẩm cuộn được */}
         <div className="p-3 overflow-y-auto divide-y divide-gray-100 space-y-2 flex-1">
-          {filteredProducts.length === 0 ? (
+          {!agency ? (
             <div className="py-12 text-center text-gray-400 space-y-1">
               <Package size={32} className="mx-auto text-gray-300" />
-              <p className="text-xs font-medium">Không tìm thấy sản phẩm nào khớp</p>
-              <span className="text-[11px]">Thử tìm với từ khóa khác</span>
+              <p className="text-xs font-medium">Chọn đại lý trước khi thêm sản phẩm</p>
+              <span className="text-[11px]">Giá lấy theo bảng giá của nhóm khách hàng mà đại lý thuộc về</span>
+            </div>
+          ) : loadError ? (
+            <div className="py-10 text-center space-y-1">
+              <AlertCircle size={28} className="mx-auto text-red-400" />
+              <p className="text-xs font-semibold text-red-600">{loadError}</p>
+            </div>
+          ) : keywordTooShort ? (
+            <div className="py-12 text-center text-gray-400 space-y-1">
+              <Search size={30} className="mx-auto text-gray-300" />
+              <p className="text-xs font-medium">Gõ ít nhất 2 ký tự mã SKU hoặc tên sản phẩm</p>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="py-12 text-center text-gray-400 space-y-1">
+              <Package size={32} className="mx-auto text-gray-300" />
+              <p className="text-xs font-medium">{loadingBackend ? 'Đang tìm...' : 'Không tìm thấy sản phẩm nào khớp'}</p>
+              {!loadingBackend && <span className="text-[11px]">Thử tìm với từ khóa khác</span>}
             </div>
           ) : (
-            filteredProducts.map((p) => {
+            products.map((p) => {
               const isAdded = addedSkuList.includes(p.sku);
 
               return (
@@ -191,10 +167,6 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
                       <span>ĐVT cơ sở: <strong className="text-gray-700">{p.baseUnit}</strong></span>
                       <span>•</span>
                       <span>Quy cách: {p.availableUnits.map((u) => u.unitName).join(', ')}</span>
-                      <span>•</span>
-                      <span className="text-emerald-600 font-medium">
-                        Tồn: {p.stockAvailable} {p.baseUnit}
-                      </span>
                     </div>
 
                     {p.priceAvailable === false ? (
