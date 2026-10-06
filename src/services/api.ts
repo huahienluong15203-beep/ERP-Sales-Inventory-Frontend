@@ -2,7 +2,11 @@ import type { RoleName, UserContextResponse, UserProfile } from '../types/user';
 import { ROLE_METADATA_MAP } from '../types/user';
 import { getAuthorizedMenus } from './menuConfig';
 
-export const API_BASE_URL = 'http://localhost:8080';
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.location.hostname
+    ? `http://${window.location.hostname}:8080`
+    : 'http://localhost:8080');
 
 /**
  * Chuyển đổi đường dẫn tương đối của avatar thành URL đầy đủ
