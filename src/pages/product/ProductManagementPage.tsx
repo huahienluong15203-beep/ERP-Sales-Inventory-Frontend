@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Product, ProductStatus } from '../../types/product';
 import {
   productService,
@@ -9,7 +9,11 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { Icons } from '../../components/common/Icons';
 import { ProductFormModal } from './components/ProductFormModal';
-import { ProductExcelImportModal } from './components/ProductExcelImportModal';
+import { useNavigate } from '../../routes/Router';
+import { useUrlPaging } from '../../hooks/useUrlParams';
+import { useServerSearch } from '../../hooks/useServerSearch';
+import { Pagination } from '../../components/common/Pagination';
+import { fetchCategories } from '../../services/categoryApi';
 import { ProductUnitConversionModal } from './components/ProductUnitConversionModal';
 
 export const ProductManagementPage: React.FC = () => {
@@ -17,39 +21,96 @@ export const ProductManagementPage: React.FC = () => {
   const canSeeCost = canManageCostPrice(currentRole);
   const canManageProducts = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER';
 
+  const navigate = useNavigate();
+
   const [products, setProducts] = useState<Product[]>([]);
-  const [keyword, setKeyword] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [selectedStatus, setSelectedStatus] = useState<ProductStatus | 'ALL'>('ALL');
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, categoryCount: 0 });
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([...PRODUCT_CATEGORIES]);
   const [isLoading, setIsLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Bộ lọc + trang lưu trên URL, vd: /products?category=Bia&status=ACTIVE&page=3
+  const { params: urlParams, setParams: setUrlParams, page, size, setPage, setSize, setFilters } = useUrlPaging({
+    keyword: '',
+    category: 'ALL',
+    status: 'ALL'
+  });
+  const selectedCategory = urlParams.category;
+  const selectedStatus = urlParams.status as ProductStatus | 'ALL';
+  const setSelectedCategory = (value: string) => setFilters({ category: value });
+  const setSelectedStatus = (value: ProductStatus | 'ALL') => setFilters({ status: value });
+
+  // Ô tìm kiếm: đợi ngừng gõ 0,4 giây mới gọi API
+  const [keyword, setKeyword] = useState(urlParams.keyword);
+  const resetToFirstPage = useCallback(() => setPage(0), [setPage]);
+  const { serverKeyword } = useServerSearch(keyword, resetToFirstPage, urlParams.keyword);
+  useEffect(() => {
+    setUrlParams({ keyword: serverKeyword });
+  }, [serverKeyword, setUrlParams]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [unitConversionProduct, setUnitConversionProduct] = useState<Product | null>(null);
 
-  const [blockedDeleteProduct, setBlockedDeleteProduct] = useState<Product | null>(null);
-  const [confirmDeleteProduct, setConfirmDeleteProduct] = useState<Product | null>(null);
+  const [deactivateTarget, setDeactivateTarget] = useState<Product | null>(null);
 
+  // Tải 1 trang sản phẩm từ Backend (lọc + phân trang phía server)
   const loadProducts = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await productService.getProducts({
-        keyword,
+        keyword: serverKeyword,
         category: selectedCategory,
         status: selectedStatus,
-        pageSize: 100
+        page,
+        size
       });
       setProducts(res.products);
+      setTotalElements(res.totalElements);
+      setTotalPages(res.totalPages);
+      if (res.totalPages > 0 && page > res.totalPages - 1) {
+        setPage(res.totalPages - 1);
+      }
+    } catch (err: unknown) {
+      setProducts([]);
+      showToast(err instanceof Error ? err.message : 'Không tải được danh sách sản phẩm!');
     } finally {
       setIsLoading(false);
     }
-  }, [keyword, selectedCategory, selectedStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverKeyword, selectedCategory, selectedStatus, page, size, setPage]);
+
+  // Số liệu thẻ đầu trang (đếm trên toàn bộ sản phẩm) + danh sách nhóm hàng cho ô lọc
+  const loadStats = useCallback(async () => {
+    try {
+      const [s, categories] = await Promise.all([
+        productService.getStats(),
+        fetchCategories().catch(() => [])
+      ]);
+      const names = Array.from(
+        new Set([...PRODUCT_CATEGORIES, ...categories.map((c) => c.name)].filter(Boolean))
+      );
+      setCategoryOptions(names);
+      setStats({ ...s, categoryCount: categories.length || PRODUCT_CATEGORIES.length });
+    } catch {
+      // Lỗi đã báo ở loadProducts
+    }
+  }, []);
 
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
+  const reloadAll = () => {
+    loadProducts();
+    loadStats();
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -66,40 +127,20 @@ export const ProductManagementPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteClick = (p: Product) => {
-    if (p.transactionCount > 0) {
-      setBlockedDeleteProduct(p);
-    } else {
-      setConfirmDeleteProduct(p);
-    }
-  };
-
-  const handleConfirmNormalDelete = async () => {
-    if (!confirmDeleteProduct) return;
-    const res = await productService.deleteProduct(confirmDeleteProduct.id);
-    setConfirmDeleteProduct(null);
-    showToast(res.message);
-    if (res.success) {
-      loadProducts();
-    }
-  };
-
+  // Sản phẩm không xoá cứng (quy tắc 8) -> chỉ Ngừng kinh doanh / Mở lại kinh doanh
   const handleSwitchToInactive = async () => {
-    if (!blockedDeleteProduct) return;
-    const res = await productService.deactivateProduct(blockedDeleteProduct.id);
-    setBlockedDeleteProduct(null);
+    if (!deactivateTarget) return;
+    const res = await productService.deactivateProduct(deactivateTarget.id);
+    setDeactivateTarget(null);
     showToast(res.message);
-    loadProducts();
+    if (res.success) reloadAll();
   };
 
-  // Thống kê nhanh theo chuẩn ETC Stat Cards
-  const stats = useMemo(() => {
-    const total = products.length;
-    const active = products.filter((p) => p.status === 'ACTIVE').length;
-    const inactive = products.filter((p) => p.status === 'INACTIVE').length;
-    const categoryCount = new Set(products.map((p) => p.category)).size;
-    return { total, active, inactive, categoryCount };
-  }, [products]);
+  const handleActivate = async (p: Product) => {
+    const res = await productService.activateProduct(p.id);
+    showToast(res.message);
+    if (res.success) reloadAll();
+  };
 
   return (
     <div className="w-full p-4 sm:p-6 lg:p-8 space-y-6">
@@ -131,7 +172,7 @@ export const ProductManagementPage: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               type="button"
-              onClick={() => setIsImportModalOpen(true)}
+              onClick={() => navigate('/products/import')}
               className="inline-flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-sm font-semibold px-4 py-2.5 rounded-xl shadow-2xs hover:shadow-xs transition-all duration-200 min-h-[44px]"
               title="Nhập danh mục sản phẩm từ file Excel"
             >
@@ -215,7 +256,7 @@ export const ProductManagementPage: React.FC = () => {
             className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
           >
             <option value="ALL">Tất cả nhóm hàng</option>
-            {PRODUCT_CATEGORIES.map((c) => (
+            {categoryOptions.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
@@ -236,7 +277,7 @@ export const ProductManagementPage: React.FC = () => {
         </div>
 
         <div className="w-full sm:w-auto sm:ml-auto text-xs sm:text-sm text-gray-500 font-medium">
-          Hiển thị: <span className="font-bold text-gray-900">{products.length}</span> sản phẩm
+          Tìm thấy: <span className="font-bold text-gray-900">{totalElements.toLocaleString('vi-VN')}</span> sản phẩm
         </div>
       </div>
 
@@ -399,22 +440,25 @@ export const ProductManagementPage: React.FC = () => {
                                 <Icons.Edit size={16} />
                               </button>
 
-                              <button
-                                type="button"
-                                title={
-                                  p.transactionCount > 0
-                                    ? 'Đã có giao dịch: Không được xóa, chỉ được ngừng kinh doanh'
-                                    : 'Xóa sản phẩm'
-                                }
-                                onClick={() => handleDeleteClick(p)}
-                                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                                  p.transactionCount > 0
-                                    ? 'text-amber-600 hover:bg-amber-50'
-                                    : 'text-red-500 hover:text-red-700 hover:bg-red-50'
-                                }`}
-                              >
-                                <Icons.Trash2 size={16} />
-                              </button>
+                              {p.status === 'ACTIVE' ? (
+                                <button
+                                  type="button"
+                                  title="Ngừng kinh doanh (sản phẩm không xoá khỏi hệ thống)"
+                                  onClick={() => setDeactivateTarget(p)}
+                                  className="p-1.5 rounded-lg transition-colors cursor-pointer text-red-500 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Icons.Trash2 size={16} />
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  title="Mở lại kinh doanh"
+                                  onClick={() => handleActivate(p)}
+                                  className="p-1.5 rounded-lg transition-colors cursor-pointer text-emerald-600 hover:bg-emerald-50"
+                                >
+                                  <Icons.RotateCcw size={16} />
+                                </button>
+                              )}
                             </>
                           )}
                         </div>
@@ -426,6 +470,18 @@ export const ProductManagementPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Phân trang: ‹ 1 2 … n › */}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalElements={totalElements}
+          size={size}
+          onPageChange={setPage}
+          onSizeChange={setSize}
+          itemLabel="sản phẩm"
+          disabled={isLoading}
+        />
       </div>
 
       {/* Modal Khai báo / Chỉnh sửa */}
@@ -434,13 +490,13 @@ export const ProductManagementPage: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSuccess={(msg) => {
           showToast(msg);
-          loadProducts();
+          reloadAll();
         }}
         productToEdit={editingProduct}
       />
 
-      {/* Modal CHẶN XÓA (Điều kiện 4) */}
-      {blockedDeleteProduct && (
+      {/* Modal NGỪNG KINH DOANH (sản phẩm không xoá cứng để giữ lịch sử giao dịch) */}
+      {deactivateTarget && (
         <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl max-w-md w-full my-auto p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95">
             <div className="flex gap-3.5 items-start">
@@ -448,16 +504,11 @@ export const ProductManagementPage: React.FC = () => {
                 <Icons.AlertTriangle size={22} />
               </div>
               <div>
-                <h3 className="text-base font-bold text-gray-900">
-                  Không thể xóa sản phẩm đã có giao dịch!
-                </h3>
+                <h3 className="text-base font-bold text-gray-900">Ngừng kinh doanh sản phẩm?</h3>
                 <p className="mt-1.5 text-xs sm:text-sm text-gray-600 leading-relaxed">
-                  Sản phẩm <b className="text-gray-900">{blockedDeleteProduct.sku} - {blockedDeleteProduct.name}</b> đã phát sinh{' '}
-                  <span className="text-red-600 font-bold">
-                    {blockedDeleteProduct.transactionCount} giao dịch
-                  </span>
-                  . Theo quy định hệ thống, không được xóa khỏi danh mục để tránh mất mát dữ liệu
-                  kế toán và kho. Bạn chỉ có thể chuyển sang <b>Ngừng kinh doanh</b>.
+                  Sản phẩm <b className="text-gray-900">{deactivateTarget.sku} - {deactivateTarget.name}</b> sẽ chuyển sang{' '}
+                  <b>Ngừng kinh doanh</b>. Theo quy định, sản phẩm không bị xoá khỏi hệ thống để giữ nguyên lịch sử
+                  đơn hàng, kho và công nợ. Bạn có thể mở lại kinh doanh bất cứ lúc nào.
                 </p>
               </div>
             </div>
@@ -465,7 +516,7 @@ export const ProductManagementPage: React.FC = () => {
             <div className="flex justify-end gap-2.5 mt-6">
               <button
                 type="button"
-                onClick={() => setBlockedDeleteProduct(null)}
+                onClick={() => setDeactivateTarget(null)}
                 className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-medium transition-colors"
               >
                 Đóng
@@ -481,56 +532,6 @@ export const ProductManagementPage: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Modal XÁC NHẬN XÓA (transactionCount === 0) */}
-      {confirmDeleteProduct && (
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl max-w-md w-full my-auto p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95">
-            <div className="flex gap-3.5 items-start">
-              <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 border border-red-100">
-                <Icons.Trash2 size={22} />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-gray-900">
-                  Xác nhận xóa vĩnh viễn sản phẩm
-                </h3>
-                <p className="mt-1.5 text-xs sm:text-sm text-gray-600 leading-relaxed">
-                  Sản phẩm <b className="text-gray-900">{confirmDeleteProduct.sku} - {confirmDeleteProduct.name}</b> chưa có giao dịch nào phát sinh.
-                  Bạn có chắc chắn muốn xóa hoàn toàn sản phẩm này khỏi hệ thống không?
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2.5 mt-6">
-              <button
-                type="button"
-                onClick={() => setConfirmDeleteProduct(null)}
-                className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-medium transition-colors"
-              >
-                Hủy bỏ
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmNormalDelete}
-                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors shadow-xs"
-              >
-                Xóa vĩnh viễn
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Nhập danh mục sản phẩm từ Excel */}
-      <ProductExcelImportModal
-        isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
-        existingProducts={products}
-        onImportSuccess={(msg) => {
-          showToast(msg);
-          loadProducts();
-        }}
-      />
 
       {/* Modal Quản lý Đơn vị tính quy đổi */}
       <ProductUnitConversionModal

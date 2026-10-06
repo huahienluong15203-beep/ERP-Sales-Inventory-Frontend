@@ -104,4 +104,6 @@ export interface ImportExecutionResult {
   createdCount: number;
   updatedCount: number;
   skippedErrorCount: number;
+  /** Các dòng lỗi bị bỏ qua (để người dùng sửa file và nhập lại) */
+  errorRows?: Array<{ rowNumber: number; sku: string; name: string; errors: string[] }>;
 }

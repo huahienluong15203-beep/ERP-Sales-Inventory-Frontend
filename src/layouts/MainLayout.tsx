@@ -148,11 +148,15 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
       ? '403 Truy Cập Bị Từ Chối'
       : location.pathname === '/profile'
         ? 'Hồ Sơ Cá Nhân'
-        : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
+        : location.pathname === '/products/import'
+          ? 'Nhập Sản Phẩm Từ Excel'
+          : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
   const pageSubtitle =
     location.pathname === '/profile'
       ? 'Thông tin cá nhân & thiết lập an toàn tài khoản'
-      : currentMenu?.description || 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống';
+      : location.pathname === '/products/import'
+        ? 'Tải tệp mẫu, xem trước từng dòng và nhập hàng loạt đến 5.000 SKU'
+        : currentMenu?.description || 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống';
 
   return (
     <div className="erp-app-shell">
