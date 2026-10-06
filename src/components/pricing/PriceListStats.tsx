@@ -1,18 +1,19 @@
 import React from 'react';
-import type { PriceList } from '../../types/pricing';
+import type { PriceListStatsData } from '../../services/pricingApi';
 import { Icons } from '../common/Icons';
 
 interface PriceListStatsProps {
-  priceLists: PriceList[];
+  /** Số liệu đếm trên toàn bộ bảng giá, lấy từ /api/price-lists/stats */
+  stats: PriceListStatsData;
 }
 
-export const PriceListStats: React.FC<PriceListStatsProps> = ({ priceLists }) => {
-  const total = priceLists.length;
-  const activeCount = priceLists.filter((p) => p.status === 'ACTIVE').length;
-  const tier1Count = priceLists.filter((p) => p.customerGroup === 'DEALER_LEVEL_1').length;
-  const tier2Count = priceLists.filter((p) => p.customerGroup === 'DEALER_LEVEL_2').length;
-  const retailCount = priceLists.filter((p) => p.customerGroup === 'RETAIL').length;
-  const lockedCount = priceLists.filter((p) => p.hasOrders).length;
+export const PriceListStats: React.FC<PriceListStatsProps> = ({ stats: data }) => {
+  const total = data.total;
+  const activeCount = data.active;
+  const tier1Count = data.dealerLevel1;
+  const tier2Count = data.dealerLevel2;
+  const retailCount = data.retail;
+  const lockedCount = data.locked;
 
   const stats = [
     {

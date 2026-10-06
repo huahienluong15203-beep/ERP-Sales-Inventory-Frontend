@@ -1,16 +1,20 @@
 import React from 'react';
 import { Icons } from '../common/Icons';
 import type { VolumeDiscountPolicy } from '../../types/discount';
+import type { VolumeDiscountStatsData } from '../../services/volumeDiscountApi';
 
 interface VolumeDiscountStatsProps {
+  /** Chính sách của trang đang xem (chỉ dùng cho tổng tiền chiết khấu). */
   policies: VolumeDiscountPolicy[];
+  /** Số liệu đếm trên toàn bộ chính sách, lấy từ /api/discount-policies/stats */
+  stats?: VolumeDiscountStatsData | null;
 }
 
-export const VolumeDiscountStats: React.FC<VolumeDiscountStatsProps> = ({ policies }) => {
-  const totalCount = policies.length;
-  const activeCount = policies.filter((p) => p.status === 'ACTIVE').length;
-  const skuCount = policies.filter((p) => p.scopeType === 'SKU').length;
-  const categoryCount = policies.filter((p) => p.scopeType === 'CATEGORY').length;
+export const VolumeDiscountStats: React.FC<VolumeDiscountStatsProps> = ({ policies, stats }) => {
+  const totalCount = stats ? stats.total : policies.length;
+  const activeCount = stats ? stats.active : policies.filter((p) => p.status === 'ACTIVE').length;
+  const skuCount = stats ? stats.productScope : policies.filter((p) => p.scopeType === 'SKU').length;
+  const categoryCount = stats ? stats.categoryScope : policies.filter((p) => p.scopeType === 'CATEGORY').length;
   const totalDiscountGiven = policies.reduce((acc, p) => acc + (p.totalDiscountGiven || 0), 0);
 
   return (

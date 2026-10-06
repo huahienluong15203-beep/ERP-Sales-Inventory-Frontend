@@ -1,15 +1,32 @@
-import React, { useState } from 'react';
+import React from 'react';
 import type { PriceList, CustomerGroupType } from '../../types/pricing';
 import { CUSTOMER_GROUPS } from '../../types/pricing';
 import { Icons } from '../common/Icons';
+import { Pagination } from '../common/Pagination';
 
 interface PriceListTableProps {
+  /** Các bảng giá của TRANG hiện tại (Backend đã lọc + phân trang). */
   priceLists: PriceList[];
   canManage: boolean;
   onViewDetail: (priceList: PriceList) => void;
   onEdit: (priceList: PriceList) => void;
   onCloneVersion: (priceList: PriceList) => void;
   onToggleStatus: (priceList: PriceList) => void;
+  // Bộ lọc (lưu trên URL ở trang cha)
+  keyword: string;
+  onKeywordChange: (value: string) => void;
+  selectedGroup: string;
+  onGroupChange: (value: string) => void;
+  selectedStatus: string;
+  onStatusChange: (value: string) => void;
+  // Phân trang
+  page: number;
+  size: number;
+  totalPages: number;
+  totalElements: number;
+  onPageChange: (page: number) => void;
+  onSizeChange: (size: number) => void;
+  loading?: boolean;
 }
 
 export const PriceListTable: React.FC<PriceListTableProps> = ({
@@ -18,30 +35,25 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
   onViewDetail,
   onEdit,
   onCloneVersion,
-  onToggleStatus
+  onToggleStatus,
+  keyword,
+  onKeywordChange,
+  selectedGroup,
+  onGroupChange,
+  selectedStatus,
+  onStatusChange,
+  page,
+  size,
+  totalPages,
+  totalElements,
+  onPageChange,
+  onSizeChange,
+  loading = false
 }) => {
-  const [selectedGroup, setSelectedGroup] = useState<string>('ALL');
-  const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
-  const [keyword, setKeyword] = useState<string>('');
-
   const nowStr = new Date().toISOString().split('T')[0];
 
-  const filteredLists = priceLists.filter((item) => {
-    if (selectedGroup !== 'ALL' && item.customerGroup !== selectedGroup) {
-      return false;
-    }
-    if (selectedStatus !== 'ALL' && item.status !== selectedStatus) {
-      return false;
-    }
-    if (keyword.trim()) {
-      const kw = keyword.toLowerCase().trim();
-      const codeMatch = item.code.toLowerCase().includes(kw);
-      const nameMatch = item.name.toLowerCase().includes(kw);
-      const noteMatch = item.note ? item.note.toLowerCase().includes(kw) : false;
-      if (!codeMatch && !nameMatch && !noteMatch) return false;
-    }
-    return true;
-  });
+  // Backend đã lọc sẵn, Frontend không lọc lại
+  const filteredLists = priceLists;
 
   const getValidityBadge = (startDate: string, endDate?: string | null) => {
     if (startDate > nowStr) {
@@ -74,7 +86,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
           <input
             type="text"
             value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+            onChange={(e) => onKeywordChange(e.target.value)}
             placeholder="Tìm theo mã bảng giá, tên bảng giá hoặc ghi chú..."
             className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs md:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
@@ -83,7 +95,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
           </div>
           {keyword && (
             <button
-              onClick={() => setKeyword('')}
+              onClick={() => onKeywordChange('')}
               className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 cursor-pointer"
             >
               <Icons.X size={14} />
@@ -96,7 +108,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
           {/* Nhóm khách hàng */}
           <select
             value={selectedGroup}
-            onChange={(e) => setSelectedGroup(e.target.value)}
+            onChange={(e) => onGroupChange(e.target.value)}
             className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
           >
             <option value="ALL">Tất cả nhóm khách hàng</option>
@@ -108,7 +120,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
           {/* Trạng thái */}
           <select
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
+            onChange={(e) => onStatusChange(e.target.value)}
             className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
           >
             <option value="ALL">Tất cả trạng thái</option>
@@ -118,7 +130,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
 
           {/* Đếm số lượng */}
           <span className="text-xs text-gray-500 ml-1">
-            Hiển thị <strong>{filteredLists.length}</strong> / {priceLists.length}
+            Tìm thấy <strong>{totalElements}</strong> bảng giá
           </span>
         </div>
       </div>
@@ -343,6 +355,18 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Phân trang: ‹ 1 2 … n › */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalElements={totalElements}
+        size={size}
+        onPageChange={onPageChange}
+        onSizeChange={onSizeChange}
+        itemLabel="bảng giá"
+        disabled={loading}
+      />
     </div>
   );
 };

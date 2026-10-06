@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Icons } from '../../components/common/Icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { VolumeDiscountStats } from '../../components/pricing/VolumeDiscountStats';
@@ -19,8 +19,13 @@ import {
   deleteVolumeDiscountPolicy,
   togglePolicyStatus,
   exportPoliciesToCsv,
+  getVolumeDiscountStats,
   BEST_DEAL_RULE_STATEMENT
 } from '../../services/volumeDiscountApi';
+import type { VolumeDiscountStatsData } from '../../services/volumeDiscountApi';
+import { useUrlPaging } from '../../hooks/useUrlParams';
+import { useServerSearch } from '../../hooks/useServerSearch';
+import { Pagination } from '../../components/common/Pagination';
 
 export const VolumeDiscountPage: React.FC = () => {
   // Quyền ghi (tạo/sửa/đổi trạng thái) chỉ dành cho ADMIN, SALES_MANAGER — backend cũng kiểm @PreAuthorize
@@ -33,11 +38,31 @@ export const VolumeDiscountPage: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  // Bộ lọc
-  const [searchKeyword, setSearchKeyword] = useState<string>('');
-  const [scopeFilter, setScopeFilter] = useState<'ALL' | DiscountScopeType>('ALL');
-  const [customerFilter, setCustomerFilter] = useState<'ALL' | CustomerGroupType>('ALL');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | DiscountPolicyStatus>('ALL');
+  const [totalElements, setTotalElements] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [stats, setStats] = useState<VolumeDiscountStatsData | null>(null);
+
+  // Bộ lọc + trang lưu trên URL, vd: /pricing/discounts?scope=SKU&status=ACTIVE&page=2
+  const { params: urlParams, setParams: setUrlParams, page, size, setPage, setSize, setFilters } = useUrlPaging({
+    keyword: '',
+    scope: 'ALL',
+    customer: 'ALL',
+    status: 'ALL'
+  });
+  const scopeFilter = urlParams.scope as 'ALL' | DiscountScopeType;
+  const customerFilter = urlParams.customer as 'ALL' | CustomerGroupType;
+  const statusFilter = urlParams.status as 'ALL' | DiscountPolicyStatus;
+  const setScopeFilter = (value: 'ALL' | DiscountScopeType) => setFilters({ scope: value });
+  const setCustomerFilter = (value: 'ALL' | CustomerGroupType) => setFilters({ customer: value });
+  const setStatusFilter = (value: 'ALL' | DiscountPolicyStatus) => setFilters({ status: value });
+
+  // Ô tìm kiếm: đợi ngừng gõ 0,4 giây mới gọi API
+  const [searchKeyword, setSearchKeyword] = useState<string>(urlParams.keyword);
+  const resetToFirstPage = useCallback(() => setPage(0), [setPage]);
+  const { serverKeyword } = useServerSearch(searchKeyword, resetToFirstPage, urlParams.keyword);
+  useEffect(() => {
+    setUrlParams({ keyword: serverKeyword });
+  }, [serverKeyword, setUrlParams]);
 
   // Điều khiển UI Modals & Simulator
   const [showSimulator, setShowSimulator] = useState<boolean>(true);
@@ -58,12 +83,19 @@ export const VolumeDiscountPage: React.FC = () => {
     setLoadError(null);
     try {
       const res = await getVolumeDiscountPolicies({
-        keyword: searchKeyword,
+        keyword: serverKeyword,
         scopeType: scopeFilter,
         customerGroup: customerFilter,
-        status: statusFilter
+        status: statusFilter,
+        page,
+        size
       });
       setPolicies(res.data);
+      setTotalElements(res.total);
+      setTotalPages(res.totalPages);
+      getVolumeDiscountStats()
+        .then(setStats)
+        .catch(() => setStats(null));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Không thể tải danh sách chính sách chiết khấu!';
       setPolicies([]);
@@ -76,7 +108,7 @@ export const VolumeDiscountPage: React.FC = () => {
 
   useEffect(() => {
     loadPolicies();
-  }, [searchKeyword, scopeFilter, customerFilter, statusFilter]);
+  }, [serverKeyword, scopeFilter, customerFilter, statusFilter, page, size]);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMsg({ text, type });
@@ -196,9 +228,7 @@ export const VolumeDiscountPage: React.FC = () => {
   // Đặt lại bộ lọc
   const handleResetFilters = () => {
     setSearchKeyword('');
-    setScopeFilter('ALL');
-    setCustomerFilter('ALL');
-    setStatusFilter('ALL');
+    setFilters({ scope: 'ALL', customer: 'ALL', status: 'ALL' });
   };
 
   return (
@@ -276,7 +306,7 @@ export const VolumeDiscountPage: React.FC = () => {
       )}
 
       {/* KPI Cards Thống kê */}
-      <VolumeDiscountStats policies={policies} />
+      <VolumeDiscountStats policies={policies} stats={stats} />
 
       {/* Banner Quy tắc nghiệp vụ Best-Deal */}
       <div className="flex items-center justify-between rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50/90 via-amber-50/50 to-white p-4 text-xs text-orange-950 shadow-2xs">
@@ -611,6 +641,18 @@ export const VolumeDiscountPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Phân trang: ‹ 1 2 … n › */}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalElements={totalElements}
+          size={size}
+          onPageChange={setPage}
+          onSizeChange={setSize}
+          itemLabel="chính sách"
+          disabled={isLoading}
+        />
       </div>
 
       {/* Modal Form Thêm / Sửa */}

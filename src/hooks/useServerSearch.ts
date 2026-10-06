@@ -37,10 +37,11 @@ function toServerKeyword(value: string): string {
  *
  * @param input       nội dung đang gõ trong ô tìm kiếm
  * @param onCommitted gọi khi serverKeyword thay đổi (vd: quay về trang đầu)
+ * @param initialKeyword từ khoá ban đầu (vd: đọc từ URL) để không gọi API 2 lần lúc mở trang
  */
-export function useServerSearch(input: string, onCommitted?: () => void) {
-  const [serverKeyword, setServerKeyword] = useState('');
-  const serverKeywordRef = useRef('');
+export function useServerSearch(input: string, onCommitted?: () => void, initialKeyword = '') {
+  const [serverKeyword, setServerKeyword] = useState(() => toServerKeyword(initialKeyword));
+  const serverKeywordRef = useRef(toServerKeyword(initialKeyword));
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onCommittedRef = useRef(onCommitted);
 

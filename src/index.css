@@ -202,3 +202,8 @@ textarea {
   animation: erpToastProgress 1.8s linear forwards;
 }
 
+
+/* Tiêu đề cột của mọi bảng luôn nằm trên 1 dòng (theo nhận xét của giáo viên) */
+table th {
+  white-space: nowrap;
+}

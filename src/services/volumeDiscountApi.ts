@@ -271,7 +271,7 @@ export async function fetchDiscountCategoryOptions(): Promise<DiscountCategoryOp
  */
 export async function getVolumeDiscountPolicies(
   params: VolumeDiscountFilterParams = {}
-): Promise<{ data: VolumeDiscountPolicy[]; total: number }> {
+): Promise<{ data: VolumeDiscountPolicy[]; total: number; totalPages: number }> {
   // Lọc + phân trang phía server (Backend trả PageResponse: content, totalElements...)
   const query = new URLSearchParams();
   if (params.keyword && params.keyword.trim() !== '') query.set('keyword', params.keyword.trim());
@@ -280,14 +280,15 @@ export async function getVolumeDiscountPolicies(
     query.set('scope', params.scopeType === 'SKU' ? 'PRODUCT' : 'CATEGORY');
   }
   query.set('page', String(params.page ?? 0));
-  query.set('size', String(params.size ?? 100));
-  const raw = await requestJson<{ content: BePolicy[]; totalElements: number }>(
+  query.set('size', String(params.size ?? 20));
+  const raw = await requestJson<{ content: BePolicy[]; totalElements: number; totalPages: number }>(
     `${BASE}?${query.toString()}`,
     { method: 'GET' },
     'Không tải được danh sách chính sách chiết khấu'
   );
   let list = (raw?.content || []).map(mapPolicy);
   let total = raw?.totalElements ?? list.length;
+  let totalPages = raw?.totalPages ?? 1;
 
   if (params.targetCategory && params.targetCategory !== 'ALL') {
     const tc = params.targetCategory.toLowerCase();
@@ -295,9 +296,26 @@ export async function getVolumeDiscountPolicies(
       (p) => p.targetId === params.targetCategory || p.targetName.toLowerCase().includes(tc)
     );
     total = list.length;
+    totalPages = 1;
   }
 
-  return { data: list, total };
+  return { data: list, total, totalPages };
+}
+
+/** Số liệu thẻ đầu trang, đếm trên TOÀN BỘ chính sách (không phụ thuộc trang đang xem). */
+export interface VolumeDiscountStatsData {
+  total: number;
+  active: number;
+  productScope: number;
+  categoryScope: number;
+}
+
+export async function getVolumeDiscountStats(): Promise<VolumeDiscountStatsData> {
+  return requestJson<VolumeDiscountStatsData>(
+    `${BASE}/stats`,
+    { method: 'GET' },
+    'Không tải được số liệu chính sách chiết khấu'
+  );
 }
 
 /**
