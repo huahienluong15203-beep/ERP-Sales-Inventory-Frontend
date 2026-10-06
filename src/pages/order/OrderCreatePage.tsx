@@ -676,7 +676,7 @@ export const OrderCreatePage: React.FC = () => {
             <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-[11px] leading-relaxed flex items-start gap-2">
               <Tag size={14} className="shrink-0 text-amber-600 mt-0.5" />
               <div>
-                <strong>Quy chuẩn chiết khấu sản lượng (S3-01): </strong>
+                <strong>Quy chuẩn chiết khấu sản lượng</strong>
                 Hệ thống tự động áp dụng bậc chiết khấu cao nhất theo tổng số lượng cơ sở (≥20: 3%, ≥50: 5%, ≥100: 8%). Không cần thương lượng miệng từng lần.
               </div>
             </div>
