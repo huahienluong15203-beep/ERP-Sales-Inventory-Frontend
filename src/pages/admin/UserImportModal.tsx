@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import * as XLSX from 'xlsx';
 import {
   X,
   FileSpreadsheet,
@@ -16,8 +15,8 @@ import {
 } from '../../components/common/Icons';
 import {
   executeUserImportApi,
+  previewUserImportApi,
   downloadUserImportTemplateApi,
-  type UserImportRowDto,
   type UserImportPreviewResponse,
   type UserImportSummaryResponse,
   type AdminUserItem
@@ -27,27 +26,17 @@ interface UserImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (summaryMsg: string) => void;
+  /** Không còn dùng: Backend tự kiểm trùng trên toàn bộ dữ liệu (giữ để không phải sửa trang cha) */
   existingUsers?: AdminUserItem[];
 }
 
 type ImportStep = 'SELECT_FILE' | 'PREVIEW' | 'SUMMARY';
 type PreviewFilterTab = 'ALL' | 'VALID' | 'INVALID';
 
-const VALID_ROLES = [
-  'ROLE_ADMIN',
-  'ROLE_SALES_MANAGER',
-  'ROLE_SALES_REP',
-  'ROLE_WAREHOUSE',
-  'ROLE_WH_MANAGER',
-  'ROLE_ACCOUNTANT',
-  'ROLE_CUSTOMER'
-];
-
 export const UserImportModal: React.FC<UserImportModalProps> = ({
   isOpen,
   onClose,
-  onSuccess,
-  existingUsers = []
+  onSuccess
 }) => {
   const [step, setStep] = useState<ImportStep>('SELECT_FILE');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -102,82 +91,19 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
   }, [isOpen]);
 
   /* ──────────────────────────────────────────────────────────────────────────
-     1. TẢI TỆP MẪU EXCEL (.xlsx) CHUẨN ĐẦY ĐỦ CỘT & HƯỚNG DẪN
+     1. TẢI TỆP MẪU EXCEL TỪ BACKEND (mẫu và danh sách mã do Backend sinh, luôn khớp dữ liệu thật)
      ────────────────────────────────────────────────────────────────────────── */
   const handleDownloadTemplate = async () => {
-    try {
-      // Ưu tiên tải từ API backend
-      const res = await downloadUserImportTemplateApi();
-      if (res.success) return;
-    } catch {
-      // Fallback: Sinh file Excel trực tiếp tại Client bằng SheetJS nếu backend offline
+    setErrorMsg(null);
+    const res = await downloadUserImportTemplateApi();
+    if (!res.success) {
+      setErrorMsg(res.message || 'Không tải được tệp mẫu từ máy chủ. Vui lòng thử lại!');
     }
-
-    // Tạo workbook mẫu bằng SheetJS
-    const wb = XLSX.utils.book_new();
-
-    // Sheet 1: Danh sách mẫu
-    const ws1Data = [
-      ['STT', 'Tên đăng nhập (*)', 'Họ và tên (*)', 'Email (*)', 'Số điện thoại', 'Mã vai trò (*)', 'Mã kho hàng', 'Mã địa bàn'],
-      [1, 'sales_north_01', 'Phan Văn Nam', 'nam.pv@erp.com', '0981112233', 'ROLE_SALES_REP', '', 'MB'],
-      [2, 'sales_north_02', 'Lê Thị Bích', 'bich.lt@erp.com', '', 'ROLE_SALES_REP', '', 'MB'],
-      [3, 'wh_staff_dn01', 'Trần Đình Trọng', 'trong.td@erp.com', '0982223344', 'ROLE_WAREHOUSE', 'WH-MT01', 'MT'],
-      [4, 'acc_south_01', 'Hoàng Kim Oanh', 'oanh.hk@erp.com', '', 'ROLE_ACCOUNTANT', '', '']
-    ];
-    const ws1 = XLSX.utils.aoa_to_sheet(ws1Data);
-    ws1['!cols'] = [
-      { wch: 6 },
-      { wch: 22 },
-      { wch: 26 },
-      { wch: 28 },
-      { wch: 16 },
-      { wch: 24 },
-      { wch: 18 },
-      { wch: 16 }
-    ];
-    XLSX.utils.book_append_sheet(wb, ws1, 'DanhSachNguoiDung');
-
-    // Sheet 2: Hướng dẫn & Quy định
-    const ws2Data = [
-      ['HƯỚNG DẪN QUY CHUẨN NHẬP DỮ LIỆU NGƯỜI DÙNG TỪ EXCEL'],
-      [''],
-      ['1. Các cột có dấu (*) là bắt buộc phải nhập dữ liệu.'],
-      ['2. Tên đăng nhập: 3 - 50 ký tự, viết liền không dấu, không trùng với tài khoản đã có trong hệ thống.'],
-      ['3. Email: Phải đúng định dạng chuẩn (vd: user@domain.com) và chưa từng được đăng ký trong hệ thống.'],
-      ['4. Số điện thoại: Tùy chọn (cho phép để trống để nhân viên tự cập nhật sau trong Hồ sơ cá nhân). Nếu nhập thì phải đủ 10 số (đầu 03, 05, 07, 08, 09) và không trùng lặp.'],
-      ['5. Ràng buộc kho: Nhân viên kho (ROLE_WAREHOUSE) hoặc Quản lý kho (ROLE_WH_MANAGER) BẮT BUỘC phải điền Mã kho hợp lệ.'],
-      ['6. Các dòng có lỗi sẽ tự động được hệ thống bỏ qua, các dòng hợp lệ vẫn sẽ được nhập an toàn vào hệ thống.'],
-      [''],
-      ['DANH SÁCH MÃ VAI TRÒ HỢP LỆ:', 'MÔ TẢ'],
-      ['ROLE_ADMIN', 'Quản trị hệ thống (Toàn quyền quản trị)'],
-      ['ROLE_SALES_MANAGER', 'Quản lý kinh doanh (Duyệt đơn, phụ trách địa bàn)'],
-      ['ROLE_SALES_REP', 'Nhân viên kinh doanh (Gõ đơn, chăm sóc đại lý)'],
-      ['ROLE_WAREHOUSE', 'Nhân viên kho (Soạn và xuất nhập kho - BẮT BUỘC GẮN MÃ KHO)'],
-      ['ROLE_WH_MANAGER', 'Quản lý kho (Quản lý cụm kho - BẮT BUỘC GẮN MÃ KHO)'],
-      ['ROLE_ACCOUNTANT', 'Kế toán công nợ (Hóa đơn, thu nợ)'],
-      ['ROLE_CUSTOMER', 'Đại lý mua sỉ (Cổng đặt hàng B2B)'],
-      [''],
-      ['DANH SÁCH MÃ KHO HỢP LỆ:', 'TÊN KHO HÀNG'],
-      ['WH-MB01', 'Kho Tổng Miền Bắc (Hà Nội)'],
-      ['WH-MN01', 'Kho Tổng Miền Nam (Bình Dương)'],
-      ['WH-MT01', 'Kho Trung Chuyển Miền Trung (Đà Nẵng)'],
-      ['WH-MK01', 'Kho Vệ Tinh Mekong (Cần Thơ)'],
-      [''],
-      ['DANH SÁCH MÃ ĐỊA BÀN HỢP LỆ:', 'TÊN VÙNG / ĐỊA BÀN'],
-      ['MB', 'Miền Bắc'],
-      ['MN', 'Miền Nam'],
-      ['MT', 'Miền Trung']
-    ];
-    const ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
-    ws2['!cols'] = [{ wch: 35 }, { wch: 45 }];
-    XLSX.utils.book_append_sheet(wb, ws2, 'HuongDan_QuyDinh');
-
-    XLSX.writeFile(wb, 'Mau_Nhap_Nguoi_Dung_ERP.xlsx');
   };
 
   /* ──────────────────────────────────────────────────────────────────────────
-     2. XỬ LÝ KHI NGƯỜI DÙNG CHỌN FILE HOẶC KÉO THẢ VÀO
-     -> TỰ ĐỘNG PHÂN TÍCH VÀ CHUYỂN NGAY SANG PREVIEW (KHÔNG BẮT BẤM THÊM NÚT)
+     2. CHỌN / KÉO THẢ FILE -> GỬI LÊN BACKEND KIỂM TRA TỪNG DÒNG RỒI HIỆN PREVIEW
+     (Backend kiểm trùng tài khoản/email/SĐT trên TOÀN BỘ dữ liệu, mã kho, mã địa bàn...)
      ────────────────────────────────────────────────────────────────────────── */
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -211,199 +137,28 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
 
     setSelectedFile(file);
     setIsProcessing(true);
-
     try {
-      // 1. Phân tích ngay lập tức tại Client bằng SheetJS: Hiển thị Preview tức thì (< 10ms), cực kỳ mượt mà
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array' });
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-
-      const rawRows: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-      if (rawRows.length <= 1) {
-        setErrorMsg('Tệp Excel không có dòng dữ liệu nào (chỉ có dòng tiêu đề hoặc tệp rỗng).');
-        setIsProcessing(false);
+      const res = await previewUserImportApi(file);
+      if (!res.success || !res.data) {
+        setSelectedFile(null);
+        setErrorMsg(res.message || 'Không thể kiểm tra tệp Excel. Vui lòng thử lại!');
         return;
       }
-
-      // Nhận diện vị trí các cột thông minh qua dòng tiêu đề (hỗ trợ cả tệp có hoặc không có cột STT)
-      const headerRow = (rawRows[0] || []).map((c: any) => String(c).trim().toLowerCase());
-      let usernameCol = headerRow.findIndex((h: string) => h.includes('đăng nhập') || h.includes('tài khoản') || h.includes('username'));
-      let fullNameCol = headerRow.findIndex((h: string) => h.includes('họ') || h.includes('tên') || h.includes('fullname'));
-      let emailCol = headerRow.findIndex((h: string) => h.includes('email'));
-      let phoneCol = headerRow.findIndex((h: string) => h.includes('điện thoại') || h.includes('phone') || h.includes('sđt'));
-      let rolesCol = headerRow.findIndex((h: string) => h.includes('vai trò') || h.includes('role'));
-      let whCol = headerRow.findIndex((h: string) => h.includes('kho') || h.includes('warehouse'));
-      let regCol = headerRow.findIndex((h: string) => h.includes('địa bàn') || h.includes('vùng') || h.includes('region'));
-
-      // Fallback theo vị trí mặc định của tệp mẫu nếu không khớp tên cột
-      if (usernameCol === -1) usernameCol = 1;
-      if (fullNameCol === -1) fullNameCol = 2;
-      if (emailCol === -1) emailCol = 3;
-      if (phoneCol === -1) phoneCol = 4;
-      if (rolesCol === -1) rolesCol = 5;
-      if (whCol === -1) whCol = 6;
-      if (regCol === -1) regCol = 7;
-
-      // Sets kiểm tra trùng lặp
-      const fileUsernames = new Set<string>();
-      const fileEmails = new Set<string>();
-      const filePhones = new Set<string>();
-
-      // Danh sách existing user trong DB / hệ thống để kiểm tra trùng
-      const safeExistingUsers = existingUsers || [];
-      const existingUsernames = new Set(safeExistingUsers.map((u) => u.username.toLowerCase()));
-      const existingEmails = new Set(safeExistingUsers.map((u) => u.email.toLowerCase()));
-      const existingPhones = new Set(
-        safeExistingUsers.filter((u) => !!u.phone).map((u) => (u.phone || '').trim())
-      );
-
-      const parsedRows: UserImportRowDto[] = [];
-
-      for (let i = 1; i < rawRows.length; i++) {
-        const row = rawRows[i];
-        if (!row || row.every((c: any) => String(c).trim() === '')) {
-          continue; // Bỏ qua dòng trống
-        }
-
-        const rowNumber = i + 1;
-        const errors: string[] = [];
-
-        const username = String(row[usernameCol] || '').trim().toLowerCase();
-        const fullName = String(row[fullNameCol] || '').trim();
-        const email = String(row[emailCol] || '').trim().toLowerCase();
-        let phone = String(row[phoneCol] || '').trim().replace(/\s+/g, '');
-        if (phone.startsWith('+84')) {
-          phone = '0' + phone.substring(3);
-        }
-        const rawRoles = String(row[rolesCol] || '').trim().toUpperCase();
-        const rawWarehouses = String(row[whCol] || '').trim().toUpperCase();
-        const rawRegions = String(row[regCol] || '').trim().toUpperCase();
-
-        // 1. Kiểm tra Username
-        if (!username) {
-          errors.push('Tên đăng nhập không được để trống.');
-        } else if (!/^[a-zA-Z0-9._-]{3,50}$/.test(username)) {
-          errors.push('Tên đăng nhập phải từ 3 đến 50 ký tự, viết liền không dấu, không chứa ký tự đặc biệt.');
-        } else if (existingUsernames.has(username)) {
-          errors.push(`Tên tài khoản '${username}' đã tồn tại trong hệ thống.`);
-        } else if (fileUsernames.has(username)) {
-          errors.push(`Tên tài khoản '${username}' bị trùng lặp với dòng khác trong tệp Excel.`);
-        } else {
-          fileUsernames.add(username);
-        }
-
-        // 2. Kiểm tra Họ và tên
-        if (!fullName) {
-          errors.push('Họ và tên không được để trống.');
-        } else if (fullName.length > 100) {
-          errors.push('Họ và tên không được vượt quá 100 ký tự.');
-        }
-
-        // 3. Kiểm tra Email
-        if (!email) {
-          errors.push('Email không được để trống.');
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          errors.push(`Email '${email}' không đúng định dạng hợp lệ.`);
-        } else if (existingEmails.has(email)) {
-          errors.push(`Email '${email}' đã được sử dụng trong hệ thống.`);
-        } else if (fileEmails.has(email)) {
-          errors.push(`Email '${email}' bị trùng lặp với dòng khác trong tệp Excel.`);
-        } else {
-          fileEmails.add(email);
-        }
-
-        // 4. Kiểm tra Số điện thoại
-        if (phone) {
-          if (!/^0(3|5|7|8|9)\d{8}$/.test(phone)) {
-            errors.push(`Số điện thoại '${phone}' không hợp lệ (phải đủ 10 số, đầu 03, 05, 07, 08 hoặc 09).`);
-          } else if (existingPhones.has(phone)) {
-            errors.push(`Số điện thoại '${phone}' đã được sử dụng bởi tài khoản khác trong hệ thống.`);
-          } else if (filePhones.has(phone)) {
-            errors.push(`Số điện thoại '${phone}' bị trùng lặp với dòng khác trong tệp Excel.`);
-          } else {
-            filePhones.add(phone);
-          }
-        }
-
-        // 5. Kiểm tra Vai trò
-        const rolesList: string[] = [];
-        let isWhRole = false;
-        if (!rawRoles) {
-          errors.push('Bắt buộc chỉ định ít nhất một vai trò hợp lệ.');
-        } else {
-          const parts = rawRoles.split(/[,;]/);
-          for (let p of parts) {
-            let r = p.trim();
-            if (!r) continue;
-            if (!r.startsWith('ROLE_')) r = 'ROLE_' + r;
-            if (VALID_ROLES.includes(r)) {
-              rolesList.push(r);
-              if (r === 'ROLE_WAREHOUSE' || r === 'ROLE_WH_MANAGER') {
-                isWhRole = true;
-              }
-            } else {
-              errors.push(`Mã vai trò '${p.trim()}' không tồn tại trong 7 vai trò hệ thống.`);
-            }
-          }
-        }
-
-        // 6. Kiểm tra Mã kho & Ràng buộc kho S1-09
-        const whList: string[] = rawWarehouses
-          ? rawWarehouses
-            .split(/[,;]/)
-            .map((w) => w.trim())
-            .filter(Boolean)
-          : [];
-
-        if (isWhRole && whList.length === 0) {
-          errors.push('Vai trò Nhân viên kho / Quản lý kho bắt buộc phải gắn với ít nhất một mã kho hợp lệ.');
-        }
-
-        // 7. Mã địa bàn
-        const regList: string[] = rawRegions
-          ? rawRegions
-            .split(/[,;]/)
-            .map((r) => r.trim())
-            .filter(Boolean)
-          : [];
-
-        parsedRows.push({
-          rowNumber,
-          username,
-          fullName,
-          email,
-          phone: phone || undefined,
-          roles: rolesList.length > 0 ? rolesList : ['ROLE_SALES_REP'],
-          warehouseCodes: whList,
-          regionCodes: regList,
-          valid: errors.length === 0,
-          errors
-        });
+      if (!res.data.rows || res.data.rows.length === 0) {
+        setSelectedFile(null);
+        setErrorMsg('Tệp Excel không có dòng dữ liệu nào (chỉ có dòng tiêu đề hoặc tệp rỗng).');
+        return;
       }
-
-      const validCount = parsedRows.filter((r) => r.valid).length;
-      const invalidCount = parsedRows.length - validCount;
-
-      setPreviewData({
-        fileName: file.name,
-        totalRows: parsedRows.length,
-        validRowsCount: validCount,
-        invalidRowsCount: invalidCount,
-        rows: parsedRows
-      });
-
-      // Chuyển thẳng sang bước PREVIEW luôn
+      setPreviewData(res.data);
       setStep('PREVIEW');
-    } catch (err: any) {
-      setErrorMsg('Không thể đọc nội dung tệp Excel: ' + (err?.message || 'Tệp bị lỗi định dạng'));
     } finally {
       setIsProcessing(false);
     }
   };
 
   /* ──────────────────────────────────────────────────────────────────────────
-     3. THỰC THI NHẬP DỮ LIỆU (BỎ QUA DÒNG LỖI, NHẬP DÒNG HỢP LỆ)
+     3. THỰC THI NHẬP (Backend bỏ qua dòng lỗi, nhập dòng hợp lệ, trả báo cáo)
+     Lỗi -> báo lỗi thật, KHÔNG giả lập "đã nhập thành công".
      ────────────────────────────────────────────────────────────────────────── */
   const handleExecuteImport = async () => {
     if (!selectedFile || !previewData) return;
@@ -411,62 +166,24 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
     setErrorMsg(null);
 
     try {
-      // 1. Thử gọi API Backend trước
-      try {
-        const res = await executeUserImportApi(selectedFile);
-        if (res.success && res.data) {
-          if (!res.data.failedCount || res.data.failedCount === 0) {
-            handleClose();
-            onSuccess(`Đã nhập thành công toàn bộ ${res.data.successCount} tài khoản người dùng từ tệp Excel.`);
-            setIsProcessing(false);
-            return;
-          }
-          setSummaryData(res.data);
-          setStep('SUMMARY');
-          setIsProcessing(false);
-          return;
-        }
-      } catch {
-        // Backend offline -> chạy mô phỏng nhập client
-      }
-
-      // 2. Xử lý lưu các dòng hợp lệ
-      const validRows = previewData.rows.filter((r) => r.valid);
-      const invalidRows = previewData.rows.filter((r) => !r.valid);
-
-      if (invalidRows.length === 0) {
-        handleClose();
-        onSuccess(`Đã nhập thành công toàn bộ ${validRows.length} tài khoản người dùng từ tệp Excel.`);
+      const res = await executeUserImportApi(selectedFile);
+      if (!res.success || !res.data) {
+        setErrorMsg(res.message || 'Không thể nhập dữ liệu. Chưa có tài khoản nào được tạo, vui lòng thử lại!');
         return;
       }
-
-      const createdUsers = validRows.map((r, idx) => ({
-        id: Date.now() + idx,
-        username: r.username,
-        fullName: r.fullName,
-        email: r.email,
-        phone: r.phone,
-        roles: r.roles
-      }));
-
-      const failedRows = invalidRows.map((r) => ({
-        rowNumber: r.rowNumber,
-        username: r.username,
-        email: r.email,
-        reasons: r.errors
-      }));
-
-      setSummaryData({
-        totalProcessed: previewData.totalRows,
-        successCount: createdUsers.length,
-        failedCount: failedRows.length,
-        createdUsers,
-        failedRows
-      });
-
+      if (res.data.successCount === 0) {
+        // Không tạo được tài khoản nào -> ở lại báo cáo để xem lý do từng dòng
+        setSummaryData(res.data);
+        setStep('SUMMARY');
+        return;
+      }
+      if (!res.data.failedCount) {
+        handleClose();
+        onSuccess(`Đã nhập thành công toàn bộ ${res.data.successCount} tài khoản người dùng từ tệp Excel.`);
+        return;
+      }
+      setSummaryData(res.data);
       setStep('SUMMARY');
-    } catch (err: any) {
-      setErrorMsg('Lỗi trong quá trình nhập: ' + (err?.message || 'Không thể lưu dữ liệu'));
     } finally {
       setIsProcessing(false);
     }
@@ -478,9 +195,10 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
   const handleFinishAndClose = () => {
     const successCount = summaryData?.successCount || 0;
     const failedCount = summaryData?.failedCount || 0;
-    const msg = `Nhập thành công ${successCount} tài khoản (đã bỏ qua ${failedCount} dòng lỗi).`;
     handleClose();
-    onSuccess(msg);
+    // Không tạo được tài khoản nào -> không báo "thành công"
+    if (successCount === 0) return;
+    onSuccess(`Nhập thành công ${successCount} tài khoản (đã bỏ qua ${failedCount} dòng lỗi).`);
   };
 
   // Lọc dữ liệu hiển thị trên bảng Preview
@@ -880,19 +598,33 @@ export const UserImportModal: React.FC<UserImportModalProps> = ({
           {/* ═════════════════════ BƯỚC 3: BÁO CÁO TỔNG KẾT ═════════════════════ */}
           {step === 'SUMMARY' && summaryData && (
             <div className="flex flex-col gap-4">
-              <div className="p-4 rounded-2xl bg-gradient-to-tr from-emerald-50 to-teal-50 border border-emerald-200 flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                  <CheckCircle2 size={24} />
+              {summaryData.successCount > 0 ? (
+                <div className="p-4 rounded-2xl bg-gradient-to-tr from-emerald-50 to-teal-50 border border-emerald-200 flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <CheckCircle2 size={24} />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <h3 className="text-sm font-bold text-emerald-950">
+                      Nhập Danh Sách Người Dùng Hoàn Tất!
+                    </h3>
+                    <span className="text-xs text-emerald-800">
+                      Đã tạo thành công <strong>{summaryData.successCount}</strong> tài khoản mới và gửi email mật khẩu tạm. Đã bỏ qua <strong>{summaryData.failedCount}</strong> dòng có lỗi.
+                    </span>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-0.5">
-                  <h3 className="text-sm font-bold text-emerald-950">
-                    Nhập Danh Sách Người Dùng Hoàn Tất!
-                  </h3>
-                  <span className="text-xs text-emerald-800">
-                    Đã tạo thành công <strong>{summaryData.successCount}</strong> tài khoản mới và gửi email mật khẩu tạm. Đã bỏ qua <strong>{summaryData.failedCount}</strong> dòng có lỗi.
-                  </span>
+              ) : (
+                <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <AlertCircle size={24} />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <h3 className="text-sm font-bold text-red-900">Chưa tạo được tài khoản nào</h3>
+                    <span className="text-xs text-red-800">
+                      Cả <strong>{summaryData.failedCount}</strong> dòng đều bị bỏ qua. Xem lý do bên dưới, sửa tệp rồi nhập lại.
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Bảng chi tiết các tài khoản đã tạo */}
               {summaryData.createdUsers.length > 0 && (

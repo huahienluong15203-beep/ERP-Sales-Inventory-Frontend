@@ -204,7 +204,8 @@ export const AppRoutes: React.FC = () => {
         />
 
 
-        {/* Đặt hàng đại lý (Sprint 3: S3-09 / SCRUM-14 / EP-04) */}
+        {/* Đặt hàng đại lý (Sprint 3: S3-09 / SCRUM-14 / EP-04).
+            Không có Kế toán: Backend /api/orders chỉ cho Admin, QL kinh doanh, NV kinh doanh tạo đơn */}
         <Route
           path="/orders/create"
           element={
@@ -212,8 +213,7 @@ export const AppRoutes: React.FC = () => {
               allowedRoles={[
                 'ROLE_SALES_REP',
                 'ROLE_SALES_MANAGER',
-                'ROLE_ADMIN',
-                'ROLE_ACCOUNTANT'
+                'ROLE_ADMIN'
               ]}
             >
               <OrderCreatePage />
@@ -227,8 +227,7 @@ export const AppRoutes: React.FC = () => {
               allowedRoles={[
                 'ROLE_SALES_REP',
                 'ROLE_SALES_MANAGER',
-                'ROLE_ADMIN',
-                'ROLE_ACCOUNTANT'
+                'ROLE_ADMIN'
               ]}
             >
               <OrderCreatePage />

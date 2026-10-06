@@ -8,8 +8,6 @@ import type {
 } from '../../../types/productUnitConversion';
 import { productUnitConversionService } from '../../../services/productUnitConversionService';
 import { API_BASE_URL, getStoredToken } from '../../../services/api';
-import { useAuth } from '../../../contexts/AuthContext';
-import { recordLocalAuditLog } from '../../../services/auditLogApi';
 import { Icons } from '../../../components/common/Icons';
 
 interface ProductUnitConversionModalProps {
@@ -107,7 +105,6 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
   product,
   onSuccess
 }) => {
-  const { user } = useAuth();
   const [units, setUnits] = useState<ProductUnitConversion[]>([]);
   const conversionUnits = useMemo(
     () => units.filter((u) => !isBaseUnitRow(u, product)),
@@ -143,44 +140,6 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
   const [calcQuantity, setCalcQuantity] = useState<string>('1');
   const [calcResult, setCalcResult] = useState<UnitConversionResult | null>(null);
   const [calcLoading, setCalcLoading] = useState<boolean>(false);
-
-  // Local storage fallback key
-  const storageKey = product ? `erp_unit_conversions_${product.sku}` : '';
-
-  const getStoredUnitsFallback = useCallback((prod: Product): ProductUnitConversion[] => {
-    const raw = localStorage.getItem(`erp_unit_conversions_${prod.sku}`);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const sanitized = sanitizeUnitsList(parsed, prod);
-          localStorage.setItem(`erp_unit_conversions_${prod.sku}`, JSON.stringify(sanitized));
-          return sanitized;
-        }
-      } catch {
-        // ignore
-      }
-    }
-    // Mặc định khởi tạo ít nhất đơn vị cơ sở hệ số 1
-    const base: ProductUnitConversion = {
-      id: 0,
-      productId: 0,
-      sku: prod.sku,
-      unitName: prod.baseUnit || 'Lon',
-      conversionFactor: 1,
-      isBaseUnit: true,
-      baseUnit: true,
-      formula: `1 ${prod.baseUnit || 'Lon'} = 1 ${prod.baseUnit || 'Lon'}`,
-      isDefaultPurchase: false,
-      isDefaultSale: false,
-      status: 'ACTIVE',
-      description: 'Đơn vị tính cơ sở chuẩn của SKU'
-    };
-
-    const sampleUnits: ProductUnitConversion[] = [base];
-    localStorage.setItem(`erp_unit_conversions_${prod.sku}`, JSON.stringify(sampleUnits));
-    return sampleUnits;
-  }, []);
 
   // Tải danh sách đơn vị tính từ Backend hoặc fallback
   const fetchUnits = useCallback(async () => {
@@ -219,7 +178,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
     if (realId) {
       try {
         const data = await productUnitConversionService.getUnits(realId);
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           const sanitized = sanitizeUnitsList(data, product);
           setUnits(sanitized);
           const nonBase = sanitized.find((u) => !isBaseUnitRow(u, product)) || sanitized[0];
@@ -228,17 +187,18 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
           return;
         }
       } catch (err: unknown) {
-        console.warn('Lỗi gọi API /units, chuyển sang chế độ dự phòng:', err);
+        // Không còn dùng dữ liệu tạm trong trình duyệt: báo lỗi thật để người dùng biết chưa tải được
+        setErrorBanner(err instanceof Error ? err.message : 'Không tải được danh sách đơn vị tính của sản phẩm.');
       }
+    } else {
+      setErrorBanner('Không tìm thấy sản phẩm này trên hệ thống. Vui lòng tải lại danh mục sản phẩm.');
     }
 
-    // Dự phòng fallback
-    const fallbackList = getStoredUnitsFallback(product);
-    setUnits(fallbackList);
-    const nonBase = fallbackList.find((u) => !isBaseUnitRow(u, product)) || fallbackList[0];
-    setCalcUnitName(nonBase ? nonBase.unitName : product.baseUnit);
+    // Chỉ hiện đơn vị cơ sở (dữ liệu thật từ Backend chưa có đơn vị quy đổi hoặc tải lỗi)
+    setUnits(sanitizeUnitsList([], product));
+    setCalcUnitName(product.baseUnit);
     setIsLoading(false);
-  }, [product, getStoredUnitsFallback]);
+  }, [product]);
 
   useEffect(() => {
     if (isOpen && product) {
@@ -349,162 +309,38 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
     setIsSubmitting(true);
 
     try {
-      let backendSuccess = false;
-
-      if (editingUnit && editingUnit.id && resolvedProductId) {
-        // CẬP NHẬT QUA BACKEND API
-        try {
-          const updateData: UpdateProductUnitConversionRequest = {
-            unitName: name,
-            conversionFactor: factor,
-            barcode: formBarcode.trim() || undefined,
-            isDefaultPurchase: formDefaultPurchase,
-            isDefaultSale: formDefaultSale,
-            description: formDescription.trim() || undefined,
-            status: formStatus,
-            changeReason: formChangeReason.trim() || 'Cập nhật hệ số quy đổi qua giao diện'
-          };
-
-          await productUnitConversionService.updateUnit(resolvedProductId, editingUnit.id, updateData);
-          setSuccessBanner(`Đã cập nhật đơn vị tính "${name}" (Hệ số: ${factor}) thành công!`);
-          setIsFormOpen(false);
-          fetchUnits();
-          backendSuccess = true;
-        } catch (apiErr) {
-          console.warn('Backend updateUnit không khả dụng, lưu vào bộ nhớ cục bộ:', apiErr);
-        }
-      } else if (!editingUnit && resolvedProductId) {
-        // TẠO MỚI QUA BACKEND API
-        try {
-          const createData: CreateProductUnitConversionRequest = {
-            unitName: name,
-            conversionFactor: factor,
-            barcode: formBarcode.trim() || undefined,
-            isDefaultPurchase: formDefaultPurchase,
-            isDefaultSale: formDefaultSale,
-            description: formDescription.trim() || undefined
-          };
-
-          await productUnitConversionService.addUnit(resolvedProductId, createData);
-          setSuccessBanner(`Đã thêm mới đơn vị quy đổi "${name}" (1 ${name} = ${factor} ${product?.baseUnit})!`);
-          setIsFormOpen(false);
-          fetchUnits();
-          backendSuccess = true;
-        } catch (apiErr) {
-          console.warn('Backend addUnit không khả dụng, lưu vào bộ nhớ cục bộ:', apiErr);
-        }
+      if (!resolvedProductId) {
+        throw new Error('Không tìm thấy sản phẩm này trên hệ thống nên chưa lưu được đơn vị quy đổi.');
       }
-
-      if (!backendSuccess) {
-        // FALLBACK LOCAL STORAGE NẾU KHÔNG CÓ KẾT NỐI DB HOẶC ID MOCK
-        let updatedList = [...units];
-        if (editingUnit) {
-          updatedList = updatedList.map((u) => {
-            if ((editingUnit.id && u.id === editingUnit.id) || u.unitName === editingUnit.unitName) {
-              return {
-                ...u,
-                unitName: name,
-                conversionFactor: factor,
-                formula: `1 ${name} = ${factor} ${product?.baseUnit}`,
-                barcode: formBarcode.trim() || '',
-                isDefaultPurchase: formDefaultPurchase,
-                isDefaultSale: formDefaultSale,
-                description: formDescription.trim(),
-                status: formStatus,
-                updatedAt: new Date().toISOString()
-              };
-            }
-            return u;
-          });
-        } else {
-          const newUnit: ProductUnitConversion = {
-            id: Date.now(),
-            productId: resolvedProductId || 0,
-            sku: product?.sku || '',
-            unitName: name,
-            conversionFactor: factor,
-            isBaseUnit: false,
-            baseUnit: false,
-            formula: `1 ${name} = ${factor} ${product?.baseUnit}`,
-            barcode: formBarcode.trim() || '',
-            isDefaultPurchase: formDefaultPurchase,
-            isDefaultSale: formDefaultSale,
-            description: formDescription.trim(),
-            status: 'ACTIVE',
-            createdAt: new Date().toISOString()
-          };
-          updatedList.push(newUnit);
-        }
-
-        const sanitized = sanitizeUnitsList(updatedList, product);
-        if (storageKey) {
-          localStorage.setItem(storageKey, JSON.stringify(sanitized));
-        }
-        setUnits(sanitized);
-        setSuccessBanner(editingUnit ? `Đã cập nhật đơn vị tính "${name}"!` : `Đã thêm đơn vị tính "${name}"!`);
-        setIsFormOpen(false);
+      // Lưu thẳng vào Backend; Backend tự ghi Nhật ký thao tác (người sửa, giá trị trước/sau).
+      // Lỗi (trùng tên, không đủ quyền...) sẽ hiện ra banner đỏ, KHÔNG lưu tạm trong trình duyệt.
+      if (editingUnit && editingUnit.id) {
+        const updateData: UpdateProductUnitConversionRequest = {
+          unitName: name,
+          conversionFactor: factor,
+          barcode: formBarcode.trim() || undefined,
+          isDefaultPurchase: formDefaultPurchase,
+          isDefaultSale: formDefaultSale,
+          description: formDescription.trim() || undefined,
+          status: formStatus,
+          changeReason: formChangeReason.trim() || 'Cập nhật hệ số quy đổi qua giao diện'
+        };
+        await productUnitConversionService.updateUnit(resolvedProductId, editingUnit.id, updateData);
+        setSuccessBanner(`Đã cập nhật đơn vị tính "${name}" (Hệ số: ${factor}) thành công!`);
+      } else {
+        const createData: CreateProductUnitConversionRequest = {
+          unitName: name,
+          conversionFactor: factor,
+          barcode: formBarcode.trim() || undefined,
+          isDefaultPurchase: formDefaultPurchase,
+          isDefaultSale: formDefaultSale,
+          description: formDescription.trim() || undefined
+        };
+        await productUnitConversionService.addUnit(resolvedProductId, createData);
+        setSuccessBanner(`Đã thêm mới đơn vị quy đổi "${name}" (1 ${name} = ${factor} ${product?.baseUnit})!`);
       }
-
-      // S2-04 / S2-07: LUÔN GHI NHẬN VÀO NHẬT KÝ THAO TÁC VỚI AVATAR NGƯỜI THỰC HIỆN
-      const oldValStr = editingUnit ? `1 ${editingUnit.unitName} = ${formatConversionFactor(editingUnit.conversionFactor)} ${product?.baseUnit}` : '—';
-      const newValStr = `1 ${name} = ${formatConversionFactor(factor)} ${product?.baseUnit}`;
-      const deltaStr = editingUnit ? `${formatConversionFactor(editingUnit.conversionFactor)} ➔ ${formatConversionFactor(factor)}` : `+${formatConversionFactor(factor)} ${product?.baseUnit}`;
-      const changeReasonText = formChangeReason.trim() || (editingUnit ? `Cập nhật hệ số quy đổi đơn vị ${name} từ ${formatConversionFactor(editingUnit.conversionFactor)} sang ${formatConversionFactor(factor)}` : `Khai báo thêm đơn vị quy đổi ${name} với hệ số ${formatConversionFactor(factor)}`);
-
-      recordLocalAuditLog({
-        module: 'INVENTORY',
-        action: editingUnit ? 'UPDATE_UNIT_CONVERSION' : 'ADD_UNIT_CONVERSION',
-        actionLabel: editingUnit ? 'Cập nhật hệ số quy đổi' : 'Thêm đơn vị quy đổi',
-        targetType: 'PRODUCT_UNIT',
-        targetId: editingUnit?.id || Date.now(),
-        targetCode: product?.sku || 'SKU',
-        targetName: product?.name || 'Sản phẩm',
-        actorId: user?.id || 1,
-        actorUsername: user?.username || 'admin',
-        actorFullName: user?.fullName || 'Người quản trị',
-        actorRole: user?.role || 'Quản trị hệ thống',
-        actorAvatarUrl: user?.avatarUrl,
-        actorAvatarThumbnailUrl: user?.avatarThumbnailUrl,
-        oldValue: oldValStr,
-        newValue: newValStr,
-        deltaFormatted: deltaStr,
-        deltaType: 'neutral',
-        reason: changeReasonText,
-        httpMethod: editingUnit ? 'PUT' : 'POST',
-        requestUri: `/api/products/${resolvedProductId || product?.id || 'sku'}/units`
-      });
-
-      // Đồng bộ bản ghi nhật ký lên Backend nếu có phiên đăng nhập
-      try {
-        const token = getStoredToken();
-        if (token) {
-          fetch(`${API_BASE_URL}/api/audit-logs`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              module: 'INVENTORY',
-              action: editingUnit ? 'UPDATE_UNIT_CONVERSION' : 'ADD_UNIT_CONVERSION',
-              targetType: 'PRODUCT_UNIT',
-              targetId: typeof editingUnit?.id === 'number' && editingUnit.id < 9000000000 ? editingUnit.id : null,
-              targetCode: product?.sku || 'SKU',
-              actorId: user?.id,
-              actorUsername: user?.username,
-              actorFullName: user?.fullName,
-              actorAvatarUrl: user?.avatarThumbnailUrl || user?.avatarUrl,
-              oldValue: oldValStr,
-              newValue: newValStr,
-              reason: changeReasonText,
-              httpMethod: editingUnit ? 'PUT' : 'POST',
-              requestUri: `/api/products/${resolvedProductId || product?.id || 'sku'}/units`
-            })
-          }).catch(() => {});
-        }
-      } catch {
-        // ignore network error
-      }
+      setIsFormOpen(false);
+      fetchUnits();
 
       if (onSuccess) {
         onSuccess(`Cập nhật đơn vị quy đổi cho SKU ${product?.sku} thành công!`);
@@ -528,84 +364,11 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
     setErrorBanner(null);
 
     try {
-      let backendSuccess = false;
-      if (deletingUnit.id && resolvedProductId) {
-        try {
-          await productUnitConversionService.deleteUnit(resolvedProductId, deletingUnit.id);
-          backendSuccess = true;
-        } catch (apiErr) {
-          console.warn('Backend deleteUnit không khả dụng, xóa cục bộ:', apiErr);
-        }
+      if (!deletingUnit.id || !resolvedProductId) {
+        throw new Error('Không tìm thấy đơn vị quy đổi này trên hệ thống.');
       }
-
-      if (!backendSuccess) {
-        // Fallback local
-        const updatedList = units.filter(
-          (u) => !(u.id === deletingUnit.id && u.unitName === deletingUnit.unitName)
-        );
-        const sanitized = sanitizeUnitsList(updatedList, product);
-        if (storageKey) {
-          localStorage.setItem(storageKey, JSON.stringify(sanitized));
-        }
-        setUnits(sanitized);
-      }
-
-      // S2-04 / S2-07: Ghi nhận thao tác XÓA vào Nhật ký thao tác kèm Avatar
-      const delReason = `Xóa đơn vị quy đổi "${deletingUnit.unitName}" khỏi SKU ${product?.sku}`;
-      recordLocalAuditLog({
-        module: 'INVENTORY',
-        action: 'DELETE_UNIT_CONVERSION',
-        actionLabel: 'Xóa đơn vị quy đổi',
-        targetType: 'PRODUCT_UNIT',
-        targetId: deletingUnit.id ?? undefined,
-        targetCode: product?.sku || 'SKU',
-        targetName: product?.name || 'Sản phẩm',
-        actorId: user?.id || 1,
-        actorUsername: user?.username || 'admin',
-        actorFullName: user?.fullName || 'Người quản trị',
-        actorRole: user?.role || 'Quản trị hệ thống',
-        actorAvatarUrl: user?.avatarUrl,
-        actorAvatarThumbnailUrl: user?.avatarThumbnailUrl,
-        oldValue: `1 ${deletingUnit.unitName} = ${formatConversionFactor(deletingUnit.conversionFactor)} ${product?.baseUnit}`,
-        newValue: 'Đã xóa',
-        deltaFormatted: `Xóa đơn vị ${deletingUnit.unitName}`,
-        deltaType: 'decrease',
-        reason: delReason,
-        httpMethod: 'DELETE',
-        requestUri: `/api/products/${resolvedProductId || product?.id || 'sku'}/units/${deletingUnit.id}`
-      });
-
-      try {
-        const token = getStoredToken();
-        if (token) {
-          fetch(`${API_BASE_URL}/api/audit-logs`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              module: 'INVENTORY',
-              action: 'DELETE_UNIT_CONVERSION',
-              targetType: 'PRODUCT_UNIT',
-              targetId: typeof deletingUnit.id === 'number' && deletingUnit.id < 9000000000 ? deletingUnit.id : null,
-              targetCode: product?.sku || 'SKU',
-              actorId: user?.id,
-              actorUsername: user?.username,
-              actorFullName: user?.fullName,
-              actorAvatarUrl: user?.avatarThumbnailUrl || user?.avatarUrl,
-              oldValue: `1 ${deletingUnit.unitName} = ${formatConversionFactor(deletingUnit.conversionFactor)} ${product?.baseUnit}`,
-              newValue: 'Đã xóa',
-              reason: delReason,
-              httpMethod: 'DELETE',
-              requestUri: `/api/products/${resolvedProductId || product?.id || 'sku'}/units/${deletingUnit.id}`
-            })
-          }).catch(() => {});
-        }
-      } catch {
-        // ignore
-      }
-
+      // Xoá trên Backend (Backend tự ghi Nhật ký thao tác); lỗi thì hiện banner đỏ
+      await productUnitConversionService.deleteUnit(resolvedProductId, deletingUnit.id);
       setSuccessBanner(`Đã xóa đơn vị quy đổi "${deletingUnit.unitName}" khỏi SKU.`);
       setDeletingUnit(null);
       fetchUnits();

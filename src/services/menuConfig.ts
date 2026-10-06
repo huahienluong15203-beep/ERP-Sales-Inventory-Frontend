@@ -123,7 +123,8 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     icon: 'ShoppingCart',
     epic: 'Đặt hàng & Duyệt ngoại lệ',
     description: 'Lên đơn nhanh tại điểm bán, tự động áp giá & chiết khấu sản lượng',
-    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
+    // Kế toán không tạo đơn (Backend chặn) -> không hiện menu để tránh bị văng ra màn đăng nhập
+    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
   },
 
 
