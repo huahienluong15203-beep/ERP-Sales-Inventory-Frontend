@@ -385,10 +385,11 @@ export const AgencyManagementPage: React.FC = () => {
           <button
             onClick={() => loadData()}
             disabled={loading}
-            title="Làm mới danh sách"
-            className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors cursor-pointer"
+            title="Làm mới danh sách đại lý"
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 text-sm font-semibold transition-colors cursor-pointer shadow-xs min-h-[44px]"
           >
-            <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={16} className={loading ? 'animate-spin text-orange-600' : ''} />
+            <span>Làm mới</span>
           </button>
 
           {/* S3-06: Chuyển giao địa bàn hàng loạt (chỉ Quản lý kinh doanh & Admin) */}

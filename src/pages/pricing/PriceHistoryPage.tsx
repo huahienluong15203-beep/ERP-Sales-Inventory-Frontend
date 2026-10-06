@@ -174,7 +174,7 @@ export const PriceHistoryPage: React.FC = () => {
 
           <a
             href="/pricing/discounts"
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:text-indigo-600 hover:border-indigo-200 hover:bg-gray-50 transition shadow-xs"
+            className="min h-[44px] inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:text-indigo-600 hover:border-indigo-200 hover:bg-gray-50 transition shadow-xs"
             title="Khai báo chính sách chiết khấu theo sản lượng"
           >
             <span className="text-indigo-600 font-bold">%</span>
@@ -184,7 +184,7 @@ export const PriceHistoryPage: React.FC = () => {
 
           <button
             onClick={handleExportExcel}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition"
+            className="min h-[44px] inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition"
           >
 
             <FileSpreadsheet size={16} />
@@ -307,8 +307,8 @@ export const PriceHistoryPage: React.FC = () => {
                   setPage(0);
                 }}
                 className={`px-3 py-1 rounded-lg transition ${trend === 'ALL'
-                    ? 'bg-white text-gray-900 font-bold shadow-xs'
-                    : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-white text-gray-900 font-bold shadow-xs'
+                  : 'text-gray-600 hover:text-gray-900'
                   }`}
               >
                 Tất cả
@@ -320,8 +320,8 @@ export const PriceHistoryPage: React.FC = () => {
                   setPage(0);
                 }}
                 className={`flex items-center gap-1 px-3 py-1 rounded-lg transition ${trend === 'INCREASE'
-                    ? 'bg-rose-600 text-white font-bold shadow-xs'
-                    : 'text-rose-600 hover:text-rose-700'
+                  ? 'bg-rose-600 text-white font-bold shadow-xs'
+                  : 'text-rose-600 hover:text-rose-700'
                   }`}
               >
                 <TrendingUp size={12} />
@@ -334,8 +334,8 @@ export const PriceHistoryPage: React.FC = () => {
                   setPage(0);
                 }}
                 className={`flex items-center gap-1 px-3 py-1 rounded-lg transition ${trend === 'DECREASE'
-                    ? 'bg-emerald-600 text-white font-bold shadow-xs'
-                    : 'text-emerald-600 hover:text-emerald-700'
+                  ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                  : 'text-emerald-600 hover:text-emerald-700'
                   }`}
               >
                 <TrendingDown size={12} />
@@ -497,10 +497,10 @@ export const PriceHistoryPage: React.FC = () => {
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg ${isIncrease
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                              : isDecrease
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-gray-100 text-gray-600'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : isDecrease
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-gray-100 text-gray-600'
                             }`}
                         >
                           {isIncrease ? <TrendingUp size={13} /> : isDecrease ? <TrendingDown size={13} /> : null}

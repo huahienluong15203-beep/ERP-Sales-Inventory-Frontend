@@ -170,7 +170,7 @@ export const PriceListPage: React.FC = () => {
 
           <a
             href="/pricing/discounts"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-300 rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition-colors"
+            className="min h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-300 rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition-colors"
           >
             <Icons.Percent size={16} className="text-indigo-600" />
             <span className="hidden sm:inline">Chiết khấu sản lượng</span>
@@ -180,7 +180,7 @@ export const PriceListPage: React.FC = () => {
           {canManage && (
             <button
               onClick={handleOpenCreate}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#F85606] hover:bg-[#E04D05] text-white text-xs sm:text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+              className="min h-[43px] inline-flex items-center gap-2 px-4 py-2.5 bg-[#F85606] hover:bg-[#E04D05] text-white text-xs sm:text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
             >
               <Icons.Plus size={18} />
               <span>Khai báo bảng giá mới</span>
