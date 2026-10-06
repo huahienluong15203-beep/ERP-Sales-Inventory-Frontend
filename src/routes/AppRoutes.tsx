@@ -8,6 +8,7 @@ import { ProfilePage } from '../pages/profile/ProfilePage';
 import { UserManagementPage } from '../pages/admin/UserManagementPage';
 import { AgencyManagementPage } from '../pages/customer/AgencyManagementPage';
 import { ProductManagementPage } from '../pages/product/ProductManagementPage';
+import { ProductImportPage } from '../pages/product/ProductImportPage';
 import { PriceListPage } from '../pages/pricing/PriceListPage';
 import { PriceHistoryPage } from '../pages/pricing/PriceHistoryPage';
 import { VolumeDiscountPage } from '../pages/pricing/VolumeDiscountPage';
@@ -104,6 +105,16 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <ProductManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S2-08: Trang riêng nhập danh mục sản phẩm từ Excel (chỉ Admin, Quản lý kinh doanh) */}
+        <Route
+          path="/products/import"
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_SALES_MANAGER', 'ROLE_ADMIN']}>
+              <ProductImportPage />
             </ProtectedRoute>
           }
         />

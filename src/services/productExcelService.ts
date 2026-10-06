@@ -168,6 +168,12 @@ export async function executeProductImport(
     totalImported: data.successCount,
     createdCount: data.createdCount,
     updatedCount: data.updatedCount,
-    skippedErrorCount: data.errorCount
+    skippedErrorCount: data.errorCount,
+    errorRows: (data.errorRows || []).map((r) => ({
+      rowNumber: r.rowNumber,
+      sku: r.sku || '',
+      name: r.name || '',
+      errors: r.errors || []
+    }))
   };
 }
