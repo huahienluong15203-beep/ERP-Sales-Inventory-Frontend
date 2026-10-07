@@ -111,8 +111,8 @@ export const Routes: React.FC<RoutesProps> = ({ children }) => {
 
     const cleanRoutePath = path.replace(/\/+$/, '') || '/';
 
-    // Khớp chính xác
-    if (cleanRoutePath === cleanCurrentPath) {
+    // Khớp chính xác (ưu tiên route cụ thể khai báo trước)
+    if (cleanRoutePath === cleanCurrentPath && !matchElement) {
       matchElement = element;
     }
   });

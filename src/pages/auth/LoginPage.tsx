@@ -18,6 +18,14 @@ import {
 
 type AuthViewMode = 'login' | 'forgot_password';
 
+/** Hiển thị thời gian chờ: "45 giây" hoặc "4:59" (phút:giây) khi từ 1 phút trở lên. */
+function formatCooldown(seconds: number): string {
+  if (seconds < 60) return `${seconds} GIÂY`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 export const LoginPage: React.FC = () => {
   const { login, isAuthenticated, user, clearMustChangePassword } = useAuth();
   const navigate = useNavigate();
@@ -29,11 +37,21 @@ export const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState<boolean>(() => {
+    const saved = localStorage.getItem('erp_remember_me_pref');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const handleRememberMeChange = (checked: boolean) => {
+    setRememberMe(checked);
+    localStorage.setItem('erp_remember_me_pref', String(checked));
+  };
 
   // Form quên mật khẩu
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSuccessMessage, setForgotSuccessMessage] = useState<string | null>(null);
+  // Số giây còn phải đợi trước khi được gửi lại email (chống spam)
+  const [forgotCooldown, setForgotCooldown] = useState(0);
 
   // Modal bắt buộc đổi mật khẩu lần đầu (S1-04 + S1-08)
   const [showForceChangeModal, setShowForceChangeModal] = useState(false);
@@ -43,19 +61,28 @@ export const LoginPage: React.FC = () => {
 
   // Trạng thái chung
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loginSuccessMessage, setLoginSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Đếm ngược thời gian chờ gửi lại email quên mật khẩu
+  useEffect(() => {
+    if (forgotCooldown <= 0) return;
+    const timer = setTimeout(() => setForgotCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [forgotCooldown]);
 
   // Nếu đã đăng nhập và không phải đang đổi mật khẩu thì vào dashboard
   useEffect(() => {
-    if (isAuthenticated && !user?.mustChangePassword && !showForceChangeModal) {
+    if (isAuthenticated && !user?.mustChangePassword && !showForceChangeModal && !loginSuccessMessage) {
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, user?.mustChangePassword, showForceChangeModal, navigate]);
+  }, [isAuthenticated, user?.mustChangePassword, showForceChangeModal, loginSuccessMessage, navigate]);
 
   // Xử lý Đăng Nhập (S1-01)
   const handleLoginSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setLoginSuccessMessage(null);
 
     const cleanUsername = username.trim();
     if (!cleanUsername) {
@@ -70,13 +97,16 @@ export const LoginPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const result = await login(cleanUsername, password);
+      const result = await login(cleanUsername, password, rememberMe);
       if (result.success) {
         // Kiểm tra xem tài khoản có gắn cờ bắt buộc đổi mật khẩu lần đầu không (S1-08)
         if (result.user?.mustChangePassword) {
           setShowForceChangeModal(true);
         } else {
-          navigate('/dashboard', { replace: true });
+          setLoginSuccessMessage('Đăng nhập thành công! Đang chuyển hướng vào hệ thống...');
+          setTimeout(() => {
+            navigate('/dashboard', { replace: true });
+          }, 350);
         }
       } else {
         setErrorMessage(result.message || 'Tài khoản hoặc mật khẩu không chính xác!');
@@ -100,8 +130,15 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
-    if (!email.includes('@') || !email.includes('.')) {
-      setErrorMessage('Địa chỉ email không đúng định dạng!');
+    // Kiểm tra định dạng: ten@tenmien.duoi (vd: nguyenvana@gmail.com)
+    const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/;
+    if (!EMAIL_REGEX.test(email)) {
+      setErrorMessage('Email không đúng định dạng (ví dụ đúng: nguyenvana@gmail.com). Vui lòng kiểm tra lại!');
+      return;
+    }
+
+    if (forgotCooldown > 0) {
+      setErrorMessage(`Vui lòng đợi ${formatCooldown(forgotCooldown).toLowerCase()} trước khi gửi lại.`);
       return;
     }
 
@@ -110,8 +147,12 @@ export const LoginPage: React.FC = () => {
       const res = await sendForgotPasswordEmail(email);
       if (res.success) {
         setForgotSuccessMessage(res.message);
+        setForgotCooldown(res.cooldownSeconds ?? 60);
       } else {
         setErrorMessage(res.message);
+        if (res.retryAfterSeconds) {
+          setForgotCooldown(res.retryAfterSeconds);
+        }
       }
     } catch {
       setErrorMessage('Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng kiểm tra lại dịch vụ!');
@@ -251,6 +292,30 @@ export const LoginPage: React.FC = () => {
           >
             <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
             <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {/* Thông báo đăng nhập thành công */}
+        {loginSuccessMessage && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '12px 14px',
+              borderRadius: '12px',
+              background: '#ECFDF5',
+              border: '1px solid #A7F3D0',
+              color: '#059669',
+              fontSize: '13px',
+              fontWeight: 600,
+              marginBottom: '20px',
+              lineHeight: 1.45,
+              animation: 'erpFadeIn 0.25s ease'
+            }}
+          >
+            <CheckCircle2 size={18} style={{ flexShrink: 0, color: '#10B981' }} />
+            <span>{loginSuccessMessage}</span>
           </div>
         )}
 
@@ -425,7 +490,7 @@ export const LoginPage: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
+                  onChange={(e) => handleRememberMeChange(e.target.checked)}
                   style={{
                     accentColor: '#F97316',
                     width: '16px',
@@ -433,7 +498,7 @@ export const LoginPage: React.FC = () => {
                     cursor: 'pointer'
                   }}
                 />
-                <span>Duy trì trạng thái đăng nhập</span>
+                <span>Ghi nhớ đăng nhập</span>
               </label>
             </div>
 
@@ -608,7 +673,7 @@ export const LoginPage: React.FC = () => {
 
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || forgotCooldown > 0}
                   style={{
                     width: '100%',
                     height: '46px',
@@ -623,9 +688,9 @@ export const LoginPage: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '10px',
-                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    cursor: isSubmitting || forgotCooldown > 0 ? 'not-allowed' : 'pointer',
                     border: 'none',
-                    opacity: isSubmitting ? 0.8 : 1,
+                    opacity: isSubmitting || forgotCooldown > 0 ? 0.6 : 1,
                     transition: 'all 0.2s ease',
                     marginBottom: '16px'
                   }}
@@ -642,13 +707,16 @@ export const LoginPage: React.FC = () => {
                       }}
                     />
                   ) : (
-                    <span>GỬI LIÊN KẾT ĐẶT LẠI</span>
+                    <span>
+                      {forgotCooldown > 0 ? `GỬI LẠI SAU ${formatCooldown(forgotCooldown)}` : 'GỬI LIÊN KẾT ĐẶT LẠI'}
+                    </span>
                   )}
                 </button>
 
                 <div style={{ textAlign: 'center' }}>
                   <button
                     type="button"
+                    disabled={isSubmitting}
                     onClick={() => {
                       setViewMode('login');
                       setErrorMessage(null);

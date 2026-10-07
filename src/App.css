@@ -26,9 +26,13 @@
   display: flex;
   flex-direction: column;
   z-index: 100;
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.04);
   border-right: 1px solid var(--erp-border-sidebar);
+}
+
+.erp-sidebar.collapsed {
+  width: var(--erp-sidebar-width-collapsed, 72px);
 }
 
 .erp-sidebar-header {
@@ -36,31 +40,49 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 18px;
+  padding: 0 16px;
   border-bottom: 1px solid var(--erp-border-sidebar);
   background: #FFFFFF;
+  position: relative;
+  transition: padding 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.erp-sidebar.collapsed .erp-sidebar-header {
+  padding: 0 10px;
+  justify-content: center;
 }
 
 .erp-logo-brand {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 10px;
   cursor: pointer;
   user-select: none;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s ease;
+  min-width: 0;
+  border-radius: 10px;
 }
 
-.erp-logo-brand:hover {
-  opacity: 0.88;
+.erp-sidebar.collapsed .erp-logo-brand {
+  gap: 0;
+  justify-content: center;
+  width: 100%;
+}
+
+.erp-logo-brand:hover .erp-logo-img {
+
+  filter: drop-shadow(0 3px 6px rgba(248, 86, 6, 0.35));
 }
 
 .erp-logo-img {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
   flex-shrink: 0;
   display: block;
   background: transparent !important;
+  transform: translateX(-5px);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .erp-logo-icon {
@@ -75,6 +97,8 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .erp-brand-title {
@@ -107,8 +131,9 @@
 
 /* Thẻ Vai Trò Hệ Thống trong Sidebar (Chuẩn App ETC) */
 .erp-sidebar-role-badge {
-  padding: 14px 20px 10px;
+  padding: 12px 16px 10px;
   border-bottom: 1px solid #F3F4F6;
+  transition: padding 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .erp-sidebar-role-title {
@@ -124,7 +149,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   color: #0D9488;
 }
@@ -141,10 +166,16 @@
 .erp-sidebar-nav {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 14px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  transition: padding 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.erp-sidebar.collapsed .erp-sidebar-nav {
+  padding: 12px 8px;
+  align-items: center;
 }
 
 .erp-menu-group {
@@ -171,6 +202,11 @@
   width: 100%;
 }
 
+.erp-sidebar.collapsed .erp-menu-item {
+  display: flex;
+  justify-content: center;
+}
+
 .erp-menu-link {
   display: flex;
   align-items: center;
@@ -184,6 +220,15 @@
   transition: all 0.2s ease;
   min-height: 44px;
   /* Touch target 44px */
+}
+
+.erp-sidebar.collapsed .erp-menu-link {
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  justify-content: center;
+  gap: 0;
+  border-radius: 12px;
 }
 
 .erp-menu-link:hover {
@@ -229,9 +274,16 @@
 
 /* Chân Sidebar: Nút Đăng Xuất dạng Pill góc dưới trái */
 .erp-sidebar-footer {
-  padding: 16px 20px;
+  padding: 14px 16px;
   border-top: 1px solid var(--erp-border-sidebar);
   background: #FFFFFF;
+  transition: padding 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.erp-sidebar.collapsed .erp-sidebar-footer {
+  padding: 14px 8px;
+  display: flex;
+  justify-content: center;
 }
 
 .erp-sidebar-logout-btn {
@@ -251,6 +303,14 @@
   transition: all 0.2s ease;
 }
 
+.erp-sidebar.collapsed .erp-sidebar-logout-btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 12px;
+  gap: 0;
+}
+
 .erp-sidebar-logout-btn:hover {
   background-color: #FEE2E2;
   border-color: #FCA5A5;
@@ -260,11 +320,17 @@
 /* 3. MAIN AREA & TOPBAR (CHUẨN APP ETC) */
 .erp-main-area {
   flex: 1;
+  min-width: 0;
   margin-left: var(--erp-sidebar-width);
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   background-color: var(--erp-bg-app);
+  transition: margin-left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.erp-main-area.sidebar-collapsed {
+  margin-left: var(--erp-sidebar-width-collapsed, 72px);
 }
 
 .erp-topbar {
@@ -352,7 +418,7 @@
 .erp-header-avatar {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: 50%;
   background: linear-gradient(135deg, #FF6A00 0%, #EE4D2D 100%);
   color: #FFFFFF;
   display: flex;
@@ -363,6 +429,14 @@
   letter-spacing: 0.5px;
   box-shadow: 0 3px 10px rgba(238, 77, 45, 0.32);
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.erp-header-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .erp-header-user-info {
@@ -373,7 +447,7 @@
 .erp-header-fullname {
   font-size: 13px;
   font-weight: 700;
-  color: #111827;
+  color: var(--erp-text-main);
   line-height: 1.25;
   white-space: nowrap;
   max-width: 160px;
@@ -383,15 +457,15 @@
 
 .erp-header-username {
   font-size: 11px;
-  color: #9CA3AF;
+  color: var(--erp-text-muted);
   font-weight: 500;
 }
 
 /* 4. PAGE CONTENT */
 .erp-page-content {
   flex: 1;
+  min-width: 0;
   padding: 24px 28px;
-  max-width: 1600px;
   width: 100%;
 }
 
@@ -596,6 +670,7 @@
 
 @media (max-width: 768px) {
   .erp-sidebar {
+    width: 270px !important;
     transform: translateX(-100%);
     box-shadow: var(--erp-shadow-drawer);
   }
@@ -608,8 +683,9 @@
     display: flex;
   }
 
-  .erp-main-area {
-    margin-left: 0;
+  .erp-main-area,
+  .erp-main-area.sidebar-collapsed {
+    margin-left: 0 !important;
   }
 
   .erp-hamburger-btn {
@@ -908,7 +984,7 @@
   flex-direction: column;
   gap: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid var(--erp-border);
+
 }
 
 @media (min-width: 640px) {
@@ -940,7 +1016,7 @@
 .user-mgmt-title {
   font-size: 22px;
   font-weight: 800;
-  color: #111827;
+  color: var(--erp-text-main);
   letter-spacing: -0.3px;
   margin: 0;
   line-height: 1.2;
@@ -948,7 +1024,7 @@
 
 .user-mgmt-subtitle {
   font-size: 13px;
-  color: #6B7280;
+  color: var(--erp-text-muted);
   margin: 3px 0 0;
 }
 
@@ -959,15 +1035,18 @@
 }
 
 .user-mgmt-btn-refresh {
-  width: 38px;
-  height: 38px;
+  min-height: 40px;
+  padding: 0 14px;
   border-radius: 10px;
   border: 1px solid var(--erp-border);
   background: #FFFFFF;
   color: #4B5563;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   box-shadow: var(--erp-shadow-sm);
@@ -1214,6 +1293,14 @@
   justify-content: center;
   box-shadow: 0 2px 6px rgba(248, 86, 6, 0.25);
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.user-mgmt-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .user-mgmt-user-info {
@@ -1711,4 +1798,343 @@
   color: #64748B;
   font-size: 12.5px;
   line-height: 1.45;
-}
+}
+
+/* ==========================================================================
+   ORDER SUMMARY STICKY BAR (S3-09): Căn chuẩn theo Sidebar & Main Area
+   ========================================================================== */
+.erp-order-sticky-bar {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  z-index: 40;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(229, 231, 235, 0.9);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+  transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (min-width: 769px) {
+  .erp-order-sticky-bar {
+    left: var(--erp-sidebar-width, 260px) !important;
+  }
+
+  .erp-main-area.sidebar-collapsed .erp-order-sticky-bar,
+  .sidebar-collapsed .erp-order-sticky-bar {
+    left: var(--erp-sidebar-width-collapsed, 72px) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .erp-order-sticky-bar {
+    left: 0 !important;
+  }
+}
+
+html.dark .erp-order-sticky-bar {
+  background-color: rgba(24, 24, 27, 0.95);
+  border-top-color: rgba(63, 63, 70, 0.6);
+}
+
+/* ==========================================================================
+   DARK MODE OVERRIDES (True Neutral Deep Dark, Ultra High Contrast)
+   ========================================================================== */
+html.dark .erp-sidebar,
+html.dark .erp-sidebar-header,
+html.dark .erp-topbar {
+  background-color: var(--erp-bg-surface) !important;
+  border-color: var(--erp-border-sidebar) !important;
+}
+
+html.dark .erp-brand-title,
+html.dark .erp-page-heading {
+  color: #FFFFFF !important;
+  font-weight: 800 !important;
+}
+
+html.dark .erp-brand-sub {
+  color: #F85606 !important;
+}
+
+html.dark .erp-page-subheading {
+  color: #D4D4D8 !important;
+}
+
+/* Sidebar Menu Items */
+html.dark .erp-menu-link {
+  color: #E4E4E7 !important;
+}
+
+html.dark .erp-menu-link:hover {
+  background-color: var(--erp-bg-sidebar-hover) !important;
+  color: #FFFFFF !important;
+}
+
+html.dark .erp-menu-link.active {
+  background: var(--erp-primary-gradient) !important;
+  color: #FFFFFF !important;
+}
+
+html.dark .erp-sidebar-role-badge {
+  border-bottom-color: var(--erp-border-sidebar) !important;
+}
+
+html.dark .erp-sidebar-role-title {
+  color: #B4B4BB !important;
+}
+
+html.dark .erp-sidebar-role-name,
+html.dark .erp-sidebar-role-name select {
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+html.dark .erp-sidebar-role-name option {
+  background-color: var(--erp-bg-surface) !important;
+  color: #FFFFFF !important;
+}
+
+/* Header User Profile Block */
+html.dark .erp-header-user-block {
+  border-left-color: var(--erp-border) !important;
+}
+
+html.dark .erp-header-user-block:hover {
+  background-color: var(--erp-bg-sidebar-hover) !important;
+}
+
+html.dark .erp-header-fullname {
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+html.dark .erp-header-username {
+  color: #D4D4D8 !important;
+}
+
+html.dark .erp-hamburger-btn {
+  color: #E4E4E7 !important;
+}
+
+html.dark .erp-hamburger-btn:hover {
+  background-color: var(--erp-bg-sidebar-hover) !important;
+  color: #FFFFFF !important;
+}
+
+/* User Management & All ERP Tables/Cards in Dark Mode */
+html.dark .user-mgmt-title {
+  color: #FFFFFF !important;
+}
+
+html.dark .user-mgmt-subtitle {
+  color: #D4D4D8 !important;
+}
+
+html.dark .user-mgmt-filter-card,
+html.dark .user-mgmt-table-card {
+  background-color: var(--erp-bg-surface) !important;
+  border-color: var(--erp-border) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark .user-mgmt-search-input,
+html.dark .user-mgmt-select {
+  background-color: #202024 !important;
+  color: #FFFFFF !important;
+  border-color: #38383E !important;
+}
+
+html.dark .user-mgmt-search-input::placeholder {
+  color: #A1A1AA !important;
+}
+
+html.dark .user-mgmt-btn-refresh,
+html.dark .user-mgmt-btn-reset {
+  background-color: #202024 !important;
+  color: #FFFFFF !important;
+  border-color: #38383E !important;
+}
+
+html.dark .user-mgmt-btn-refresh:hover,
+html.dark .user-mgmt-btn-reset:hover {
+  background-color: var(--erp-bg-sidebar-hover) !important;
+  color: #ffffff !important;
+}
+
+html.dark .user-mgmt-thead {
+  background-color: #202024 !important;
+  border-bottom-color: #38383E !important;
+}
+
+html.dark .user-mgmt-th {
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+html.dark .user-mgmt-tbody tr {
+  border-bottom-color: #2E2E33 !important;
+}
+
+html.dark .user-mgmt-tbody tr:hover {
+  background-color: #242428 !important;
+}
+
+html.dark .user-mgmt-tbody tr.row-locked {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+html.dark .user-mgmt-fullname {
+  color: #FFFFFF !important;
+}
+
+html.dark .user-mgmt-username {
+  color: #D4D4D8 !important;
+}
+
+html.dark .user-mgmt-contact-row {
+  color: #FFFFFF !important;
+}
+
+html.dark .user-mgmt-contact-row.phone {
+  color: #D4D4D8 !important;
+}
+
+html.dark .user-mgmt-assignment-note {
+  background-color: #202024 !important;
+  border-color: #38383E !important;
+  color: #D4D4D8 !important;
+}
+
+/* Global utility classes dark mode overrides (High-contrast pure white & crisp silver) */
+html.dark .bg-white {
+  background-color: var(--erp-bg-surface) !important;
+}
+
+html.dark .bg-gray-50,
+html.dark .bg-slate-50,
+html.dark .bg-gray-50\/50,
+html.dark .bg-gray-50\/70,
+html.dark .bg-gray-50\/80 {
+  background-color: #1f1f23 !important;
+}
+
+html.dark .bg-gray-100,
+html.dark .bg-slate-100 {
+  background-color: #27272a !important;
+  color: #FFFFFF !important;
+}
+
+html.dark .bg-gray-200,
+html.dark .bg-slate-200 {
+  background-color: #333338 !important;
+}
+
+/* HIGH CONTRAST TEXT RULES */
+html.dark .text-gray-900,
+html.dark .text-slate-900,
+html.dark .text-gray-800,
+html.dark .text-slate-800,
+html.dark .text-gray-700,
+html.dark .text-slate-700 {
+  color: #FFFFFF !important;
+}
+
+html.dark .text-gray-600,
+html.dark .text-slate-600,
+html.dark .text-gray-500,
+html.dark .text-slate-500 {
+  color: #E4E4E7 !important;
+}
+
+html.dark .text-gray-400,
+html.dark .text-slate-400 {
+  color: #D4D4D8 !important;
+}
+
+html.dark .text-gray-300,
+html.dark .text-slate-300 {
+  color: #B4B4BB !important;
+}
+
+/* HIGH CONTRAST BORDERS */
+html.dark .border-gray-100,
+html.dark .border-slate-100 {
+  border-color: #2E2E33 !important;
+}
+
+html.dark .border-gray-200,
+html.dark .border-slate-200,
+html.dark .border-gray-200\/80 {
+  border-color: #38383E !important;
+}
+
+html.dark .border-gray-300,
+html.dark .border-slate-300 {
+  border-color: #44444A !important;
+}
+
+html.dark .divide-gray-100> :not([hidden])~ :not([hidden]),
+html.dark .divide-gray-200> :not([hidden])~ :not([hidden]) {
+  border-color: #2E2E33 !important;
+}
+
+/* HIGH CONTRAST TABLES ACROSS ALL MODULES */
+html.dark table thead th {
+  background-color: #202024 !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  border-bottom: 2px solid #38383E !important;
+}
+
+html.dark table tbody td {
+  color: #FFFFFF !important;
+  border-bottom: 1px solid #2E2E33 !important;
+}
+
+html.dark table tbody tr:hover {
+  background-color: #242428 !important;
+}
+
+html.dark table th.sticky,
+html.dark table td.sticky {
+  background-color: #18181b !important;
+  border-color: #38383E !important;
+}
+
+/* HIGH CONTRAST FORM CONTROLS ACROSS ALL MODULES */
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark select,
+html.dark textarea {
+  background-color: #202024 !important;
+  color: #FFFFFF !important;
+  border-color: #38383E !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #A1A1AA !important;
+}
+
+html.dark select option {
+  background-color: #18181b !important;
+  color: #FFFFFF !important;
+}
+
+/* Action Icon Buttons */
+html.dark button:not(.btn-primary):not([class*="bg-gradient"]) {
+  color: inherit;
+}
+
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-50\/70:hover,
+html.dark .hover\:bg-gray-50\/80:hover {
+  background-color: var(--erp-bg-sidebar-hover) !important;
+}
+
+html.dark .hover\:text-gray-900:hover,
+html.dark .hover\:text-gray-800:hover {
+  color: #FFFFFF !important;
+}

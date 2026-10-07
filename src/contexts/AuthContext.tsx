@@ -1,8 +1,26 @@
-import { createContext, useContext, useState, useEffect, useCallback, type FC, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type FC, type ReactNode } from 'react';
 import type { RoleName, UserProfile, MenuItem } from '../types/user';
-import { fetchUserNavigationContext, loginUser, logoutUser } from '../services/api';
+import {
+  fetchUserNavigationContext,
+  loginUser,
+  logoutUser,
+  getStoredToken,
+  getStoredItem,
+  setStoredItem,
+  removeStoredItem,
+  isRememberMeActive
+} from '../services/api';
 import { checkPathPermission } from '../services/menuConfig';
 import { SessionExpiredModal } from '../components/common/SessionExpiredModal';
+import { Icons } from '../components/common/Icons';
+
+export type ToastType = 'success' | 'error' | 'info' | 'logout';
+
+export interface ToastNotification {
+  title: string;
+  message?: string;
+  type?: ToastType;
+}
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -10,12 +28,15 @@ interface AuthContextType {
   currentRole: RoleName;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<{ success: boolean; message?: string; user?: UserProfile }>;
+  login: (username: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; message?: string; user?: UserProfile }>;
   logout: () => Promise<void>;
   switchRole: (role: RoleName) => Promise<void>;
   hasPermission: (path: string) => boolean;
   refreshContext: () => Promise<void>;
+  updateUser: (updated: Partial<UserProfile>) => void;
   clearMustChangePassword: () => void;
+  showToast: (title: string, message?: string, type?: ToastType, duration?: number) => void;
+  clearToast: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,12 +67,12 @@ function getHighestPriorityRole(roles: RoleName[]): RoleName {
 
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [currentRole, setCurrentRole] = useState<RoleName>(() => {
-    const savedRole = localStorage.getItem(STORAGE_ROLE_KEY) as RoleName;
+    const savedRole = getStoredItem(STORAGE_ROLE_KEY) as RoleName;
     return ROLE_PRIORITY.includes(savedRole) ? savedRole : 'ROLE_ADMIN';
   });
 
   const [user, setUser] = useState<UserProfile | null>(() => {
-    const saved = localStorage.getItem(STORAGE_USER_KEY);
+    const saved = getStoredItem(STORAGE_USER_KEY);
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -65,12 +86,43 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [menus, setMenus] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return !!localStorage.getItem(STORAGE_TOKEN_KEY);
+    return !!getStoredToken();
   });
   const [sessionExpiredData, setSessionExpiredData] = useState<{ message: string } | null>(null);
 
-  const loadUserContext = useCallback(async (role: RoleName) => {
-    const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+  // Thông báo Toast toàn hệ thống
+  const [toast, setToast] = useState<ToastNotification | null>(null);
+  const toastTimerRef = useRef<any>(null);
+
+  const clearToast = useCallback(() => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+    setToast(null);
+  }, []);
+
+  const showToast = useCallback((title: string, message: string = '', type: ToastType = 'success', duration: number = 1800) => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    setToast({ title, message, type });
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, duration);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
+  const loadUserContext = useCallback(async (role: RoleName, isSilent: boolean = false) => {
+    const token = getStoredToken();
     if (!token) {
       setIsAuthenticated(false);
       setUser(null);
@@ -78,7 +130,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       return;
     }
 
-    setIsLoading(true);
+    if (!isSilent) {
+      setIsLoading(true);
+    }
     try {
       const data = await fetchUserNavigationContext(role);
       if (data.user) {
@@ -88,26 +142,31 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (availableRoles.length > 0 && !availableRoles.includes(role)) {
           activeRole = getHighestPriorityRole(availableRoles);
           setCurrentRole(activeRole);
-          localStorage.setItem(STORAGE_ROLE_KEY, activeRole);
+          setStoredItem(STORAGE_ROLE_KEY, activeRole, isRememberMeActive());
           data.user.role = activeRole;
         }
 
         setUser((prev) => {
           const merged = { ...prev, ...data.user };
-          localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(merged));
+          setStoredItem(STORAGE_USER_KEY, JSON.stringify(merged), isRememberMeActive());
           return merged;
         });
       }
       setMenus(data.menus);
     } catch (err: any) {
-      if (err?.message === 'SESSION_EXPIRED' || err?.message === 'NO_TOKEN' || err?.message?.includes('Phiên làm việc')) {
+      if (err?.message === 'SESSION_EXPIRED' || err?.message === 'NO_TOKEN' || err?.message?.includes('Phiên làm việc') || err?.message?.includes('khoá') || err?.message?.includes('401')) {
         setIsAuthenticated(false);
         setUser(null);
+        removeStoredItem(STORAGE_TOKEN_KEY);
+        removeStoredItem(STORAGE_USER_KEY);
+        removeStoredItem(STORAGE_ROLE_KEY);
       } else {
         console.error('Lỗi khi tải ngữ cảnh phân quyền người dùng:', err);
       }
     } finally {
-      setIsLoading(false);
+      if (!isSilent) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -124,11 +183,11 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
           setUser(null);
         } else {
           setIsAuthenticated(true);
-          const savedUser = localStorage.getItem(STORAGE_USER_KEY);
+          const savedUser = getStoredItem(STORAGE_USER_KEY);
           if (savedUser) {
             try { setUser(JSON.parse(savedUser)); } catch {}
           }
-          const savedRole = localStorage.getItem(STORAGE_ROLE_KEY) as RoleName;
+          const savedRole = getStoredItem(STORAGE_ROLE_KEY) as RoleName;
           if (savedRole && ROLE_PRIORITY.includes(savedRole)) {
             setCurrentRole(savedRole);
           }
@@ -146,10 +205,15 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setSessionExpiredData({ message: msg });
     };
 
+    let lastFocusTime = Date.now();
     const handleFocus = () => {
-      const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+      const now = Date.now();
+      // Bỏ qua nếu thời gian giữa 2 lần focus dưới 60 giây (tránh gián đoạn, unmount UI khi mở hộp thoại chọn tệp)
+      if (now - lastFocusTime < 60000) return;
+      lastFocusTime = now;
+      const token = getStoredToken();
       if (token) {
-        loadUserContext(currentRole);
+        loadUserContext(currentRole, true);
       }
     };
 
@@ -167,16 +231,28 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   /**
    * Đăng nhập người dùng (Story S1-01)
    */
-  const login = async (username: string, password: string): Promise<{ success: boolean; message?: string; user?: UserProfile }> => {
+  const login = async (
+    username: string,
+    password: string,
+    rememberMe: boolean = true
+  ): Promise<{ success: boolean; message?: string; user?: UserProfile }> => {
     setIsLoading(true);
     try {
-      const result = await loginUser(username, password);
+      const result = await loginUser(username, password, rememberMe);
       if (result.success && result.user) {
         setIsAuthenticated(true);
         setCurrentRole(result.user.role);
-        localStorage.setItem(STORAGE_ROLE_KEY, result.user.role);
-        localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(result.user));
+        setStoredItem(STORAGE_ROLE_KEY, result.user.role, rememberMe);
+        setStoredItem(STORAGE_USER_KEY, JSON.stringify(result.user), rememberMe);
         setUser(result.user);
+
+        // HIỂN THỊ TOAST THÀNH CÔNG NGAY LẬP TỨC (0ms)
+        const displayName = result.user.fullName || result.user.username || username;
+        showToast(
+          'Đăng nhập thành công!',
+          `Chào mừng ${displayName} quay trở lại hệ thống.`
+        );
+
         await loadUserContext(result.user.role);
         return { success: true, user: result.user };
       } else {
@@ -196,7 +272,16 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       await logoutUser();
       setIsAuthenticated(false);
       setUser(null);
-      localStorage.removeItem(STORAGE_USER_KEY);
+      removeStoredItem(STORAGE_USER_KEY);
+      removeStoredItem(STORAGE_ROLE_KEY);
+      removeStoredItem(STORAGE_TOKEN_KEY);
+
+      // Hiển thị thông báo Toast đăng xuất với type = 'logout' (màu cam hổ phách ấm áp)
+      showToast(
+        'Đăng xuất thành công!',
+        'Bạn đã đăng xuất an toàn khỏi hệ thống.',
+        'logout'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -207,7 +292,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
    */
   const switchRole = async (newRole: RoleName) => {
     setCurrentRole(newRole);
-    localStorage.setItem(STORAGE_ROLE_KEY, newRole);
+    setStoredItem(STORAGE_ROLE_KEY, newRole, isRememberMeActive());
     await loadUserContext(newRole);
   };
 
@@ -230,10 +315,19 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setUser((prev) => {
       if (!prev) return null;
       const updated = { ...prev, mustChangePassword: false };
-      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(updated));
+      setStoredItem(STORAGE_USER_KEY, JSON.stringify(updated), isRememberMeActive());
       return updated;
     });
   };
+
+  const updateUser = useCallback((updated: Partial<UserProfile>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const merged = { ...prev, ...updated };
+      setStoredItem(STORAGE_USER_KEY, JSON.stringify(merged), isRememberMeActive());
+      return merged;
+    });
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -248,10 +342,211 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         switchRole,
         hasPermission,
         refreshContext,
-        clearMustChangePassword
+        updateUser,
+        clearMustChangePassword,
+        showToast,
+        clearToast
       }}
     >
       {children}
+
+      {/* THÔNG BÁO TOAST NỔI TOÀN HỆ THỐNG - HIỂN THỊ TỨC THÌ, TỰ ĐỘNG BIẾN MẤT */}
+      {toast && (() => {
+        const isLogout = toast.type === 'logout';
+        const isError = toast.type === 'error';
+        const isInfo = toast.type === 'info';
+
+        // Gradient nền
+        const bg = isLogout
+          ? 'linear-gradient(135deg, #ffffff 0%, #FFF7ED 100%)' // Cam Amber ấm áp cho đăng xuất
+          : isError
+            ? 'linear-gradient(135deg, #ffffff 0%, #FEF2F2 100%)'
+            : isInfo
+              ? 'linear-gradient(135deg, #ffffff 0%, #EFF6FF 100%)'
+              : 'linear-gradient(135deg, #ffffff 0%, #F0FDF4 100%)'; // Xanh lá mặc định (đăng nhập)
+
+        // Viền
+        const borderColor = isLogout
+          ? '#FDBA74' // Orange-300
+          : isError
+            ? '#FCA5A5'
+            : isInfo
+              ? '#93C5FD'
+              : '#86EFAC';
+
+        // Bóng đổ
+        const shadow = isLogout
+          ? '0 10px 25px -5px rgba(249, 115, 22, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.05)'
+          : isError
+            ? '0 10px 25px -5px rgba(239, 68, 68, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.05)'
+            : isInfo
+              ? '0 10px 25px -5px rgba(59, 130, 246, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.05)'
+              : '0 10px 25px -5px rgba(16, 185, 129, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.05)';
+
+        // Icon Box
+        const iconBg = isLogout
+          ? '#FFEDD5' // Orange-100
+          : isError
+            ? '#FEE2E2'
+            : isInfo
+              ? '#DBEAFE'
+              : '#DCFCE7';
+
+        const iconColor = isLogout
+          ? '#EA580C' // Orange-600
+          : isError
+            ? '#DC2626'
+            : isInfo
+              ? '#2563EB'
+              : '#16A34A';
+
+        // Màu tiêu đề
+        const titleColor = isLogout
+          ? '#9A3412' // Orange-800
+          : isError
+            ? '#991B1B'
+            : isInfo
+              ? '#1E40AF'
+              : '#166534';
+
+        // Thanh tiến trình
+        const progressTrack = isLogout
+          ? '#FFEDD5'
+          : isError
+            ? '#FEE2E2'
+            : isInfo
+              ? '#DBEAFE'
+              : '#DCFCE7';
+
+        const progressBg = isLogout
+          ? 'linear-gradient(90deg, #F97316 0%, #EA580C 100%)' // Gradient Cam sang trọng
+          : isError
+            ? 'linear-gradient(90deg, #EF4444 0%, #DC2626 100%)'
+            : isInfo
+              ? 'linear-gradient(90deg, #3B82F6 0%, #2563EB 100%)'
+              : 'linear-gradient(90deg, #10B981 0%, #059669 100%)';
+
+        return (
+          <div
+            role="status"
+            aria-live="polite"
+            className="erp-login-toast"
+            style={{
+              position: 'fixed',
+              top: '16px',
+              right: '20px',
+              zIndex: 999999,
+              display: 'flex',
+              flexDirection: 'column',
+              minWidth: '280px',
+              maxWidth: '380px',
+              borderRadius: '12px',
+              background: bg,
+              border: `1px solid ${borderColor}`,
+              boxShadow: shadow,
+              overflow: 'hidden',
+              pointerEvents: 'auto'
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '10px 12px 8px 12px'
+              }}
+            >
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '10px',
+                  background: iconBg,
+                  color: iconColor,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}
+              >
+                {isLogout ? (
+                  <Icons.LogOut size={18} />
+                ) : isError ? (
+                  <Icons.AlertTriangle size={18} />
+                ) : isInfo ? (
+                  <Icons.Info size={18} />
+                ) : (
+                  <Icons.CheckCircle2 size={18} />
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    color: titleColor,
+                    lineHeight: 1.3
+                  }}
+                >
+                  {toast.title}
+                </div>
+                {toast.message ? (
+                  <div
+                    style={{
+                      fontSize: '11.5px',
+                      color: '#4B5563',
+                      marginTop: '2px',
+                      lineHeight: 1.4,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {toast.message}
+                  </div>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={clearToast}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#9CA3AF',
+                  padding: '4px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}
+                title="Đóng thông báo"
+              >
+                <Icons.X size={15} />
+              </button>
+            </div>
+            {/* Thanh tiến trình thời gian tự động biến mất */}
+            <div
+              style={{
+                height: '3px',
+                width: '100%',
+                background: progressTrack,
+                overflow: 'hidden'
+              }}
+            >
+              <div
+                className="erp-toast-progress-bar"
+                style={{
+                  height: '100%',
+                  background: progressBg
+                }}
+              />
+            </div>
+          </div>
+        );
+      })()}
+
       {sessionExpiredData && (
         <SessionExpiredModal
           message={sessionExpiredData.message}

@@ -33,7 +33,112 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     allowedRoles: ['ROLE_ADMIN']
   },
 
-  // 3. Hồ sơ cá nhân
+  // 2b. Nhật ký thao tác hệ thống (Sprint 2: S2-04 - Quản trị hệ thống, Kế toán, Quản lý kho, Quản lý KD)
+  {
+    title: 'Nhật ký thao tác',
+    path: '/audit-logs',
+    icon: 'ShieldCheck',
+    epic: 'Hệ Thống & Tài Khoản',
+    description: 'Truy vết thao tác điều chỉnh tồn kho khi kiểm kê lệch và công nợ',
+    allowedRoles: ['ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_WH_MANAGER', 'ROLE_SALES_MANAGER']
+  },
+
+  // 3. Quản lý hồ sơ đại lý (Sprint 3: S3-03 / SCRUM-85 / EP-03 - Kế toán công nợ & Quản lý KD)
+  {
+    title: 'Hồ sơ đại lý',
+    path: '/customers',
+    icon: 'Building2',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: 'Quản lý danh sách khách hàng chuẩn hóa, bảng giá và trạng thái giao dịch',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
+  },
+
+  // 4. Quản lý danh mục sản phẩm (Sprint 2: S2-05)
+  {
+    title: 'Danh mục sản phẩm',
+    path: '/products',
+    icon: 'Package',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Quản lý chuẩn hóa danh mục sản phẩm, mã SKU và bảo mật giá vốn',
+    allowedRoles: [
+      'ROLE_SALES_MANAGER',
+      'ROLE_ADMIN',
+      'ROLE_SALES_REP',
+      'ROLE_WAREHOUSE',
+      'ROLE_WH_MANAGER',
+      'ROLE_ACCOUNTANT'
+    ]
+  },
+
+  // 4b. Danh mục nhà cung cấp (S2-09 / SCRUM-46: Kho & Nguồn hàng)
+  {
+    title: 'Danh mục nhà cung cấp',
+    path: '/suppliers',
+    icon: 'Truck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Quản lý nguồn hàng và đối tác cung ứng, gắn vào phiếu nhập kho để truy nguyên lô lỗi',
+    allowedRoles: [
+      'ROLE_ADMIN',
+      'ROLE_WH_MANAGER',
+      'ROLE_WAREHOUSE',
+      'ROLE_SALES_MANAGER',
+      'ROLE_ACCOUNTANT'
+    ]
+  },
+
+  // 5. Bảng giá sản phẩm (S2-10 / SCRUM-55: EP-02 Sản phẩm & Bảng giá)
+  {
+    title: 'Bảng giá sản phẩm',
+    path: '/pricing',
+    icon: 'Tags',
+    epic: 'Sản phẩm & Bảng giá',
+    description: 'Khai báo bảng giá theo nhóm khách hàng, thời gian hiệu lực và giá sàn',
+    allowedRoles: ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
+  },
+
+  // 6. Lịch sử thay đổi giá (Sprint 3: S3-02 / SCRUM-13 / EP-02 - Quản lý kinh doanh & Admin)
+  {
+    title: 'Lịch sử thay đổi giá',
+    path: '/pricing/history',
+    icon: 'History',
+    epic: 'Sản phẩm & Bảng giá',
+    description: 'Xem lịch sử thay đổi giá cũ - mới, người sửa và căn cứ giải thích cho đại lý',
+    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
+  },
+
+  // 6b. Chiết khấu sản lượng (Sprint 3: S3-01 / SCRUM-12 / SCRUM-77 / EP-02 - Quản lý kinh doanh)
+  {
+    title: 'Chiết khấu sản lượng',
+    path: '/pricing/discounts',
+    icon: 'Percent',
+    epic: 'Sản phẩm & Bảng giá',
+    description: 'Khai báo bậc chiết khấu theo số lượng SKU/nhóm hàng và quy tắc có lợi nhất cho khách',
+    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
+  },
+
+  // 6c. Đặt hàng đại lý (Sprint 3: S3-09 / SCRUM-14 / EP-04: Đặt hàng & Duyệt ngoại lệ)
+  {
+    title: 'Đơn hàng đại lý',
+    path: '/orders/create',
+    icon: 'ShoppingCart',
+    epic: 'Đặt hàng & Duyệt ngoại lệ',
+    description: 'Lên đơn nhanh tại điểm bán, tự động áp giá & chiết khấu sản lượng',
+    // Kế toán không tạo đơn (Backend chặn) -> không hiện menu để tránh bị văng ra màn đăng nhập
+    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+  },
+
+
+  // 7. Quản lý nhóm hàng nhiều cấp (EP-02: Dành cho Quản lý kinh doanh & Admin)
+  {
+    title: 'Quản lý nhóm hàng',
+    path: '/categories',
+    icon: 'Boxes',
+    epic: 'Sản phẩm & Bảng giá',
+    description: 'Cấu trúc nhóm hàng ≥ 3 cấp & xem doanh số theo ngành hàng',
+    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+  },
+
+  // 8. Hồ sơ cá nhân (Luôn ở dưới cùng các tính năng nghiệp vụ, ngay trên Đăng xuất)
   {
     title: 'Hồ sơ cá nhân',
     path: '/profile',
@@ -56,12 +161,28 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
  * Hàm lọc danh sách menu theo vai trò người dùng (Tiêu chuẩn S1-06)
  * "Mục menu không thuộc quyền thì không hiển thị"
  * Hỗ trợ một hoặc nhiều vai trò cùng lúc
+ * Luôn bảo đảm "Hồ sơ cá nhân" ở vị trí cuối cùng trong danh sách
  */
 export function getAuthorizedMenus(roles: RoleName | RoleName[]): MenuItem[] {
   const roleList = Array.isArray(roles) ? roles : [roles];
-  return ALL_SYSTEM_MENUS.filter((item) =>
+  const list = ALL_SYSTEM_MENUS.filter((item) =>
     item.allowedRoles.some((r) => roleList.includes(r))
-  ).map(({ allowedRoles: _allowedRoles, ...menuItem }) => menuItem);
+  ).map((item) => ({
+    title: item.title,
+    path: item.path,
+    icon: item.icon,
+    epic: item.epic,
+    description: item.description,
+    badge: item.badge
+  }));
+
+  // Đảm bảo "Hồ sơ cá nhân" (/profile) luôn nằm ở vị trí cuối cùng của Sidebar
+  const nonProfile = list.filter((m) => m.path !== '/profile');
+  const profileItem = list.find((m) => m.path === '/profile');
+  if (profileItem) {
+    return [...nonProfile, profileItem];
+  }
+  return nonProfile;
 }
 
 /**
@@ -70,7 +191,7 @@ export function getAuthorizedMenus(roles: RoleName | RoleName[]): MenuItem[] {
 export function checkPathPermission(path: string, roles: RoleName | RoleName[]): boolean {
   const roleList = Array.isArray(roles) ? roles : [roles];
   const cleanPath = path.split('?')[0].replace(/\/+$/, '') || '/';
-  
+
   if (cleanPath === '/' || cleanPath === '/dashboard' || cleanPath === '/profile') {
     return true;
   }
@@ -101,7 +222,7 @@ export function checkPathPermission(path: string, roles: RoleName | RoleName[]):
  */
 export function getAllowedRolesForPath(path: string): RoleName[] {
   const cleanPath = path.split('?')[0].replace(/\/+$/, '') || '/';
-  
+
   if (cleanPath === '/admin/users' || cleanPath.startsWith('/admin/users/')) {
     return ['ROLE_ADMIN'];
   }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { FC, ReactNode, FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation, Link } from '../routes/Router';
@@ -6,6 +6,8 @@ import { ROLE_METADATA_MAP } from '../types/user';
 import type { RoleName } from '../types/user';
 import { Icons, DynamicIcon } from '../components/common/Icons';
 import { changePasswordApi } from '../services/api';
+import { LogoutConfirmModal } from '../components/common/LogoutConfirmModal';
+import { UserAvatarMenu } from '../components/common/UserAvatarMenu';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -16,8 +18,43 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Thanh điều hướng Sidebar (taskbar): loại bỏ "Hồ sơ cá nhân" (/profile) theo yêu cầu (chuyển sang menu ảnh đại diện)
+  const displayedMenus = useMemo(() => {
+    return menus.filter((m) => m.path !== '/profile');
+  }, [menus]);
+
   // Trạng thái mở/đóng Sidebar trên Mobile (tối ưu hóa màn hình 360px)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+
+  // Trạng thái thu gọn Sidebar trên Desktop (lưu localStorage)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem('erp_sidebar_collapsed') === 'true';
+  });
+
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('erp_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
+
+  // Hộp xác nhận đăng xuất
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
+  const [loggingOut, setLoggingOut] = useState<boolean>(false);
+
+
+
+  const handleConfirmLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setLoggingOut(false);
+      setShowLogoutConfirm(false);
+      navigate('/login');
+    }
+  };
 
   // Đóng Mobile Drawer khi đổi route
   useEffect(() => {
@@ -95,28 +132,6 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
     }
   };
 
-  // Lấy 2 chữ cái đầu viết tắt cho Avatar (chuẩn App ETC)
-  const getAvatarInitials = (name?: string, roleStr?: string): string => {
-    if (!name) return 'EP';
-    const words = name.trim().split(/\s+/);
-    if (words.length >= 2) {
-      return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
-    }
-    if (roleStr) {
-      return roleStr.replace('ROLE_', '').slice(0, 2).toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
-  };
-
-  // Gom nhóm menu theo Epic để giao diện chuyên nghiệp
-  const groupedMenus: Record<string, typeof menus> = {};
-  menus.forEach((item) => {
-    const epic = item.epic || 'Hệ thống';
-    if (!groupedMenus[epic]) {
-      groupedMenus[epic] = [];
-    }
-    groupedMenus[epic].push(item);
-  });
 
   // Lấy tiêu đề và mô tả của trang hiện tại cho Header
   const currentMenu = menus.find((m) => m.path === location.pathname);
@@ -125,11 +140,15 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
       ? '403 Truy Cập Bị Từ Chối'
       : location.pathname === '/profile'
         ? 'Hồ Sơ Cá Nhân'
-        : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
+        : location.pathname === '/products/import'
+          ? 'Nhập Sản Phẩm Từ Excel'
+          : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
   const pageSubtitle =
     location.pathname === '/profile'
       ? 'Thông tin cá nhân & thiết lập an toàn tài khoản'
-      : currentMenu?.description || 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống';
+      : location.pathname === '/products/import'
+        ? 'Tải tệp mẫu, xem trước từng dòng và nhập hàng loạt đến 5.000 SKU'
+        : currentMenu?.description || 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống';
 
   return (
     <div className="erp-app-shell">
@@ -143,16 +162,23 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
       )}
 
       {/* 2. SIDEBAR ĐIỀU HƯỚNG PHÂN QUYỀN  - NỀN TRẮNG & MENU PILL) */}
-      <aside className={`erp-sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
+      <aside className={`erp-sidebar ${isMobileMenuOpen ? 'open' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         {/* Header của Sidebar */}
         <div className="erp-sidebar-header">
-          <div className="erp-logo-brand" onClick={() => navigate('/dashboard')} title="Về bảng điều khiển">
-            <img src="/logo-cube.png" alt="ERP Logo" className="erp-logo-img" />
-            <div className="erp-logo-text">
-              <span className="erp-brand-title">ERP SALES & INVENTORY</span>
-              <span className="erp-brand-sub">Bán Hàng & Quản Trị Kho</span>
-            </div>
+          <div
+            className="erp-logo-brand"
+            onClick={toggleSidebarCollapse}
+            title={isSidebarCollapsed ? 'Bấm vào logo để mở rộng sidebar' : 'Bấm vào logo để thu gọn sidebar'}
+          >
+            <img src="/logo-cube.png" alt="ERP Logo" className="erp-logo-img logosidebar" />
+            {!isSidebarCollapsed && (
+              <div className="erp-logo-text">
+                <span className="erp-brand-title">ERP SALES & INVENTORY</span>
+                <span className="erp-brand-sub">Bán Hàng & Quản Trị Kho</span>
+              </div>
+            )}
           </div>
+
           {/* Nút đóng Sidebar trên Mobile 360px */}
           <button
             type="button"
@@ -160,123 +186,114 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             onClick={() => setIsMobileMenuOpen(false)}
             aria-label="Đóng menu"
           >
-            <Icons.X size={22} />
+            <Icons.X size={20} />
           </button>
         </div>
 
-        {/* Khối Thẻ VAI TRÒ HỆ THỐNG  */}
-        <div className="erp-sidebar-role-badge">
-          <div className="erp-sidebar-role-title flex items-center justify-between">
-            <span>VAI TRÒ HỆ THỐNG</span>
-
+        {/* Khối Thẻ VAI TRÒ HỆ THỐNG */}
+        {!isSidebarCollapsed && (
+          <div className="erp-sidebar-role-badge" title={`Vai trò: ${currentRoleMeta.label}`}>
+            <div className="erp-sidebar-role-title flex items-center justify-between">
+              <span>VAI TRÒ HỆ THỐNG</span>
+            </div>
+            <div className="erp-sidebar-role-name flex items-center justify-between">
+              {user?.roles && user.roles.length > 1 ? (
+                <div className="relative flex items-center w-full">
+                  <select
+                    value={effectiveRole}
+                    onChange={(e) => switchRole(e.target.value as RoleName)}
+                    style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none' }}
+                    className="w-full bg-transparent font-bold text-gray-800 text-xs cursor-pointer border-none outline-none focus:ring-0 p-0 pr-5 truncate"
+                    title="Chuyển đổi vai trò làm việc"
+                  >
+                    {user.roles.map((r) => (
+                      <option key={r} value={r}>
+                        {ROLE_METADATA_MAP[r]?.label || r}
+                      </option>
+                    ))}
+                  </select>
+                  <Icons.ChevronDown size={14} className="absolute right-0 text-gray-400 pointer-events-none" />
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 overflow-hidden">
+                  <span>{currentRoleMeta.label}</span>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="erp-sidebar-role-name flex items-center justify-between">
-            {user?.roles && user.roles.length > 1 ? (
-              <div className="relative flex items-center w-full">
-                <select
-                  value={effectiveRole}
-                  onChange={(e) => switchRole(e.target.value as RoleName)}
-                  style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none' }}
-                  className="w-full bg-transparent font-bold text-gray-800 text-xs cursor-pointer border-none outline-none focus:ring-0 p-0 pr-5 truncate"
-                  title="Chuyển đổi vai trò làm việc"
-                >
-                  {user.roles.map((r) => (
-                    <option key={r} value={r}>
-                      {ROLE_METADATA_MAP[r]?.label || r}
-                    </option>
-                  ))}
-                </select>
-                <Icons.ChevronDown size={14} className="absolute right-0 text-gray-400 pointer-events-none" />
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 overflow-hidden">
-                <span>{currentRoleMeta.label}</span>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
 
         {/* Danh sách Menu lọc theo quyền (Story S1-06: Chỉ hiển thị menu thuộc quyền) */}
         <nav className="erp-sidebar-nav" aria-label="Menu điều hướng hệ thống">
           {isLoading ? (
-            <div style={{ padding: '20px 10px' }}>
+            <div style={{ padding: isSidebarCollapsed ? '10px 0' : '20px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
               <div
                 style={{
-                  height: '38px',
+                  height: isSidebarCollapsed ? '44px' : '38px',
+                  width: isSidebarCollapsed ? '44px' : '100%',
                   background: '#F3F4F6',
-                  borderRadius: '9999px',
-                  marginBottom: '10px'
+                  borderRadius: isSidebarCollapsed ? '12px' : '9999px',
                 }}
               />
               <div
                 style={{
-                  height: '38px',
+                  height: isSidebarCollapsed ? '44px' : '38px',
+                  width: isSidebarCollapsed ? '44px' : '100%',
                   background: '#F3F4F6',
-                  borderRadius: '9999px',
-                  marginBottom: '10px'
+                  borderRadius: isSidebarCollapsed ? '12px' : '9999px',
                 }}
               />
-              <div style={{ height: '38px', background: '#F3F4F6', borderRadius: '9999px' }} />
+              <div
+                style={{
+                  height: isSidebarCollapsed ? '44px' : '38px',
+                  width: isSidebarCollapsed ? '44px' : '100%',
+                  background: '#F3F4F6',
+                  borderRadius: isSidebarCollapsed ? '12px' : '9999px',
+                }}
+              />
             </div>
           ) : menus.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '30px 10px', color: '#9CA3AF' }}>
-              <Icons.AlertTriangle size={24} />
-              <p style={{ fontSize: '13px', marginTop: '6px' }}>
-                Chưa có mục menu nào được cấp quyền.
-              </p>
+              <Icons.AlertTriangle size={20} />
+              {!isSidebarCollapsed && (
+                <p style={{ fontSize: '13px', marginTop: '6px' }}>
+                  Chưa có mục menu nào được cấp quyền.
+                </p>
+              )}
             </div>
           ) : (
-            Object.entries(groupedMenus).map(([epicKey, items]) => (
-              <div key={epicKey} className="erp-menu-group">
-                <div className="erp-menu-group-title">
-                  <span>{epicKey}</span>
-                </div>
-                <ul className="erp-menu-list">
-                  {items.map((item) => {
-                    const isActive = location.pathname === item.path;
-                    return (
-                      <li key={item.path} className="erp-menu-item">
-                        <Link
-                          to={item.path}
-                          className={`erp-menu-link ${isActive ? 'active' : ''}`}
-                          title={item.description}
-                        >
-                          <span className="erp-menu-icon">
-                            <DynamicIcon name={item.icon} size={18} />
-                          </span>
+            <ul className="erp-menu-list">
+              {displayedMenus.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <li key={item.path} className="erp-menu-item">
+                    <Link
+                      to={item.path}
+                      className={`erp-menu-link ${isActive ? 'active' : ''}`}
+                      title={item.title}
+                    >
+                      <span className="erp-menu-icon">
+                        <DynamicIcon name={item.icon} size={18} />
+                      </span>
+                      {!isSidebarCollapsed && (
+                        <>
                           <span className="erp-menu-title">{item.title}</span>
                           {item.badge && (
                             <span className="erp-menu-badge">{item.badge}</span>
                           )}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))
+                        </>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </nav>
-
-        {/* Nút Đăng Xuất dạng Pill cố định góc dưới bên trái (như App ETC) */}
-        <div className="erp-sidebar-footer">
-          <button
-            type="button"
-            className="erp-sidebar-logout-btn"
-            onClick={async () => {
-              await logout();
-              navigate('/login');
-            }}
-            title="Đăng xuất khỏi hệ thống"
-          >
-            <Icons.LogOut size={16} />
-            <span>Đăng Xuất</span>
-          </button>
-        </div>
       </aside>
 
       {/* 3. KHU VỰC NỘI DUNG CHÍNH (MAIN AREA) */}
-      <div className="erp-main-area">
+      <div className={`erp-main-area ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         {/* Topbar điều hướng trên cùng (Chuẩn App ETC) */}
         <header className="erp-topbar">
           <div className="erp-topbar-left">
@@ -294,7 +311,9 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             {/* Tiêu đề trang + mô tả hoạt động bên dưới */}
             <div className="erp-page-title-box">
               <h1 className="erp-page-heading">{pageTitle}</h1>
-              <span className="erp-page-subheading">{pageSubtitle}</span>
+              {location.pathname !== '/categories' && (
+                <span className="erp-page-subheading">{pageSubtitle}</span>
+              )}
             </div>
           </div>
 
@@ -302,24 +321,13 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
 
 
-          {/* Khối User Profile Avatar ở Header (như App ETC) */}
-          <div
-            className="erp-header-user-block"
-            onClick={() => navigate('/profile')}
-            title="Xem hồ sơ cá nhân"
-          >
-            <div className="erp-header-avatar">
-              {getAvatarInitials(user?.fullName, currentRole)}
-            </div>
-            <div className="erp-header-user-info">
-              <span className="erp-header-fullname">
-                {user?.fullName || 'Người Dùng'}
-              </span>
-              <span className="erp-header-username">
-                {user?.username || 'user'}
-              </span>
-            </div>
-          </div>
+          {/* Menu Ảnh đại diện với 3 tùy chọn: 1 là Hồ sơ cá nhân, 2 là Chủ đề, 3 là Đăng xuất (Ảnh 3 / Ảnh 2) */}
+          <UserAvatarMenu
+            user={user}
+            currentRole={effectiveRole}
+            onOpenProfile={() => navigate('/profile')}
+            onLogout={() => setShowLogoutConfirm(true)}
+          />
         </header>
 
         {/* Nội dung trang */}
@@ -464,7 +472,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
                 </button>
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={() => setShowLogoutConfirm(true)}
                   className="w-full py-2 text-center text-xs text-slate-400 hover:text-slate-600 transition-colors font-medium cursor-pointer"
                 >
                   Đăng xuất tài khoản
@@ -474,6 +482,16 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
           </div>
         </div>
       )}
+
+      {/* 4. HỘP XÁC NHẬN ĐĂNG XUẤT */}
+      <LogoutConfirmModal
+        open={showLogoutConfirm}
+        loading={loggingOut}
+        onConfirm={handleConfirmLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
+
+
     </div>
   );
 };

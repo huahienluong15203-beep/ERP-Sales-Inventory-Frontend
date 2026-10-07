@@ -45,6 +45,12 @@ export class ErrorBoundary extends Component<Props, State> {
             {this.state.errorMessage && (
               <pre className="erp-code-block">{this.state.errorMessage}</pre>
             )}
+            {(this.state.errorMessage.includes('insertBefore') ||
+              this.state.errorMessage.includes('removeChild')) && (
+              <div className="p-3 my-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 rounded-lg text-xs text-left">
+                <strong>Gợi ý khắc phục:</strong> Lỗi này xảy ra khi tính năng <em>Tự động dịch (Google Translate / Edge Translate)</em> của trình duyệt can thiệp vào các thẻ hiển thị của hệ thống. Bạn vui lòng tắt tính năng Dịch trang trên thanh địa chỉ trình duyệt, sau đó bấm <strong>Làm mới trình duyệt</strong>.
+              </div>
+            )}
             <div className="erp-action-group">
               <button
                 type="button"

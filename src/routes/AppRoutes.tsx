@@ -6,6 +6,17 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { DashboardPage } from '../pages/dashboard/DashboardPage';
 import { ProfilePage } from '../pages/profile/ProfilePage';
 import { UserManagementPage } from '../pages/admin/UserManagementPage';
+import { UserImportPage } from '../pages/admin/UserImportPage';
+import { AgencyManagementPage } from '../pages/customer/AgencyManagementPage';
+import { ProductManagementPage } from '../pages/product/ProductManagementPage';
+import { ProductImportPage } from '../pages/product/ProductImportPage';
+import { PriceListPage } from '../pages/pricing/PriceListPage';
+import { PriceHistoryPage } from '../pages/pricing/PriceHistoryPage';
+import { VolumeDiscountPage } from '../pages/pricing/VolumeDiscountPage';
+import { CategoryManagementPage } from '../pages/category/CategoryManagementPage';
+import { OrderCreatePage } from '../pages/order/OrderCreatePage';
+import { SupplierManagementPage } from '../pages/supplier/SupplierManagementPage';
+import { AuditLogPage } from '../pages/admin/AuditLogPage';
 import { ModulePage } from '../pages/common/ModulePage';
 import { ForbiddenPage } from '../pages/common/ForbiddenPage';
 import { NotFoundPage } from '../pages/common/NotFoundPage';
@@ -14,7 +25,7 @@ import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
- * Cây định tuyến toàn hệ thống ERP (Sprint 1)
+ * Cây định tuyến toàn hệ thống ERP
  * - Chưa đăng nhập: Chuyển hướng về /login
  * - Đã đăng nhập: Mọi trang (kể cả 403 Forbidden và 404 NotFound) đều dùng chung MainLayout (S1-07)
  */
@@ -54,6 +65,15 @@ export const AppRoutes: React.FC = () => {
             </ProtectedRoute>
           }
         />
+        {/* S2-01: Trang riêng nhập người dùng hàng loạt từ Excel (chỉ Quản trị viên) */}
+        <Route
+          path="/users/import"
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
+              <UserImportPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/admin/users"
           element={
@@ -63,8 +83,212 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* Quản lý hồ sơ đại lý (Sprint 3: S3-03 / SCRUM-85 / EP-03) */}
+        <Route
+          path="/customers"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <AgencyManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Quản lý danh mục sản phẩm (Sprint 2: S2-05) */}
+        <Route
+          path="/products"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_SALES_REP',
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <ProductManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S2-08: Trang riêng nhập danh mục sản phẩm từ Excel (chỉ Admin, Quản lý kinh doanh) */}
+        <Route
+          path="/products/import"
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_SALES_MANAGER', 'ROLE_ADMIN']}>
+              <ProductImportPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Quản lý danh mục nhà cung cấp (S2-09 / SCRUM-46 / Kho & Nguồn hàng) */}
+        <Route
+          path="/suppliers"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ADMIN',
+                'ROLE_WH_MANAGER',
+                'ROLE_WAREHOUSE',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <SupplierManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Quản lý bảng giá sản phẩm (S2-10 / SCRUM-55 / EP-02) */}
+        <Route
+          path="/pricing"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <PriceListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/price-lists"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <PriceListPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Lịch sử thay đổi giá & Biểu giá (Sprint 3: S3-02 / SCRUM-13 / EP-02) */}
+        <Route
+          path="/pricing/history"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_SALES_REP',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <PriceHistoryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Chính sách chiết khấu theo sản lượng (Sprint 3: S3-01 / SCRUM-12 / SCRUM-77 / EP-02) */}
+        <Route
+          path="/pricing/discounts"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_SALES_REP',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <VolumeDiscountPage />
+            </ProtectedRoute>
+          }
+        />
+
+
+        {/* Đặt hàng đại lý (Sprint 3: S3-09 / SCRUM-14 / EP-04).
+            Không có Kế toán: Backend /api/orders chỉ cho Admin, QL kinh doanh, NV kinh doanh tạo đơn */}
+        <Route
+          path="/orders/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_REP',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <OrderCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/orders"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_REP',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <OrderCreatePage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Hồ sơ cá nhân (Mọi vai trò đều xem được) */}
         <Route path="/profile" element={<ProfilePage />} />
+
+        {/* Quản lý nhóm hàng nhiều cấp & doanh số ngành hàng (Quản lý kinh doanh & Admin) */}
+        <Route
+          path="/categories"
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_SALES_MANAGER', 'ROLE_ADMIN']}>
+              <CategoryManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Nhật ký thao tác tồn kho & công nợ (Sprint 2: S2-04) */}
+        <Route
+          path="/audit-logs"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_WH_MANAGER',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <AuditLogPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/audit-logs"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_WH_MANAGER',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <AuditLogPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Trang 403 Forbidden trực tiếp */}
         <Route path="/forbidden" element={<ForbiddenPage />} />
@@ -76,7 +300,18 @@ export const AppRoutes: React.FC = () => {
             m.path !== '/' &&
             m.path !== '/profile' &&
             m.path !== '/users' &&
-            m.path !== '/admin/users'
+            m.path !== '/admin/users' &&
+            m.path !== '/customers' &&
+            m.path !== '/products' &&
+            m.path !== '/categories' &&
+            m.path !== '/suppliers' &&
+            m.path !== '/pricing' &&
+            m.path !== '/price-lists' &&
+            m.path !== '/pricing/history' &&
+            m.path !== '/orders/create' &&
+            m.path !== '/orders' &&
+            m.path !== '/audit-logs' &&
+            m.path !== '/admin/audit-logs'
         ).map((menuItem) => (
           <Route
             key={menuItem.path}

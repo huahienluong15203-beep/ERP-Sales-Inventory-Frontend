@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from '../../routes/Router';
 import {
   fetchAdminUsers,
   fetchAdminFormOptions,
@@ -8,6 +9,7 @@ import {
   updateAdminAssignments,
   lockAdminUser,
   unlockAdminUser,
+  getAvatarFullUrl,
   type AdminUserItem,
   type AdminFormOptions,
   type CreateAdminUserPayload,
@@ -15,7 +17,7 @@ import {
   type UpdateAssignmentsPayload
 } from '../../services/api';
 import type { RoleName } from '../../types/user';
-import { ROLE_METADATA_MAP } from '../../types/user';
+import { ROLE_METADATA_MAP, getUserAvatarInitials } from '../../types/user';
 import {
   Users,
   Search,
@@ -31,27 +33,66 @@ import {
   CheckCircle2,
   AlertTriangle,
   X,
-  ChevronLeft,
-  ChevronRight,
   Filter,
-  Info
+  Info,
+  FileSpreadsheet
 } from '../../components/common/Icons';
+import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
+import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
+import { Pagination } from '../../components/common/Pagination';
+import { fetchAuditLogs } from '../../services/auditLogApi';
+
+/**
+ * Kiểm tra số điện thoại Việt Nam: để trống HOẶC đủ 10 số, bắt đầu bằng 03/05/07/08/09.
+ * Trả về câu báo lỗi, hoặc null nếu hợp lệ.
+ */
+function getPhoneError(phone?: string): string | null {
+  const value = (phone || '').trim();
+  if (!value) return null;
+  if (!/^\d+$/.test(value)) return 'Số điện thoại chỉ được gồm chữ số.';
+  if (value.length !== 10) return `Số điện thoại phải đủ 10 số (đang có ${value.length} số).`;
+  if (!/^0(3|5|7|8|9)\d{8}$/.test(value)) return 'Đầu số không hợp lệ (phải bắt đầu bằng 03, 05, 07, 08 hoặc 09).';
+  return null;
+}
+
+/** Chỉ giữ lại chữ số, tối đa 10 số. */
+function sanitizePhoneInput(raw: string): string {
+  return raw.replace(/\D/g, '').slice(0, 10);
+}
 
 export const UserManagementPage: React.FC = () => {
-  const { user: currentUser, refreshContext } = useAuth();
+  const { user: currentUser, refreshContext, showToast } = useAuth();
+  const navigate = useNavigate();
 
   // Danh sách người dùng & phân trang
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [page, setPage] = useState<number>(0);
-  const [size] = useState<number>(20); // Mặc định 20 dòng theo tiêu chuẩn S1-09
   const [totalElements, setTotalElements] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
 
+  // Bộ lọc + trang lưu trên URL (vd: /users?role=ROLE_ADMIN&page=2). Mặc định 20 dòng/trang (S1-08)
+  const { params: urlParams, setParams: setUrlParams, page, size, setPage, setSize, setFilters } = useUrlPaging({
+    keyword: '',
+    role: '',
+    status: ''
+  });
+  const selectedRole = urlParams.role;
+  const selectedStatus = urlParams.status;
+  const setSelectedRole = (value: string) => setFilters({ role: value });
+  const setSelectedStatus = (value: string) => setFilters({ status: value });
+
   // Bộ lọc tìm kiếm
-  const [keyword, setKeyword] = useState<string>('');
-  const [selectedRole, setSelectedRole] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [keyword, setKeyword] = useState<string>(urlParams.keyword);
+  // Gõ từ 2 ký tự mới gọi API (đợi ngừng gõ 0,4 giây); 1 ký tự thì lọc tại chỗ
+  const resetToFirstPage = useCallback(() => setPage(0), [setPage]);
+  const { serverKeyword, localKeyword, flush: flushSearch } = useServerSearch(
+    keyword,
+    resetToFirstPage,
+    urlParams.keyword
+  );
+  useEffect(() => {
+    setUrlParams({ keyword: serverKeyword });
+  }, [serverKeyword, setUrlParams]);
 
   // Tùy chọn form (vai trò, kho, địa bàn)
   const [formOptions, setFormOptions] = useState<AdminFormOptions>({
@@ -66,8 +107,42 @@ export const UserManagementPage: React.FC = () => {
     message: string;
   } | null>(null);
 
+  // Bản đồ đồng bộ avatar người dùng (kết hợp cache cục bộ và Nhật ký thao tác để đồng bộ tức thì)
+  const [avatarMap, setAvatarMap] = useState<Record<string, string>>(() => {
+    try {
+      const stored = localStorage.getItem('erp_avatar_cache');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    // Tự động thu thập avatar người dùng từ Nhật ký thao tác để đồng bộ ngay lập tức
+    fetchAuditLogs({ size: 100 })
+      .then((res) => {
+        if (res && res.logs) {
+          const map: Record<string, string> = {};
+          res.logs.forEach((log) => {
+            if (log.actorUsername && log.actorAvatarUrl) {
+              map[log.actorUsername.toLowerCase()] = log.actorAvatarUrl;
+            }
+          });
+          setAvatarMap((prev) => {
+            const next = { ...map, ...prev };
+            try {
+              localStorage.setItem('erp_avatar_cache', JSON.stringify(next));
+            } catch { }
+            return next;
+          });
+        }
+      })
+      .catch(() => { });
+  }, []);
+
   // Modal Thêm Tài Khoản (S1-08)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  // Modal Nhập Tài Khoản Hàng Loạt Từ Excel (S2-01 / SCRUM-18)
   const [createLoading, setCreateLoading] = useState<boolean>(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createForm, setCreateForm] = useState<CreateAdminUserPayload>({
@@ -109,7 +184,7 @@ export const UserManagementPage: React.FC = () => {
     setActionAlert(null);
     try {
       const res = await fetchAdminUsers({
-        keyword: keyword.trim() || undefined,
+        keyword: serverKeyword || undefined,
         role: selectedRole || undefined,
         status: selectedStatus || undefined,
         page,
@@ -126,7 +201,7 @@ export const UserManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [keyword, selectedRole, selectedStatus, page, size]);
+  }, [serverKeyword, selectedRole, selectedStatus, page, size]);
 
   // Tải danh mục vai trò/kho/địa bàn lúc khởi động
   useEffect(() => {
@@ -138,19 +213,23 @@ export const UserManagementPage: React.FC = () => {
     loadUsers();
   }, [loadUsers]);
 
-  // Tìm kiếm tức thời khi submit
+  // Bấm Enter / nút Lọc: tìm ngay không cần đợi
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const changed = flushSearch();
     setPage(0);
-    loadUsers();
+    if (!changed) loadUsers();
   };
+
+  // Mới gõ 1 ký tự: lọc tại chỗ trên danh sách đang hiển thị, không gọi API
+  const visibleUsers = localKeyword
+    ? users.filter((u) => matchesKeyword(localKeyword, u.fullName, u.username, u.phone, u.email))
+    : users;
 
   // Reset bộ lọc
   const handleResetFilters = () => {
     setKeyword('');
-    setSelectedRole('');
-    setSelectedStatus('');
-    setPage(0);
+    setFilters({ role: '', status: '' });
   };
 
   // Mở modal tạo tài khoản
@@ -180,8 +259,9 @@ export const UserManagementPage: React.FC = () => {
     }
 
     // Kiểm tra định dạng số điện thoại nếu người dùng có nhập
-    if (createForm.phone && !/^(0|\+84)(3|5|7|8|9)\d{8}$/.test(createForm.phone.trim())) {
-      setCreateError('Số điện thoại không hợp lệ! Vui lòng nhập số điện thoại gồm 10 chữ số (đầu 03, 05, 07, 08, 09) hoặc để trống.');
+    const createPhoneError = getPhoneError(createForm.phone);
+    if (createPhoneError) {
+      setCreateError(createPhoneError);
       return;
     }
 
@@ -210,12 +290,10 @@ export const UserManagementPage: React.FC = () => {
       const result = await createAdminUser(sanitizedPayload);
       if (result.success) {
         setIsCreateModalOpen(false);
-        setActionAlert({
-          type: 'success',
-          message:
-            result.message ||
-            'Tạo tài khoản thành công! Mật khẩu tạm và email kích hoạt đã được gửi tới nhân viên.'
-        });
+        showToast(
+          'Tạo tài khoản thành công!',
+          result.message || 'Mật khẩu tạm và email kích hoạt đã được gửi tới nhân viên.'
+        );
         setPage(0);
         loadUsers();
       } else {
@@ -255,8 +333,9 @@ export const UserManagementPage: React.FC = () => {
     setEditError(null);
     setEditLoading(true);
     try {
-      if (editInfoForm.phone && !/^(0|\+84)(3|5|7|8|9)\d{8}$/.test(editInfoForm.phone.trim())) {
-        setEditError('Số điện thoại không hợp lệ! Vui lòng nhập số điện thoại gồm 10 chữ số (đầu 03, 05, 07, 08, 09) hoặc để trống.');
+      const editPhoneError = getPhoneError(editInfoForm.phone);
+      if (editPhoneError) {
+        setEditError(editPhoneError);
         setEditLoading(false);
         return;
       }
@@ -268,10 +347,10 @@ export const UserManagementPage: React.FC = () => {
       const res = await updateAdminUser(editingUser.id, payload);
       if (res.success) {
         setIsEditModalOpen(false);
-        setActionAlert({
-          type: 'success',
-          message: 'Cập nhật thông tin tài khoản thành công!'
-        });
+        showToast(
+          'Cập nhật thành công!',
+          'Thông tin tài khoản người dùng đã được lưu lại.'
+        );
         loadUsers();
         if (currentUser && (currentUser.id === editingUser.id || currentUser.username === editingUser.username)) {
           refreshContext();
@@ -335,10 +414,10 @@ export const UserManagementPage: React.FC = () => {
       const res = await updateAdminAssignments(editingUser.id, sanitizedPayload);
       if (res.success) {
         setIsEditModalOpen(false);
-        setActionAlert({
-          type: 'success',
-          message: 'Cập nhật phân quyền, kho và địa bàn thành công!'
-        });
+        showToast(
+          'Phân quyền thành công!',
+          'Phân quyền vai trò, kho và địa bàn đã được cập nhật.'
+        );
         loadUsers();
         if (currentUser && (currentUser.id === editingUser.id || currentUser.username === editingUser.username)) {
           refreshContext();
@@ -385,11 +464,11 @@ export const UserManagementPage: React.FC = () => {
         const res = await lockAdminUser(lockTargetUser.id, lockReason.trim());
         if (res.success) {
           const isSales = lockTargetUser.roles.includes('ROLE_SALES_REP') || lockTargetUser.roles.includes('ROLE_SALES_MANAGER');
-          setActionAlert({
-            type: 'success',
-            message: `Đã khóa tài khoản [${lockTargetUser.username}] và thu hồi phiên làm việc thành công.${isSales ? ' (Lưu ý: Các đại lý do nhân sự này phụ trách đã được gắn cảnh báo Cần bàn giao)' : ''
-              }`
-          });
+          showToast(
+            'Đã khóa tài khoản!',
+            `Tài khoản [${lockTargetUser.username}] đã bị khóa và thu hồi phiên.${isSales ? ' (Cần bàn giao đại lý)' : ''}`,
+            'error'
+          );
           loadUsers();
         } else {
           setActionAlert({ type: 'error', message: res.message });
@@ -397,10 +476,10 @@ export const UserManagementPage: React.FC = () => {
       } else {
         const res = await unlockAdminUser(lockTargetUser.id);
         if (res.success) {
-          setActionAlert({
-            type: 'success',
-            message: `Đã mở khóa tài khoản [${lockTargetUser.username}] thành công.`
-          });
+          showToast(
+            'Đã mở khóa tài khoản!',
+            `Tài khoản [${lockTargetUser.username}] đã được kích hoạt lại.`
+          );
           loadUsers();
         } else {
           setActionAlert({ type: 'error', message: res.message });
@@ -414,13 +493,8 @@ export const UserManagementPage: React.FC = () => {
     }
   };
 
-  // Avatar initials
-  const getInitials = (name?: string) => {
-    if (!name) return 'U';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  };
+  // Avatar initials đồng bộ toàn hệ thống
+  const getInitials = (name?: string) => getUserAvatarInitials(name);
 
   // Class badge màu theo vai trò
   const getRoleBadgeClass = (role: RoleName): string => {
@@ -444,30 +518,36 @@ export const UserManagementPage: React.FC = () => {
     }
   };
 
+  // Đang ở trang vượt quá số trang -> tự lùi về trang cuối
+  useClampPage(page, totalPages, setPage, loading);
+
   return (
     <div className="user-mgmt-container">
-      {/* 1. Tiêu đề Phân hệ & Nút Tạo tài khoản */}
-      <div className="user-mgmt-header">
-        <div className="user-mgmt-header-left">
-          <div className="user-mgmt-header-icon">
-            <Users size={24} />
-          </div>
-          <div>
-            <h1 className="user-mgmt-title">Quản Lý Tài Khoản & Nhân Sự</h1>
-            <p className="user-mgmt-subtitle">
-              Quản trị nhân sự, đa vai trò (RBAC), gán kho, địa bàn và kiểm soát trạng thái tài khoản
-            </p>
-          </div>
-        </div>
-
+      {/* 1. Thanh thao tác tác vụ */}
+      <div className="user-mgmt-header" style={{ justifyContent: 'flex-end' }}>
         <div className="user-mgmt-header-actions">
           <button
             onClick={() => loadUsers()}
             disabled={loading}
-            title="Làm mới danh sách"
+            title="Làm mới danh sách tài khoản"
             className="user-mgmt-btn-refresh"
           >
-            <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <span>Làm mới</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/users/import')}
+            className="user-mgmt-btn-create"
+            style={{
+              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+              color: '#ffffff',
+              boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)'
+            }}
+            title="Nhập danh sách người dùng hàng loạt từ tệp Excel"
+          >
+            <FileSpreadsheet size={18} />
+            <span>Nhập Từ Excel</span>
           </button>
 
           <button onClick={handleOpenCreateModal} className="user-mgmt-btn-create">
@@ -477,17 +557,10 @@ export const UserManagementPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Thông báo thông điệp hệ thống */}
-      {actionAlert && (
-        <div
-          className={`user-mgmt-alert ${actionAlert.type === 'success' ? 'user-mgmt-alert-success' : 'user-mgmt-alert-error'
-            }`}
-        >
-          {actionAlert.type === 'success' ? (
-            <CheckCircle2 size={18} style={{ color: '#059669', flexShrink: 0, marginTop: 2 }} />
-          ) : (
-            <AlertTriangle size={18} style={{ color: '#DC2626', flexShrink: 0, marginTop: 2 }} />
-          )}
+      {/* Thông báo lỗi nếu có */}
+      {actionAlert && actionAlert.type === 'error' && (
+        <div className="user-mgmt-alert user-mgmt-alert-error">
+          <AlertTriangle size={18} style={{ color: '#DC2626', flexShrink: 0, marginTop: 2 }} />
           <div style={{ flex: 1 }}>{actionAlert.message}</div>
           <button
             onClick={() => setActionAlert(null)}
@@ -517,10 +590,7 @@ export const UserManagementPage: React.FC = () => {
           <div>
             <select
               value={selectedRole}
-              onChange={(e) => {
-                setSelectedRole(e.target.value);
-                setPage(0);
-              }}
+              onChange={(e) => setSelectedRole(e.target.value)}
               className="user-mgmt-select"
             >
               <option value="">Tất cả vai trò</option>
@@ -536,10 +606,7 @@ export const UserManagementPage: React.FC = () => {
           <div>
             <select
               value={selectedStatus}
-              onChange={(e) => {
-                setSelectedStatus(e.target.value);
-                setPage(0);
-              }}
+              onChange={(e) => setSelectedStatus(e.target.value)}
               className="user-mgmt-select"
             >
               <option value="">Tất cả trạng thái</option>
@@ -598,7 +665,7 @@ export const UserManagementPage: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ) : users.length === 0 ? (
+              ) : visibleUsers.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ padding: '48px', textAlign: 'center', color: '#6B7280' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
@@ -611,16 +678,39 @@ export const UserManagementPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                users.map((item) => {
+                visibleUsers.map((item) => {
                   const isLocked = item.status === 'LOCKED';
                   const isCurrentUser = currentUser?.username === item.username;
+                  const displayAvatar = (isCurrentUser ? (currentUser?.avatarThumbnailUrl || currentUser?.avatarUrl) : null)
+                    || item.avatarThumbnailUrl
+                    || item.avatarUrl
+                    || avatarMap[item.username.toLowerCase()];
 
                   return (
                     <tr key={item.id} className={isLocked ? 'row-locked' : ''}>
                       {/* Cột 1: Tên & Username */}
                       <td className="user-mgmt-td">
                         <div className="user-mgmt-user-cell">
-                          <div className="user-mgmt-avatar">{getInitials(item.fullName)}</div>
+                          <div className="user-mgmt-avatar">
+                            {displayAvatar ? (
+                              <img
+                                src={getAvatarFullUrl(displayAvatar)}
+                                alt={item.fullName}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  // Fallback về text initials nếu ảnh bị lỗi
+                                  const target = e.currentTarget;
+                                  target.style.display = 'none';
+                                  if (target.nextElementSibling) {
+                                    (target.nextElementSibling as HTMLElement).style.display = 'flex';
+                                  }
+                                }}
+                              />
+                            ) : null}
+                            <span style={{ display: displayAvatar ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                              {getInitials(item.fullName)}
+                            </span>
+                          </div>
                           <div className="user-mgmt-user-info">
                             <span className="user-mgmt-fullname">
                               {item.fullName}
@@ -767,46 +857,16 @@ export const UserManagementPage: React.FC = () => {
         </div>
 
         {/* Phân Trang (S1-09: Mặc định 20 dòng / trang) */}
-        <div className="user-mgmt-pagination">
-          <div>
-            Hiển thị{' '}
-            <strong style={{ color: '#111827' }}>
-              {totalElements === 0 ? 0 : page * size + 1}
-            </strong>{' '}
-            -{' '}
-            <strong style={{ color: '#111827' }}>
-              {Math.min((page + 1) * size, totalElements)}
-            </strong>{' '}
-            trên tổng <strong style={{ color: '#111827' }}>{totalElements}</strong> tài khoản{' '}
-            <span style={{ color: '#9CA3AF', fontWeight: 'normal' }}>
-              (Mặc định 20 dòng/trang)
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0 || loading}
-              className="user-mgmt-pagination-btn"
-            >
-              <ChevronLeft size={14} />
-              <span>Trước</span>
-            </button>
-
-            <span style={{ padding: '0 8px', fontWeight: 600, color: '#111827' }}>
-              Trang {page + 1} / {totalPages || 1}
-            </span>
-
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1 || loading}
-              className="user-mgmt-pagination-btn"
-            >
-              <span>Sau</span>
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalElements={totalElements}
+          size={size}
+          onPageChange={setPage}
+          onSizeChange={setSize}
+          itemLabel="tài khoản"
+          disabled={loading}
+        />
       </div>
 
       {/* ======================================================== */}
@@ -826,6 +886,8 @@ export const UserManagementPage: React.FC = () => {
               <button
                 onClick={() => setIsCreateModalOpen(false)}
                 className="user-mgmt-modal-close"
+                disabled={createLoading}
+                style={createLoading ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
               >
                 <X size={18} />
               </button>
@@ -834,502 +896,159 @@ export const UserManagementPage: React.FC = () => {
             {/* Form */}
             <form onSubmit={handleCreateSubmit} style={{ display: 'contents' }}>
               <div className="user-mgmt-modal-body">
-                {/* Báo lỗi trùng username/email/phone (S1-08) */}
-                {createError && (
-                  <div className="user-mgmt-alert user-mgmt-alert-error">
-                    <AlertTriangle size={18} style={{ color: '#DC2626', flexShrink: 0, marginTop: 1 }} />
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>{createError}</span>
-                  </div>
-                )}
-
-                {/* Banner hướng dẫn */}
-                <div
+                {/* Đang gọi API tạo tài khoản + gửi mail -> khoá toàn bộ ô nhập */}
+                <fieldset
+                  disabled={createLoading}
                   style={{
-                    padding: '10px 14px',
-                    borderRadius: 10,
-                    background: '#EFF6FF',
-                    border: '1px solid #BFDBFE',
-                    color: '#1E40AF',
-                    fontSize: 12.5,
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 8
+                    border: 'none',
+                    margin: 0,
+                    padding: 0,
+                    minWidth: 0,
+                    opacity: createLoading ? 0.6 : 1,
+                    transition: 'opacity 0.2s ease'
                   }}
                 >
-                  <Mail size={16} style={{ color: '#2563EB', flexShrink: 0, marginTop: 1 }} />
-                  <div>
-                    <strong>Lưu ý:</strong> Sau khi tạo, email chứa mật khẩu tạm sẽ được gửi
-                    tới người dùng. Đăng nhập lần đầu bắt buộc đổi mật khẩu mới.
-                  </div>
-                </div>
+                  {/* Báo lỗi trùng username/email/phone (S1-08) */}
+                  {createError && (
+                    <div className="user-mgmt-alert user-mgmt-alert-error">
+                      <AlertTriangle size={18} style={{ color: '#DC2626', flexShrink: 0, marginTop: 1 }} />
+                      <span style={{ fontSize: 13, fontWeight: 600 }}>{createError}</span>
+                    </div>
+                  )}
 
-                {/* Thông tin cơ bản */}
-                <div className="user-mgmt-form-grid">
+                  {/* Banner hướng dẫn */}
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: 10,
+                      background: '#EFF6FF',
+                      border: '1px solid #BFDBFE',
+                      color: '#1E40AF',
+                      fontSize: 12.5,
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 8
+                    }}
+                  >
+                    <Mail size={16} style={{ color: '#2563EB', flexShrink: 0, marginTop: 1 }} />
+                    <div>
+                      <strong>Lưu ý:</strong> Sau khi tạo, email chứa mật khẩu tạm sẽ được gửi
+                      tới người dùng. Đăng nhập lần đầu bắt buộc đổi mật khẩu mới.
+                    </div>
+                  </div>
+
+                  {/* Thông tin cơ bản */}
+                  <div className="user-mgmt-form-grid">
+                    <div className="user-mgmt-form-group">
+                      <label className="user-mgmt-form-label">
+                        Tên đăng nhập (Username) <span style={{ color: '#DC2626' }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={createForm.username}
+                        onChange={(e) =>
+                          setCreateForm({
+                            ...createForm,
+                            username: e.target.value.toLowerCase().trim()
+                          })
+                        }
+                        placeholder="ví dụ: tran.minh"
+                        className="user-mgmt-form-input"
+                      />
+                    </div>
+
+                    <div className="user-mgmt-form-group">
+                      <label className="user-mgmt-form-label">
+                        Họ và tên đầy đủ <span style={{ color: '#DC2626' }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={createForm.fullName}
+                        onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })}
+                        placeholder="ví dụ: Trần Văn Minh"
+                        className="user-mgmt-form-input"
+                      />
+                    </div>
+
+                    <div className="user-mgmt-form-group">
+                      <label className="user-mgmt-form-label">
+                        Email nhận mật khẩu tạm <span style={{ color: '#DC2626' }}>*</span>
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={createForm.email}
+                        onChange={(e) =>
+                          setCreateForm({ ...createForm, email: e.target.value.trim() })
+                        }
+                        placeholder="minh.tran@erp.com"
+                        className="user-mgmt-form-input"
+                      />
+                    </div>
+
+                    <div className="user-mgmt-form-group">
+                      <label className="user-mgmt-form-label">
+                        Số điện thoại <span style={{ color: '#6B7280', fontSize: '11px', fontWeight: 'normal' }}>(10 số: 03/05/07/08/09 hoặc để trống)</span>
+                      </label>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
+                        value={createForm.phone || ''}
+                        onChange={(e) =>
+                          setCreateForm({ ...createForm, phone: sanitizePhoneInput(e.target.value) })
+                        }
+                        placeholder="Ví dụ: 0912345678"
+                        className="user-mgmt-form-input"
+                        style={getPhoneError(createForm.phone) ? { borderColor: '#DC2626' } : undefined}
+                      />
+                      {getPhoneError(createForm.phone) && (
+                        <p style={{ color: '#DC2626', fontSize: 12, marginTop: 6, fontWeight: 600 }}>
+                          {getPhoneError(createForm.phone)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Quy tắc 1: Một người dùng có thể giữ nhiều vai trò cùng lúc */}
                   <div className="user-mgmt-form-group">
                     <label className="user-mgmt-form-label">
-                      Tên đăng nhập (Username) <span style={{ color: '#DC2626' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={createForm.username}
-                      onChange={(e) =>
-                        setCreateForm({
-                          ...createForm,
-                          username: e.target.value.toLowerCase().trim()
-                        })
-                      }
-                      placeholder="ví dụ: tran.minh"
-                      className="user-mgmt-form-input"
-                    />
-                  </div>
-
-                  <div className="user-mgmt-form-group">
-                    <label className="user-mgmt-form-label">
-                      Họ và tên đầy đủ <span style={{ color: '#DC2626' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={createForm.fullName}
-                      onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })}
-                      placeholder="ví dụ: Trần Văn Minh"
-                      className="user-mgmt-form-input"
-                    />
-                  </div>
-
-                  <div className="user-mgmt-form-group">
-                    <label className="user-mgmt-form-label">
-                      Email nhận mật khẩu tạm <span style={{ color: '#DC2626' }}>*</span>
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={createForm.email}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, email: e.target.value.trim() })
-                      }
-                      placeholder="minh.tran@erp.com"
-                      className="user-mgmt-form-input"
-                    />
-                  </div>
-
-                  <div className="user-mgmt-form-group">
-                    <label className="user-mgmt-form-label">
-                      Số điện thoại <span style={{ color: '#6B7280', fontSize: '11px', fontWeight: 'normal' }}>(10 số: 03/05/07/08/09 hoặc để trống)</span>
-                    </label>
-                    <input
-                      type="tel"
-                      value={createForm.phone || ''}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, phone: e.target.value.trim() })
-                      }
-                      placeholder="Ví dụ: 0912345678"
-                      className="user-mgmt-form-input"
-                    />
-                  </div>
-                </div>
-
-                {/* Quy tắc 1: Một người dùng có thể giữ nhiều vai trò cùng lúc */}
-                <div className="user-mgmt-form-group">
-                  <label className="user-mgmt-form-label">
-                    Phân quyền vai trò <span style={{ color: '#DC2626' }}>*</span>{' '}
-                    <span style={{ color: '#6B7280', fontWeight: 'normal' }}>
-                      (Có thể chọn nhiều vai trò cùng lúc)
-                    </span>
-                  </label>
-                  <div className="user-mgmt-checkbox-grid">
-                    {formOptions.roles.map((r) => {
-                      const isSelected = createForm.roles.includes(r);
-                      return (
-                        <label
-                          key={r}
-                          className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              const newRoles = e.target.checked
-                                ? [...createForm.roles, r]
-                                : createForm.roles.filter((role) => role !== r);
-                              const hasWh = newRoles.some((role) => role === 'ROLE_WAREHOUSE' || role === 'ROLE_WH_MANAGER');
-                              const hasSales = newRoles.some((role) => role === 'ROLE_SALES_REP' || role === 'ROLE_SALES_MANAGER');
-                              setCreateForm({
-                                ...createForm,
-                                roles: newRoles,
-                                warehouseIds: hasWh ? createForm.warehouseIds : [],
-                                regionIds: hasSales ? createForm.regionIds : []
-                              });
-                            }}
-                            style={{ marginTop: 2, accentColor: '#F85606' }}
-                          />
-                          <div>
-                            <div style={{ fontWeight: 700 }}>
-                              {ROLE_METADATA_MAP[r]?.label || r}
-                            </div>
-                            <div style={{ fontSize: 11, color: '#6B7280' }}>
-                              {ROLE_METADATA_MAP[r]?.description}
-                            </div>
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Quy tắc 2: Phân công kho hàng (Chỉ dành cho nhân sự thuộc bộ phận Kho) */}
-                {(() => {
-                  const isCreateWarehouseRole = createForm.roles.some((r) => r === 'ROLE_WAREHOUSE' || r === 'ROLE_WH_MANAGER');
-                  const isCreateSalesRole = createForm.roles.some((r) => r === 'ROLE_SALES_REP' || r === 'ROLE_SALES_MANAGER');
-                  return (
-                    <>
-                      <div className="user-mgmt-form-group">
-                        <label
-                          className="user-mgmt-form-label"
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                        >
-                          <span>Kho hàng phụ trách</span>
-                          {isCreateWarehouseRole && (
-                            <span
-                              style={{
-                                fontSize: 11,
-                                color: '#B45309',
-                                fontWeight: 700,
-                                background: '#FEF3C7',
-                                padding: '2px 8px',
-                                borderRadius: 4
-                              }}
-                            >
-                              * Bắt buộc chọn ít nhất 1 kho cho vai trò Kho!
-                            </span>
-                          )}
-                        </label>
-                        {isCreateWarehouseRole ? (
-                          <div className="user-mgmt-checkbox-grid">
-                            {formOptions.warehouses.map((wh) => {
-                              const isSelected = createForm.warehouseIds?.includes(wh.id);
-                              return (
-                                <label
-                                  key={wh.id}
-                                  className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={(e) => {
-                                      const cur = createForm.warehouseIds || [];
-                                      if (e.target.checked) {
-                                        setCreateForm({ ...createForm, warehouseIds: [...cur, wh.id] });
-                                      } else {
-                                        setCreateForm({
-                                          ...createForm,
-                                          warehouseIds: cur.filter((id) => id !== wh.id)
-                                        });
-                                      }
-                                    }}
-                                    style={{ accentColor: '#F85606' }}
-                                  />
-                                  <span style={{ fontSize: 12.5 }}>{wh.name}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="user-mgmt-assignment-note">
-                            <Info size={16} style={{ color: '#94A3B8', flexShrink: 0 }} />
-                            <span>Không áp dụng. Chỉ nhân sự thuộc bộ phận Kho (Quản lý kho / Thủ kho) mới được phân công quản lý kho hàng.</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Địa bàn phụ trách (Chỉ dành cho nhân sự thuộc bộ phận Kinh doanh) */}
-                      <div className="user-mgmt-form-group">
-                        <label className="user-mgmt-form-label">Địa bàn phụ trách (Kinh doanh)</label>
-                        {isCreateSalesRole ? (
-                          <div className="user-mgmt-checkbox-grid">
-                            {formOptions.regions.map((reg) => {
-                              const isSelected = createForm.regionIds?.includes(reg.id);
-                              return (
-                                <label
-                                  key={reg.id}
-                                  className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={(e) => {
-                                      const cur = createForm.regionIds || [];
-                                      if (e.target.checked) {
-                                        setCreateForm({ ...createForm, regionIds: [...cur, reg.id] });
-                                      } else {
-                                        setCreateForm({
-                                          ...createForm,
-                                          regionIds: cur.filter((id) => id !== reg.id)
-                                        });
-                                      }
-                                    }}
-                                    style={{ accentColor: '#2563EB' }}
-                                  />
-                                  <span style={{ fontSize: 12.5 }}>{reg.name}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="user-mgmt-assignment-note">
-                            <Info size={16} style={{ color: '#94A3B8', flexShrink: 0 }} />
-                            <span>Không áp dụng. Chỉ nhân sự thuộc bộ phận Kinh doanh (Quản lý kinh doanh / Nhân viên kinh doanh) mới được phân công địa bàn.</span>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-
-              {/* Footer */}
-              <div className="user-mgmt-modal-footer">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="user-mgmt-btn-cancel"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={createLoading}
-                  className="user-mgmt-btn-submit"
-                >
-                  {createLoading && <RefreshCw size={15} className="animate-spin" />}
-                  <span>{createLoading ? 'Đang tạo...' : 'Tạo Tài Khoản & Gửi Email'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* MODAL 2: SỬA THÔNG TIN & PHÂN QUYỀN (S1-08 / S1-09)      */}
-      {/* ======================================================== */}
-      {isEditModalOpen && editingUser && (
-        <div className="user-mgmt-modal-overlay">
-          <div className="user-mgmt-modal-dialog">
-            <div className="user-mgmt-modal-header">
-              <div>
-                <h3 className="user-mgmt-modal-title">
-                  Cập Nhật Tài Khoản: @{editingUser.username}
-                </h3>
-                <p className="user-mgmt-modal-desc">{editingUser.fullName}</p>
-              </div>
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="user-mgmt-modal-close"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Tabs */}
-            <div
-              style={{
-                display: 'flex',
-                background: '#F9FAFB',
-                borderBottom: '1px solid #E5E7EB',
-                padding: '0 24px'
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setEditTab('info');
-                  setEditError(null);
-                }}
-                style={{
-                  padding: '10px 16px',
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  border: 'none',
-                  background: 'transparent',
-                  borderBottom: editTab === 'info' ? '2px solid #F85606' : '2px solid transparent',
-                  color: editTab === 'info' ? '#F85606' : '#6B7280',
-                  cursor: 'pointer'
-                }}
-              >
-                1. Thông tin cá nhân
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditTab('assignments');
-                  setEditError(null);
-                }}
-                style={{
-                  padding: '10px 16px',
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  border: 'none',
-                  background: 'transparent',
-                  borderBottom:
-                    editTab === 'assignments' ? '2px solid #F85606' : '2px solid transparent',
-                  color: editTab === 'assignments' ? '#F85606' : '#6B7280',
-                  cursor: 'pointer'
-                }}
-              >
-                2. Phân quyền & Kho / Địa bàn
-              </button>
-            </div>
-
-            {/* Tab Body */}
-            <div className="user-mgmt-modal-body">
-              {editError && (
-                <div className="user-mgmt-alert user-mgmt-alert-error">
-                  <AlertTriangle size={18} style={{ color: '#DC2626', flexShrink: 0, marginTop: 1 }} />
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>{editError}</span>
-                </div>
-              )}
-
-              {/* Tab 1: Sửa thông tin cơ bản */}
-              {editTab === 'info' && (
-                <form onSubmit={handleUpdateInfoSubmit} style={{ display: 'contents' }}>
-                  <div className="user-mgmt-form-group">
-                    <label className="user-mgmt-form-label">Họ và tên</label>
-                    <input
-                      type="text"
-                      required
-                      value={editInfoForm.fullName}
-                      onChange={(e) =>
-                        setEditInfoForm({ ...editInfoForm, fullName: e.target.value })
-                      }
-                      className="user-mgmt-form-input"
-                    />
-                  </div>
-
-                  <div className="user-mgmt-form-group">
-                    <label className="user-mgmt-form-label">Email liên hệ</label>
-                    <input
-                      type="email"
-                      required
-                      value={editInfoForm.email}
-                      onChange={(e) =>
-                        setEditInfoForm({ ...editInfoForm, email: e.target.value.trim() })
-                      }
-                      className="user-mgmt-form-input"
-                    />
-                  </div>
-
-                  <div className="user-mgmt-form-group">
-                    <label className="user-mgmt-form-label">Số điện thoại</label>
-                    <input
-                      type="tel"
-                      value={editInfoForm.phone || ''}
-                      onChange={(e) =>
-                        setEditInfoForm({ ...editInfoForm, phone: e.target.value.trim() })
-                      }
-                      className="user-mgmt-form-input"
-                    />
-                  </div>
-
-                  <div className="user-mgmt-modal-footer" style={{ margin: '16px -24px -22px', borderBottomLeftRadius: 18, borderBottomRightRadius: 18 }}>
-                    <button
-                      type="button"
-                      onClick={() => setIsEditModalOpen(false)}
-                      className="user-mgmt-btn-cancel"
-                    >
-                      Đóng
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={editLoading}
-                      className="user-mgmt-btn-submit"
-                    >
-                      {editLoading && <RefreshCw size={15} className="animate-spin" />}
-                      <span>Lưu thông tin</span>
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* Tab 2: Phân quyền & Kho / Địa bàn */}
-              {editTab === 'assignments' && (
-                <form onSubmit={handleUpdateAssignmentsSubmit} style={{ display: 'contents' }}>
-                  {/* Quy tắc 1 & 3: Đa vai trò + Không thể tự thu hồi vai trò admin của chính mình */}
-                  <div className="user-mgmt-form-group">
-                    <label className="user-mgmt-form-label">
-                      Vai trò người dùng{' '}
+                      Phân quyền vai trò <span style={{ color: '#DC2626' }}>*</span>{' '}
                       <span style={{ color: '#6B7280', fontWeight: 'normal' }}>
-                        (Một người dùng có thể giữ nhiều vai trò cùng lúc)
+                        (Có thể chọn nhiều vai trò cùng lúc)
                       </span>
                     </label>
-
                     <div className="user-mgmt-checkbox-grid">
                       {formOptions.roles.map((r) => {
-                        const isSelected = editAssignmentsForm.roles.includes(r);
-                        const isSelf = Boolean(
-                          currentUser &&
-                          (currentUser.id === editingUser.id ||
-                            currentUser.username === editingUser.username)
-                        );
-                        const isLockedAdmin = isSelf && r === 'ROLE_ADMIN';
-
+                        const isSelected = createForm.roles.includes(r);
                         return (
                           <label
                             key={r}
-                            className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''
-                              } ${isLockedAdmin ? 'disabled' : ''}`}
-                            title={
-                              isLockedAdmin
-                                ? 'Không thể tự thu hồi vai trò Quản trị hệ thống của chính mình!'
-                                : undefined
-                            }
+                            className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
                           >
                             <input
                               type="checkbox"
                               checked={isSelected}
-                              disabled={isLockedAdmin}
                               onChange={(e) => {
                                 const newRoles = e.target.checked
-                                  ? [...editAssignmentsForm.roles, r]
-                                  : editAssignmentsForm.roles.filter((role) => role !== r);
+                                  ? [...createForm.roles, r]
+                                  : createForm.roles.filter((role) => role !== r);
                                 const hasWh = newRoles.some((role) => role === 'ROLE_WAREHOUSE' || role === 'ROLE_WH_MANAGER');
                                 const hasSales = newRoles.some((role) => role === 'ROLE_SALES_REP' || role === 'ROLE_SALES_MANAGER');
-                                setEditAssignmentsForm({
-                                  ...editAssignmentsForm,
+                                setCreateForm({
+                                  ...createForm,
                                   roles: newRoles,
-                                  warehouseIds: hasWh ? editAssignmentsForm.warehouseIds : [],
-                                  regionIds: hasSales ? editAssignmentsForm.regionIds : []
+                                  warehouseIds: hasWh ? createForm.warehouseIds : [],
+                                  regionIds: hasSales ? createForm.regionIds : []
                                 });
                               }}
                               style={{ marginTop: 2, accentColor: '#F85606' }}
                             />
                             <div>
-                              <div
-                                style={{
-                                  fontWeight: 700,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 6
-                                }}
-                              >
+                              <div style={{ fontWeight: 700 }}>
                                 {ROLE_METADATA_MAP[r]?.label || r}
-                                {isLockedAdmin && (
-                                  <span
-                                    style={{
-                                      fontSize: 10,
-                                      color: '#7E22CE',
-                                      background: '#F3E8FF',
-                                      padding: '1px 6px',
-                                      borderRadius: 4,
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: 3
-                                    }}
-                                  >
-                                    <Lock size={10} /> Không thể tự thu hồi
-                                  </span>
-                                )}
                               </div>
                               <div style={{ fontSize: 11, color: '#6B7280' }}>
                                 {ROLE_METADATA_MAP[r]?.description}
@@ -1341,10 +1060,10 @@ export const UserManagementPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Quy tắc 2: Phân công kho hàng & Địa bàn theo đúng chức năng nhiệm vụ */}
+                  {/* Quy tắc 2: Phân công kho hàng (Chỉ dành cho nhân sự thuộc bộ phận Kho) */}
                   {(() => {
-                    const isEditWarehouseRole = editAssignmentsForm.roles.some((r) => r === 'ROLE_WAREHOUSE' || r === 'ROLE_WH_MANAGER');
-                    const isEditSalesRole = editAssignmentsForm.roles.some((r) => r === 'ROLE_SALES_REP' || r === 'ROLE_SALES_MANAGER');
+                    const isCreateWarehouseRole = createForm.roles.some((r) => r === 'ROLE_WAREHOUSE' || r === 'ROLE_WH_MANAGER');
+                    const isCreateSalesRole = createForm.roles.some((r) => r === 'ROLE_SALES_REP' || r === 'ROLE_SALES_MANAGER');
                     return (
                       <>
                         <div className="user-mgmt-form-group">
@@ -1353,7 +1072,7 @@ export const UserManagementPage: React.FC = () => {
                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                           >
                             <span>Kho hàng phụ trách</span>
-                            {isEditWarehouseRole && (
+                            {isCreateWarehouseRole && (
                               <span
                                 style={{
                                   fontSize: 11,
@@ -1364,14 +1083,14 @@ export const UserManagementPage: React.FC = () => {
                                   borderRadius: 4
                                 }}
                               >
-                                * Bắt buộc gắn ít nhất 1 kho cho nhân sự Kho!
+                                * Bắt buộc chọn ít nhất 1 kho cho vai trò Kho!
                               </span>
                             )}
                           </label>
-                          {isEditWarehouseRole ? (
+                          {isCreateWarehouseRole ? (
                             <div className="user-mgmt-checkbox-grid">
                               {formOptions.warehouses.map((wh) => {
-                                const isSelected = editAssignmentsForm.warehouseIds?.includes(wh.id);
+                                const isSelected = createForm.warehouseIds?.includes(wh.id);
                                 return (
                                   <label
                                     key={wh.id}
@@ -1381,15 +1100,12 @@ export const UserManagementPage: React.FC = () => {
                                       type="checkbox"
                                       checked={isSelected}
                                       onChange={(e) => {
-                                        const cur = editAssignmentsForm.warehouseIds || [];
+                                        const cur = createForm.warehouseIds || [];
                                         if (e.target.checked) {
-                                          setEditAssignmentsForm({
-                                            ...editAssignmentsForm,
-                                            warehouseIds: [...cur, wh.id]
-                                          });
+                                          setCreateForm({ ...createForm, warehouseIds: [...cur, wh.id] });
                                         } else {
-                                          setEditAssignmentsForm({
-                                            ...editAssignmentsForm,
+                                          setCreateForm({
+                                            ...createForm,
                                             warehouseIds: cur.filter((id) => id !== wh.id)
                                           });
                                         }
@@ -1412,10 +1128,10 @@ export const UserManagementPage: React.FC = () => {
                         {/* Địa bàn phụ trách (Chỉ dành cho nhân sự thuộc bộ phận Kinh doanh) */}
                         <div className="user-mgmt-form-group">
                           <label className="user-mgmt-form-label">Địa bàn phụ trách (Kinh doanh)</label>
-                          {isEditSalesRole ? (
+                          {isCreateSalesRole ? (
                             <div className="user-mgmt-checkbox-grid">
                               {formOptions.regions.map((reg) => {
-                                const isSelected = editAssignmentsForm.regionIds?.includes(reg.id);
+                                const isSelected = createForm.regionIds?.includes(reg.id);
                                 return (
                                   <label
                                     key={reg.id}
@@ -1425,15 +1141,12 @@ export const UserManagementPage: React.FC = () => {
                                       type="checkbox"
                                       checked={isSelected}
                                       onChange={(e) => {
-                                        const cur = editAssignmentsForm.regionIds || [];
+                                        const cur = createForm.regionIds || [];
                                         if (e.target.checked) {
-                                          setEditAssignmentsForm({
-                                            ...editAssignmentsForm,
-                                            regionIds: [...cur, reg.id]
-                                          });
+                                          setCreateForm({ ...createForm, regionIds: [...cur, reg.id] });
                                         } else {
-                                          setEditAssignmentsForm({
-                                            ...editAssignmentsForm,
+                                          setCreateForm({
+                                            ...createForm,
                                             regionIds: cur.filter((id) => id !== reg.id)
                                           });
                                         }
@@ -1455,26 +1168,457 @@ export const UserManagementPage: React.FC = () => {
                       </>
                     );
                   })()}
+                </fieldset>
+              </div>
 
-                  <div className="user-mgmt-modal-footer" style={{ margin: '16px -24px -22px', borderBottomLeftRadius: 18, borderBottomRightRadius: 18 }}>
-                    <button
-                      type="button"
-                      onClick={() => setIsEditModalOpen(false)}
-                      className="user-mgmt-btn-cancel"
-                    >
-                      Đóng
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={editLoading}
-                      className="user-mgmt-btn-submit"
-                    >
-                      {editLoading && <RefreshCw size={15} className="animate-spin" />}
-                      <span>Lưu phân quyền</span>
-                    </button>
+              {/* Footer */}
+              <div className="user-mgmt-modal-footer">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="user-mgmt-btn-cancel"
+                  disabled={createLoading}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={createLoading || Boolean(getPhoneError(createForm.phone))}
+                  className="user-mgmt-btn-submit"
+                  style={getPhoneError(createForm.phone) ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+                >
+                  {createLoading && <RefreshCw size={15} className="animate-spin" />}
+                  <span>{createLoading ? 'Đang tạo...' : 'Tạo Tài Khoản & Gửi Email'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 2: SỬA THÔNG TIN & PHÂN QUYỀN (S1-08 / S1-09)      */}
+      {/* ======================================================== */}
+      {isEditModalOpen && editingUser && (
+        <div className="user-mgmt-modal-overlay">
+          <div className="user-mgmt-modal-dialog">
+            <div className="user-mgmt-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div className="user-mgmt-avatar" style={{ width: 42, height: 42 }}>
+                  {(() => {
+                    const isCurrent = currentUser?.username === editingUser.username;
+                    const editAvatar = (isCurrent ? (currentUser?.avatarThumbnailUrl || currentUser?.avatarUrl) : null)
+                      || editingUser.avatarThumbnailUrl
+                      || editingUser.avatarUrl
+                      || avatarMap[editingUser.username.toLowerCase()];
+                    return (
+                      <>
+                        {editAvatar ? (
+                          <img
+                            src={getAvatarFullUrl(editAvatar)}
+                            alt={editingUser.fullName}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              if (target.nextElementSibling) {
+                                (target.nextElementSibling as HTMLElement).style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <span style={{ display: editAvatar ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                          {getInitials(editingUser.fullName)}
+                        </span>
+                      </>
+                    );
+                  })()}
+                </div>
+                <div>
+                  <h3 className="user-mgmt-modal-title">
+                    Cập Nhật Tài Khoản: @{editingUser.username}
+                  </h3>
+                  <p className="user-mgmt-modal-desc">{editingUser.fullName}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="user-mgmt-modal-close"
+                disabled={editLoading}
+                style={editLoading ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div
+              style={{
+                display: 'flex',
+                background: '#F9FAFB',
+                borderBottom: '1px solid #E5E7EB',
+                padding: '0 24px'
+              }}
+            >
+              <button
+                type="button"
+                disabled={editLoading}
+                onClick={() => {
+                  setEditTab('info');
+                  setEditError(null);
+                }}
+                style={{
+                  padding: '10px 16px',
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  border: 'none',
+                  background: 'transparent',
+                  borderBottom: editTab === 'info' ? '2px solid #F85606' : '2px solid transparent',
+                  color: editTab === 'info' ? '#F85606' : '#6B7280',
+                  cursor: 'pointer'
+                }}
+              >
+                1. Thông tin cá nhân
+              </button>
+              <button
+                type="button"
+                disabled={editLoading}
+                onClick={() => {
+                  setEditTab('assignments');
+                  setEditError(null);
+                }}
+                style={{
+                  padding: '10px 16px',
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  border: 'none',
+                  background: 'transparent',
+                  borderBottom:
+                    editTab === 'assignments' ? '2px solid #F85606' : '2px solid transparent',
+                  color: editTab === 'assignments' ? '#F85606' : '#6B7280',
+                  cursor: 'pointer'
+                }}
+              >
+                2. Phân quyền & Kho / Địa bàn
+              </button>
+            </div>
+
+            {/* Tab Body */}
+            <div className="user-mgmt-modal-body">
+              {/* Đang lưu -> khoá toàn bộ ô nhập và nút trong 2 tab */}
+              <fieldset
+                disabled={editLoading}
+                style={{
+                  border: 'none',
+                  margin: 0,
+                  padding: 0,
+                  minWidth: 0,
+                  opacity: editLoading ? 0.6 : 1,
+                  transition: 'opacity 0.2s ease'
+                }}
+              >
+                {editError && (
+                  <div className="user-mgmt-alert user-mgmt-alert-error">
+                    <AlertTriangle size={18} style={{ color: '#DC2626', flexShrink: 0, marginTop: 1 }} />
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{editError}</span>
                   </div>
-                </form>
-              )}
+                )}
+
+                {/* Tab 1: Sửa thông tin cơ bản */}
+                {editTab === 'info' && (
+                  <form onSubmit={handleUpdateInfoSubmit} style={{ display: 'contents' }}>
+                    <div className="user-mgmt-form-group">
+                      <label className="user-mgmt-form-label">Họ và tên</label>
+                      <input
+                        type="text"
+                        required
+                        value={editInfoForm.fullName}
+                        onChange={(e) =>
+                          setEditInfoForm({ ...editInfoForm, fullName: e.target.value })
+                        }
+                        className="user-mgmt-form-input"
+                      />
+                    </div>
+
+                    <div className="user-mgmt-form-group">
+                      <label className="user-mgmt-form-label">Email liên hệ</label>
+                      <input
+                        type="email"
+                        required
+                        value={editInfoForm.email}
+                        onChange={(e) =>
+                          setEditInfoForm({ ...editInfoForm, email: e.target.value.trim() })
+                        }
+                        className="user-mgmt-form-input"
+                      />
+                    </div>
+
+                    <div className="user-mgmt-form-group">
+                      <label className="user-mgmt-form-label">Số điện thoại</label>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
+                        value={editInfoForm.phone || ''}
+                        onChange={(e) =>
+                          setEditInfoForm({ ...editInfoForm, phone: sanitizePhoneInput(e.target.value) })
+                        }
+                        placeholder="Ví dụ: 0912345678 (hoặc để trống)"
+                        className="user-mgmt-form-input"
+                        style={getPhoneError(editInfoForm.phone) ? { borderColor: '#DC2626' } : undefined}
+                      />
+                      {getPhoneError(editInfoForm.phone) && (
+                        <p style={{ color: '#DC2626', fontSize: 12, marginTop: 6, fontWeight: 600 }}>
+                          {getPhoneError(editInfoForm.phone)}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="user-mgmt-modal-footer" style={{ margin: '16px -24px -22px', borderBottomLeftRadius: 18, borderBottomRightRadius: 18 }}>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditModalOpen(false)}
+                        className="user-mgmt-btn-cancel"
+                      >
+                        Đóng
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={editLoading || Boolean(getPhoneError(editInfoForm.phone))}
+                        className="user-mgmt-btn-submit"
+                        style={getPhoneError(editInfoForm.phone) ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+                      >
+                        {editLoading && <RefreshCw size={15} className="animate-spin" />}
+                        <span>Lưu thông tin</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Tab 2: Phân quyền & Kho / Địa bàn */}
+                {editTab === 'assignments' && (
+                  <form onSubmit={handleUpdateAssignmentsSubmit} style={{ display: 'contents' }}>
+                    {/* Quy tắc 1 & 3: Đa vai trò + Không thể tự thu hồi vai trò admin của chính mình */}
+                    <div className="user-mgmt-form-group">
+                      <label className="user-mgmt-form-label">
+                        Vai trò người dùng{' '}
+                        <span style={{ color: '#6B7280', fontWeight: 'normal' }}>
+                          (Một người dùng có thể giữ nhiều vai trò cùng lúc)
+                        </span>
+                      </label>
+
+                      <div className="user-mgmt-checkbox-grid">
+                        {formOptions.roles.map((r) => {
+                          const isSelected = editAssignmentsForm.roles.includes(r);
+                          const isSelf = Boolean(
+                            currentUser &&
+                            (currentUser.id === editingUser.id ||
+                              currentUser.username === editingUser.username)
+                          );
+                          const isLockedAdmin = isSelf && r === 'ROLE_ADMIN';
+
+                          return (
+                            <label
+                              key={r}
+                              className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''
+                                } ${isLockedAdmin ? 'disabled' : ''}`}
+                              title={
+                                isLockedAdmin
+                                  ? 'Không thể tự thu hồi vai trò Quản trị hệ thống của chính mình!'
+                                  : undefined
+                              }
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={isLockedAdmin}
+                                onChange={(e) => {
+                                  const newRoles = e.target.checked
+                                    ? [...editAssignmentsForm.roles, r]
+                                    : editAssignmentsForm.roles.filter((role) => role !== r);
+                                  const hasWh = newRoles.some((role) => role === 'ROLE_WAREHOUSE' || role === 'ROLE_WH_MANAGER');
+                                  const hasSales = newRoles.some((role) => role === 'ROLE_SALES_REP' || role === 'ROLE_SALES_MANAGER');
+                                  setEditAssignmentsForm({
+                                    ...editAssignmentsForm,
+                                    roles: newRoles,
+                                    warehouseIds: hasWh ? editAssignmentsForm.warehouseIds : [],
+                                    regionIds: hasSales ? editAssignmentsForm.regionIds : []
+                                  });
+                                }}
+                                style={{ marginTop: 2, accentColor: '#F85606' }}
+                              />
+                              <div>
+                                <div
+                                  style={{
+                                    fontWeight: 700,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 6
+                                  }}
+                                >
+                                  {ROLE_METADATA_MAP[r]?.label || r}
+                                  {isLockedAdmin && (
+                                    <span
+                                      style={{
+                                        fontSize: 10,
+                                        color: '#7E22CE',
+                                        background: '#F3E8FF',
+                                        padding: '1px 6px',
+                                        borderRadius: 4,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 3
+                                      }}
+                                    >
+                                      <Lock size={10} /> Không thể tự thu hồi
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: 11, color: '#6B7280' }}>
+                                  {ROLE_METADATA_MAP[r]?.description}
+                                </div>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Quy tắc 2: Phân công kho hàng & Địa bàn theo đúng chức năng nhiệm vụ */}
+                    {(() => {
+                      const isEditWarehouseRole = editAssignmentsForm.roles.some((r) => r === 'ROLE_WAREHOUSE' || r === 'ROLE_WH_MANAGER');
+                      const isEditSalesRole = editAssignmentsForm.roles.some((r) => r === 'ROLE_SALES_REP' || r === 'ROLE_SALES_MANAGER');
+                      return (
+                        <>
+                          <div className="user-mgmt-form-group">
+                            <label
+                              className="user-mgmt-form-label"
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                            >
+                              <span>Kho hàng phụ trách</span>
+                              {isEditWarehouseRole && (
+                                <span
+                                  style={{
+                                    fontSize: 11,
+                                    color: '#B45309',
+                                    fontWeight: 700,
+                                    background: '#FEF3C7',
+                                    padding: '2px 8px',
+                                    borderRadius: 4
+                                  }}
+                                >
+                                  * Bắt buộc gắn ít nhất 1 kho cho nhân sự Kho!
+                                </span>
+                              )}
+                            </label>
+                            {isEditWarehouseRole ? (
+                              <div className="user-mgmt-checkbox-grid">
+                                {formOptions.warehouses.map((wh) => {
+                                  const isSelected = editAssignmentsForm.warehouseIds?.includes(wh.id);
+                                  return (
+                                    <label
+                                      key={wh.id}
+                                      className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={(e) => {
+                                          const cur = editAssignmentsForm.warehouseIds || [];
+                                          if (e.target.checked) {
+                                            setEditAssignmentsForm({
+                                              ...editAssignmentsForm,
+                                              warehouseIds: [...cur, wh.id]
+                                            });
+                                          } else {
+                                            setEditAssignmentsForm({
+                                              ...editAssignmentsForm,
+                                              warehouseIds: cur.filter((id) => id !== wh.id)
+                                            });
+                                          }
+                                        }}
+                                        style={{ accentColor: '#F85606' }}
+                                      />
+                                      <span style={{ fontSize: 12.5 }}>{wh.name}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className="user-mgmt-assignment-note">
+                                <Info size={16} style={{ color: '#94A3B8', flexShrink: 0 }} />
+                                <span>Không áp dụng. Chỉ nhân sự thuộc bộ phận Kho (Quản lý kho / Thủ kho) mới được phân công quản lý kho hàng.</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Địa bàn phụ trách (Chỉ dành cho nhân sự thuộc bộ phận Kinh doanh) */}
+                          <div className="user-mgmt-form-group">
+                            <label className="user-mgmt-form-label">Địa bàn phụ trách (Kinh doanh)</label>
+                            {isEditSalesRole ? (
+                              <div className="user-mgmt-checkbox-grid">
+                                {formOptions.regions.map((reg) => {
+                                  const isSelected = editAssignmentsForm.regionIds?.includes(reg.id);
+                                  return (
+                                    <label
+                                      key={reg.id}
+                                      className={`user-mgmt-checkbox-card ${isSelected ? 'selected' : ''}`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={(e) => {
+                                          const cur = editAssignmentsForm.regionIds || [];
+                                          if (e.target.checked) {
+                                            setEditAssignmentsForm({
+                                              ...editAssignmentsForm,
+                                              regionIds: [...cur, reg.id]
+                                            });
+                                          } else {
+                                            setEditAssignmentsForm({
+                                              ...editAssignmentsForm,
+                                              regionIds: cur.filter((id) => id !== reg.id)
+                                            });
+                                          }
+                                        }}
+                                        style={{ accentColor: '#2563EB' }}
+                                      />
+                                      <span style={{ fontSize: 12.5 }}>{reg.name}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className="user-mgmt-assignment-note">
+                                <Info size={16} style={{ color: '#94A3B8', flexShrink: 0 }} />
+                                <span>Không áp dụng. Chỉ nhân sự thuộc bộ phận Kinh doanh (Quản lý kinh doanh / Nhân viên kinh doanh) mới được phân công địa bàn.</span>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()}
+
+                    <div className="user-mgmt-modal-footer" style={{ margin: '16px -24px -22px', borderBottomLeftRadius: 18, borderBottomRightRadius: 18 }}>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditModalOpen(false)}
+                        className="user-mgmt-btn-cancel"
+                      >
+                        Đóng
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={editLoading}
+                        className="user-mgmt-btn-submit"
+                      >
+                        {editLoading && <RefreshCw size={15} className="animate-spin" />}
+                        <span>Lưu phân quyền</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </fieldset>
             </div>
           </div>
         </div>
@@ -1567,6 +1711,7 @@ export const UserManagementPage: React.FC = () => {
                       type="text"
                       required
                       value={lockReason}
+                      disabled={lockLoading}
                       onChange={(e) => setLockReason(e.target.value)}
                       placeholder="Nhập lý do khóa cụ thể (ví dụ: Nghỉ việc, vi phạm bảo mật...)"
                       className="user-mgmt-form-input"
@@ -1587,6 +1732,7 @@ export const UserManagementPage: React.FC = () => {
                 type="button"
                 onClick={() => setLockTargetUser(null)}
                 className="user-mgmt-btn-cancel"
+                disabled={lockLoading}
               >
                 Hủy bỏ
               </button>
@@ -1615,6 +1761,7 @@ export const UserManagementPage: React.FC = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };
