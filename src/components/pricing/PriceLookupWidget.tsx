@@ -1,17 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { CustomerGroupType, PriceLookupResponse } from '../../types/pricing';
-import { CUSTOMER_GROUPS, CATALOG_PRODUCTS } from '../../types/pricing';
+import { CUSTOMER_GROUPS } from '../../types/pricing';
 import { lookupPrice } from '../../services/pricingApi';
+import { productService, ProductOptionItem } from '../../services/productService';
 import { Icons } from '../common/Icons';
 
 export const PriceLookupWidget: React.FC = () => {
   const [customerGroup, setCustomerGroup] = useState<CustomerGroupType>('DEALER_LEVEL_1');
-  const [productSku, setProductSku] = useState<string>('BIA-HN-330');
+  const [productSku, setProductSku] = useState<string>('');
+  const [realProducts, setRealProducts] = useState<ProductOptionItem[]>([]);
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<PriceLookupResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [testSimulatedPrice, setTestSimulatedPrice] = useState<string>('');
+
+  useEffect(() => {
+    productService
+      .searchProductOptions('', 50)
+      .then(setRealProducts)
+      .catch(() => {});
+  }, []);
 
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,13 +109,13 @@ export const PriceLookupWidget: React.FC = () => {
               list="catalog-sku-options"
               value={productSku}
               onChange={(e) => setProductSku(e.target.value)}
-              placeholder="VD: BIA-HN-330"
+              placeholder="VD: BIA-0001, NGK-0002..."
               className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 uppercase font-mono"
             />
             <datalist id="catalog-sku-options">
-              {CATALOG_PRODUCTS.map((prod) => (
-                <option key={prod.sku} value={prod.sku}>
-                  {prod.name}
+              {realProducts.map((prod) => (
+                <option key={prod.id} value={prod.sku}>
+                  {prod.name} {prod.packaging ? `(${prod.packaging})` : ''}
                 </option>
               ))}
             </datalist>

@@ -70,6 +70,17 @@ export interface ProductListResult {
   currentPage: number;
 }
 
+export interface ProductOptionItem {
+  id: number;
+  sku: string;
+  name: string;
+  category?: string | null;
+  baseUnit?: string | null;
+  packaging?: string | null;
+  costPrice?: number | null;
+  status?: string | null;
+}
+
 export interface ProductStatsResult {
   total: number;
   active: number;
@@ -185,6 +196,35 @@ export const productService = {
       totalPages: data?.totalPages ?? 1,
       currentPage: page
     };
+  },
+
+  /**
+   * Tra cứu nhanh sản phẩm cho combobox / dropdown (hỗ trợ tìm kiếm cả FE lẫn BE, tới 5.000+ sản phẩm).
+   */
+  async searchProductOptions(keyword: string = '', limit: number = 30): Promise<ProductOptionItem[]> {
+    const query = new URLSearchParams();
+    if (keyword.trim()) query.set('keyword', keyword.trim());
+    query.set('limit', String(limit));
+    try {
+      const res = await authFetch(`${PRODUCTS_URL}/search-options?${query.toString()}`);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Fallback bên dưới
+    }
+    // Fallback: nếu API search-options chưa sẵn sàng, dùng getProducts
+    const result = await this.getProducts({ keyword, size: limit, status: 'ACTIVE' });
+    return result.products.map((p) => ({
+      id: Number(p.id),
+      sku: p.sku,
+      name: p.name,
+      category: p.category,
+      baseUnit: p.baseUnit,
+      packaging: p.packagingSpec,
+      costPrice: p.costPrice,
+      status: p.status
+    }));
   },
 
   /** Số liệu thẻ đầu trang, đếm trên TOÀN BỘ sản phẩm (gọi API với size=1 chỉ để lấy tổng). */

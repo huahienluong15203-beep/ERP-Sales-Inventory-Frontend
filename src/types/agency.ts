@@ -12,10 +12,21 @@ export interface PricingTier {
   id: string;
   code: string;
   name: string;
-  discountPercent: number;
-  description: string;
+  discountPercent?: number;
+  description?: string;
   badgeBg: string;
   badgeColor: string;
+}
+
+export interface PriceListOption {
+  id: number | string;
+  code: string;
+  name: string;
+  customerGroup: string;
+  customerGroupLabel?: string;
+  startDate?: string;
+  endDate?: string | null;
+  status?: string;
 }
 
 export interface CustomerGroupOption {
@@ -48,6 +59,7 @@ export interface Agency {
   customerGroup: CustomerGroupId; // Nhóm khách hàng
   customerGroupName: string;  // Tên nhóm hiển thị
   pricingTier: PricingTier;   // Bảng giá tự động áp dụng từ nhóm khách hàng
+  priceList?: { id: number | string; code: string; name: string } | null; // Bảng giá thực tế trong hệ thống
   regionId: string;           // Mã khu vực
   regionName: string;         // Tên khu vực (vd: Hà Nội, TP.HCM, Miền Tây...)
   assignedRepId: string;      // ID nhân viên kinh doanh phụ trách
