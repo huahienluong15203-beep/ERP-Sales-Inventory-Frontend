@@ -1104,8 +1104,8 @@ export const CategoryManagement: React.FC = () => {
                       type="button"
                       onClick={() => setViewScope('BRANCH')}
                       className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${viewScope === 'BRANCH'
-                          ? 'bg-white text-slate-900 font-bold shadow-xs'
-                          : 'text-slate-500 hover:text-slate-800'
+                        ? 'bg-white text-slate-900 font-bold shadow-xs'
+                        : 'text-slate-500 hover:text-slate-800'
                         }`}
                       title="Bao gồm cả sản phẩm ở các phân nhóm con"
                     >
@@ -1115,8 +1115,8 @@ export const CategoryManagement: React.FC = () => {
                       type="button"
                       onClick={() => setViewScope('DIRECT')}
                       className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${viewScope === 'DIRECT'
-                          ? 'bg-white text-slate-900 font-bold shadow-xs'
-                          : 'text-slate-500 hover:text-slate-800'
+                        ? 'bg-white text-slate-900 font-bold shadow-xs'
+                        : 'text-slate-500 hover:text-slate-800'
                         }`}
                       title="Chỉ sản phẩm gắn trực tiếp tại node này"
                     >
@@ -1614,8 +1614,8 @@ export const CategoryManagement: React.FC = () => {
                     type="button"
                     onClick={() => setAssignFilter('ALL')}
                     className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${assignFilter === 'ALL'
-                        ? 'bg-orange-50 text-orange-700 font-bold'
-                        : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-orange-50 text-orange-700 font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
                       }`}
                   >
                     Tất cả ({systemProducts.length})
@@ -1624,8 +1624,8 @@ export const CategoryManagement: React.FC = () => {
                     type="button"
                     onClick={() => setAssignFilter('OTHER')}
                     className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${assignFilter === 'OTHER'
-                        ? 'bg-orange-50 text-orange-700 font-bold'
-                        : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-orange-50 text-orange-700 font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
                       }`}
                   >
                     Chưa thuộc nhóm này
@@ -1634,8 +1634,8 @@ export const CategoryManagement: React.FC = () => {
                     type="button"
                     onClick={() => setAssignFilter('UNASSIGNED')}
                     className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${assignFilter === 'UNASSIGNED'
-                        ? 'bg-orange-50 text-orange-700 font-bold'
-                        : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-orange-50 text-orange-700 font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
                       }`}
                   >
                     Chưa phân nhóm
@@ -1696,10 +1696,10 @@ export const CategoryManagement: React.FC = () => {
                           if (!isAlreadyInCurrent) handleToggleSelectProduct(p.id);
                         }}
                         className={`p-3 flex items-center gap-3 transition-colors ${isAlreadyInCurrent
-                            ? 'bg-slate-50/70 cursor-not-allowed opacity-75'
-                            : isSelected
-                              ? 'bg-orange-50/50 hover:bg-orange-50 cursor-pointer'
-                              : 'bg-white hover:bg-slate-50/80 cursor-pointer'
+                          ? 'bg-slate-50/70 cursor-not-allowed opacity-75'
+                          : isSelected
+                            ? 'bg-orange-50/50 hover:bg-orange-50 cursor-pointer'
+                            : 'bg-white hover:bg-slate-50/80 cursor-pointer'
                           }`}
                       >
                         <input

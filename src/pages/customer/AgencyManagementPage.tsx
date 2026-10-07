@@ -756,10 +756,10 @@ export const AgencyManagementPage: React.FC = () => {
               <thead>
                 <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                   <th className="py-3.5 px-4 whitespace-nowrap min-w-[240px]">Mã & Tên Đại Lý</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap min-w-[220px]">Nhóm Khách Hàng / Bảng Giá</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap min-w-[180px]">Khu Vực & Phụ Trách</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap min-w-[180px]">Giao Dịch & Công Nợ</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap w-36 text-center">Trạng Thái</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap min-w-[200px]">Nhóm Khách Hàng / Bảng Giá</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap min-w-[170px]">Khu Vực & Phụ Trách</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap min-w-[150px]">Công Nợ</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap min-w-[150px] text-center">Trạng Thái</th>
                   <th className="py-3.5 px-4 whitespace-nowrap w-28 text-right pr-6">Thao Tác</th>
                 </tr>
               </thead>
@@ -804,31 +804,33 @@ export const AgencyManagementPage: React.FC = () => {
                                 {agency.name}
                               </strong>
                             </div>
-                            <div className="flex items-center gap-3 text-gray-500 text-[11px]">
+                            <div className="flex items-center gap-2 flex-wrap text-gray-500 text-[11px]">
                               <span>MST: <strong className="text-gray-700 font-mono">{agency.taxCode}</strong></span>
                               {agency.phone && (
-                                <span className="flex items-center gap-1">
-                                  <Phone size={12} className="text-gray-400" />
-                                  {agency.phone}
-                                </span>
+                                <>
+                                  <span>•</span>
+                                  <span className="flex items-center gap-1">
+                                    <Phone size={11} className="text-gray-400" />
+                                    {agency.phone}
+                                  </span>
+                                </>
                               )}
+                              <span>•</span>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDeliveryPoints(agency)}
+                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#F85606] hover:underline cursor-pointer"
+                                title="Xem và quản lý các điểm giao hàng của đại lý"
+                              >
+                                <Truck size={11} />
+                                <span>{agency.deliveryPointCount ?? 0} kho</span>
+                              </button>
                             </div>
                             {agency.address && (
                               <p className="text-[11px] text-gray-400 line-clamp-1 max-w-sm">
                                 {agency.address}
                               </p>
                             )}
-                            <div className="pt-0.5">
-                              <button
-                                type="button"
-                                onClick={() => handleOpenDeliveryPoints(agency)}
-                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-orange-50 text-[#F85606] hover:bg-orange-100 border border-orange-200 transition-colors cursor-pointer"
-                                title="Xem và quản lý các điểm giao hàng của đại lý"
-                              >
-                                <Truck size={12} />
-                                <span>{agency.deliveryPointCount ?? 0} kho / điểm giao</span>
-                              </button>
-                            </div>
                           </div>
                         </td>
 
@@ -885,72 +887,50 @@ export const AgencyManagementPage: React.FC = () => {
                           </div>
                         </td>
 
-                        {/* Cột 4: Lịch sử giao dịch & Công nợ */}
-                        <td className="py-4 px-4">
-                          <div className="space-y-1 text-[11px]">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-gray-500">Đơn hàng:</span>
-                              <span className={`font-bold ${agency.transactionCount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
-                                {agency.transactionCount} giao dịch
+                        {/* Cột 4: Công nợ nhanh & Icon xem chi tiết hạn mức */}
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          <div className="inline-flex items-center gap-2">
+                            <div>
+                              <span className="text-[10px] text-gray-400 font-medium block">Công nợ</span>
+                              <span className={`font-mono font-bold text-xs ${
+                                agency.totalDebt > 0 ? 'text-rose-600' : 'text-gray-700'
+                              }`}>
+                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(agency.totalDebt)}
                               </span>
                             </div>
-                            <div>
-                              <span className="text-gray-500">Công nợ: </span>
-                              <strong className="text-red-600 font-mono">
-                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(agency.totalDebt)}
-                              </strong>
-                            </div>
-                            <div className="pt-0.5">
-                              <button
-                                type="button"
-                                onClick={() => handleOpenCreditLimit(agency)}
-                                className="inline-flex items-center gap-1 text-[10px] text-gray-500 hover:text-[#F85606] cursor-pointer hover:underline text-left"
-                                title="Nhấn để xem lịch sử và điều chỉnh hạn mức nợ"
-                              >
-                                <span>Hạn mức: <strong className="font-mono text-gray-700">{new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(agency.creditLimit)}đ</strong></span>
-                                <span>•</span>
-                                <span>Tối đa: <strong className="text-blue-600 font-semibold">{agency.maxDebtDays || 30} ngày</strong></span>
-                              </button>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenCreditLimit(agency)}
+                              className="p-1.5 rounded-lg border border-gray-200 hover:border-orange-300 hover:bg-orange-50 text-gray-400 hover:text-[#F85606] transition-colors cursor-pointer shrink-0"
+                              title={`Hạn mức nợ: ${new Intl.NumberFormat('vi-VN').format(agency.creditLimit)}đ • Tối đa ${agency.maxDebtDays || 30} ngày • ${agency.transactionCount} đơn hàng. Nhấn để xem chi tiết & điều chỉnh.`}
+                            >
+                              <CreditCard size={14} />
+                            </button>
                           </div>
                         </td>
 
-                        {/* Cột 5: Trạng thái (S3-03 & S3-07) */}
-                        <td className="py-4 px-4 text-center">
+                        {/* Cột 5: Trạng thái (Dạng badge ngang chuẩn 1 dòng, không bị đứt chữ) */}
+                        <td className="py-4 px-4 text-center whitespace-nowrap">
                           {agency.transactionLocked ? (
-                            <div className="inline-flex flex-col items-center gap-1">
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs">
-                                <Lock size={12} className="text-rose-600" />
-                                Khóa Giao Dịch
-                              </span>
-                              {agency.transactionLockReason && (
-                                <span
-                                  className="text-[10px] text-rose-700 italic max-w-40 truncate block font-medium"
-                                  title={`Lý do khóa: ${agency.transactionLockReason}`}
-                                >
-                                  "{agency.transactionLockReason}"
-                                </span>
-                              )}
-                            </div>
+                            <span
+                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/80 whitespace-nowrap shadow-2xs"
+                              title={agency.transactionLockReason ? `Lý do khóa: "${agency.transactionLockReason}"` : 'Khóa giao dịch'}
+                            >
+                              <Lock size={12} className="text-rose-600 shrink-0" />
+                              <span>Khóa Giao Dịch</span>
+                            </span>
                           ) : isSuspended ? (
-                            <div className="inline-flex flex-col items-center gap-1">
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                                <ShieldAlert size={12} />
-                                Dừng Giao Dịch
-                              </span>
-                              {agency.suspendReason && (
-                                <span
-                                  className="text-[10px] text-amber-700 italic max-w-36 truncate block"
-                                  title={agency.suspendReason}
-                                >
-                                  "{agency.suspendReason}"
-                                </span>
-                              )}
-                            </div>
+                            <span
+                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 whitespace-nowrap shadow-2xs"
+                              title={agency.suspendReason && agency.suspendReason !== '0' ? `Lý do dừng: "${agency.suspendReason}"` : 'Dừng giao dịch'}
+                            >
+                              <ShieldAlert size={12} className="text-amber-600 shrink-0" />
+                              <span>Dừng Giao Dịch</span>
+                            </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                              <CheckCircle2 size={12} />
-                              Đang Hoạt Động
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 whitespace-nowrap shadow-2xs">
+                              <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
+                              <span>Đang Hoạt Động</span>
                             </span>
                           )}
                         </td>
