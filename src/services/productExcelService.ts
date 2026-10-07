@@ -96,6 +96,7 @@ export async function parseProductExcelFile(
     if (existing && isRowUpdate) {
       if (existing.name !== r.name) changedFields.push('Tên sản phẩm');
       if (r.category && existing.category !== r.category) changedFields.push('Nhóm hàng');
+      if (r.levelChanged) changedFields.push('Cây phân cấp');
       if (existing.baseUnit !== r.baseUnit) changedFields.push('ĐVT');
       if (r.packaging && existing.packagingSpec !== r.packaging) changedFields.push('Quy cách');
       if (r.costPrice != null && existing.costPrice !== r.costPrice) changedFields.push('Giá vốn');
@@ -107,6 +108,11 @@ export async function parseProductExcelFile(
       sku: r.sku,
       name: r.name,
       category: r.category || 'Chưa phân loại',
+      department: r.department,
+      subCategory: r.subCategory,
+      categoryPath: r.categoryPath || r.category || 'Chưa phân loại',
+      categoryLevel: r.categoryLevel,
+      levelChanged: r.levelChanged,
       baseUnit: r.baseUnit,
       packagingSpec: r.packaging || '',
       costPrice: r.costPrice != null ? r.costPrice : 0,
