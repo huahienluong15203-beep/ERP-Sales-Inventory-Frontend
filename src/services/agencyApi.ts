@@ -528,8 +528,22 @@ export async function fetchAgencies(params: AgencyFilterParams): Promise<AgencyL
     throw new Error(await readBackendError(res, 'Không tải được danh sách đại lý'));
   }
   const data = await res.json();
+  const mappedList: Agency[] = (data?.content || []).map(mapCustomer);
+
+  // Đồng bộ số lượng điểm giao hàng thực tế từ database PostgreSQL (S3-04)
+  await Promise.all(
+    mappedList.map(async (agency: Agency) => {
+      try {
+        const points = await fetchDeliveryPointsByAgency(agency.id);
+        agency.deliveryPointCount = points.length;
+      } catch {
+        // fallback
+      }
+    })
+  );
+
   return {
-    content: (data?.content || []).map(mapCustomer),
+    content: mappedList,
     totalElements: data?.totalElements ?? 0,
     totalPages: data?.totalPages ?? 1,
     currentPage: page
