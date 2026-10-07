@@ -407,13 +407,108 @@ export async function fetchAuditLogs(
             const rawCode = item.targetCode || `#${item.targetId || item.id}`;
             const [skuPart, unitPart] = rawCode.includes(':') ? rawCode.split(':') : [rawCode, ''];
 
-            // Chuẩn hóa delta ngắn gọn nếu có thông tin hệ số
-            let displayDelta = item.oldValue && item.newValue ? `${item.oldValue} ➔ ${item.newValue}` : undefined;
-            if (item.oldValue && item.newValue && item.oldValue.includes('Hệ số:') && item.newValue.includes('Hệ số:')) {
-              const oldMatch = item.oldValue.match(/Hệ số:\s*(\d+(\.\d+)?)/);
-              const newMatch = item.newValue.match(/Hệ số:\s*(\d+(\.\d+)?)/);
+            // Chuẩn hóa oldValue, newValue và delta theo chuẩn nghiệp vụ ERP (S2-04, S3-05, S3-07)
+            let formattedOld = item.oldValue || '—';
+            let formattedNew = item.newValue || '—';
+            let displayDelta: string | undefined = undefined;
+            let displayDeltaType: 'increase' | 'decrease' | 'neutral' = 'neutral';
+
+            const rawOld = item.oldValue?.trim();
+            const rawNew = item.newValue?.trim();
+
+            // 1. Phân tích chuỗi JSON công nợ (S3-05) & Khóa giao dịch (S3-07)
+            if (rawOld?.startsWith('{') && rawNew?.startsWith('{')) {
+              try {
+                const o = JSON.parse(rawOld);
+                const n = JSON.parse(rawNew);
+
+                if ('creditLimit' in o && 'creditLimit' in n) {
+                  const oLim = Number(o.creditLimit || 0);
+                  const nLim = Number(n.creditLimit || 0);
+                  const oDays = o.maxDebtDays ?? 0;
+                  const nDays = n.maxDebtDays ?? 0;
+
+                  formattedOld = `${oLim.toLocaleString('vi-VN')} đ • ${oDays} ngày`;
+                  formattedNew = `${nLim.toLocaleString('vi-VN')} đ • ${nDays} ngày`;
+
+                  const diffLim = nLim - oLim;
+                  const diffDays = nDays - oDays;
+
+                  if (diffLim !== 0) {
+                    displayDelta = `${diffLim > 0 ? '+' : ''}${diffLim.toLocaleString('vi-VN')} đ`;
+                    if (diffDays !== 0) {
+                      displayDelta += ` (${diffDays > 0 ? '+' : ''}${diffDays} ngày)`;
+                    }
+                    displayDeltaType = diffLim > 0 ? 'increase' : 'decrease';
+                  } else if (diffDays !== 0) {
+                    displayDelta = `${diffDays > 0 ? '+' : ''}${diffDays} ngày`;
+                    displayDeltaType = diffDays > 0 ? 'increase' : 'decrease';
+                  } else {
+                    displayDelta = '—';
+                  }
+                } else if ('transactionLocked' in o && 'transactionLocked' in n) {
+                  formattedOld = o.transactionLocked ? 'Đã khóa giao dịch' : 'Đang mở giao dịch';
+                  formattedNew = n.transactionLocked ? 'Đã khóa giao dịch' : 'Đang mở giao dịch';
+                  if (o.transactionLocked !== n.transactionLocked) {
+                    displayDelta = n.transactionLocked ? 'Khóa giao dịch' : 'Mở giao dịch';
+                    displayDeltaType = n.transactionLocked ? 'decrease' : 'increase';
+                  } else {
+                    displayDelta = '—';
+                  }
+                }
+              } catch {
+                // Giữ nguyên fallback nếu parse lỗi
+              }
+            } else if (rawOld && rawNew && rawOld.includes('Hệ số:') && rawNew.includes('Hệ số:')) {
+              // 2. Hệ số quy đổi đơn vị tính (S2-08)
+              const oldMatch = rawOld.match(/Hệ số:\s*(\d+(\.\d+)?)/);
+              const newMatch = rawNew.match(/Hệ số:\s*(\d+(\.\d+)?)/);
               if (oldMatch && newMatch) {
-                displayDelta = `${oldMatch[1]} ➔ ${newMatch[1]}`;
+                const oNum = Number(oldMatch[1]);
+                const nNum = Number(newMatch[1]);
+                displayDelta = `${oNum} ➔ ${nNum}`;
+                displayDeltaType = nNum > oNum ? 'increase' : nNum < oNum ? 'decrease' : 'neutral';
+              }
+            } else if (rawOld && rawNew && !isNaN(Number(rawOld)) && !isNaN(Number(rawNew))) {
+              // 3. Số tiền thuần túy (giá bán / giá vốn)
+              const oNum = Number(rawOld);
+              const nNum = Number(rawNew);
+              formattedOld = `${oNum.toLocaleString('vi-VN')} đ`;
+              formattedNew = `${nNum.toLocaleString('vi-VN')} đ`;
+              const diff = nNum - oNum;
+              if (diff !== 0) {
+                const pct = oNum > 0 ? Math.round(((diff / oNum) * 100) * 100) / 100 : 0;
+                displayDelta = `${diff > 0 ? '+' : ''}${diff.toLocaleString('vi-VN')} đ (${pct > 0 ? '+' : ''}${pct}%)`;
+                displayDeltaType = diff > 0 ? 'increase' : 'decrease';
+              } else {
+                displayDelta = '—';
+              }
+            } else if (rawOld && rawNew && rawOld === rawNew) {
+              // 4. Giá trị cũ và mới giống hệt nhau (Lon == Lon, Gói == Gói, hoặc Bảng giá == Bảng giá)
+              if (rawOld.startsWith('Bảng giá')) {
+                const shortTitle = rawOld.split('|')[0].trim();
+                formattedOld = shortTitle;
+                formattedNew = shortTitle;
+              }
+              displayDelta = '—';
+              displayDeltaType = 'neutral';
+            } else if (rawOld?.startsWith('Bảng giá') || rawNew?.startsWith('Bảng giá')) {
+              // 5. Chuỗi text tóm tắt bảng giá
+              formattedOld = rawOld ? rawOld.split('|')[0].trim() : '—';
+              formattedNew = rawNew ? rawNew.split('|')[0].trim() : '—';
+              displayDelta = 'Cập nhật bảng giá';
+              displayDeltaType = 'neutral';
+            } else if (rawOld && rawNew) {
+              // 6. Chuyển đổi trạng thái hoặc chuyển đổi ĐVT (Chai -> Thùng, ACTIVE -> INACTIVE)
+              if (rawOld === 'ACTIVE' && rawNew === 'INACTIVE') {
+                displayDelta = 'Ngừng hoạt động';
+                displayDeltaType = 'decrease';
+              } else if (rawOld === 'INACTIVE' && rawNew === 'ACTIVE') {
+                displayDelta = 'Kích hoạt lại';
+                displayDeltaType = 'increase';
+              } else {
+                displayDelta = `${rawOld} ➔ ${rawNew}`;
+                displayDeltaType = 'neutral';
               }
             }
 
@@ -439,10 +534,10 @@ export async function fetchAuditLogs(
                 ? 'Kế toán'
                 : 'Hệ thống',
               actorAvatarUrl: item.actorAvatarUrl,
-              oldValue: item.oldValue || '—',
-              newValue: item.newValue || '—',
+              oldValue: formattedOld,
+              newValue: formattedNew,
               deltaFormatted: displayDelta,
-              deltaType: 'neutral',
+              deltaType: displayDeltaType,
               reason: item.reason || 'Cập nhật hệ thống',
               ipAddress: item.ipAddress || '127.0.0.1',
               userAgent: item.userAgent,
