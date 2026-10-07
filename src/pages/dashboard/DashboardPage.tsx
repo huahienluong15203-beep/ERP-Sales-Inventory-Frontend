@@ -63,27 +63,44 @@ export const DashboardPage: React.FC = () => {
           console.warn('Không tải được danh mục sản phẩm từ backend:', err);
         }
 
-        // 2. Lấy dữ liệu đại lý thật từ API Backend
-        try {
-          const agencyStats = await fetchAgencyStats();
-          if (isMounted) {
-            setAgencyCount(agencyStats.total);
-            setActiveAgenciesCount(agencyStats.active);
+        // 2. Lấy dữ liệu đại lý thật từ API Backend (chỉ với vai trò có quyền xem đại lý)
+        const canViewCustomers =
+          currentRole === 'ROLE_ADMIN' ||
+          currentRole === 'ROLE_SALES_MANAGER' ||
+          currentRole === 'ROLE_ACCOUNTANT' ||
+          currentRole === 'ROLE_SALES_REP' ||
+          Boolean(user?.roles?.some((r) => ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_ACCOUNTANT', 'ROLE_SALES_REP'].includes(r)));
+
+        if (canViewCustomers) {
+          try {
+            const agencyStats = await fetchAgencyStats();
+            if (isMounted) {
+              setAgencyCount(agencyStats.total);
+              setActiveAgenciesCount(agencyStats.active);
+            }
+          } catch (err) {
+            console.warn('Không tải được danh sách đại lý từ backend:', err);
           }
-        } catch (err) {
-          console.warn('Không tải được danh sách đại lý từ backend:', err);
         }
 
-        // 3. Lấy dữ liệu đơn hàng thật từ Backend kết hợp đơn đã chốt
-        try {
-          const res = await authFetch(`${API_BASE_URL}/api/orders?page=0&size=10`);
-          let backendOrders: any[] = [];
-          let backendTotal = 0;
-          if (res.ok) {
-            const data = await res.json();
-            backendOrders = data.content || [];
-            backendTotal = data.totalElements || backendOrders.length;
-          }
+        // 3. Lấy dữ liệu đơn hàng thật từ Backend kết hợp đơn đã chốt (chỉ với vai trò có quyền xem đơn hàng)
+        const canViewOrders =
+          currentRole === 'ROLE_ADMIN' ||
+          currentRole === 'ROLE_SALES_MANAGER' ||
+          currentRole === 'ROLE_ACCOUNTANT' ||
+          currentRole === 'ROLE_SALES_REP' ||
+          Boolean(user?.roles?.some((r) => ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_ACCOUNTANT', 'ROLE_SALES_REP'].includes(r)));
+
+        if (canViewOrders) {
+          try {
+            const res = await authFetch(`${API_BASE_URL}/api/orders?page=0&size=10`);
+            let backendOrders: any[] = [];
+            let backendTotal = 0;
+            if (res.ok) {
+              const data = await res.json();
+              backendOrders = data.content || [];
+              backendTotal = data.totalElements || backendOrders.length;
+            }
 
           // Lấy đơn hàng đã chốt từ localStorage nếu có
           let localConfirmedOrders: any[] = [];
@@ -153,8 +170,9 @@ export const DashboardPage: React.FC = () => {
 
             setRecentOrders(formattedRecent);
           }
-        } catch (err) {
-          console.warn('Không tải được đơn hàng từ backend:', err);
+          } catch (err) {
+            console.warn('Không tải được đơn hàng từ backend:', err);
+          }
         }
       } finally {
         if (isMounted) setIsLoading(false);
