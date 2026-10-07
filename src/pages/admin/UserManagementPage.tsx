@@ -18,6 +18,7 @@ import {
 } from '../../services/api';
 import type { RoleName } from '../../types/user';
 import { ROLE_METADATA_MAP, getUserAvatarInitials } from '../../types/user';
+import { invalidateAgencyFormOptionsCache } from '../../services/agencyApi';
 import {
   Users,
   Search,
@@ -296,6 +297,7 @@ export const UserManagementPage: React.FC = () => {
         );
         setPage(0);
         loadUsers();
+        invalidateAgencyFormOptionsCache();
       } else {
         setCreateError(result.message || 'Tạo tài khoản thất bại.');
       }
@@ -352,6 +354,7 @@ export const UserManagementPage: React.FC = () => {
           'Thông tin tài khoản người dùng đã được lưu lại.'
         );
         loadUsers();
+        invalidateAgencyFormOptionsCache();
         if (currentUser && (currentUser.id === editingUser.id || currentUser.username === editingUser.username)) {
           refreshContext();
         }
@@ -419,6 +422,7 @@ export const UserManagementPage: React.FC = () => {
           'Phân quyền vai trò, kho và địa bàn đã được cập nhật.'
         );
         loadUsers();
+        invalidateAgencyFormOptionsCache();
         if (currentUser && (currentUser.id === editingUser.id || currentUser.username === editingUser.username)) {
           refreshContext();
         }
@@ -470,6 +474,7 @@ export const UserManagementPage: React.FC = () => {
             'error'
           );
           loadUsers();
+          invalidateAgencyFormOptionsCache();
         } else {
           setActionAlert({ type: 'error', message: res.message });
         }
@@ -481,6 +486,7 @@ export const UserManagementPage: React.FC = () => {
             `Tài khoản [${lockTargetUser.username}] đã được kích hoạt lại.`
           );
           loadUsers();
+          invalidateAgencyFormOptionsCache();
         } else {
           setActionAlert({ type: 'error', message: res.message });
         }

@@ -27,7 +27,7 @@ export const AssignSalesRepModal: React.FC<AssignSalesRepModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      fetchActiveSalesReps().then((reps) => {
+      fetchActiveSalesReps(true).then((reps) => {
         if (reps && reps.length > 0) {
           setSalesReps(reps);
         }

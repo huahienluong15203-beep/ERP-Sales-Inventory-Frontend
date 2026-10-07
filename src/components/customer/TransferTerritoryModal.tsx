@@ -47,13 +47,15 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      fetchAgencyFormOptions()
+      fetchAgencyFormOptions(true)
         .then((options) => {
           setRegions(options.regions);
           if (options.salesReps.length > 0) {
             setSalesReps(options.salesReps);
-            setFromRepId(options.salesReps[0]?.id || '');
-            setToRepId(options.salesReps[1]?.id || options.salesReps[0]?.id || '');
+            const firstId = options.salesReps[0]?.id || '';
+            const secondId = options.salesReps.find((r) => r.id !== firstId)?.id || firstId;
+            setFromRepId(firstId);
+            setToRepId(secondId);
           }
         })
         .catch(() => setError('Không tải được danh sách khu vực và nhân viên kinh doanh.'));
@@ -62,6 +64,16 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
       setError(null);
     }
   }, [isOpen]);
+
+  const handleFromRepChange = (newFromId: string) => {
+    setFromRepId(newFromId);
+    if (toRepId === newFromId) {
+      const alternative = salesReps.find((r) => r.id !== newFromId);
+      if (alternative) {
+        setToRepId(alternative.id);
+      }
+    }
+  };
 
   useEffect(() => {
     if (!isOpen || !/^\d+$/.test(fromRepId)) {
@@ -181,7 +193,7 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
               </label>
               <select
                 value={fromRepId}
-                onChange={(e) => setFromRepId(e.target.value)}
+                onChange={(e) => handleFromRepChange(e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-white rounded-lg border border-red-200 focus:border-red-400 outline-none font-medium"
               >
                 {salesReps.map((rep) => (
