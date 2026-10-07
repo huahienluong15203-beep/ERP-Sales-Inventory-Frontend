@@ -51,7 +51,7 @@ export const AgencyCardView: React.FC<AgencyCardViewProps> = ({
 }) => {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs animate-pulse space-y-3">
             <div className="h-5 bg-gray-200 rounded-md w-2/3" />
@@ -69,7 +69,7 @@ export const AgencyCardView: React.FC<AgencyCardViewProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       {agencies.map((agency) => {
         const isLocked = Boolean(agency.transactionLocked);
         const isSuspended = agency.status === 'SUSPENDED';
@@ -88,68 +88,71 @@ export const AgencyCardView: React.FC<AgencyCardViewProps> = ({
             }`}
           >
             {/* 1. Header Thẻ */}
-            <div className="p-4 border-b border-gray-100 space-y-2">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-md font-mono font-bold text-[11px] bg-gray-100 text-gray-800 border border-gray-200">
-                    {agency.code}
-                  </span>
-                  <div
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border max-w-full"
-                    style={{
-                      backgroundColor: agency.pricingTier.badgeBg,
-                      color: agency.pricingTier.badgeColor,
-                      borderColor: 'currentColor'
-                    }}
-                    title={`${agency.pricingTier.code} - ${agency.pricingTier.name}`}
-                  >
-                    <BadgeDollarSign size={11} className="shrink-0" />
-                    <span className="truncate">{agency.pricingTier.name}</span>
-                    {agency.pricingTier.code && (
-                      <span className="px-1 py-0.2 rounded-md bg-white/90 text-[9px] font-mono shrink-0 ml-0.5 border border-black/10">
-                        {agency.pricingTier.code}
-                      </span>
-                    )}
-                  </div>
-                </div>
+            <div className="p-4 border-b border-gray-100 space-y-2.5">
+              {/* Hàng 1: Mã đại lý & Trạng thái hoạt động */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="px-2 py-0.5 rounded-md font-mono font-bold text-[11px] bg-gray-100 text-gray-800 border border-gray-200 shrink-0">
+                  {agency.code}
+                </span>
 
                 {/* Trạng thái hoạt động / khóa */}
                 {isLocked ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shrink-0">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shrink-0 whitespace-nowrap">
                     <Lock size={11} className="text-rose-600" />
                     Khóa Giao Dịch
                   </span>
                 ) : isSuspended ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0 whitespace-nowrap">
                     <ShieldAlert size={11} />
                     Dừng Giao Dịch
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0 whitespace-nowrap">
                     <CheckCircle2 size={11} />
                     Đang Hoạt Động
                   </span>
                 )}
               </div>
 
+              {/* Hàng 2: Bảng giá áp dụng (dòng riêng, không chèn ép trạng thái) */}
+              <div className="flex items-center min-w-0">
+                <div
+                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold border max-w-full min-w-0"
+                  style={{
+                    backgroundColor: agency.pricingTier.badgeBg,
+                    color: agency.pricingTier.badgeColor,
+                    borderColor: 'currentColor'
+                  }}
+                  title={`${agency.pricingTier.code} - ${agency.pricingTier.name}`}
+                >
+                  <BadgeDollarSign size={11} className="shrink-0" />
+                  <span className="truncate">{agency.pricingTier.name}</span>
+                  {agency.pricingTier.code && (
+                    <span className="px-1 py-0.2 rounded-md bg-white/90 text-[9px] font-mono shrink-0 ml-0.5 border border-black/10">
+                      {agency.pricingTier.code}
+                    </span>
+                  )}
+                </div>
+              </div>
+
               <div>
                 <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">
                   {agency.name}
                 </h3>
-                <div className="flex items-center gap-2 text-[11px] text-gray-500 mt-0.5">
-                  <span>MST: <strong className="font-mono text-gray-700">{agency.taxCode}</strong></span>
-                  <span>•</span>
-                  <span>{agency.customerGroupName}</span>
+                <div className="flex items-center gap-2 text-[11px] text-gray-500 mt-0.5 min-w-0">
+                  <span className="shrink-0">MST: <strong className="font-mono text-gray-700">{agency.taxCode}</strong></span>
+                  <span className="shrink-0">•</span>
+                  <span className="truncate">{agency.customerGroupName}</span>
                 </div>
               </div>
 
               {/* Tuyến / Khu vực phụ trách */}
-              <div className="flex items-center justify-between gap-2 pt-1 text-[11px] text-gray-600">
-                <div className="flex items-center gap-1.5 text-blue-700 font-semibold bg-blue-50/80 px-2 py-0.5 rounded-lg border border-blue-100">
+              <div className="flex items-center justify-between gap-2 pt-0.5 text-[11px] text-gray-600">
+                <div className="flex items-center gap-1.5 text-blue-700 font-semibold bg-blue-50/80 px-2 py-0.5 rounded-lg border border-blue-100 min-w-0">
                   <MapPin size={12} className="text-blue-500 shrink-0" />
-                  <span>Tuyến: {agency.regionName}</span>
+                  <span className="truncate">Tuyến: {agency.regionName}</span>
                 </div>
-                <div className="flex items-center gap-1 text-gray-500">
+                <div className="flex items-center gap-1 text-gray-500 shrink-0">
                   <Users size={11} className="text-orange-500" />
                   <span className="truncate max-w-[120px]">{agency.assignedRepName || 'Chưa gán'}</span>
                 </div>
@@ -223,9 +226,13 @@ export const AgencyCardView: React.FC<AgencyCardViewProps> = ({
                   </strong>
                 </div>
 
-                <div className="flex items-center justify-between text-gray-500 text-[10px]">
-                  <span>Hạn mức nợ: <strong className="font-mono text-gray-700">{new Intl.NumberFormat('vi-VN').format(agency.creditLimit)}đ</strong></span>
-                  <span>Tối đa: <strong className="text-blue-600">{agency.maxDebtDays || 30} ngày</strong></span>
+                <div className="flex items-center justify-between gap-2 text-gray-500 text-[10px]">
+                  <span className="truncate">
+                    Hạn mức nợ: <strong className="font-mono text-gray-700">{new Intl.NumberFormat('vi-VN').format(agency.creditLimit)}đ</strong>
+                  </span>
+                  <span className="shrink-0">
+                    Tối đa: <strong className="text-blue-600 font-medium">{agency.maxDebtDays || 30} ngày</strong>
+                  </span>
                 </div>
 
                 {/* Thanh tiến độ công nợ */}
@@ -253,7 +260,7 @@ export const AgencyCardView: React.FC<AgencyCardViewProps> = ({
                   title="Quản lý điểm giao hàng"
                 >
                   <Truck size={12} className="text-[#F85606]" />
-                  <span>Kho ({agency.deliveryPointCount ?? 0})</span>
+                  <span>Điểm giao ({agency.deliveryPointCount ?? 0})</span>
                 </button>
 
                 {/* Lịch sử phân công */}
