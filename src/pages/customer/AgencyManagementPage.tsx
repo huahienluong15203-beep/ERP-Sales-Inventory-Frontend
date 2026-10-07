@@ -262,6 +262,9 @@ export const AgencyManagementPage: React.FC = () => {
   const reloadAll = () => {
     loadData();
     loadStats();
+    fetchAgencyFormOptions(true)
+      .then((options) => setRegionOptions(options.regions))
+      .catch(() => undefined);
   };
 
   // Submit form tìm kiếm

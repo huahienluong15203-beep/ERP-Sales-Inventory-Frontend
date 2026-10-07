@@ -45,18 +45,35 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
   const [affectedTotal, setAffectedTotal] = useState(0);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
+  const [loadingOptions, setLoadingOptions] = useState(false);
+
+  const loadOptions = async (force = true) => {
+    setLoadingOptions(true);
+    try {
+      const options = await fetchAgencyFormOptions(force);
+      setRegions(options.regions);
+      if (options.salesReps.length > 0) {
+        setSalesReps(options.salesReps);
+        const reps = options.salesReps;
+        setFromRepId((prev) => (reps.some((r) => r.id === prev) ? prev : reps[0]?.id || ''));
+        setToRepId((prev) => {
+          if (reps.length > 1) {
+            const defaultTo = reps[1]?.id || '';
+            return reps.some((r) => r.id === prev && r.id !== reps[0]?.id) ? prev : defaultTo;
+          }
+          return reps[0]?.id || '';
+        });
+      }
+    } catch {
+      setError('Không tải được danh sách khu vực và nhân viên kinh doanh.');
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
-      fetchAgencyFormOptions()
-        .then((options) => {
-          setRegions(options.regions);
-          if (options.salesReps.length > 0) {
-            setSalesReps(options.salesReps);
-            setFromRepId(options.salesReps[0]?.id || '');
-            setToRepId(options.salesReps[1]?.id || options.salesReps[0]?.id || '');
-          }
-        })
-        .catch(() => setError('Không tải được danh sách khu vực và nhân viên kinh doanh.'));
+      loadOptions(true);
       setSelectedRegionId('');
       setReason('');
       setError(null);
@@ -94,6 +111,16 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
 
   const fromRep = salesReps.find((r) => r.id === fromRepId) || SALES_REP_OPTIONS.find((r) => r.id === fromRepId);
   const isSameRep = fromRepId === toRepId;
+
+  const handleFromRepChange = (newFromId: string) => {
+    setFromRepId(newFromId);
+    if (toRepId === newFromId) {
+      const alternative = salesReps.find((r) => r.id !== newFromId);
+      if (alternative) {
+        setToRepId(alternative.id);
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,12 +182,23 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-white transition-colors cursor-pointer"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => loadOptions(true)}
+              disabled={loadingOptions}
+              title="Tải lại danh sách nhân viên từ máy chủ"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-white transition-colors cursor-pointer"
+            >
+              <RefreshCw size={16} className={loadingOptions ? 'animate-spin text-[#F85606]' : ''} />
+            </button>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-white transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Nội dung form */}
@@ -169,6 +207,26 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
               <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {salesReps.length < 2 && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
+              <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold">Cần ít nhất 2 nhân viên kinh doanh để thực hiện bàn giao.</p>
+                <p className="text-[11px] text-amber-700 mt-1">
+                  Hiện danh sách nhận diện được {salesReps.length} nhân viên ({salesReps[0]?.fullName || 'Chưa có'}). Nếu bạn vừa thêm tài khoản hoặc gán vai trò nhân viên kinh doanh, hãy bấm{' '}
+                  <button
+                    type="button"
+                    onClick={() => loadOptions(true)}
+                    className="text-[#F85606] font-bold underline hover:text-[#d64700] cursor-pointer"
+                  >
+                    Tải lại danh sách
+                  </button>
+                  .
+                </p>
+              </div>
             </div>
           )}
 
@@ -181,7 +239,7 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
               </label>
               <select
                 value={fromRepId}
-                onChange={(e) => setFromRepId(e.target.value)}
+                onChange={(e) => handleFromRepChange(e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-white rounded-lg border border-red-200 focus:border-red-400 outline-none font-medium"
               >
                 {salesReps.map((rep) => (

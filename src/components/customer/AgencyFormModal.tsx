@@ -55,7 +55,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      fetchAgencyFormOptions()
+      fetchAgencyFormOptions(true)
         .then((options) => {
           setRegions(options.regions);
           setSalesReps(options.salesReps);

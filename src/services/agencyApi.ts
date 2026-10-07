@@ -124,11 +124,11 @@ export const SALES_REP_OPTIONS: SalesRepOption[] = [
  * Lấy danh sách nhân viên kinh doanh đang hoạt động để phân công phụ trách.
  * Tự động đồng bộ với danh sách tài khoản thực tế trên hệ thống (User Management).
  */
-export async function fetchActiveSalesReps(): Promise<SalesRepOption[]> {
+export async function fetchActiveSalesReps(force = false): Promise<SalesRepOption[]> {
   // Dùng /api/customers/form-options (Admin, QL kinh doanh, Kế toán, NV kinh doanh đều gọi được).
   // Không gọi /api/admin/users vì chỉ Admin có quyền -> vai trò khác bị 403 và văng ra màn đăng nhập.
   try {
-    const options = await fetchAgencyFormOptions();
+    const options = await fetchAgencyFormOptions(force);
     if (options.salesReps.length > 0) return options.salesReps;
   } catch {
     // dùng danh sách mẫu bên dưới
@@ -472,8 +472,16 @@ export interface AgencyFormOptions {
 
 let formOptionsCache: Promise<AgencyFormOptions> | null = null;
 
-/** Khu vực + nhân viên kinh doanh thật từ Backend (GET /api/customers/form-options), tải 1 lần. */
-export function fetchAgencyFormOptions(): Promise<AgencyFormOptions> {
+/** Xoá cache danh mục để ép tải lại dữ liệu mới nhất từ Backend */
+export function invalidateAgencyFormOptionsCache(): void {
+  formOptionsCache = null;
+}
+
+/** Khu vực + nhân viên kinh doanh thật từ Backend (GET /api/customers/form-options). Có thể ép tải mới bằng force = true. */
+export function fetchAgencyFormOptions(force = false): Promise<AgencyFormOptions> {
+  if (force) {
+    formOptionsCache = null;
+  }
   if (!formOptionsCache) {
     formOptionsCache = authFetch(`${CUSTOMERS_URL}/form-options`)
       .then(async (res) => {
