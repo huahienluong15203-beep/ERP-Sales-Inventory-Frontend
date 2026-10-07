@@ -22,9 +22,7 @@ import {
   AlertTriangle,
   RefreshCw,
   Navigation,
-  Building2,
-  ShoppingCart,
-  Info
+  Building2
 } from '../common/Icons';
 import { AddressPicker } from '../common/AddressPicker';
 
@@ -41,8 +39,8 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
   agency,
   onPointsUpdated
 }) => {
-  // Tab chế độ: Danh sách (LIST) | Thêm/Sửa (FORM) | Mô phỏng đơn hàng (SIMULATION)
-  const [activeTab, setActiveTab] = useState<'LIST' | 'FORM' | 'SIMULATION'>('LIST');
+  // Tab chế độ: Danh sách (LIST) | Thêm/Sửa (FORM)
+  const [activeTab, setActiveTab] = useState<'LIST' | 'FORM'>('LIST');
 
   // Dữ liệu điểm giao hàng
   const [points, setPoints] = useState<DeliveryPoint[]>([]);
@@ -66,10 +64,6 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
   // Xác nhận xóa
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  // Mô phỏng lên đơn hàng (AC 3)
-  const [simulatedSelectedPointId, setSimulatedSelectedPointId] = useState<string>('');
-  const [simulatedOrderCreated, setSimulatedOrderCreated] = useState(false);
-
   // Tải danh sách điểm giao hàng của đại lý
   const loadPoints = useCallback(async () => {
     if (!agency) return;
@@ -77,11 +71,6 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
     try {
       const data = await fetchDeliveryPointsByAgency(agency.id);
       setPoints(data);
-      // Đặt mặc định cho dropdown mô phỏng lên đơn
-      const def = data.find((p) => p.isDefault) || data[0];
-      if (def) {
-        setSimulatedSelectedPointId(def.id);
-      }
     } catch {
       setNotice({ type: 'error', message: 'Không thể tải danh sách điểm giao hàng!' });
     } finally {
@@ -97,7 +86,6 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
       setNotice(null);
       setFormError(null);
       setConfirmDeleteId(null);
-      setSimulatedOrderCreated(false);
     }
   }, [isOpen, agency, loadPoints]);
 
@@ -258,9 +246,6 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
     }
   };
 
-  // Điểm giao hàng được chọn trong mô phỏng lên đơn
-  const simulatedSelectedPoint = points.find((p) => p.id === simulatedSelectedPointId) || points.find((p) => p.isDefault) || points[0];
-
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden border border-gray-100">
@@ -325,22 +310,6 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
               <Plus size={14} />
               <span>{editingPoint ? `Sửa: ${editingPoint.name}` : 'Thêm Điểm Giao Mới'}</span>
             </button>
-
-            <button
-              onClick={() => {
-                setActiveTab('SIMULATION');
-                setSimulatedOrderCreated(false);
-              }}
-              className={`py-3 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-colors cursor-pointer ${
-                activeTab === 'SIMULATION'
-                  ? 'border-[#F85606] text-[#F85606]'
-                  : 'border-transparent text-gray-500 hover:text-gray-800'
-              }`}
-              title="Kiểm chứng AC 3: Khi lên đơn hàng chỉ chọn điểm giao trong danh sách của đúng đại lý đó"
-            >
-              <ShoppingCart size={14} />
-              <span>Mô Phỏng Lên Đơn (AC 3)</span>
-            </button>
           </div>
 
           {activeTab === 'LIST' && (
@@ -349,7 +318,7 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
               className="my-1.5 px-3 py-1.5 rounded-lg bg-[#F85606] hover:bg-[#d04602] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
             >
               <Plus size={14} />
-              <span>Thêm Kho Mới</span>
+              <span>Thêm Điểm Giao</span>
             </button>
           )}
         </div>
@@ -400,7 +369,7 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
                   <Truck size={42} className="mx-auto text-gray-300 mb-2" />
                   <h4 className="text-sm font-bold text-gray-700">Chưa có điểm giao hàng nào</h4>
                   <p className="text-xs text-gray-500 max-w-md mx-auto mt-1 mb-4">
-                    Đại lý này hiện chưa được cấu hình điểm giao hàng. Vui lòng khai báo kho nhận hàng để phục vụ xuất kho giao hàng chính xác.
+                    Đại lý này hiện chưa được cấu hình điểm giao hàng. Vui lòng khai báo điểm nhận hàng để phục vụ xuất kho giao hàng chính xác.
                   </p>
                   <button
                     onClick={handleOpenAddForm}
@@ -555,7 +524,7 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
                       {editingPoint ? `Chỉnh sửa: ${editingPoint.name}` : 'Khai Báo Điểm Giao Hàng Mới'}
                     </h4>
                     <p className="text-[11px] text-gray-500">
-                      Thiết lập thông tin kho và ghi chú chỉ dẫn cho tài xế giao hàng
+                      Thiết lập địa chỉ nhận hàng và ghi chú chỉ dẫn cho tài xế giao hàng
                     </p>
                   </div>
                 </div>
@@ -580,13 +549,13 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
               {/* Tên điểm giao */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Tên Điểm Giao / Tên Kho <span className="text-red-500">*</span>
+                  Tên Điểm Giao Hàng <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="VD: Kho Tổng Gia Lâm, Kho KCN Sóng Thần, Showroom Chi Nhánh 1..."
+                  placeholder="VD: Cửa hàng số 1, Kho nhận Gia Lâm, Showroom Chi Nhánh 2..."
                   className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200 focus:border-[#F85606] focus:ring-1 focus:ring-[#F85606] outline-none"
                   autoFocus
                 />
@@ -702,135 +671,6 @@ export const DeliveryPointsModal: React.FC<DeliveryPointsModalProps> = ({
                 </button>
               </div>
             </form>
-          )}
-
-          {/* TAB 3: MÔ PHỎNG LÊN ĐƠN HÀNG (AC 3) */}
-          {activeTab === 'SIMULATION' && (
-            <div className="max-w-2xl mx-auto space-y-4">
-              <div className="p-3.5 rounded-2xl bg-linear-to-r from-blue-50/80 to-indigo-50/60 border border-blue-200 text-xs space-y-1">
-                <div className="flex items-center gap-2 text-blue-900 font-bold">
-                  <Info size={16} className="text-blue-600 shrink-0" />
-                  <span>Tiêu Chí Nghiệm Thu (AC 3): Lên Đơn Hàng Chọn Điểm Giao Thuộc Đại Lý</span>
-                </div>
-                <p className="text-blue-800 text-[11px] leading-relaxed">
-                  Khi nhân viên kinh doanh lên đơn cho đại lý <strong>[{agency.name}]</strong>, danh sách chọn điểm giao chỉ hiển thị <strong>đúng các kho của đại lý này</strong> (không bị lẫn kho của đại lý khác), và <strong>tự động chọn trước điểm mặc định</strong>.
-                </p>
-              </div>
-
-              {/* Form giả lập màn hình tạo đơn hàng */}
-              <div className="rounded-2xl border border-gray-200 p-5 bg-white shadow-xs space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <ShoppingCart size={18} className="text-[#F85606]" />
-                    <strong className="text-sm text-gray-900 font-bold">
-                      Phiếu Đặt Hàng (Mô phỏng thực tế)
-                    </strong>
-                  </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600 font-mono">
-                    ĐƠN #DH-882910
-                  </span>
-                </div>
-
-                {/* Khách hàng / Đại lý mua hàng */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Đại Lý Đặt Hàng
-                  </label>
-                  <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs font-medium text-gray-800 flex items-center justify-between">
-                    <span>{agency.name}</span>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
-                      {agency.customerGroupName}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Dropdown Điểm Giao Hàng của riêng Đại lý này (AC 3) */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <Truck size={13} className="text-[#F85606]" />
-                      <span>Chọn Điểm Giao Hàng Của Khách</span>
-                    </span>
-                    <span className="text-[10px] text-gray-400 font-normal">
-                      (Chỉ hiển thị {points.length} kho của đại lý này)
-                    </span>
-                  </label>
-
-                  {points.length === 0 ? (
-                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
-                      ⚠️ Đại lý này chưa có điểm giao hàng nào! Vui lòng khai báo ít nhất 1 điểm giao trước khi lên đơn.
-                    </div>
-                  ) : (
-                    <select
-                      value={simulatedSelectedPointId}
-                      onChange={(e) => {
-                        setSimulatedSelectedPointId(e.target.value);
-                        setSimulatedOrderCreated(false);
-                      }}
-                      className="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-200 bg-white focus:border-[#F85606] focus:ring-1 focus:ring-[#F85606] outline-none font-medium"
-                    >
-                      {points.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} {p.isDefault ? '⭐ [MẶC ĐỊNH]' : ''} — {p.address}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                {/* Chi tiết điểm giao đang được chọn */}
-                {simulatedSelectedPoint && (
-                  <div className="p-3.5 rounded-xl border border-orange-200 bg-orange-50/30 text-xs space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-gray-900 flex items-center gap-1.5">
-                        <MapPin size={13} className="text-red-500" />
-                        {simulatedSelectedPoint.name}
-                      </span>
-                      {simulatedSelectedPoint.isDefault && (
-                        <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-200">
-                          ⭐ Điểm mặc định
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-gray-700 text-[11px]">
-                      <strong>Địa chỉ giao: </strong>{simulatedSelectedPoint.address}
-                    </p>
-                    <p className="text-gray-700 text-[11px]">
-                      <strong>Người nhận: </strong>{simulatedSelectedPoint.contactPerson} ({simulatedSelectedPoint.phone})
-                    </p>
-                    {simulatedSelectedPoint.routeNotes && (
-                      <div className="p-2 rounded-lg bg-blue-50/70 border border-blue-100 text-[10px] text-blue-900 flex items-start gap-1">
-                        <Navigation size={12} className="text-blue-600 shrink-0 mt-0.5" />
-                        <span><strong>Lưu ý tài xế: </strong>{simulatedSelectedPoint.routeNotes}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Kết quả mô phỏng */}
-                {simulatedOrderCreated ? (
-                  <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1 animate-in zoom-in-95">
-                    <div className="flex items-center gap-1.5 font-bold">
-                      <CheckCircle2 size={16} className="text-emerald-600" />
-                      <span>Đơn hàng đã tiếp nhận thành công với địa chỉ giao đúng kho!</span>
-                    </div>
-                    <p className="text-[11px] text-emerald-800">
-                      Hàng hóa sẽ được xuất kho và giao thẳng đến <strong>"{simulatedSelectedPoint?.name}"</strong> thay vì trụ sở chính, giúp tiết kiệm chi phí bốc dỡ chuyển tiếp cho đại lý.
-                    </p>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={points.length === 0}
-                    onClick={() => setSimulatedOrderCreated(true)}
-                    className="w-full py-2.5 bg-[#F85606] hover:bg-[#d04602] disabled:opacity-40 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
-                  >
-                    <ShoppingCart size={15} />
-                    <span>Xác Nhận Tạo Đơn Thử Nghiệm</span>
-                  </button>
-                )}
-              </div>
-            </div>
           )}
 
         </div>

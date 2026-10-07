@@ -823,7 +823,7 @@ export const AgencyManagementPage: React.FC = () => {
                                 title="Xem và quản lý các điểm giao hàng của đại lý"
                               >
                                 <Truck size={11} />
-                                <span>{agency.deliveryPointCount ?? 0} kho</span>
+                                <span>{agency.deliveryPointCount ?? 0} điểm giao</span>
                               </button>
                             </div>
                             {agency.address && (

@@ -427,6 +427,7 @@ interface BackendCustomer {
   transactionLockReason?: string | null;
   transactionLockedAt?: string | null;
   priceList?: { id: number; code: string; name: string } | null;
+  deliveryPointCount?: number | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 }
@@ -484,6 +485,9 @@ function mapCustomer(c: BackendCustomer): Agency {
     transactionLocked: Boolean(c.transactionLocked),
     transactionLockReason: c.transactionLockReason || '',
     transactionLockedAt: c.transactionLockedAt || undefined,
+    deliveryPointCount: typeof c.deliveryPointCount === 'number'
+      ? c.deliveryPointCount
+      : (c.address?.trim() ? 1 : 0),
     createdAt: formatBackendDate(c.createdAt),
     updatedAt: formatBackendDate(c.updatedAt)
   };

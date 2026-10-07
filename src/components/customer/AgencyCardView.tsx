@@ -260,7 +260,7 @@ export const AgencyCardView: React.FC<AgencyCardViewProps> = ({
                   title="Quản lý điểm giao hàng"
                 >
                   <Truck size={12} className="text-[#F85606]" />
-                  <span>Kho ({agency.deliveryPointCount ?? 0})</span>
+                  <span>Điểm giao ({agency.deliveryPointCount ?? 0})</span>
                 </button>
 
                 {/* Lịch sử phân công */}
