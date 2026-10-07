@@ -19,7 +19,12 @@ export interface ProductImportRowDto {
   rowNumber: number;
   sku: string;
   name: string;
+  department?: string;
   category?: string;
+  subCategory?: string;
+  categoryPath?: string;
+  categoryLevel?: number;
+  levelChanged?: boolean;
   baseUnit: string;
   packaging?: string;
   costPrice?: number;
@@ -67,6 +72,11 @@ export interface ProductImportRow {
   sku: string;                  // Mã SKU
   name: string;                 // Tên sản phẩm
   category: string;             // Nhóm hàng
+  department?: string;          // Ngành hàng (Cấp 1)
+  subCategory?: string;         // Phân nhóm (Cấp 3)
+  categoryPath?: string;        // Đường dẫn cây phân cấp (Cấp 1 > Cấp 2 > Cấp 3)
+  categoryLevel?: number;       // Cấp cây phân cấp (1, 2, 3)
+  levelChanged?: boolean;       // Đánh dấu ghi đè / đổi cấp cây (Part 4)
   baseUnit: string;             // Đơn vị tính cơ sở (Lon, Chai, Thùng...)
   packagingSpec: string;        // Quy cách đóng gói (vd: 24 lon / thùng)
   costPrice: number;            // Giá vốn (VND)
