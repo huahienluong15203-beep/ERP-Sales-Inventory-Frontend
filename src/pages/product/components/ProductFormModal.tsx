@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Product, CreateProductInput, UpdateProductInput, ProductStatus } from '../../../types/product';
 import {
   PRODUCT_CATEGORIES,
@@ -7,6 +7,7 @@ import {
   formatCurrencyVND,
   productService
 } from '../../../services/productService';
+import { fetchCategories, type CategoryWithCount } from '../../../services/categoryApi';
 import { useAuth } from '../../../contexts/AuthContext';
 import { Icons } from '../../../components/common/Icons';
 
@@ -28,7 +29,10 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   const [sku, setSku] = useState('');
   const [name, setName] = useState('');
-  const [category, setCategory] = useState<string>(PRODUCT_CATEGORIES[0]);
+  const [categories, setCategories] = useState<CategoryWithCount[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [categoryId, setCategoryId] = useState<string>('');
+  const [category, setCategory] = useState<string>('');
   const [baseUnit, setBaseUnit] = useState<string>(COMMON_BASE_UNITS[0]);
   const [packagingSpec, setPackagingSpec] = useState('');
   const [costPrice, setCostPrice] = useState<number | string>(0);
@@ -44,10 +48,32 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      setLoadingCategories(true);
+      fetchCategories()
+        .then((list) => {
+          setCategories(list);
+          if (productToEdit) {
+            if (productToEdit.categoryId) {
+              setCategoryId(productToEdit.categoryId);
+              const matched = list.find((c) => c.id === productToEdit.categoryId);
+              if (matched) setCategory(matched.name);
+            } else if (productToEdit.category) {
+              const matchedByName = list.find((c) => c.name.toLowerCase() === productToEdit.category.toLowerCase());
+              if (matchedByName) {
+                setCategoryId(matchedByName.id);
+                setCategory(matchedByName.name);
+              }
+            }
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoadingCategories(false));
+
       if (productToEdit) {
         setSku(productToEdit.sku);
         setName(productToEdit.name);
-        setCategory(productToEdit.category || PRODUCT_CATEGORIES[0]);
+        setCategoryId(productToEdit.categoryId || '');
+        setCategory(productToEdit.category || '');
         setBaseUnit(productToEdit.baseUnit || COMMON_BASE_UNITS[0]);
         setPackagingSpec(productToEdit.packagingSpec || '');
         setCostPrice(productToEdit.costPrice || 0);
@@ -56,7 +82,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       } else {
         setSku('');
         setName('');
-        setCategory(PRODUCT_CATEGORIES[0]);
+        setCategoryId('');
+        setCategory('');
         setBaseUnit(COMMON_BASE_UNITS[0]);
         setPackagingSpec('');
         setCostPrice(0);
@@ -68,6 +95,69 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setImagePreviewError(false);
     }
   }, [isOpen, productToEdit]);
+
+  // Sắp xếp nhóm hàng theo phân cấp cây DFS
+  const hierarchicalCategories = useMemo(() => {
+    const map = new Map<string | null, CategoryWithCount[]>();
+    for (const c of categories) {
+      const pid = c.parentId ?? null;
+      if (!map.has(pid)) map.set(pid, []);
+      map.get(pid)!.push(c);
+    }
+    const result: { cat: CategoryWithCount; label: string; path: string }[] = [];
+    const getPath = (c: CategoryWithCount): string => {
+      const parts: string[] = [c.name];
+      let curr = c;
+      while (curr.parentId) {
+        const parent = categories.find((p) => p.id === curr.parentId);
+        if (!parent) break;
+        parts.unshift(parent.name);
+        curr = parent;
+      }
+      return parts.join(' > ');
+    };
+    const traverse = (parentId: string | null, depth: number) => {
+      const list = map.get(parentId) || [];
+      list.sort((a, b) => a.code.localeCompare(b.code));
+      for (const item of list) {
+        let indent = '';
+        if (depth === 2) indent = '└─ ';
+        else if (depth === 3) indent = '└── ';
+        else if (depth > 3) indent = `${'──'.repeat(depth - 1)} `;
+        const badge = item.level === 1 ? '[Cấp 1 - Ngành]' : item.level === 2 ? '[Cấp 2 - Nhóm]' : `[Cấp ${item.level}]`;
+        result.push({
+          cat: item,
+          label: `${indent}${badge} ${item.name} (${item.code})`,
+          path: getPath(item)
+        });
+        traverse(item.id, depth + 1);
+      }
+    };
+    traverse(null, 1);
+    return result;
+  }, [categories]);
+
+  const selectedCategoryPath = useMemo(() => {
+    if (!categoryId) return null;
+    const found = hierarchicalCategories.find((h) => h.cat.id === categoryId);
+    return found ? found.path : null;
+  }, [categoryId, hierarchicalCategories]);
+
+  const handleCategoryChange = (val: string) => {
+    if (!val) {
+      setCategoryId('');
+      setCategory('');
+      return;
+    }
+    const found = categories.find((c) => c.id === val);
+    if (found) {
+      setCategoryId(found.id);
+      setCategory(found.name);
+    } else {
+      setCategoryId('');
+      setCategory(val);
+    }
+  };
 
   const handleSkuChange = async (val: string) => {
     const formatted = val.toUpperCase().replace(/\s+/g, '-');
@@ -108,6 +198,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       return;
     }
 
+    if (!category.trim() && !categoryId) {
+      setGeneralError('Vui lòng chọn nhóm hàng cho sản phẩm.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const parsedCost = canEditCost ? Number(costPrice) || 0 : productToEdit?.costPrice || 0;
@@ -115,7 +210,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       if (isEditing && productToEdit) {
         const updatePayload: UpdateProductInput = {
           name: name.trim(),
-          category,
+          category: category.trim() || 'Chưa phân loại',
+          categoryId: categoryId ? categoryId : undefined,
           baseUnit: baseUnit.trim(),
           packagingSpec: packagingSpec.trim(),
           status,
@@ -136,7 +232,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         const createPayload: CreateProductInput = {
           sku: cleanSku,
           name: name.trim(),
-          category,
+          category: category.trim() || 'Chưa phân loại',
+          categoryId: categoryId ? categoryId : undefined,
           baseUnit: baseUnit.trim(),
           packagingSpec: packagingSpec.trim(),
           costPrice: parsedCost,
@@ -281,21 +378,42 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             {/* 3. Nhóm hàng & 4. ĐVT cơ sở */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
-                  3. Nhóm hàng <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    3. Nhóm hàng (Cây S2-06) <span className="text-red-500">*</span>
+                  </label>
+                  {loadingCategories && (
+                    <span className="text-[11px] text-gray-400">Đang tải cây...</span>
+                  )}
+                </div>
                 <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  value={categoryId || category}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
                   disabled={isSubmitting}
-                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
                 >
-                  {PRODUCT_CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
+                  <option value="">-- Chọn nhóm hàng từ cây phân cấp --</option>
+                  {hierarchicalCategories.length > 0 ? (
+                    hierarchicalCategories.map(({ cat, label }) => (
+                      <option key={cat.id} value={cat.id}>
+                        {label}
+                      </option>
+                    ))
+                  ) : (
+                    PRODUCT_CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))
+                  )}
                 </select>
+                {selectedCategoryPath && (
+                  <div className="mt-1.5 flex items-center gap-1.5 text-xs text-orange-700 bg-orange-50/80 px-2.5 py-1 rounded-lg border border-orange-200/50">
+                    <Icons.Building2 size={13} className="shrink-0 text-orange-600" />
+                    <span className="font-semibold">Phân cấp:</span>
+                    <span className="font-medium truncate">{selectedCategoryPath}</span>
+                  </div>
+                )}
               </div>
 
               <div>

@@ -12,6 +12,8 @@ import {
   updateCategory,
   type CategoryWithCount
 } from '../../services/categoryApi';
+import { productService } from '../../services/productService';
+import type { Product } from '../../types/product';
 import { RefreshCw } from '../common/Icons';
 
 // Chỉ ADMIN và SALES_MANAGER được ghi (backend @PreAuthorize). Các vai trò khác chỉ xem.
@@ -56,6 +58,14 @@ export const CategoryManagement: React.FC = () => {
 
   // Tìm kiếm sản phẩm trong danh sách
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Modal gán sản phẩm từ hệ thống vào nhóm
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState<boolean>(false);
+  const [systemProducts, setSystemProducts] = useState<Product[]>([]);
+  const [loadingSystemProducts, setLoadingSystemProducts] = useState<boolean>(false);
+  const [assignSearch, setAssignSearch] = useState<string>('');
+  const [assignFilter, setAssignFilter] = useState<'ALL' | 'UNASSIGNED' | 'OTHER'>('ALL');
+  const [selectedProductIdsToAssign, setSelectedProductIdsToAssign] = useState<Set<string>>(new Set());
 
   // Modal chuyển sản phẩm sang nhóm khác
   const [movingProduct, setMovingProduct] = useState<CategoryProduct | null>(null);
@@ -292,6 +302,90 @@ export const CategoryManagement: React.FC = () => {
       setConfirmDeleteCategory(null);
       showToast(errMsg(err, 'Không thể xoá nhóm hàng.'), 'error');
       await refreshAll();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Mở modal gán sản phẩm vào nhóm đang chọn
+  const handleOpenAssignModal = async () => {
+    if (!selectedCategory || !canManage) return;
+    setIsAssignModalOpen(true);
+    setSelectedProductIdsToAssign(new Set());
+    setAssignSearch('');
+    setAssignFilter('ALL');
+    setLoadingSystemProducts(true);
+    try {
+      const res = await productService.getProducts({ page: 0, size: 200 });
+      setSystemProducts(res.products || []);
+    } catch (err) {
+      showToast(errMsg(err, 'Không tải được danh sách sản phẩm hệ thống.'), 'error');
+    } finally {
+      setLoadingSystemProducts(false);
+    }
+  };
+
+  // Lọc sản phẩm hệ thống theo từ khóa và trạng thái nhóm
+  const filteredSystemProducts = useMemo(() => {
+    const q = assignSearch.trim().toLowerCase();
+    return systemProducts.filter((p) => {
+      const matchesSearch =
+        !q ||
+        p.sku.toLowerCase().includes(q) ||
+        p.name.toLowerCase().includes(q) ||
+        (p.category && p.category.toLowerCase().includes(q));
+      if (!matchesSearch) return false;
+
+      const isCurrentGroup = p.categoryId === selectedCategory?.id;
+      if (assignFilter === 'UNASSIGNED') {
+        return !p.categoryId || p.category === 'Chưa phân loại';
+      }
+      if (assignFilter === 'OTHER') {
+        return !isCurrentGroup;
+      }
+      return true;
+    });
+  }, [systemProducts, assignSearch, assignFilter, selectedCategory]);
+
+  const handleToggleSelectProduct = (id: string) => {
+    setSelectedProductIdsToAssign((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAllFiltered = (selectableIds: string[]) => {
+    setSelectedProductIdsToAssign((prev) => {
+      const allSelected = selectableIds.length > 0 && selectableIds.every((id) => prev.has(id));
+      const next = new Set(prev);
+      if (allSelected) {
+        selectableIds.forEach((id) => next.delete(id));
+      } else {
+        selectableIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  // Thực hiện gán danh sách sản phẩm vào nhóm đang chọn qua API S2-06
+  const handleExecuteAssignProducts = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCategory || selectedProductIdsToAssign.size === 0 || !canManage || saving) return;
+    setSaving(true);
+    try {
+      const pids = Array.from(selectedProductIdsToAssign);
+      const res = await moveProductsToCategory(selectedCategory.id, pids);
+      showToast(
+        `Đã thêm thành công ${res.movedCount} sản phẩm vào nhóm "${res.categoryName}"!`,
+        'success'
+      );
+      setIsAssignModalOpen(false);
+      setSelectedProductIdsToAssign(new Set());
+      await refreshAll();
+    } catch (err) {
+      showToast(errMsg(err, 'Không thể gán sản phẩm vào nhóm.'), 'error');
     } finally {
       setSaving(false);
     }
@@ -944,6 +1038,20 @@ export const CategoryManagement: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </svg>
                     </div>
+
+                    {canManage && selectedCategory && (
+                      <button
+                        type="button"
+                        onClick={handleOpenAssignModal}
+                        className="h-8 px-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-xs hover:shadow-sm transition-all cursor-pointer inline-flex items-center gap-1.5 shrink-0"
+                        title={`Thêm sản phẩm từ hệ thống vào nhóm ${selectedCategory.name}`}
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span>+ Thêm Sản Phẩm</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -983,8 +1091,26 @@ export const CategoryManagement: React.FC = () => {
                         </tr>
                       ) : displayedProducts.length === 0 ? (
                         <tr>
-                          <td colSpan={canManage ? 7 : 6} className="text-center py-8 text-slate-400">
-                            Không có sản phẩm nào trong nhóm hàng này hoặc không khớp từ khoá tìm kiếm.
+                          <td colSpan={canManage ? 7 : 6} className="text-center py-10 text-slate-400">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <p className="text-xs sm:text-sm">
+                                {searchQuery
+                                  ? 'Không có sản phẩm nào khớp với từ khoá tìm kiếm.'
+                                  : 'Chưa có sản phẩm nào được gán vào nhóm hàng này.'}
+                              </p>
+                              {canManage && !searchQuery && selectedCategory && (
+                                <button
+                                  type="button"
+                                  onClick={handleOpenAssignModal}
+                                  className="mt-1 px-3.5 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold text-xs border border-orange-200 transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                                  </svg>
+                                  <span>Gán sản phẩm vào nhóm ngay</span>
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ) : (
@@ -1323,6 +1449,231 @@ export const CategoryManagement: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: THÊM / GÁN SẢN PHẨM VÀO NHÓM */}
+      {canManage && isAssignModalOpen && selectedCategory && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-[9999] overflow-y-auto animate-fadeIn">
+          <div className="w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden relative">
+            {/* Header Modal */}
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-orange-50/70 to-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center border border-orange-200/60 shrink-0">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                    Thêm Sản Phẩm Vào Nhóm: {selectedCategory.name}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Mã nhóm: <span className="font-mono font-semibold text-slate-700">{selectedCategory.code}</span> (Cấp {selectedCategory.level}) — Chọn sản phẩm từ hệ thống để gán vào nhóm này
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAssignModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div className="p-4 border-b border-slate-100 bg-slate-50/50 space-y-3 shrink-0">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <div className="relative flex-1 min-w-[200px]">
+                  <input
+                    type="text"
+                    value={assignSearch}
+                    onChange={(e) => setAssignSearch(e.target.value)}
+                    placeholder="Tìm theo mã SKU, tên hàng hoặc nhóm hiện tại..."
+                    className="w-full h-9 pl-8 pr-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200"
+                  />
+                  <svg
+                    className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+
+                <div className="inline-flex rounded-xl bg-white p-0.5 border border-slate-200 text-xs font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setAssignFilter('ALL')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      assignFilter === 'ALL'
+                        ? 'bg-orange-50 text-orange-700 font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Tất cả ({systemProducts.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssignFilter('OTHER')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      assignFilter === 'OTHER'
+                        ? 'bg-orange-50 text-orange-700 font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Chưa thuộc nhóm này
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssignFilter('UNASSIGNED')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      assignFilter === 'UNASSIGNED'
+                        ? 'bg-orange-50 text-orange-700 font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Chưa phân nhóm
+                  </button>
+                </div>
+              </div>
+
+              {/* Thông tin chọn nhanh */}
+              {(() => {
+                const selectableIds = filteredSystemProducts
+                  .filter((p) => p.categoryId !== selectedCategory.id)
+                  .map((p) => p.id);
+                const isAllSelected =
+                  selectableIds.length > 0 && selectableIds.every((id) => selectedProductIdsToAssign.has(id));
+
+                return (
+                  <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                    <label className="inline-flex items-center gap-2 cursor-pointer font-medium select-none">
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        onChange={() => handleSelectAllFiltered(selectableIds)}
+                        disabled={selectableIds.length === 0}
+                        className="rounded text-orange-600 focus:ring-orange-500 cursor-pointer"
+                      />
+                      <span>Chọn tất cả các sản phẩm có thể gán ({selectableIds.length})</span>
+                    </label>
+
+                    <span>
+                      Đã chọn:{' '}
+                      <strong className="text-orange-600 font-bold">{selectedProductIdsToAssign.size}</strong> sản phẩm
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Danh sách sản phẩm */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {loadingSystemProducts ? (
+                <div className="text-center py-12 text-slate-400 text-xs">
+                  Đang tải danh sách sản phẩm từ hệ thống...
+                </div>
+              ) : filteredSystemProducts.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 text-xs">
+                  Không tìm thấy sản phẩm nào phù hợp với bộ lọc tìm kiếm.
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+                  {filteredSystemProducts.map((p) => {
+                    const isAlreadyInCurrent = p.categoryId === selectedCategory.id;
+                    const isSelected = selectedProductIdsToAssign.has(p.id);
+
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => {
+                          if (!isAlreadyInCurrent) handleToggleSelectProduct(p.id);
+                        }}
+                        className={`p-3 flex items-center gap-3 transition-colors ${
+                          isAlreadyInCurrent
+                            ? 'bg-slate-50/70 cursor-not-allowed opacity-75'
+                            : isSelected
+                            ? 'bg-orange-50/50 hover:bg-orange-50 cursor-pointer'
+                            : 'bg-white hover:bg-slate-50/80 cursor-pointer'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected || isAlreadyInCurrent}
+                          disabled={isAlreadyInCurrent}
+                          onChange={() => {
+                            if (!isAlreadyInCurrent) handleToggleSelectProduct(p.id);
+                          }}
+                          className="rounded text-orange-600 focus:ring-orange-500 cursor-pointer disabled:opacity-50"
+                        />
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono font-bold text-xs text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                              {p.sku}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-900 truncate">{p.name}</span>
+                            <span className="text-[11px] text-slate-500 px-1.5 py-0.5 bg-slate-100 rounded">
+                              {p.baseUnit}
+                            </span>
+                          </div>
+
+                          <div className="mt-1 flex items-center gap-2 text-[11px]">
+                            {isAlreadyInCurrent ? (
+                              <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-semibold border border-emerald-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Đang ở nhóm này
+                              </span>
+                            ) : p.categoryId ? (
+                              <span className="inline-flex items-center gap-1 text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                                Nhóm hiện tại: <span className="font-semibold text-slate-800">{p.category}</span>
+                                <span className="text-orange-600 ml-1 font-semibold">→ Chuyển vào nhóm này</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded font-medium border border-amber-200">
+                                Chưa phân nhóm (sẽ gán mới vào nhóm này)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer Modal */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
+              <span className="text-xs text-slate-500">
+                Đã chọn: <strong className="text-orange-600 font-bold">{selectedProductIdsToAssign.size}</strong> sản phẩm
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAssignModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-medium cursor-pointer"
+                >
+                  Huỷ Bỏ
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExecuteAssignProducts}
+                  disabled={selectedProductIdsToAssign.size === 0 || saving}
+                  className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-md shadow-orange-500/20 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>{saving ? 'Đang gán...' : `Xác Nhận Gán Vào Nhóm (${selectedProductIdsToAssign.size})`}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

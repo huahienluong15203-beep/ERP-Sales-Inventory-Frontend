@@ -106,6 +106,7 @@ function mapProduct(p: BackendProduct): Product {
     sku: p.sku,
     name: p.name,
     category: p.category || 'Chưa phân loại',
+    categoryId: p.categoryId != null ? String(p.categoryId) : undefined,
     baseUnit: p.baseUnit,
     packagingSpec: p.packaging || '',
     // Backend trả null nếu vai trò không được xem giá vốn
@@ -144,6 +145,7 @@ async function putProduct(
   const body = {
     name: patch.name ?? current.name,
     category: patch.category ?? current.category ?? undefined,
+    categoryId: patch.categoryId !== undefined ? patch.categoryId : (current.categoryId ?? undefined),
     baseUnit: patch.baseUnit ?? current.baseUnit,
     packaging: patch.packaging ?? current.packaging ?? undefined,
     // Không gửi giá vốn nếu không đổi -> Backend giữ nguyên
@@ -224,6 +226,7 @@ export const productService = {
       sku: input.sku.trim().toUpperCase(),
       name: input.name.trim(),
       category: input.category || undefined,
+      categoryId: input.categoryId ? Number(input.categoryId) : undefined,
       baseUnit: input.baseUnit.trim(),
       packaging: input.packagingSpec?.trim() || undefined,
       // Giá vốn chỉ Quản lý kinh doanh & Admin được nhập (Backend cũng kiểm)
@@ -255,6 +258,7 @@ export const productService = {
     const result = await putProduct(id, current, {
       name: input.name?.trim(),
       category: input.category,
+      categoryId: input.categoryId !== undefined ? (input.categoryId ? Number(input.categoryId) : null) : undefined,
       baseUnit: input.baseUnit?.trim(),
       packaging: input.packagingSpec?.trim(),
       imageUrl: input.imageUrl?.trim(),
