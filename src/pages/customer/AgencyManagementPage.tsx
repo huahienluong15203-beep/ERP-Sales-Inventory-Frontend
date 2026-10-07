@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import type {
   Agency,
   AgencyFilterParams,
@@ -180,19 +181,52 @@ export const AgencyManagementPage: React.FC = () => {
   // S3-08: Tab lọc nhanh trạng thái trong tuyến
   const [routeQuickFilter, setRouteQuickFilter] = useState<'ALL' | 'ACTIVE' | 'LOCKED' | 'SUSPENDED'>('ALL');
 
-  // State menu thả xuống thao tác khác trên từng dòng
-  const [openMenuAgencyId, setOpenMenuAgencyId] = useState<string | null>(null);
+  // State menu thả xuống thao tác khác trên từng dòng (qua portal tránh cắt xén UI)
+  const [openMenuAgency, setOpenMenuAgency] = useState<Agency | null>(null);
+  const [menuCoords, setMenuCoords] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
 
   useEffect(() => {
+    const handleCloseMenu = () => {
+      setOpenMenuAgency(null);
+      setMenuCoords(null);
+    };
+
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (!target.closest('.agency-action-dropdown')) {
-        setOpenMenuAgencyId(null);
+        handleCloseMenu();
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleCloseMenu, true);
+    window.addEventListener('resize', handleCloseMenu);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleCloseMenu, true);
+      window.removeEventListener('resize', handleCloseMenu);
+    };
   }, []);
+
+  const handleToggleMenu = (e: React.MouseEvent<HTMLButtonElement>, agency: Agency) => {
+    e.stopPropagation();
+    if (openMenuAgency?.id === agency.id) {
+      setOpenMenuAgency(null);
+      setMenuCoords(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const dropdownHeight = 240;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const shouldOpenUp = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+
+    setMenuCoords({
+      top: shouldOpenUp ? undefined : Math.round(rect.bottom + 6),
+      bottom: shouldOpenUp ? Math.round(window.innerHeight - rect.top + 6) : undefined,
+      right: Math.max(12, Math.round(window.innerWidth - rect.right))
+    });
+    setOpenMenuAgency(agency);
+  };
 
   // Số liệu thẻ đầu trang (toàn bộ đại lý, không phụ thuộc trang đang xem)
   const [agencyStats, setAgencyStats] = useState({ total: 0, active: 0, suspended: 0, locked: 0 });
@@ -717,16 +751,16 @@ export const AgencyManagementPage: React.FC = () => {
         )
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto min-h-[300px]">
+            <table className="w-full min-w-[1050px] text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                  <th className="py-3.5 px-4">Mã & Tên Đại Lý</th>
-                  <th className="py-3.5 px-4">Nhóm Khách Hàng / Bảng Giá</th>
-                  <th className="py-3.5 px-4">Khu Vực & Phụ Trách</th>
-                  <th className="py-3.5 px-4">Giao Dịch & Công Nợ</th>
-                  <th className="py-3.5 px-4 text-center">Trạng Thái</th>
-                  <th className="py-3.5 px-4 text-right">Thao Tác</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap min-w-[240px]">Mã & Tên Đại Lý</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap min-w-[220px]">Nhóm Khách Hàng / Bảng Giá</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap min-w-[180px]">Khu Vực & Phụ Trách</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap min-w-[180px]">Giao Dịch & Công Nợ</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap w-36 text-center">Trạng Thái</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap w-28 text-right pr-6">Thao Tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-xs">
@@ -750,7 +784,7 @@ export const AgencyManagementPage: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  visibleAgencies.map((agency, index) => {
+                  visibleAgencies.map((agency) => {
                     const isSuspended = agency.status === 'SUSPENDED';
 
                     return (
@@ -922,7 +956,7 @@ export const AgencyManagementPage: React.FC = () => {
                         </td>
 
                         {/* Cột 6: Thao tác - Rút gọn chỉ còn 2-3 nút gọn gàng */}
-                        <td className="py-4 px-4 text-right">
+                        <td className="py-4 px-4 pr-6 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1.5 agency-action-dropdown relative">
                             {/* 1. Nút Sửa thông tin hồ sơ */}
                             {canManageAgency && (
@@ -950,12 +984,13 @@ export const AgencyManagementPage: React.FC = () => {
                             <div className="relative">
                               <button
                                 type="button"
-                                onClick={() => setOpenMenuAgencyId(openMenuAgencyId === agency.id ? null : agency.id)}
+                                onClick={(e) => handleToggleMenu(e, agency)}
                                 title="Thao tác khác"
-                                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${openMenuAgencyId === agency.id
-                                  ? 'bg-orange-50 border-orange-300 text-[#F85606]'
-                                  : 'border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-800'
-                                  }`}
+                                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                                  openMenuAgency?.id === agency.id
+                                    ? 'bg-orange-50 border-orange-300 text-[#F85606]'
+                                    : 'border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+                                }`}
                               >
                                 <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                   <circle cx="12" cy="12" r="1.5" />
@@ -963,128 +998,6 @@ export const AgencyManagementPage: React.FC = () => {
                                   <circle cx="5" cy="12" r="1.5" />
                                 </svg>
                               </button>
-
-                              {/* Dropdown menu nổi */}
-                              {openMenuAgencyId === agency.id && (
-                                <div
-                                  className={`absolute right-0 ${index >= visibleAgencies.length - 2 ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
-                                    } w-52 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 text-xs divide-y divide-gray-100 text-left animate-in fade-in duration-100`}
-                                >
-                                  <div className="py-1">
-                                    {/* Quản lý điểm giao hàng */}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenMenuAgencyId(null);
-                                        handleOpenDeliveryPoints(agency);
-                                      }}
-                                      className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-orange-50/60 hover:text-[#F85606] transition-colors cursor-pointer"
-                                    >
-                                      <Truck size={14} className="text-[#F85606]" />
-                                      <span>Điểm giao hàng ({agency.deliveryPointCount ?? 0})</span>
-                                    </button>
-
-                                    {/* Lịch sử phân công */}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenMenuAgencyId(null);
-                                        handleOpenHistory(agency);
-                                      }}
-                                      className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-blue-50/60 hover:text-blue-600 transition-colors cursor-pointer"
-                                    >
-                                      <History size={14} className="text-blue-500" />
-                                      <span>Lịch sử phân công</span>
-                                    </button>
-
-                                    {/* Thiết lập hạn mức công nợ */}
-                                    {canManageAgency && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setOpenMenuAgencyId(null);
-                                          handleOpenCreditLimit(agency);
-                                        }}
-                                        className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-blue-50/60 hover:text-blue-600 transition-colors cursor-pointer"
-                                      >
-                                        <CreditCard size={14} className="text-blue-500" />
-                                        <span>Hạn mức công nợ</span>
-                                      </button>
-                                    )}
-                                  </div>
-
-                                  <div className="py-1">
-                                    {/* Khóa / Mở giao dịch (S3-07 / SCRUM-19 - Kế toán & Quản lý) */}
-                                    {canManageAgency && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setOpenMenuAgencyId(null);
-                                          handleOpenLockModal(agency);
-                                        }}
-                                        className={`w-full px-3 py-2 text-left flex items-center gap-2.5 transition-colors cursor-pointer ${agency.transactionLocked
-                                          ? 'text-emerald-700 hover:bg-emerald-50'
-                                          : 'text-rose-700 hover:bg-rose-50'
-                                          }`}
-                                      >
-                                        {agency.transactionLocked ? (
-                                          <>
-                                            <Unlock size={14} className="text-emerald-600" />
-                                            <span className="font-semibold">Mở khóa giao dịch</span>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Lock size={14} className="text-rose-600" />
-                                            <span className="font-semibold">Khóa giao dịch (Nợ)</span>
-                                          </>
-                                        )}
-                                      </button>
-                                    )}
-
-                                    {/* Dừng / Mở lại giao dịch */}
-                                    {canManageAgency && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setOpenMenuAgencyId(null);
-                                          handleOpenSuspendModal(agency);
-                                        }}
-                                        className={`w-full px-3 py-2 text-left flex items-center gap-2.5 transition-colors cursor-pointer ${isSuspended
-                                          ? 'text-emerald-700 hover:bg-emerald-50'
-                                          : 'text-amber-700 hover:bg-amber-50'
-                                          }`}
-                                      >
-                                        {isSuspended ? (
-                                          <>
-                                            <CheckCircle2 size={14} className="text-emerald-600" />
-                                            <span>Mở lại giao dịch</span>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <ShieldAlert size={14} className="text-amber-600" />
-                                            <span>Dừng giao dịch</span>
-                                          </>
-                                        )}
-                                      </button>
-                                    )}
-
-                                    {/* Xóa hồ sơ: chỉ Admin, Kế toán; Backend chặn nếu đã có đơn hàng */}
-                                    {canDeleteAgency && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setOpenMenuAgencyId(null);
-                                          handleOpenDeleteModal(agency);
-                                        }}
-                                        className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
-                                      >
-                                        <Trash2 size={14} className="text-rose-600" />
-                                        <span className="font-semibold">Xóa đại lý</span>
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
                             </div>
                           </div>
                         </td>
@@ -1199,6 +1112,147 @@ export const AgencyManagementPage: React.FC = () => {
         onConfirmDelete={handleConfirmDelete}
         onOpenSuspend={handleOpenSuspendModal}
       />
+
+      {/* Menu thao tác nổi (Portal) để tránh hoàn toàn bị cắt bởi overflow của bảng */}
+      {openMenuAgency && menuCoords && createPortal(
+        <div
+          className="fixed agency-action-dropdown w-52 bg-white rounded-xl shadow-2xl border border-gray-100 py-1 z-[9999] text-xs divide-y divide-gray-100 text-left animate-in fade-in duration-100"
+          style={{
+            top: menuCoords.top !== undefined ? `${menuCoords.top}px` : undefined,
+            bottom: menuCoords.bottom !== undefined ? `${menuCoords.bottom}px` : undefined,
+            right: `${menuCoords.right}px`
+          }}
+        >
+          <div className="py-1">
+            {/* Quản lý điểm giao hàng */}
+            <button
+              type="button"
+              onClick={() => {
+                const target = openMenuAgency;
+                setOpenMenuAgency(null);
+                setMenuCoords(null);
+                handleOpenDeliveryPoints(target);
+              }}
+              className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-orange-50/60 hover:text-[#F85606] transition-colors cursor-pointer"
+            >
+              <Truck size={14} className="text-[#F85606]" />
+              <span>Điểm giao hàng ({openMenuAgency.deliveryPointCount ?? 0})</span>
+            </button>
+
+            {/* Lịch sử phân công */}
+            <button
+              type="button"
+              onClick={() => {
+                const target = openMenuAgency;
+                setOpenMenuAgency(null);
+                setMenuCoords(null);
+                handleOpenHistory(target);
+              }}
+              className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-blue-50/60 hover:text-blue-600 transition-colors cursor-pointer"
+            >
+              <History size={14} className="text-blue-500" />
+              <span>Lịch sử phân công</span>
+            </button>
+
+            {/* Thiết lập hạn mức công nợ */}
+            {canManageAgency && (
+              <button
+                type="button"
+                onClick={() => {
+                  const target = openMenuAgency;
+                  setOpenMenuAgency(null);
+                  setMenuCoords(null);
+                  handleOpenCreditLimit(target);
+                }}
+                className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-blue-50/60 hover:text-blue-600 transition-colors cursor-pointer"
+              >
+                <CreditCard size={14} className="text-blue-500" />
+                <span>Hạn mức công nợ</span>
+              </button>
+            )}
+          </div>
+
+          <div className="py-1">
+            {/* Khóa / Mở giao dịch (S3-07 / SCRUM-19 - Kế toán & Quản lý) */}
+            {canManageAgency && (
+              <button
+                type="button"
+                onClick={() => {
+                  const target = openMenuAgency;
+                  setOpenMenuAgency(null);
+                  setMenuCoords(null);
+                  handleOpenLockModal(target);
+                }}
+                className={`w-full px-3 py-2 text-left flex items-center gap-2.5 transition-colors cursor-pointer ${
+                  openMenuAgency.transactionLocked
+                    ? 'text-emerald-700 hover:bg-emerald-50'
+                    : 'text-rose-700 hover:bg-rose-50'
+                }`}
+              >
+                {openMenuAgency.transactionLocked ? (
+                  <>
+                    <Unlock size={14} className="text-emerald-600" />
+                    <span className="font-semibold">Mở khóa giao dịch</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock size={14} className="text-rose-600" />
+                    <span className="font-semibold">Khóa giao dịch (Nợ)</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Dừng / Mở lại giao dịch */}
+            {canManageAgency && (
+              <button
+                type="button"
+                onClick={() => {
+                  const target = openMenuAgency;
+                  setOpenMenuAgency(null);
+                  setMenuCoords(null);
+                  handleOpenSuspendModal(target);
+                }}
+                className={`w-full px-3 py-2 text-left flex items-center gap-2.5 transition-colors cursor-pointer ${
+                  openMenuAgency.status === 'SUSPENDED'
+                    ? 'text-emerald-700 hover:bg-emerald-50'
+                    : 'text-amber-700 hover:bg-amber-50'
+                }`}
+              >
+                {openMenuAgency.status === 'SUSPENDED' ? (
+                  <>
+                    <CheckCircle2 size={14} className="text-emerald-600" />
+                    <span>Mở lại giao dịch</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldAlert size={14} className="text-amber-600" />
+                    <span>Dừng giao dịch</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Xóa hồ sơ: chỉ Admin, Kế toán */}
+            {canDeleteAgency && (
+              <button
+                type="button"
+                onClick={() => {
+                  const target = openMenuAgency;
+                  setOpenMenuAgency(null);
+                  setMenuCoords(null);
+                  handleOpenDeleteModal(target);
+                }}
+                className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+              >
+                <Trash2 size={14} className="text-rose-600" />
+                <span className="font-semibold">Xóa đại lý</span>
+              </button>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };
