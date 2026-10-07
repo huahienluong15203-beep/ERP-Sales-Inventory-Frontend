@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { PriceList, PriceListRequest, PriceListItemRequest, CustomerGroupType } from '../../types/pricing';
 import { CUSTOMER_GROUPS } from '../../types/pricing';
 import { createPriceList, updatePriceList } from '../../services/pricingApi';
-import { productService, ProductOptionItem } from '../../services/productService';
+import { productService } from '../../services/productService';
+import type { ProductOptionItem } from '../../services/productService';
 import { Icons } from '../common/Icons';
 
 interface PriceListFormModalProps {

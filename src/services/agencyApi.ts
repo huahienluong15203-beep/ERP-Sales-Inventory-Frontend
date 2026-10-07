@@ -425,6 +425,7 @@ interface BackendCustomer {
   maxDebtDays?: number | null;
   transactionLocked?: boolean | null;
   transactionLockReason?: string | null;
+  transactionLockedAt?: string | null;
   priceList?: { id: number; code: string; name: string } | null;
   createdAt?: string | null;
   updatedAt?: string | null;
