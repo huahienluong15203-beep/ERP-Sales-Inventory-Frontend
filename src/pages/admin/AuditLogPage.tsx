@@ -31,7 +31,7 @@ export const AuditLogPage: React.FC = () => {
   // Thống kê toàn cục
   const [allLogsForStats] = useState<AuditLogItem[]>(() => getLocalAuditLogs());
 
-  // Bộ lọc + trang lưu trên URL, vd: /audit-logs?module=PRICING&range=TODAY&page=2
+  // Bộ lọc + trang lưu trên URL, vd: /logs?tab=audit&module=PRICING&range=TODAY&page=2
   const { params: urlParams, page, size, setPage, setSize, setFilters: setUrlFilters } = useUrlPaging({
     keyword: '',
     module: 'ALL',

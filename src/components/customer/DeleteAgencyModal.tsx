@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Agency } from '../../types/agency';
 import {
@@ -12,7 +12,8 @@ interface DeleteAgencyModalProps {
   isOpen: boolean;
   onClose: () => void;
   agency: Agency | null;
-  onConfirmDelete: (agency: Agency) => Promise<void>;
+  /** Gọi Backend xoá; trả về kết quả để modal hiện lỗi thật (vd đã phát sinh đơn hàng) */
+  onConfirmDelete: (agency: Agency, reason: string) => Promise<{ success: boolean; message: string; code?: string }>;
   onOpenSuspend?: (agency: Agency) => void;
 }
 
@@ -24,16 +25,42 @@ export const DeleteAgencyModal: React.FC<DeleteAgencyModalProps> = ({
   onOpenSuspend
 }) => {
   const [submitting, setSubmitting] = useState(false);
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  // Backend báo đại lý đã phát sinh đơn hàng -> chuyển sang màn "không thể xoá"
+  const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setReason('');
+      setError(null);
+      setBlockedMessage(null);
+    }
+  }, [isOpen, agency?.id]);
 
   if (!isOpen || !agency) return null;
 
-  const hasTransactions = Boolean(agency.hasTransactions) || (agency.transactionCount ?? 0) > 0;
+  const hasTransactions =
+    Boolean(blockedMessage) || Boolean(agency.hasTransactions) || (agency.transactionCount ?? 0) > 0;
 
   const handleConfirm = async () => {
+    if (!reason.trim()) {
+      setError('Vui lòng nhập lý do xoá đại lý');
+      return;
+    }
     setSubmitting(true);
+    setError(null);
     try {
-      await onConfirmDelete(agency);
-      onClose();
+      const res = await onConfirmDelete(agency, reason.trim());
+      if (res.success) {
+        onClose();
+      } else if (res.code === 'CUSTOMER_HAS_TRANSACTIONS') {
+        setBlockedMessage(res.message);
+      } else {
+        setError(res.message);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Không thể xoá đại lý');
     } finally {
       setSubmitting(false);
     }
@@ -92,8 +119,12 @@ export const DeleteAgencyModal: React.FC<DeleteAgencyModalProps> = ({
                   Đã phát sinh giao dịch không thể xóa
                 </h3>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  Đại lý <strong className="text-gray-900">[{agency.code}] {agency.name}</strong> đã phát sinh{' '}
-                  <strong className="text-orange-600">{agency.transactionCount} giao dịch / đơn hàng</strong> trong hệ thống.
+                  {blockedMessage || (
+                    <>
+                      Đại lý <strong className="text-gray-900">[{agency.code}] {agency.name}</strong> đã phát sinh{' '}
+                      <strong className="text-orange-600">{agency.transactionCount} giao dịch / đơn hàng</strong> trong hệ thống.
+                    </>
+                  )}
                 </p>
               </div>
 
@@ -116,12 +147,31 @@ export const DeleteAgencyModal: React.FC<DeleteAgencyModalProps> = ({
                   Bạn có chắc muốn xóa đại lý này?
                 </h3>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  Hồ sơ đại lý <strong className="text-gray-900">[{agency.code}] {agency.name}</strong> chưa phát sinh giao dịch nào.
+                  Hồ sơ đại lý <strong className="text-gray-900">[{agency.code}] {agency.name}</strong>
                 </p>
               </div>
 
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 text-left">
-                ⚠️ Hành động này sẽ <strong>xóa vĩnh viễn</strong> hồ sơ đại lý khỏi hệ thống và không thể khôi phục lại.
+                ⚠️ Chỉ xoá được đại lý <strong>chưa có đơn hàng nào</strong> (vd tạo nhầm). Hồ sơ, điểm giao và lịch sử phân công sẽ bị{' '}
+                <strong>xóa vĩnh viễn</strong>; thao tác được ghi vào Nhật ký thao tác.
+              </div>
+
+              <div className="text-left">
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Lý do xoá <span className="text-rose-600">*</span>
+                </label>
+                <textarea
+                  value={reason}
+                  onChange={(e) => {
+                    setReason(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  maxLength={500}
+                  rows={2}
+                  placeholder="VD: Tạo nhầm hồ sơ, trùng với đại lý DL-001"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200 focus:border-rose-400 focus:ring-1 focus:ring-rose-200 outline-none resize-none"
+                />
+                {error && <p className="mt-1 text-[11px] font-semibold text-rose-600">{error}</p>}
               </div>
             </div>
           )}

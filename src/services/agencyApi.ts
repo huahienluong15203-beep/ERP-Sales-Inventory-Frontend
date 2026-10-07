@@ -772,14 +772,26 @@ export async function reactivateAgency(id: string): Promise<{ success: boolean; 
 }
 
 /**
- * 6. Đại lý KHÔNG xoá cứng khỏi hệ thống (quy tắc 8: dữ liệu đã phát sinh giao dịch chỉ chuyển trạng thái).
+ * 6. Xoá hồ sơ đại lý (Admin, Kế toán công nợ), bắt buộc lý do.
+ * Backend chỉ cho xoá đại lý CHƯA phát sinh đơn hàng; đã có đơn -> code CUSTOMER_HAS_TRANSACTIONS
+ * (quy tắc 8: giữ lịch sử, dùng "Dừng giao dịch" thay thế).
  */
-export async function deleteAgency(id: string): Promise<{ success: boolean; message: string }> {
-  void id;
+export async function deleteAgency(
+  id: string,
+  reason: string
+): Promise<{ success: boolean; message: string; code?: string }> {
+  const res = await authFetch(`${CUSTOMERS_URL}/${id}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ reason })
+  });
+  if (res.ok) {
+    return { success: true, message: 'Đã xoá hồ sơ đại lý khỏi hệ thống' };
+  }
+  const data = await res.clone().json().catch(() => null);
   return {
     success: false,
-    message:
-      'Hồ sơ đại lý không xoá khỏi hệ thống để giữ lịch sử đơn hàng và công nợ. Vui lòng dùng "Dừng giao dịch" thay cho xoá.'
+    code: data?.code,
+    message: await readBackendError(res, 'Không thể xoá đại lý')
   };
 }
 
