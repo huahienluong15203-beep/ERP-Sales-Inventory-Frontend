@@ -39,7 +39,7 @@ export const CUSTOMER_GROUP_OPTIONS: CustomerGroupOption[] = [
     defaultPricingTier: {
       id: 'PRICE_TIER_1',
       code: 'BG-CK25',
-      name: 'Bảng giá Sỉ Cấp 1 (CK 25%)',
+      name: 'Bảng giá Sỉ Cấp 1',
       discountPercent: 25,
       description: 'Chiết khấu 25% trực tiếp trên giá bán niêm yết',
       badgeBg: '#FEF3C7',
@@ -53,7 +53,7 @@ export const CUSTOMER_GROUP_OPTIONS: CustomerGroupOption[] = [
     defaultPricingTier: {
       id: 'PRICE_TIER_2',
       code: 'BG-CK15',
-      name: 'Bảng giá Đại lý Cấp 2 (CK 15%)',
+      name: 'Bảng giá Đại lý Cấp 2',
       discountPercent: 15,
       description: 'Chiết khấu 15% trực tiếp trên giá bán niêm yết',
       badgeBg: '#E0E7FF',
@@ -67,7 +67,7 @@ export const CUSTOMER_GROUP_OPTIONS: CustomerGroupOption[] = [
     defaultPricingTier: {
       id: 'PRICE_STANDARD',
       code: 'BG-STANDARD',
-      name: 'Bảng giá Niêm yết Chuẩn (CK 0%)',
+      name: 'Bảng giá Niêm yết Chuẩn',
       discountPercent: 0,
       description: 'Bán theo đúng giá niêm yết công ty, bảo hộ giá thị trường',
       badgeBg: '#F3F4F6',
