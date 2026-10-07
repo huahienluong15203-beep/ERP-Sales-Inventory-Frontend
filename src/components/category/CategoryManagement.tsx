@@ -3,7 +3,6 @@ import type { ProductCategory, CategoryProduct, CategoryRollup } from '../../typ
 import { useAuth } from '../../contexts/AuthContext';
 import {
   CATEGORY_MAX_LEVEL,
-  CATEGORY_PRODUCTS_MAX_PAGE_SIZE,
   createCategory,
   deleteCategory,
   fetchCategories,
@@ -15,6 +14,7 @@ import {
 import { productService } from '../../services/productService';
 import type { Product } from '../../types/product';
 import { RefreshCw } from '../common/Icons';
+import { Pagination } from '../common/Pagination';
 
 // Chỉ ADMIN và SALES_MANAGER được ghi (backend @PreAuthorize). Các vai trò khác chỉ xem.
 const WRITE_ROLES = new Set(['ADMIN', 'SALES_MANAGER']);
@@ -40,6 +40,9 @@ export const CategoryManagement: React.FC = () => {
   // Sản phẩm của nhóm đang chọn (từ server)
   const [products, setProducts] = useState<CategoryProduct[]>([]);
   const [productsTotal, setProductsTotal] = useState<number>(0);
+  const [productPage, setProductPage] = useState<number>(0);
+  const [productSize, setProductSize] = useState<number>(20);
+  const [productTotalPages, setProductTotalPages] = useState<number>(1);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(false);
   const [productsError, setProductsError] = useState<string | null>(null);
   const [productsReloadKey, setProductsReloadKey] = useState<number>(0);
@@ -49,6 +52,9 @@ export const CategoryManagement: React.FC = () => {
 
   // Nhóm đang chọn trong cây
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+
+  // Tìm kiếm lọc cây nhóm hàng
+  const [treeSearch, setTreeSearch] = useState<string>('');
 
   // Trạng thái mở rộng các node cây
   const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(() => new Set());
@@ -133,11 +139,17 @@ export const CategoryManagement: React.FC = () => {
     loadCategories({ initial: true });
   }, [loadCategories]);
 
-  // Tải sản phẩm của nhóm đang chọn theo phạm vi xem
+  // Khi đổi nhóm hàng hoặc phạm vi xem thì quay về trang đầu
+  useEffect(() => {
+    setProductPage(0);
+  }, [selectedCategoryId, viewScope]);
+
+  // Tải sản phẩm của nhóm đang chọn theo phạm vi xem và phân trang
   useEffect(() => {
     if (!selectedCategoryId) {
       setProducts([]);
       setProductsTotal(0);
+      setProductTotalPages(1);
       return;
     }
     let cancelled = false;
@@ -145,18 +157,20 @@ export const CategoryManagement: React.FC = () => {
     setProductsError(null);
     fetchCategoryProducts(selectedCategoryId, {
       includeSubgroups: viewScope === 'BRANCH',
-      page: 0,
-      size: CATEGORY_PRODUCTS_MAX_PAGE_SIZE
+      page: productPage,
+      size: productSize
     })
       .then((res) => {
         if (cancelled) return;
         setProducts(res.content);
         setProductsTotal(res.totalElements);
+        setProductTotalPages(res.totalPages || Math.ceil(res.totalElements / productSize) || 1);
       })
       .catch((err) => {
         if (cancelled) return;
         setProducts([]);
         setProductsTotal(0);
+        setProductTotalPages(1);
         setProductsError(errMsg(err, 'Không thể tải danh sách sản phẩm.'));
       })
       .finally(() => {
@@ -165,7 +179,7 @@ export const CategoryManagement: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [selectedCategoryId, viewScope, productsReloadKey]);
+  }, [selectedCategoryId, viewScope, productPage, productSize, productsReloadKey]);
 
   const refreshAll = async () => {
     await loadCategories();
@@ -513,15 +527,57 @@ export const CategoryManagement: React.FC = () => {
     });
   };
 
+  // Tổng số SKU toàn hệ thống
+  const totalSystemSkus = useMemo(() => {
+    return categories
+      .filter((c) => c.parentId === null)
+      .reduce((sum, c) => sum + (rollupsByCategoryId[c.id]?.totalProductCount || 0), 0);
+  }, [categories, rollupsByCategoryId]);
+
+  // Set các ID nhóm hàng khớp từ khoá tìm kiếm trên cây (bao gồm cả các cha của nó)
+  const matchingTreeCategoryIds = useMemo(() => {
+    if (!treeSearch.trim()) return null;
+    const q = treeSearch.toLowerCase().trim();
+    const matches = new Set<string>();
+
+    categories.forEach((cat) => {
+      if (cat.name.toLowerCase().includes(q) || cat.code.toLowerCase().includes(q)) {
+        matches.add(cat.id);
+        let curr = categories.find((c) => c.id === cat.parentId);
+        while (curr) {
+          matches.add(curr.id);
+          curr = categories.find((c) => c.id === curr?.parentId);
+        }
+      }
+    });
+
+    return matches;
+  }, [categories, treeSearch]);
+
+  // Tự động mở rộng khi có kết quả tìm kiếm trên cây
+  useEffect(() => {
+    if (matchingTreeCategoryIds && matchingTreeCategoryIds.size > 0) {
+      setExpandedNodeIds((prev) => new Set([...prev, ...matchingTreeCategoryIds]));
+    }
+  }, [matchingTreeCategoryIds]);
+
   // Hàm render đệ quy cây nhóm hàng với thụt lề và đường nối trực quan
   const renderCategoryTree = (parentId: string | null = null, depth = 0) => {
-    const currentLevelNodes = categories.filter((c) => c.parentId === parentId);
+    const currentLevelNodes = categories.filter((c) => {
+      if (c.parentId !== parentId) return false;
+      if (matchingTreeCategoryIds && !matchingTreeCategoryIds.has(c.id)) return false;
+      return true;
+    });
     if (currentLevelNodes.length === 0) return null;
 
     return (
       <div className={`space-y-1 ${depth > 0 ? 'ml-3 sm:ml-4 pl-2 border-l border-slate-200' : ''}`}>
         {currentLevelNodes.map((cat) => {
-          const hasChildren = categories.some((c) => c.parentId === cat.id);
+          const hasChildren = categories.some((c) => {
+            if (c.parentId !== cat.id) return false;
+            if (matchingTreeCategoryIds && !matchingTreeCategoryIds.has(c.id)) return false;
+            return true;
+          });
           const isExpanded = expandedNodeIds.has(cat.id);
           const isSelected = selectedCategoryId === cat.id;
           const rollup = rollupsByCategoryId[cat.id] || {
@@ -783,6 +839,42 @@ export const CategoryManagement: React.FC = () => {
             </div>
           </div>
 
+          {/* Thống kê nhanh tổng SKU toàn hệ thống */}
+          <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-orange-50/80 to-amber-50/80 border border-orange-200/80 rounded-xl text-xs text-orange-950">
+            <span className="font-medium text-slate-700">Tổng sản phẩm toàn hệ thống:</span>
+            <span className="font-mono font-bold text-orange-600 bg-white px-2.5 py-0.5 rounded-lg border border-orange-200 shadow-xs">
+              {totalSystemSkus.toLocaleString('vi-VN')} SKU
+            </span>
+          </div>
+
+          {/* Ô lọc tìm kiếm nhanh trên cây */}
+          <div className="relative">
+            <input
+              type="text"
+              value={treeSearch}
+              onChange={(e) => setTreeSearch(e.target.value)}
+              placeholder="Lọc nhanh ngành / nhóm hàng..."
+              className="w-full h-8 pl-8 pr-7 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200"
+            />
+            <svg
+              className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {treeSearch && (
+              <button
+                type="button"
+                onClick={() => setTreeSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
           {/* Hướng dẫn quy tắc nhanh */}
           <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-[11px] text-amber-800 space-y-1">
             <div className="font-semibold flex items-center gap-1.5 text-amber-900">
@@ -980,18 +1072,13 @@ export const CategoryManagement: React.FC = () => {
                   <div>
                     <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                       <span>Danh Sách Mã Hàng Trong Ngành</span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
-                        {displayedProducts.length} sản phẩm
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-200">
+                        {productsTotal.toLocaleString('vi-VN')} sản phẩm
                       </span>
                     </h3>
                     <p className="text-xs text-slate-400">
                       {canManage ? 'Xem mã hàng trong nhóm và thực hiện chuyển nhóm hàng' : 'Xem mã hàng trong nhóm'}
                     </p>
-                    {productsTotal > products.length && (
-                      <p className="text-[11px] text-amber-700">
-                        Đang hiển thị {products.length}/{productsTotal} sản phẩm đầu tiên.
-                      </p>
-                    )}
                   </div>
 
                   {/* Toggle phạm vi xem + Ô tìm kiếm */}
@@ -1164,6 +1251,23 @@ export const CategoryManagement: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Thanh phân trang sản phẩm trong nhóm */}
+                {productsTotal > 0 && (
+                  <Pagination
+                    page={productPage}
+                    totalPages={productTotalPages}
+                    totalElements={productsTotal}
+                    size={productSize}
+                    onPageChange={setProductPage}
+                    onSizeChange={(newSize) => {
+                      setProductSize(newSize);
+                      setProductPage(0);
+                    }}
+                    itemLabel="sản phẩm"
+                    disabled={loadingProducts}
+                  />
+                )}
               </div>
             </>
           ) : (

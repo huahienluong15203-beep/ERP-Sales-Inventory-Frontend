@@ -49,6 +49,31 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
+  // Tối ưu hóa khi bảng giá có nhiều dòng sản phẩm: Lọc & phân trang danh sách dòng
+  const [itemFilter, setItemFilter] = useState<string>('');
+  const [itemPage, setItemPage] = useState<number>(0);
+  const pageSize = 25;
+
+  const filteredIndexedItems = useMemo(() => {
+    return items
+      .map((item, originalIndex) => ({ item, originalIndex }))
+      .filter(({ item }) => {
+        if (!itemFilter.trim()) return true;
+        const q = itemFilter.toLowerCase().trim();
+        return (
+          item.productSku.toLowerCase().includes(q) ||
+          item.productName.toLowerCase().includes(q)
+        );
+      });
+  }, [items, itemFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredIndexedItems.length / pageSize));
+  const currentPage = Math.min(itemPage, totalPages - 1);
+  const pagedIndexedItems = useMemo(() => {
+    const start = currentPage * pageSize;
+    return filteredIndexedItems.slice(start, start + pageSize);
+  }, [filteredIndexedItems, currentPage, pageSize]);
+
   // Tìm kiếm sản phẩm thật trong hệ thống (YC1: hỗ trợ tìm kiếm cả FE lẫn BE)
   const [productSearchInput, setProductSearchInput] = useState<string>('');
   const [productOptions, setProductOptions] = useState<ProductOptionItem[]>([]);
@@ -438,9 +463,9 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                       <div className="p-2 bg-gray-50/90 text-[11px] font-semibold text-gray-500 flex justify-between items-center sticky top-0 backdrop-blur-sm border-b border-gray-100">
                         <span>Sản phẩm trong hệ thống ({filteredProducts.length})</span>
                         {productSearchInput ? (
-                          <span className="text-orange-600 font-normal">Gõ tìm kiếm FE & BE</span>
+                          <span className="text-orange-600 font-normal"> </span>
                         ) : (
-                          <span className="text-gray-400 font-normal">Gợi ý sản phẩm thật</span>
+                          <span className="text-gray-400 font-normal"> </span>
                         )}
                       </div>
                       {filteredProducts.length === 0 ? (
@@ -460,9 +485,8 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                               type="button"
                               disabled={isAdded}
                               onClick={() => handleAddRealProduct(p)}
-                              className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 transition-colors cursor-pointer ${
-                                isAdded ? 'bg-gray-50/70 opacity-60 cursor-not-allowed' : 'hover:bg-orange-50/70'
-                              }`}
+                              className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 transition-colors cursor-pointer ${isAdded ? 'bg-gray-50/70 opacity-60 cursor-not-allowed' : 'hover:bg-orange-50/70'
+                                }`}
                             >
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -498,6 +522,35 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                   )}
                 </div>
 
+                {/* Ô lọc dòng giá trong bảng */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={itemFilter}
+                    onChange={(e) => {
+                      setItemFilter(e.target.value);
+                      setItemPage(0);
+                    }}
+                    placeholder="Lọc dòng giá đã thêm..."
+                    className="w-40 sm:w-48 text-xs px-2.5 py-1.5 pl-7 pr-6 bg-white border border-gray-300 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-500"
+                  />
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                    <Icons.Search size={12} />
+                  </span>
+                  {itemFilter && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setItemFilter('');
+                        setItemPage(0);
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
                 <button
                   type="button"
                   onClick={handleAddItemRow}
@@ -524,19 +577,22 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-xs">
-                  {items.length === 0 ? (
+                  {filteredIndexedItems.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-gray-400">
-                        Chưa có sản phẩm nào. Hãy tìm kiếm sản phẩm phía trên hoặc bấm "Thêm dòng trống" để bắt đầu định giá.
+                        {itemFilter
+                          ? `Không tìm thấy dòng giá nào khớp với từ khóa "${itemFilter}".`
+                          : 'Chưa có sản phẩm nào. Hãy tìm kiếm sản phẩm phía trên hoặc bấm "Thêm dòng trống" để bắt đầu định giá.'}
                       </td>
                     </tr>
                   ) : (
-                    items.map((item, idx) => {
+                    pagedIndexedItems.map(({ item, originalIndex }, pagedIdx) => {
                       const numP = parseFloat(item.price) || 0;
                       const numF = parseFloat(item.floorPrice) || 0;
                       const hasFloorError = numF > numP && numP > 0;
                       const diff = numP - numF;
-                      const rowKey = item.id ? `item-${item.id}` : `sku-${item.productSku || 'idx'}-${idx}`;
+                      const rowNumber = currentPage * pageSize + pagedIdx + 1;
+                      const rowKey = item.id ? `item-${item.id}` : `sku-${item.productSku || 'idx'}-${originalIndex}`;
 
                       return (
                         <tr
@@ -544,13 +600,13 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                           className={hasFloorError ? 'bg-rose-50/60' : ''}
                         >
                           <td className="py-2 px-3 text-center text-gray-400 font-mono text-[11px]">
-                            <span>{idx + 1}</span>
+                            <span>{rowNumber}</span>
                           </td>
                           <td className="py-2 px-3">
                             <input
                               type="text"
                               value={item.productSku}
-                              onChange={(e) => handleUpdateItem(idx, 'productSku', e.target.value)}
+                              onChange={(e) => handleUpdateItem(originalIndex, 'productSku', e.target.value)}
                               placeholder="SKU-001"
                               className="w-full px-2 py-1 bg-white border border-gray-300 rounded-lg text-xs font-mono uppercase font-bold"
                               required
@@ -560,7 +616,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                             <input
                               type="text"
                               value={item.productName}
-                              onChange={(e) => handleUpdateItem(idx, 'productName', e.target.value)}
+                              onChange={(e) => handleUpdateItem(originalIndex, 'productName', e.target.value)}
                               placeholder="Tên sản phẩm..."
                               className="w-full px-2 py-1 bg-white border border-gray-300 rounded-lg text-xs"
                             />
@@ -569,7 +625,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                             <input
                               type="number"
                               value={item.price}
-                              onChange={(e) => handleUpdateItem(idx, 'price', e.target.value)}
+                              onChange={(e) => handleUpdateItem(originalIndex, 'price', e.target.value)}
                               placeholder="250000"
                               className="w-full px-2 py-1 bg-white border border-gray-300 rounded-lg text-xs text-right font-semibold text-emerald-600"
                               required
@@ -579,13 +635,12 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                             <input
                               type="number"
                               value={item.floorPrice}
-                              onChange={(e) => handleUpdateItem(idx, 'floorPrice', e.target.value)}
+                              onChange={(e) => handleUpdateItem(originalIndex, 'floorPrice', e.target.value)}
                               placeholder="220000"
-                              className={`w-full px-2 py-1 bg-white border rounded-lg text-xs text-right font-semibold ${
-                                hasFloorError
-                                  ? 'border-rose-500 text-rose-600 ring-1 ring-rose-500'
-                                  : 'border-gray-300 text-amber-600'
-                              }`}
+                              className={`w-full px-2 py-1 bg-white border rounded-lg text-xs text-right font-semibold ${hasFloorError
+                                ? 'border-rose-500 text-rose-600 ring-1 ring-rose-500'
+                                : 'border-gray-300 text-amber-600'
+                                }`}
                               required
                             />
                           </td>
@@ -595,21 +650,21 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                                 hasFloorError
                                   ? 'inline-block text-[10px] text-rose-600 font-bold'
                                   : numP > 0
-                                  ? 'inline-block text-[11px] text-gray-500 font-medium'
-                                  : 'inline-block text-gray-400'
+                                    ? 'inline-block text-[11px] text-gray-500 font-medium'
+                                    : 'inline-block text-gray-400'
                               }
                             >
                               {hasFloorError
                                 ? 'Sàn > Giá!'
                                 : numP > 0
-                                ? `-${Math.round((diff / numP) * 100)}%`
-                                : '-'}
+                                  ? `-${Math.round((diff / numP) * 100)}%`
+                                  : '-'}
                             </span>
                           </td>
                           <td className="py-2 px-3 text-center">
                             <button
                               type="button"
-                              onClick={() => handleRemoveItem(idx)}
+                              onClick={() => handleRemoveItem(originalIndex)}
                               className="text-gray-400 hover:text-rose-600 p-1 rounded-md transition-colors cursor-pointer"
                             >
                               <Icons.Trash2 size={14} />
@@ -621,6 +676,39 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                   )}
                 </tbody>
               </table>
+
+              {/* Thanh phân trang nội bộ cho bảng nhập liệu */}
+              {filteredIndexedItems.length > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-2.5 bg-gray-50/80 border-t border-gray-200 text-xs text-gray-600">
+                  <div>
+                    Hiển thị <strong>{currentPage * pageSize + 1}</strong>–<strong>{Math.min((currentPage + 1) * pageSize, filteredIndexedItems.length)}</strong> / <strong>{filteredIndexedItems.length.toLocaleString('vi-VN')}</strong> dòng
+                    {filteredIndexedItems.length !== items.length && (
+                      <span className="text-gray-400 ml-1">(lọc từ {items.length.toLocaleString('vi-VN')} mặt hàng)</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setItemPage((p) => Math.max(0, p - 1))}
+                      disabled={currentPage === 0}
+                      className="px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-xs font-semibold transition-colors"
+                    >
+                      Trang trước
+                    </button>
+                    <span className="px-2 font-mono font-medium text-gray-800">
+                      Trang {currentPage + 1} / {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setItemPage((p) => Math.min(totalPages - 1, p + 1))}
+                      disabled={currentPage >= totalPages - 1}
+                      className="px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-xs font-semibold transition-colors"
+                    >
+                      Trang sau
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
