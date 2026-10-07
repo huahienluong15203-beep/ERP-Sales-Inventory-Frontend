@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import type {
   Agency,
@@ -6,12 +6,13 @@ import type {
   UpdateAgencyPayload,
   CustomerGroupId,
   SalesRepOption,
-  RegionOption
+  RegionOption,
+  PriceListOption
 } from '../../types/agency';
 import {
   CUSTOMER_GROUP_OPTIONS,
   fetchAgencyFormOptions,
-  getPricingTierByGroup
+  getRealPriceListForGroup
 } from '../../services/agencyApi';
 import { X, Building2, AlertTriangle, CheckCircle2, Info } from '../common/Icons';
 import { AddressPicker } from '../common/AddressPicker';
@@ -36,9 +37,10 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
   const canChangeSalesRep = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER';
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Khu vực + nhân viên kinh doanh lấy từ Backend (id thật trong DB)
+  // Khu vực + nhân viên kinh doanh + bảng giá lấy từ Backend (id thật trong DB)
   const [salesReps, setSalesReps] = useState<SalesRepOption[]>([]);
   const [regions, setRegions] = useState<RegionOption[]>([]);
+  const [priceLists, setPriceLists] = useState<PriceListOption[]>([]);
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [taxCode, setTaxCode] = useState('');
@@ -59,6 +61,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
         .then((options) => {
           setRegions(options.regions);
           setSalesReps(options.salesReps);
+          setPriceLists(options.priceLists || []);
           // Chỉ khi THÊM MỚI mới chọn sẵn khu vực / người phụ trách đầu tiên.
           // Sửa đại lý chưa có người phụ trách thì giữ trống, không tự gán người khác.
           if (!initialData) {
@@ -70,8 +73,11 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
     }
   }, [isOpen]);
 
-  // Bảng giá hiện thời được ánh xạ trực tiếp từ Nhóm khách hàng đã chọn
-  const activePricingTier = getPricingTierByGroup(customerGroup);
+  // Bảng giá hiện thời được ánh xạ trực tiếp từ Nhóm khách hàng đã chọn (dữ liệu thật trong hệ thống)
+  const activePricingTier = useMemo(
+    () => getRealPriceListForGroup(customerGroup, priceLists),
+    [customerGroup, priceLists]
+  );
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -321,17 +327,20 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
                   Bảng Giá Áp Dụng Tự Động:
                 </label>
                 <div
-                  className="px-3 py-2 rounded-lg border flex items-center justify-between text-xs font-bold"
+                  className="px-3 py-2 rounded-lg border flex items-center justify-between text-xs font-bold gap-2"
                   style={{
                     backgroundColor: activePricingTier.badgeBg,
                     color: activePricingTier.badgeColor,
                     borderColor: 'currentColor'
                   }}
+                  title={`${activePricingTier.code} - ${activePricingTier.name}`}
                 >
-                  <span>{activePricingTier.name}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-white/80 text-[10px] tracking-wide">
-                    CK {activePricingTier.discountPercent}%
-                  </span>
+                  <span className="truncate">{activePricingTier.name}</span>
+                  {activePricingTier.code && (
+                    <span className="px-2 py-0.5 rounded-full bg-white/90 text-[10px] font-mono tracking-wider shrink-0 border border-black/10">
+                      {activePricingTier.code}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

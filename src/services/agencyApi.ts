@@ -27,7 +27,9 @@ import type {
   AssignSalesRepPayload,
   TransferCustomersPayload,
   CustomerTransactionLockPayload,
-  OrderCreationCheckResponse
+  OrderCreationCheckResponse,
+  PricingTier,
+  PriceListOption
 } from '../types/agency';
 
 // Danh mục Nhóm khách hàng & Bảng giá tương ứng
@@ -37,11 +39,10 @@ export const CUSTOMER_GROUP_OPTIONS: CustomerGroupOption[] = [
     name: 'Đại lý Cấp 1 (Tổng thầu / NPP Lớn)',
     description: 'Áp dụng cho các nhà phân phối độc quyền cấp tỉnh, sản lượng lớn',
     defaultPricingTier: {
-      id: 'PRICE_TIER_1',
-      code: 'BG-CK25',
-      name: 'Bảng giá Sỉ Cấp 1',
-      discountPercent: 25,
-      description: 'Chiết khấu 25% trực tiếp trên giá bán niêm yết',
+      id: 'BG-DL1-2026',
+      code: 'BG-DL1-2026',
+      name: 'Bảng giá Đại lý Cấp 1 (NPP Toàn quốc 2026)',
+      description: 'Bảng giá chuẩn dành cho Nhà phân phối Cấp 1',
       badgeBg: '#FEF3C7',
       badgeColor: '#92400E'
     }
@@ -51,11 +52,10 @@ export const CUSTOMER_GROUP_OPTIONS: CustomerGroupOption[] = [
     name: 'Đại lý Cấp 2 (Bán buôn khu vực)',
     description: 'Áp dụng cho các cửa hàng đại lý vùng, doanh số trung bình',
     defaultPricingTier: {
-      id: 'PRICE_TIER_2',
-      code: 'BG-CK15',
-      name: 'Bảng giá Đại lý Cấp 2',
-      discountPercent: 15,
-      description: 'Chiết khấu 15% trực tiếp trên giá bán niêm yết',
+      id: 'BG-DL2-2026',
+      code: 'BG-DL2-2026',
+      name: 'Bảng giá Đại lý Cấp 2 (Bán buôn khu vực 2026)',
+      description: 'Bảng giá chuẩn dành cho Đại lý Bán buôn Cấp 2',
       badgeBg: '#E0E7FF',
       badgeColor: '#3730A3'
     }
@@ -65,11 +65,10 @@ export const CUSTOMER_GROUP_OPTIONS: CustomerGroupOption[] = [
     name: 'Đại lý Showroom & Bán lẻ VIP',
     description: 'Áp dụng cho các điểm giới thiệu sản phẩm và đối tác thương mại',
     defaultPricingTier: {
-      id: 'PRICE_STANDARD',
-      code: 'BG-STANDARD',
-      name: 'Bảng giá Niêm yết Chuẩn',
-      discountPercent: 0,
-      description: 'Bán theo đúng giá niêm yết công ty, bảo hộ giá thị trường',
+      id: 'BG-RETAIL-2026',
+      code: 'BG-RETAIL-2026',
+      name: 'Bảng giá Niêm yết Khách lẻ & Showroom 2026',
+      description: 'Bảng giá bán lẻ niêm yết trực tiếp showroom',
       badgeBg: '#F3F4F6',
       badgeColor: '#374151'
     }
@@ -427,6 +426,7 @@ interface BackendCustomer {
   transactionLocked?: boolean | null;
   transactionLockReason?: string | null;
   transactionLockedAt?: string | null;
+  priceList?: { id: number; code: string; name: string } | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 }
@@ -435,6 +435,29 @@ function mapCustomer(c: BackendCustomer): Agency {
   const groupId = groupFromBackend(c.customerGroup);
   const groupOption = CUSTOMER_GROUP_OPTIONS.find((g) => g.id === groupId);
   const suspended = c.status === 'INACTIVE';
+
+  // Lấy bảng giá thật từ Backend nếu có, hoặc dùng fallback theo nhóm
+  const groupStyles: Record<CustomerGroupId, { badgeBg: string; badgeColor: string }> = {
+    TIER_1: { badgeBg: '#FEF3C7', badgeColor: '#92400E' },
+    TIER_2: { badgeBg: '#E0E7FF', badgeColor: '#3730A3' },
+    RETAIL_SHOWROOM: { badgeBg: '#F3F4F6', badgeColor: '#374151' }
+  };
+  const style = groupStyles[groupId] || groupStyles.RETAIL_SHOWROOM;
+
+  let pricingTier: PricingTier;
+  if (c.priceList) {
+    pricingTier = {
+      id: String(c.priceList.id),
+      code: c.priceList.code,
+      name: c.priceList.name,
+      description: `Bảng giá áp dụng: ${c.priceList.code}`,
+      badgeBg: style.badgeBg,
+      badgeColor: style.badgeColor
+    };
+  } else {
+    pricingTier = getPricingTierByGroup(groupId);
+  }
+
   return {
     id: String(c.id),
     code: c.code,
@@ -442,7 +465,8 @@ function mapCustomer(c: BackendCustomer): Agency {
     taxCode: c.taxCode || '',
     customerGroup: groupId,
     customerGroupName: c.customerGroupLabel || groupOption?.name || groupId,
-    pricingTier: getPricingTierByGroup(groupId),
+    pricingTier,
+    priceList: c.priceList || null,
     regionId: c.region?.id != null ? String(c.region.id) : '',
     regionName: c.region?.name || 'Chưa xác định',
     assignedRepId: c.salesRep?.id != null ? String(c.salesRep.id) : '',
@@ -468,6 +492,7 @@ function mapCustomer(c: BackendCustomer): Agency {
 export interface AgencyFormOptions {
   regions: RegionOption[];
   salesReps: SalesRepOption[];
+  priceLists: PriceListOption[];
 }
 
 let formOptionsCache: Promise<AgencyFormOptions> | null = null;
@@ -476,7 +501,34 @@ export function invalidateAgencyFormOptionsCache(): void {
   formOptionsCache = null;
 }
 
-/** Khu vực + nhân viên kinh doanh thật từ Backend (GET /api/customers/form-options). */
+/** Lấy Bảng giá thực tế khớp theo Nhóm khách hàng từ danh mục formOptions */
+export function getRealPriceListForGroup(
+  groupId: CustomerGroupId,
+  availablePriceLists?: PriceListOption[]
+): PricingTier {
+  const backendGroup = GROUP_TO_BACKEND[groupId];
+  const found = availablePriceLists?.find((pl) => pl.customerGroup === backendGroup && pl.status !== 'INACTIVE');
+  const groupStyles: Record<CustomerGroupId, { badgeBg: string; badgeColor: string }> = {
+    TIER_1: { badgeBg: '#FEF3C7', badgeColor: '#92400E' },
+    TIER_2: { badgeBg: '#E0E7FF', badgeColor: '#3730A3' },
+    RETAIL_SHOWROOM: { badgeBg: '#F3F4F6', badgeColor: '#374151' }
+  };
+  const style = groupStyles[groupId] || groupStyles.RETAIL_SHOWROOM;
+
+  if (found) {
+    return {
+      id: String(found.id),
+      code: found.code,
+      name: found.name,
+      description: `Bảng giá áp dụng: ${found.code}`,
+      badgeBg: style.badgeBg,
+      badgeColor: style.badgeColor
+    };
+  }
+  return getPricingTierByGroup(groupId);
+}
+
+/** Khu vực + nhân viên kinh doanh + bảng giá thật từ Backend (GET /api/customers/form-options). */
 export function fetchAgencyFormOptions(forceReload: boolean = false): Promise<AgencyFormOptions> {
   if (forceReload || !formOptionsCache) {
     formOptionsCache = authFetch(`${CUSTOMERS_URL}/form-options`)
@@ -496,6 +548,16 @@ export function fetchAgencyFormOptions(forceReload: boolean = false): Promise<Ag
             phone: '',
             email: '',
             regionId: ''
+          })),
+          priceLists: (data?.priceLists || []).map((pl: { id: number; code: string; name: string; customerGroup: string; customerGroupLabel?: string; startDate?: string; endDate?: string | null; status?: string }) => ({
+            id: pl.id,
+            code: pl.code,
+            name: pl.name,
+            customerGroup: pl.customerGroup,
+            customerGroupLabel: pl.customerGroupLabel,
+            startDate: pl.startDate,
+            endDate: pl.endDate,
+            status: pl.status
           }))
         };
       })

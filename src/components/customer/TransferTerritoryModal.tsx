@@ -217,7 +217,7 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
               >
                 {salesReps.map((rep) => (
                   <option key={rep.id} value={rep.id} disabled={rep.id === fromRepId}>
-                    {rep.fullName} {rep.phone ? `(${rep.phone})` : ''} {rep.id === fromRepId ? '(Trùng)' : ''}
+                    {rep.fullName} {rep.phone ? `(${rep.phone})` : ''} {rep.id === fromRepId ? '' : ''}
                   </option>
                 ))}
               </select>

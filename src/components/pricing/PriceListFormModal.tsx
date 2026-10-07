@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { PriceList, PriceListRequest, PriceListItemRequest, CustomerGroupType } from '../../types/pricing';
-import { CUSTOMER_GROUPS, CATALOG_PRODUCTS } from '../../types/pricing';
+import { CUSTOMER_GROUPS } from '../../types/pricing';
 import { createPriceList, updatePriceList } from '../../services/pricingApi';
+import { productService } from '../../services/productService';
+import type { ProductOptionItem } from '../../services/productService';
 import { Icons } from '../common/Icons';
 
 interface PriceListFormModalProps {
@@ -42,29 +44,81 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
         floorPrice: it.floorPrice.toString()
       }));
     }
-    return [
-      {
-        productSku: 'BIA-HN-330',
-        productName: 'Bia Hà Nội Lon 330ml (Thùng 24 lon)',
-        price: '210000',
-        floorPrice: '200000'
-      },
-      {
-        productSku: 'BIA-SG-330',
-        productName: 'Bia Sài Gòn Special Lon 330ml',
-        price: '260000',
-        floorPrice: '245000'
-      },
-      {
-        productSku: 'COCA-320',
-        productName: 'Nước ngọt Coca-Cola Lon 320ml',
-        price: '165000',
-        floorPrice: '155000'
-      }
-    ];
+    return [];
   });
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
+
+  // Tìm kiếm sản phẩm thật trong hệ thống (YC1: hỗ trợ tìm kiếm cả FE lẫn BE)
+  const [productSearchInput, setProductSearchInput] = useState<string>('');
+  const [productOptions, setProductOptions] = useState<ProductOptionItem[]>([]);
+  const [isSearchingProduct, setIsSearchingProduct] = useState<boolean>(false);
+  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState<boolean>(false);
+  const searchDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Tải danh sách sản phẩm thật ban đầu khi mở modal
+  useEffect(() => {
+    productService
+      .searchProductOptions('', 50)
+      .then((prods) => {
+        setProductOptions(prods);
+      })
+      .catch((err) => {
+        console.error('Không tải được danh mục sản phẩm mẫu:', err);
+      });
+  }, []);
+
+  // Debounce tìm kiếm phía Server (BE) khi người dùng gõ từ khóa
+  useEffect(() => {
+    const trimmed = productSearchInput.trim();
+    if (!trimmed) return;
+
+    const timer = setTimeout(async () => {
+      setIsSearchingProduct(true);
+      try {
+        const results = await productService.searchProductOptions(trimmed, 30);
+        setProductOptions((prev) => {
+          const map = new Map<number, ProductOptionItem>();
+          results.forEach((p) => map.set(p.id, p));
+          prev.forEach((p) => {
+            if (!map.has(p.id)) map.set(p.id, p);
+          });
+          return Array.from(map.values());
+        });
+      } catch (err) {
+        console.error('Lỗi tìm kiếm sản phẩm phía BE:', err);
+      } finally {
+        setIsSearchingProduct(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [productSearchInput]);
+
+  // Đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(event.target as Node)) {
+        setIsProductDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Lọc tức thì phía Frontend (FE) trên tập sản phẩm đã nạp
+  const filteredProducts = useMemo(() => {
+    const q = productSearchInput.trim().toLowerCase();
+    if (!q) return productOptions.slice(0, 30);
+    return productOptions
+      .filter((p) => {
+        const matchSku = p.sku.toLowerCase().includes(q);
+        const matchName = p.name.toLowerCase().includes(q);
+        const matchCat = p.category ? p.category.toLowerCase().includes(q) : false;
+        return matchSku || matchName || matchCat;
+      })
+      .slice(0, 30);
+  }, [productOptions, productSearchInput]);
 
   const handleAddItemRow = () => {
     setItems((prev) => [
@@ -78,16 +132,23 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
     ]);
   };
 
-  const handleAddCatalogProduct = (catalogSku: string) => {
-    if (!catalogSku) return;
-    const prod = CATALOG_PRODUCTS.find((p) => p.sku === catalogSku);
+  const handleAddRealProduct = (prod: ProductOptionItem) => {
     if (!prod) return;
 
     // Kiểm tra SKU đã có chưa
     const existing = items.find((i) => i.productSku.toUpperCase() === prod.sku.toUpperCase());
     if (existing) {
-      alert(`Sản phẩm '${prod.sku}' đã có trong danh sách bảng giá!`);
+      alert(`Sản phẩm '${prod.sku} - ${prod.name}' đã có trong danh sách bảng giá!`);
       return;
+    }
+
+    // Tính mức giá bán và giá sàn hợp lý: nếu có giá vốn thì giá bán = vốn * 1.2, giá sàn = vốn * 1.05
+    let defaultPrice = 100000;
+    let defaultFloor = 90000;
+    if (prod.costPrice && Number(prod.costPrice) > 0) {
+      const cost = Number(prod.costPrice);
+      defaultPrice = Math.round(cost * 1.2);
+      defaultFloor = Math.round(cost * 1.05);
     }
 
     setItems((prev) => [
@@ -95,10 +156,12 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
       {
         productSku: prod.sku,
         productName: prod.name,
-        price: prod.suggestedRetailPrice.toString(),
-        floorPrice: Math.round(prod.suggestedRetailPrice * 0.9).toString()
+        price: defaultPrice.toString(),
+        floorPrice: defaultFloor.toString()
       }
     ]);
+    setProductSearchInput('');
+    setIsProductDropdownOpen(false);
   };
 
   const handleUpdateItem = (index: number, field: keyof EditableItem, value: string) => {
@@ -345,26 +408,100 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
-                {/* Chọn nhanh từ catalog FMCG */}
-                <select
-                  onChange={(e) => {
-                    handleAddCatalogProduct(e.target.value);
-                    e.target.value = '';
-                  }}
-                  className="text-xs px-2.5 py-1.5 bg-gray-100 border border-gray-300 rounded-xl text-gray-700 cursor-pointer"
-                >
-                  <option value="">+ Chọn từ Danh mục FMCG mẫu...</option>
-                  {CATALOG_PRODUCTS.map((prod) => (
-                    <option key={prod.sku} value={prod.sku}>
-                      {prod.sku} - {prod.name}
-                    </option>
-                  ))}
-                </select>
+                {/* Thanh tìm kiếm & chọn sản phẩm thật trong hệ thống (YC1: Tìm kiếm FE & BE) */}
+                <div ref={searchDropdownRef} className="relative min-w-[280px] sm:min-w-[340px]">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={productSearchInput}
+                      onChange={(e) => {
+                        setProductSearchInput(e.target.value);
+                        setIsProductDropdownOpen(true);
+                      }}
+                      onFocus={() => setIsProductDropdownOpen(true)}
+                      placeholder="🔍 Tìm & thêm sản phẩm thật (SKU, tên)..."
+                      className="w-full text-xs px-3 py-1.5 pl-8 bg-white border border-gray-300 rounded-xl text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all"
+                    />
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                      <Icons.Search size={13} />
+                    </span>
+                    {isSearchingProduct && (
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-orange-500">
+                        <div className="w-3.5 h-3.5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Dropdown danh sách sản phẩm thật */}
+                  {isProductDropdownOpen && (
+                    <div className="absolute left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-xl z-50 divide-y divide-gray-100 animate-in fade-in zoom-in-95">
+                      <div className="p-2 bg-gray-50/90 text-[11px] font-semibold text-gray-500 flex justify-between items-center sticky top-0 backdrop-blur-sm border-b border-gray-100">
+                        <span>Sản phẩm trong hệ thống ({filteredProducts.length})</span>
+                        {productSearchInput ? (
+                          <span className="text-orange-600 font-normal">Gõ tìm kiếm FE & BE</span>
+                        ) : (
+                          <span className="text-gray-400 font-normal">Gợi ý sản phẩm thật</span>
+                        )}
+                      </div>
+                      {filteredProducts.length === 0 ? (
+                        <div className="p-4 text-center text-xs text-gray-400">
+                          {isSearchingProduct
+                            ? 'Đang tìm kiếm sản phẩm...'
+                            : `Không tìm thấy sản phẩm nào khớp với "${productSearchInput}"`}
+                        </div>
+                      ) : (
+                        filteredProducts.map((p) => {
+                          const isAdded = items.some(
+                            (it) => it.productSku.toUpperCase() === p.sku.toUpperCase()
+                          );
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              disabled={isAdded}
+                              onClick={() => handleAddRealProduct(p)}
+                              className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                                isAdded ? 'bg-gray-50/70 opacity-60 cursor-not-allowed' : 'hover:bg-orange-50/70'
+                              }`}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-mono font-bold text-[11px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-800 border border-gray-200">
+                                    {p.sku}
+                                  </span>
+                                  <span className="font-medium text-xs text-gray-900 truncate">
+                                    {p.name}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-gray-500 mt-0.5 flex items-center gap-2">
+                                  {p.category && <span>{p.category}</span>}
+                                  {p.baseUnit && <span>• ĐVT: {p.baseUnit}</span>}
+                                  {p.packaging && <span>• {p.packaging}</span>}
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                {isAdded ? (
+                                  <span className="text-[10px] text-gray-400 font-medium px-2 py-0.5 bg-gray-100 rounded-md">
+                                    Đã thêm
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] text-orange-600 font-semibold flex items-center gap-0.5 px-2 py-0.5 rounded-md hover:bg-orange-100/80 transition-colors">
+                                    <Icons.Plus size={12} /> Thêm
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 <button
                   type="button"
                   onClick={handleAddItemRow}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-50 hover:bg-orange-100 text-[#F85606] text-xs font-semibold rounded-xl border border-orange-200 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-50 hover:bg-orange-100 text-[#F85606] text-xs font-semibold rounded-xl border border-orange-200 transition-colors cursor-pointer shrink-0"
                 >
                   <Icons.Plus size={14} />
                   <span>Thêm dòng trống</span>
@@ -390,7 +527,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                   {items.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-gray-400">
-                        Chưa có sản phẩm nào. Hãy bấm "Chọn từ Danh mục FMCG mẫu" hoặc "Thêm dòng trống".
+                        Chưa có sản phẩm nào. Hãy tìm kiếm sản phẩm phía trên hoặc bấm "Thêm dòng trống" để bắt đầu định giá.
                       </td>
                     </tr>
                   ) : (

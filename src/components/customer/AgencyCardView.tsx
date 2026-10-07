@@ -95,18 +95,21 @@ export const AgencyCardView: React.FC<AgencyCardViewProps> = ({
                     {agency.code}
                   </span>
                   <div
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border max-w-full"
                     style={{
                       backgroundColor: agency.pricingTier.badgeBg,
                       color: agency.pricingTier.badgeColor,
                       borderColor: 'currentColor'
                     }}
+                    title={`${agency.pricingTier.code} - ${agency.pricingTier.name}`}
                   >
-                    <BadgeDollarSign size={11} />
-                    <span>{agency.pricingTier.name}</span>
-                    <span className="px-1 py-0.2 rounded-full bg-white/80 text-[9px] ml-0.5">
-                      CK {agency.pricingTier.discountPercent}%
-                    </span>
+                    <BadgeDollarSign size={11} className="shrink-0" />
+                    <span className="truncate">{agency.pricingTier.name}</span>
+                    {agency.pricingTier.code && (
+                      <span className="px-1 py-0.2 rounded-md bg-white/90 text-[9px] font-mono shrink-0 ml-0.5 border border-black/10">
+                        {agency.pricingTier.code}
+                      </span>
+                    )}
                   </div>
                 </div>
 

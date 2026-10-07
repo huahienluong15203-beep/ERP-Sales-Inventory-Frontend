@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { PriceList, CustomerGroupType, PriceListItemRequest } from '../../types/pricing';
-import { CUSTOMER_GROUPS, CATALOG_PRODUCTS } from '../../types/pricing';
+import { CUSTOMER_GROUPS } from '../../types/pricing';
 import { addOrUpdatePriceListItem, deletePriceListItem } from '../../services/pricingApi';
+import { productService } from '../../services/productService';
+import type { ProductOptionItem } from '../../services/productService';
 import { Icons } from '../common/Icons';
 
 interface PriceListDetailModalProps {
@@ -26,21 +28,36 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
   const [floorPrice, setFloorPrice] = useState<string>('');
   const [itemError, setItemError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [realProducts, setRealProducts] = useState<ProductOptionItem[]>([]);
+
+  useEffect(() => {
+    productService
+      .searchProductOptions('', 40)
+      .then(setRealProducts)
+      .catch(() => {});
+  }, []);
 
   if (!priceList) return null;
 
   const groupInfo = CUSTOMER_GROUPS[priceList.customerGroup as CustomerGroupType];
   const items = priceList.items || [];
 
-  const handleSelectCatalogProduct = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleSelectRealProduct = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedSku = e.target.value;
     if (!selectedSku) return;
-    const prod = CATALOG_PRODUCTS.find((p) => p.sku === selectedSku);
+    const prod = realProducts.find((p) => p.sku === selectedSku);
     if (prod) {
       setSku(prod.sku);
       setName(prod.name);
-      setPrice(prod.suggestedRetailPrice.toString());
-      setFloorPrice(Math.round(prod.suggestedRetailPrice * 0.9).toString());
+      let defPrice = 100000;
+      let defFloor = 90000;
+      if (prod.costPrice && Number(prod.costPrice) > 0) {
+        const cost = Number(prod.costPrice);
+        defPrice = Math.round(cost * 1.2);
+        defFloor = Math.round(cost * 1.05);
+      }
+      setPrice(defPrice.toString());
+      setFloorPrice(defFloor.toString());
     }
   };
 
@@ -202,12 +219,12 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
                   Thêm hoặc cập nhật giá sản phẩm:
                 </span>
                 <select
-                  onChange={handleSelectCatalogProduct}
-                  className="text-xs px-2 py-1 bg-white border border-orange-300 rounded-lg text-gray-700 cursor-pointer"
+                  onChange={handleSelectRealProduct}
+                  className="text-xs px-2 py-1 bg-white border border-orange-300 rounded-lg text-gray-700 cursor-pointer max-w-[280px]"
                 >
-                  <option value="">-- Chọn nhanh sản phẩm từ mẫu FMCG --</option>
-                  {CATALOG_PRODUCTS.map((p) => (
-                    <option key={p.sku} value={p.sku}>
+                  <option value="">-- Chọn nhanh sản phẩm trong hệ thống --</option>
+                  {realProducts.map((p) => (
+                    <option key={p.id} value={p.sku}>
                       {p.sku} - {p.name}
                     </option>
                   ))}

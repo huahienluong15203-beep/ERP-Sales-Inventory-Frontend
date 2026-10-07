@@ -803,20 +803,23 @@ export const AgencyManagementPage: React.FC = () => {
                               {agency.customerGroupName}
                             </div>
 
-                            {/* Bảng giá tự động ánh xạ */}
+                            {/* Bảng giá áp dụng thực tế */}
                             <div
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border max-w-full"
                               style={{
                                 backgroundColor: agency.pricingTier.badgeBg,
                                 color: agency.pricingTier.badgeColor,
                                 borderColor: 'currentColor'
                               }}
+                              title={`${agency.pricingTier.code} - ${agency.pricingTier.name}`}
                             >
-                              <BadgeDollarSign size={13} />
-                              <span>{agency.pricingTier.name}</span>
-                              <span className="px-1.5 py-0.5 rounded-full bg-white/80 text-[10px] tracking-wide ml-0.5">
-                                CK {agency.pricingTier.discountPercent}%
-                              </span>
+                              <BadgeDollarSign size={13} className="shrink-0" />
+                              <span className="truncate">{agency.pricingTier.name}</span>
+                              {agency.pricingTier.code && (
+                                <span className="px-1.5 py-0.5 rounded-md bg-white/90 text-[10px] font-mono tracking-wider ml-0.5 shrink-0 border border-black/10">
+                                  {agency.pricingTier.code}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </td>
