@@ -21,7 +21,8 @@ import type {
   PolicyCandidateResult,
   VolumeDiscountFilterParams,
   DiscountCalculationType,
-  DiscountPolicyStatus
+  DiscountPolicyStatus,
+  DiscountCustomerScope
 } from '../types/discount';
 import type { CatalogProduct } from '../types/pricing';
 import { API_BASE_URL, authFetch } from './api';
@@ -29,7 +30,7 @@ import { API_BASE_URL, authFetch } from './api';
 const BASE = `${API_BASE_URL}/api/discount-policies`;
 
 export const BEST_DEAL_RULE_STATEMENT =
-  'Quy tắc kinh doanh: Khi một đơn hàng hoặc dòng sản phẩm cùng lúc thỏa mãn nhiều chính sách chiết khấu (ví dụ: vừa có chính sách riêng theo SKU, vừa có chính sách theo nhóm hàng, hoặc chương trình đại lý), hệ thống sẽ tự động so sánh và áp dụng chính sách có tổng mức chiết khấu cao nhất (có lợi nhất cho khách hàng), không cộng dồn chồng chéo trừ khi có quy định ngoại lệ.';
+  'Chính sách chiết khấu bậc thang theo số lượng mua dành cho từng nhóm khách hàng.';
 
 // ============================================================================
 // Kiểu dữ liệu backend
@@ -54,6 +55,8 @@ interface BePolicy {
   productName: string | null;
   categoryId: number | null;
   categoryName: string | null;
+  customerGroup: string | null;
+  customerGroupLabel: string | null;
   discountType: BeDiscountType;
   startDate: string;
   endDate: string | null;
@@ -180,8 +183,8 @@ function mapPolicy(p: BePolicy): VolumeDiscountPolicy {
     scopeType: isSku ? 'SKU' : 'CATEGORY',
     targetId: isSku ? p.productSku || '' : p.categoryId != null ? String(p.categoryId) : '',
     targetName: (isSku ? p.productName : p.categoryName) || '',
-    customerGroup: 'ALL',
-    customerGroupLabel: 'Tất cả nhóm đại lý',
+    customerGroup: (p.customerGroup as DiscountCustomerScope) || 'ALL',
+    customerGroupLabel: p.customerGroupLabel || (p.customerGroup ? p.customerGroup : 'Tất cả nhóm đại lý'),
     startDate: p.startDate,
     endDate: p.endDate,
     status,
@@ -213,6 +216,7 @@ function toBackendBody(req: VolumeDiscountPolicyRequest) {
     scope: isSku ? 'PRODUCT' : 'CATEGORY',
     productSku: isSku ? req.targetId : null,
     categoryId: isSku ? null : Number(req.targetId),
+    customerGroup: req.customerGroup && req.customerGroup !== 'ALL' ? req.customerGroup : null,
     discountType: feType === 'PERCENT' ? 'PERCENT' : 'AMOUNT_PER_UNIT',
     startDate: req.startDate,
     endDate: req.endDate || null,
@@ -361,10 +365,16 @@ export async function updateVolumeDiscountPolicy(
 }
 
 /**
- * Backend không cho xoá cứng (quy tắc dự án) → "Ngừng áp dụng" = chuyển INACTIVE
+ * Xóa chính sách chiết khấu
  */
 export async function deleteVolumeDiscountPolicy(id: string | number): Promise<boolean> {
-  await patchStatus(id, 'INACTIVE');
+  const res = await authFetch(`${BASE}/${id}`, {
+    method: 'DELETE'
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText || 'Không thể xóa chính sách chiết khấu');
+  }
   return true;
 }
 
