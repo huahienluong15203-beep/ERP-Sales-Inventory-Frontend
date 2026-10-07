@@ -14,6 +14,7 @@ export interface Product {
   sku: string;                // 1. Mã SKU duy nhất toàn hệ thống
   name: string;               // 2. Tên sản phẩm chuẩn toàn công ty
   category: string;           // 3. Nhóm hàng
+  categoryId?: string;        // ID nhóm hàng trong cây (S2-06)
   baseUnit: string;           // 4. Đơn vị tính cơ sở (Base Unit: Lon, Chai, Hộp, Gói, Cái, Kg...)
   packagingSpec: string;      // 5. Quy cách đóng gói (vd: 24 lon / thùng, 12 hộp / lốc...)
   costPrice: number;          // 6. Giá vốn (BẢO MẬT: Chỉ Quản lý kinh doanh & Admin được xem và sửa)

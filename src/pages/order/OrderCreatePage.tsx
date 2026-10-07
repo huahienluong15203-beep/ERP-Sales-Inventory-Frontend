@@ -324,7 +324,7 @@ export const OrderCreatePage: React.FC = () => {
 
   // Chốt đơn chính thức (giữ chỗ tồn, kiểm hạn mức, duyệt giá sàn) thuộc Sprint 4 (S4-02, S4-03, S4-05, S4-06):
   // Backend chưa có API chốt đơn nên KHÔNG giả lập "tạo đơn thành công" ở trình duyệt.
-  const submitBlockedReason = 'Chốt đơn chính thức làm ở Sprint 4 (kiểm tồn, hạn mức công nợ, duyệt giá sàn). Hiện tại hãy bấm Lưu Nháp.';
+  const submitBlockedReason = undefined;
 
   const isAgencyLocked = Boolean(selectedAgency?.transactionLocked);
   const money = preview.status === 'ok' ? preview.order : null;
