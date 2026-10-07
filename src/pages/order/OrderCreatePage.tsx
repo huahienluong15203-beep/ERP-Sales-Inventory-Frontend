@@ -392,7 +392,7 @@ export const OrderCreatePage: React.FC = () => {
 
         {/* 3. KHỐI 2: DANH SÁCH DÒNG SẢN PHẨM ĐẶT HÀNG */}
         <div className="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-4 sm:p-5 space-y-4">
-          <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 pb-3 border-b border-gray-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
             <div>
               <h2 className="text-sm sm:text-base font-bold text-gray-900 leading-tight flex items-center gap-2">
                 <span>2. Danh Sách Sản Phẩm Đặt Hàng</span>
@@ -405,11 +405,11 @@ export const OrderCreatePage: React.FC = () => {
               </p>
             </div>
 
-            {/* Nút mở Picker thêm sản phẩm */}
+            {/* Nút mở Picker thêm sản phẩm duy nhất */}
             <button
               type="button"
               onClick={openProductPicker}
-              className="px-3.5 py-2 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 active:scale-98 transition cursor-pointer shrink-0"
+              className="px-4 py-2 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 active:scale-98 transition cursor-pointer self-start sm:self-auto shrink-0"
             >
               <Plus size={16} />
               <span>Thêm Sản Phẩm</span>
@@ -418,26 +418,22 @@ export const OrderCreatePage: React.FC = () => {
 
           {/* Vùng hiển thị các dòng hàng */}
           {items.length === 0 ? (
-            <div className="py-12 px-4 rounded-xl border border-dashed border-gray-200 bg-gray-50/50 text-center space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-orange-50 text-[#F85606] flex items-center justify-center mx-auto">
+            <div
+              onClick={openProductPicker}
+              className="py-12 px-4 rounded-xl border border-dashed border-gray-200 hover:border-orange-300 bg-gray-50/50 hover:bg-orange-50/20 text-center space-y-3 cursor-pointer transition-colors group"
+              title="Nhấn để tìm và thêm sản phẩm vào đơn hàng"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-orange-50 group-hover:bg-orange-100 text-[#F85606] flex items-center justify-center mx-auto transition-colors">
                 <ShoppingCart size={28} />
               </div>
               <div>
-                <strong className="text-sm text-gray-800 font-bold block">
+                <strong className="text-sm text-gray-800 font-bold block group-hover:text-[#F85606] transition-colors">
                   Đơn hàng chưa có sản phẩm nào
                 </strong>
                 <span className="text-xs text-gray-500 max-w-sm block mx-auto mt-0.5">
                   Nhấn nút "+ Thêm Sản Phẩm" để tìm nhanh SKU theo danh mục và chọn đơn vị quy đổi (thùng/lốc/lon).
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={openProductPicker}
-                className="px-4 py-2 rounded-xl bg-orange-100 hover:bg-orange-200 text-[#F85606] font-bold text-xs inline-flex items-center gap-1.5 transition"
-              >
-                <Plus size={15} />
-                <span>Thêm sản phẩm đầu tiên</span>
-              </button>
             </div>
           ) : (
             <div className="space-y-3">

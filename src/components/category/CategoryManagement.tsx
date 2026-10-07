@@ -1068,7 +1068,8 @@ export const CategoryManagement: React.FC = () => {
 
               {/* BẢNG DANH SÁCH MÃ SẢN PHẨM THUỘC NGÀNH HÀNG */}
               <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                {/* Tiêu đề & Nút Thêm Sản Phẩm chính */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-slate-100">
                   <div>
                     <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                       <span>Danh Sách Mã Hàng Trong Ngành</span>
@@ -1076,69 +1077,69 @@ export const CategoryManagement: React.FC = () => {
                         {productsTotal.toLocaleString('vi-VN')} sản phẩm
                       </span>
                     </h3>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-400 mt-0.5">
                       {canManage ? 'Xem mã hàng trong nhóm và thực hiện chuyển nhóm hàng' : 'Xem mã hàng trong nhóm'}
                     </p>
                   </div>
 
-                  {/* Toggle phạm vi xem + Ô tìm kiếm */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="inline-flex rounded-xl bg-slate-100 p-0.5 border border-slate-200 text-[11px] font-medium">
-                      <button
-                        type="button"
-                        onClick={() => setViewScope('BRANCH')}
-                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${viewScope === 'BRANCH'
-                          ? 'bg-white text-slate-900 font-bold shadow-xs'
-                          : 'text-slate-500 hover:text-slate-800'
-                          }`}
-                        title="Bao gồm cả sản phẩm ở các phân nhóm con"
-                      >
-                        Toàn bộ nhánh ({activeRollup?.totalProductCount || 0})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setViewScope('DIRECT')}
-                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${viewScope === 'DIRECT'
-                          ? 'bg-white text-slate-900 font-bold shadow-xs'
-                          : 'text-slate-500 hover:text-slate-800'
-                          }`}
-                        title="Chỉ sản phẩm gắn trực tiếp tại node này"
-                      >
-                        Gắn trực tiếp ({activeRollup?.directProductCount || 0})
-                      </button>
-                    </div>
-
-                    <div className="relative w-full sm:w-auto">
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Tìm SKU, tên sản phẩm..."
-                        className="h-8 pl-8 pr-3 rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200 w-full sm:w-44"
-                      />
-                      <svg
-                        className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  {canManage && selectedCategory && (
+                    <button
+                      type="button"
+                      onClick={handleOpenAssignModal}
+                      className="h-8 px-3.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-xs hover:shadow-sm transition-all cursor-pointer inline-flex items-center gap-1.5 self-start sm:self-auto shrink-0"
+                      title={`Thêm sản phẩm từ hệ thống vào nhóm ${selectedCategory.name}`}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                       </svg>
-                    </div>
+                      <span>Thêm Sản Phẩm</span>
+                    </button>
+                  )}
+                </div>
 
-                    {canManage && selectedCategory && (
-                      <button
-                        type="button"
-                        onClick={handleOpenAssignModal}
-                        className="h-8 px-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-xs hover:shadow-sm transition-all cursor-pointer inline-flex items-center gap-1.5 shrink-0"
-                        title={`Thêm sản phẩm từ hệ thống vào nhóm ${selectedCategory.name}`}
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                        </svg>
-                        <span>+ Thêm Sản Phẩm</span>
-                      </button>
-                    )}
+                {/* Thanh công cụ: Phạm vi xem & Ô tìm kiếm (dàn đều hai bên, không bao giờ bị đè) */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="inline-flex rounded-xl bg-slate-100 p-0.5 border border-slate-200 text-[11px] font-medium shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setViewScope('BRANCH')}
+                      className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${viewScope === 'BRANCH'
+                          ? 'bg-white text-slate-900 font-bold shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      title="Bao gồm cả sản phẩm ở các phân nhóm con"
+                    >
+                      Toàn bộ nhánh ({activeRollup?.totalProductCount || 0})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewScope('DIRECT')}
+                      className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${viewScope === 'DIRECT'
+                          ? 'bg-white text-slate-900 font-bold shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      title="Chỉ sản phẩm gắn trực tiếp tại node này"
+                    >
+                      Gắn trực tiếp ({activeRollup?.directProductCount || 0})
+                    </button>
+                  </div>
+
+                  <div className="relative w-full sm:w-64">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Tìm SKU, tên sản phẩm..."
+                      className="h-8 pl-8 pr-3 rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200 w-full"
+                    />
+                    <svg
+                      className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
                   </div>
                 </div>
 
@@ -1612,33 +1613,30 @@ export const CategoryManagement: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setAssignFilter('ALL')}
-                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                      assignFilter === 'ALL'
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${assignFilter === 'ALL'
                         ? 'bg-orange-50 text-orange-700 font-bold'
                         : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                      }`}
                   >
                     Tất cả ({systemProducts.length})
                   </button>
                   <button
                     type="button"
                     onClick={() => setAssignFilter('OTHER')}
-                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                      assignFilter === 'OTHER'
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${assignFilter === 'OTHER'
                         ? 'bg-orange-50 text-orange-700 font-bold'
                         : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                      }`}
                   >
                     Chưa thuộc nhóm này
                   </button>
                   <button
                     type="button"
                     onClick={() => setAssignFilter('UNASSIGNED')}
-                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                      assignFilter === 'UNASSIGNED'
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${assignFilter === 'UNASSIGNED'
                         ? 'bg-orange-50 text-orange-700 font-bold'
                         : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                      }`}
                   >
                     Chưa phân nhóm
                   </button>
@@ -1697,13 +1695,12 @@ export const CategoryManagement: React.FC = () => {
                         onClick={() => {
                           if (!isAlreadyInCurrent) handleToggleSelectProduct(p.id);
                         }}
-                        className={`p-3 flex items-center gap-3 transition-colors ${
-                          isAlreadyInCurrent
+                        className={`p-3 flex items-center gap-3 transition-colors ${isAlreadyInCurrent
                             ? 'bg-slate-50/70 cursor-not-allowed opacity-75'
                             : isSelected
-                            ? 'bg-orange-50/50 hover:bg-orange-50 cursor-pointer'
-                            : 'bg-white hover:bg-slate-50/80 cursor-pointer'
-                        }`}
+                              ? 'bg-orange-50/50 hover:bg-orange-50 cursor-pointer'
+                              : 'bg-white hover:bg-slate-50/80 cursor-pointer'
+                          }`}
                       >
                         <input
                           type="checkbox"
