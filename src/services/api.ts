@@ -313,14 +313,17 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
   }
 
   const response = await fetch(url, { ...options, headers });
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     const data = await response.clone().json().catch(() => null);
     const message =
-      data?.message ||
-      (response.status === 403
-        ? 'Bạn không có quyền truy cập hoặc tài khoản đã bị khóa!'
-        : 'Phiên làm việc của bạn đã hết hạn. Vui lòng đăng nhập lại!');
+      data?.message || 'Phiên làm việc của bạn đã hết hạn. Vui lòng đăng nhập lại!';
     handleSessionExpired(message);
+    throw new Error(message);
+  }
+  if (response.status === 403) {
+    const data = await response.clone().json().catch(() => null);
+    const message =
+      data?.message || 'Bạn không có quyền thực hiện thao tác này!';
     throw new Error(message);
   }
   return response;
