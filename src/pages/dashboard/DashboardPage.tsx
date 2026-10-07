@@ -374,7 +374,7 @@ export const DashboardPage: React.FC = () => {
       {/* 2b. PHÂN HỆ QUẢN LÝ BẢNG GIÁ & LỊCH SỬ THAY ĐỔI GIÁ (S3-02 / SCRUM-13) */}
       {canViewCostAndMargin && (
         <div
-          onClick={() => navigate('/pricing/history')}
+          onClick={() => navigate('/logs?tab=price')}
           style={{
             cursor: 'pointer',
             marginBottom: '20px',
@@ -440,7 +440,7 @@ export const DashboardPage: React.FC = () => {
         currentRole === 'ROLE_WH_MANAGER' ||
         currentRole === 'ROLE_SALES_MANAGER') && (
           <div
-            onClick={() => navigate('/audit-logs')}
+            onClick={() => navigate('/logs?tab=audit')}
             style={{
               cursor: 'pointer',
               marginBottom: '20px',

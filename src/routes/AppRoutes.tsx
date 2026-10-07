@@ -11,12 +11,11 @@ import { AgencyManagementPage } from '../pages/customer/AgencyManagementPage';
 import { ProductManagementPage } from '../pages/product/ProductManagementPage';
 import { ProductImportPage } from '../pages/product/ProductImportPage';
 import { PriceListPage } from '../pages/pricing/PriceListPage';
-import { PriceHistoryPage } from '../pages/pricing/PriceHistoryPage';
 import { VolumeDiscountPage } from '../pages/pricing/VolumeDiscountPage';
 import { CategoryManagementPage } from '../pages/category/CategoryManagementPage';
 import { OrderCreatePage } from '../pages/order/OrderCreatePage';
 import { SupplierManagementPage } from '../pages/supplier/SupplierManagementPage';
-import { AuditLogPage } from '../pages/admin/AuditLogPage';
+import { SystemLogPage } from '../pages/system-log/SystemLogPage';
 import { ModulePage } from '../pages/common/ModulePage';
 import { ForbiddenPage } from '../pages/common/ForbiddenPage';
 import { NotFoundPage } from '../pages/common/NotFoundPage';
@@ -179,22 +178,8 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
-        {/* Lịch sử thay đổi giá & Biểu giá (Sprint 3: S3-02 / SCRUM-13 / EP-02) */}
-        <Route
-          path="/pricing/history"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                'ROLE_SALES_MANAGER',
-                'ROLE_ADMIN',
-                'ROLE_SALES_REP',
-                'ROLE_ACCOUNTANT'
-              ]}
-            >
-              <PriceHistoryPage />
-            </ProtectedRoute>
-          }
-        />
+        {/* Lịch sử thay đổi giá đã gộp vào "Nhật ký hệ thống" (link cũ tự chuyển sang tab tương ứng) */}
+        <Route path="/pricing/history" element={<Navigate to="/logs?tab=price" replace />} />
 
         {/* Chính sách chiết khấu theo sản lượng (Sprint 3: S3-01 / SCRUM-12 / SCRUM-77 / EP-02) */}
         <Route
@@ -258,37 +243,25 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
-        {/* Nhật ký thao tác tồn kho & công nợ (Sprint 2: S2-04) */}
+        {/* Nhật ký hệ thống: gộp Nhật ký thao tác (S2-04) + Lịch sử thay đổi giá (S3-02), lọc theo loại ở tab */}
         <Route
-          path="/audit-logs"
+          path="/logs"
           element={
             <ProtectedRoute
               allowedRoles={[
                 'ROLE_ADMIN',
                 'ROLE_ACCOUNTANT',
                 'ROLE_WH_MANAGER',
-                'ROLE_SALES_MANAGER'
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
               ]}
             >
-              <AuditLogPage />
+              <SystemLogPage />
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/admin/audit-logs"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                'ROLE_ADMIN',
-                'ROLE_ACCOUNTANT',
-                'ROLE_WH_MANAGER',
-                'ROLE_SALES_MANAGER'
-              ]}
-            >
-              <AuditLogPage />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/audit-logs" element={<Navigate to="/logs?tab=audit" replace />} />
+        <Route path="/admin/audit-logs" element={<Navigate to="/logs?tab=audit" replace />} />
 
         {/* Trang 403 Forbidden trực tiếp */}
         <Route path="/forbidden" element={<ForbiddenPage />} />
@@ -311,7 +284,8 @@ export const AppRoutes: React.FC = () => {
             m.path !== '/orders/create' &&
             m.path !== '/orders' &&
             m.path !== '/audit-logs' &&
-            m.path !== '/admin/audit-logs'
+            m.path !== '/admin/audit-logs' &&
+            m.path !== '/logs'
         ).map((menuItem) => (
           <Route
             key={menuItem.path}

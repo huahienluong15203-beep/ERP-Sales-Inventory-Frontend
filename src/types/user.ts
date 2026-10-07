@@ -35,6 +35,8 @@ export interface MenuItem {
   epic?: string;
   description?: string;
   badge?: string;
+  /** Nhóm chức năng hiển thị thành tiêu đề trên Sidebar (vd "Bán hàng") */
+  group?: string;
   allowedRoles?: RoleName[];
 }
 

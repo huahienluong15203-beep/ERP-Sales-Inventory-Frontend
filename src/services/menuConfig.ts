@@ -5,7 +5,7 @@ import type { MenuItem, RoleName } from '../types/user';
  * Tuân thủ phạm vi Sprint 1: Bàn làm việc, Quản lý tài khoản (Admin), Hồ sơ cá nhân.
  */
 export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
-  // 1. Dashboard chung
+  // Sắp theo nhóm chức năng: mỗi "group" là 1 tiêu đề trên Sidebar
   {
     title: 'Bàn làm việc',
     path: '/dashboard',
@@ -23,40 +23,31 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     ]
   },
 
-  // 2. Quản lý tài khoản (Chỉ Quản trị viên hệ thống - Sprint 1 S1-08 / S1-09 / S1-10)
-  {
-    title: 'Quản lý tài khoản',
-    path: '/users',
-    icon: 'Users',
-    epic: 'Hệ Thống & Tài Khoản',
-    description: 'Quản lý danh sách nhân sự, phân quyền và khóa tài khoản',
-    allowedRoles: ['ROLE_ADMIN']
-  },
-
-  // 2b. Nhật ký thao tác hệ thống (Sprint 2: S2-04 - Quản trị hệ thống, Kế toán, Quản lý kho, Quản lý KD)
-  {
-    title: 'Nhật ký thao tác',
-    path: '/audit-logs',
-    icon: 'ShieldCheck',
-    epic: 'Hệ Thống & Tài Khoản',
-    description: 'Truy vết thao tác điều chỉnh tồn kho khi kiểm kê lệch và công nợ',
-    allowedRoles: ['ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_WH_MANAGER', 'ROLE_SALES_MANAGER']
-  },
-
-  // 3. Quản lý hồ sơ đại lý (Sprint 3: S3-03 / SCRUM-85 / EP-03 - Kế toán công nợ & Quản lý KD)
   {
     title: 'Hồ sơ đại lý',
     path: '/customers',
+    group: 'Bán hàng',
     icon: 'Building2',
     epic: 'Đại lý & Hạn mức nợ',
     description: 'Quản lý danh sách khách hàng chuẩn hóa, bảng giá và trạng thái giao dịch',
     allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
   },
 
-  // 4. Quản lý danh mục sản phẩm (Sprint 2: S2-05)
+  {
+    title: 'Đơn hàng đại lý',
+    path: '/orders/create',
+    group: 'Bán hàng',
+    icon: 'ShoppingCart',
+    epic: 'Đặt hàng & Duyệt ngoại lệ',
+    description: 'Lên đơn nhanh tại điểm bán, tự động áp giá & chiết khấu sản lượng',
+    // Kế toán không tạo đơn (Backend chặn) -> không hiện menu để tránh bị văng ra màn đăng nhập
+    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+  },
+
   {
     title: 'Danh mục sản phẩm',
     path: '/products',
+    group: 'Sản phẩm & Kho',
     icon: 'Package',
     epic: 'Sản phẩm & Tồn kho',
     description: 'Quản lý chuẩn hóa danh mục sản phẩm, mã SKU và bảo mật giá vốn',
@@ -70,10 +61,20 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     ]
   },
 
-  // 4b. Danh mục nhà cung cấp (S2-09 / SCRUM-46: Kho & Nguồn hàng)
+  {
+    title: 'Quản lý nhóm hàng',
+    path: '/categories',
+    group: 'Sản phẩm & Kho',
+    icon: 'Boxes',
+    epic: 'Sản phẩm & Bảng giá',
+    description: 'Cấu trúc nhóm hàng ≥ 3 cấp & xem doanh số theo ngành hàng',
+    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+  },
+
   {
     title: 'Danh mục nhà cung cấp',
     path: '/suppliers',
+    group: 'Sản phẩm & Kho',
     icon: 'Truck',
     epic: 'Sản phẩm & Tồn kho',
     description: 'Quản lý nguồn hàng và đối tác cung ứng, gắn vào phiếu nhập kho để truy nguyên lô lỗi',
@@ -86,59 +87,48 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     ]
   },
 
-  // 5. Bảng giá sản phẩm (S2-10 / SCRUM-55: EP-02 Sản phẩm & Bảng giá)
   {
     title: 'Bảng giá sản phẩm',
     path: '/pricing',
+    group: 'Giá & Chiết khấu',
     icon: 'Tags',
     epic: 'Sản phẩm & Bảng giá',
     description: 'Khai báo bảng giá theo nhóm khách hàng, thời gian hiệu lực và giá sàn',
     allowedRoles: ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
   },
 
-  // 6. Lịch sử thay đổi giá (Sprint 3: S3-02 / SCRUM-13 / EP-02 - Quản lý kinh doanh & Admin)
-  {
-    title: 'Lịch sử thay đổi giá',
-    path: '/pricing/history',
-    icon: 'History',
-    epic: 'Sản phẩm & Bảng giá',
-    description: 'Xem lịch sử thay đổi giá cũ - mới, người sửa và căn cứ giải thích cho đại lý',
-    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
-  },
-
-  // 6b. Chiết khấu sản lượng (Sprint 3: S3-01 / SCRUM-12 / SCRUM-77 / EP-02 - Quản lý kinh doanh)
   {
     title: 'Chiết khấu sản lượng',
     path: '/pricing/discounts',
+    group: 'Giá & Chiết khấu',
     icon: 'Percent',
     epic: 'Sản phẩm & Bảng giá',
     description: 'Khai báo bậc chiết khấu theo số lượng SKU/nhóm hàng và quy tắc có lợi nhất cho khách',
     allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
   },
 
-  // 6c. Đặt hàng đại lý (Sprint 3: S3-09 / SCRUM-14 / EP-04: Đặt hàng & Duyệt ngoại lệ)
   {
-    title: 'Đơn hàng đại lý',
-    path: '/orders/create',
-    icon: 'ShoppingCart',
-    epic: 'Đặt hàng & Duyệt ngoại lệ',
-    description: 'Lên đơn nhanh tại điểm bán, tự động áp giá & chiết khấu sản lượng',
-    // Kế toán không tạo đơn (Backend chặn) -> không hiện menu để tránh bị văng ra màn đăng nhập
-    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+    title: 'Quản lý tài khoản',
+    path: '/users',
+    group: 'Hệ thống',
+    icon: 'Users',
+    epic: 'Hệ Thống & Tài Khoản',
+    description: 'Quản lý danh sách nhân sự, phân quyền và khóa tài khoản',
+    allowedRoles: ['ROLE_ADMIN']
   },
 
-
-  // 7. Quản lý nhóm hàng nhiều cấp (EP-02: Dành cho Quản lý kinh doanh & Admin)
   {
-    title: 'Quản lý nhóm hàng',
-    path: '/categories',
-    icon: 'Boxes',
-    epic: 'Sản phẩm & Bảng giá',
-    description: 'Cấu trúc nhóm hàng ≥ 3 cấp & xem doanh số theo ngành hàng',
-    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+    title: 'Nhật ký hệ thống',
+    path: '/logs',
+    group: 'Hệ thống',
+    icon: 'ShieldCheck',
+    epic: 'Hệ Thống & Tài Khoản',
+    description: 'Nhật ký thao tác và lịch sử thay đổi giá trong một trang, lọc theo loại nhật ký',
+    // Hợp quyền của 2 tab; trong trang chỉ hiện tab đúng quyền
+    // (Nhật ký thao tác S2-04: Admin, Kế toán, QL kho, QL KD; Lịch sử giá S3-02: Admin, Kế toán, QL KD, NV KD)
+    allowedRoles: ['ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_WH_MANAGER', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
   },
 
-  // 8. Hồ sơ cá nhân (Luôn ở dưới cùng các tính năng nghiệp vụ, ngay trên Đăng xuất)
   {
     title: 'Hồ sơ cá nhân',
     path: '/profile',
@@ -172,6 +162,7 @@ export function getAuthorizedMenus(roles: RoleName | RoleName[]): MenuItem[] {
     path: item.path,
     icon: item.icon,
     epic: item.epic,
+    group: item.group,
     description: item.description,
     badge: item.badge
   }));

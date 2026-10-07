@@ -202,6 +202,41 @@
   width: 100%;
 }
 
+/* Tiêu đề nhóm chức năng trên Sidebar (vd BÁN HÀNG, SẢN PHẨM & KHO) */
+.erp-menu-group {
+  margin: 12px 14px 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #9CA3AF;
+  list-style: none;
+}
+
+.erp-menu-group:first-child {
+  margin-top: 4px;
+}
+
+.erp-sidebar.collapsed .erp-menu-group {
+  margin: 8px 0 4px;
+  display: flex;
+  justify-content: center;
+}
+
+.erp-menu-group-divider {
+  display: block;
+  width: 24px;
+  border-top: 1px solid #E5E7EB;
+}
+
+html.dark .erp-menu-group {
+  color: #71717A;
+}
+
+html.dark .erp-menu-group-divider {
+  border-color: #3F3F46;
+}
+
 .erp-sidebar.collapsed .erp-menu-item {
   display: flex;
   justify-content: center;

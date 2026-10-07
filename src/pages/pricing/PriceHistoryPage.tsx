@@ -41,7 +41,7 @@ export const PriceHistoryPage: React.FC = () => {
   // Danh mục sản phẩm tổng hợp
   const [products, setProducts] = useState<ProductPricingSummary[]>([]);
 
-  // Bộ lọc + trang lưu trên URL, vd: /pricing/history?sku=BIA-HN&trend=UP&page=2
+  // Bộ lọc + trang lưu trên URL, vd: /logs?tab=price&sku=BIA-HN&trend=UP&page=2
   const { params: urlParams, page, size, setPage, setSize, setFilters } = useUrlPaging({
     keyword: '',
     sku: 'ALL',

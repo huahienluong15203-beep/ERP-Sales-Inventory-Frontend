@@ -50,7 +50,8 @@ import {
   History,
   Lock,
   Unlock,
-  Navigation
+  Navigation,
+  Trash2
 } from '../../components/common/Icons';
 
 export const AgencyManagementPage: React.FC = () => {
@@ -95,6 +96,8 @@ export const AgencyManagementPage: React.FC = () => {
   const canManageAssignments = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER';
   const canManageAgency = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER' || currentRole === 'ROLE_ACCOUNTANT';
   const isSalesRep = currentRole === 'ROLE_SALES_REP';
+  // Xoá hồ sơ đại lý: chỉ Admin và Kế toán công nợ (Backend kiểm lại quyền)
+  const canDeleteAgency = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_ACCOUNTANT';
 
   // Modal Thêm Mới / Chỉnh Sửa Đại Lý (S3-03)
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -131,14 +134,13 @@ export const AgencyManagementPage: React.FC = () => {
     setIsDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = async (agency: Agency) => {
-    const res = await deleteAgency(agency.id);
+  const handleConfirmDelete = async (agency: Agency, reason: string) => {
+    const res = await deleteAgency(agency.id, reason);
     if (res.success) {
-      showToast('Đã xóa đại lý', res.message || 'Xóa đại lý thành công', 'success');
+      showToast('Đã xóa đại lý', `Đã xóa hồ sơ [${agency.code}] ${agency.name}`, 'success');
       reloadAll();
-    } else {
-      showToast('Không thể xóa đại lý', res.message || 'Có lỗi xảy ra khi xóa đại lý', 'error');
     }
+    return res;
   };
 
   // Modal Phân công nhân viên phụ trách (S3-06 / SCRUM-17)
@@ -710,7 +712,7 @@ export const AgencyManagementPage: React.FC = () => {
             onHistory={handleOpenHistory}
             onLockModal={handleOpenLockModal}
             onSuspendModal={handleOpenSuspendModal}
-            onDeleteModal={handleOpenDeleteModal}
+            onDeleteModal={canDeleteAgency ? handleOpenDeleteModal : undefined}
           />
         )
       ) : (
@@ -1066,7 +1068,20 @@ export const AgencyManagementPage: React.FC = () => {
                                       </button>
                                     )}
 
-                                    {/* Không có "Xóa đại lý": hồ sơ đại lý không xoá cứng, dùng Dừng giao dịch */}
+                                    {/* Xóa hồ sơ: chỉ Admin, Kế toán; Backend chặn nếu đã có đơn hàng */}
+                                    {canDeleteAgency && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setOpenMenuAgencyId(null);
+                                          handleOpenDeleteModal(agency);
+                                        }}
+                                        className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+                                      >
+                                        <Trash2 size={14} className="text-rose-600" />
+                                        <span className="font-semibold">Xóa đại lý</span>
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               )}

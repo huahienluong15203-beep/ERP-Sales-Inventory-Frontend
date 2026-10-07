@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { Fragment, useState, useEffect, useMemo } from 'react';
 import type { FC, ReactNode, FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation, Link } from '../routes/Router';
@@ -134,7 +134,9 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
 
   // Lấy tiêu đề và mô tả của trang hiện tại cho Header
-  const currentMenu = menus.find((m) => m.path === location.pathname);
+  // Bỏ phần ?query (vd /logs?tab=price) khi so khớp menu
+  const currentPath = location.pathname.split('?')[0];
+  const currentMenu = menus.find((m) => m.path === currentPath);
   const pageTitle =
     location.pathname === '/forbidden'
       ? '403 Truy Cập Bị Từ Chối'
@@ -263,10 +265,18 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             </div>
           ) : (
             <ul className="erp-menu-list">
-              {displayedMenus.map((item) => {
-                const isActive = location.pathname === item.path;
+              {displayedMenus.map((item, idx) => {
+                const isActive = currentPath === item.path;
+                // Gom nhóm theo chức năng: hiện tiêu đề nhóm khi sang nhóm mới
+                const showGroup = Boolean(item.group) && item.group !== displayedMenus[idx - 1]?.group;
                 return (
-                  <li key={item.path} className="erp-menu-item">
+                  <Fragment key={item.path}>
+                  {showGroup && (
+                    <li className="erp-menu-group" aria-hidden={isSidebarCollapsed}>
+                      {isSidebarCollapsed ? <span className="erp-menu-group-divider" /> : item.group}
+                    </li>
+                  )}
+                  <li className="erp-menu-item">
                     <Link
                       to={item.path}
                       className={`erp-menu-link ${isActive ? 'active' : ''}`}
@@ -285,6 +295,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
                       )}
                     </Link>
                   </li>
+                  </Fragment>
                 );
               })}
             </ul>
