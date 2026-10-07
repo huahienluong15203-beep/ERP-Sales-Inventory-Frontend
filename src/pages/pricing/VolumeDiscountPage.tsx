@@ -16,8 +16,7 @@ import {
   deleteVolumeDiscountPolicy,
   togglePolicyStatus,
   exportPoliciesToCsv,
-  getVolumeDiscountStats,
-  BEST_DEAL_RULE_STATEMENT
+  getVolumeDiscountStats
 } from '../../services/volumeDiscountApi';
 import type { VolumeDiscountStatsData } from '../../services/volumeDiscountApi';
 import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';

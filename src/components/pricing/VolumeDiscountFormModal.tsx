@@ -9,7 +9,6 @@ import type {
 } from '../../types/discount';
 import type { CatalogProduct } from '../../types/pricing';
 import {
-  BEST_DEAL_RULE_STATEMENT,
   fetchDiscountProductOptions,
   fetchDiscountCategoryOptions
 } from '../../services/volumeDiscountApi';

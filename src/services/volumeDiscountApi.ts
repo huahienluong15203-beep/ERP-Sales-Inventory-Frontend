@@ -21,7 +21,8 @@ import type {
   PolicyCandidateResult,
   VolumeDiscountFilterParams,
   DiscountCalculationType,
-  DiscountPolicyStatus
+  DiscountPolicyStatus,
+  DiscountCustomerScope
 } from '../types/discount';
 import type { CatalogProduct } from '../types/pricing';
 import { API_BASE_URL, authFetch } from './api';
