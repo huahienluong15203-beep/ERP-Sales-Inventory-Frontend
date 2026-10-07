@@ -96,6 +96,11 @@ export const CreditLimitModal: React.FC<CreditLimitModalProps> = ({
             return;
         }
 
+        if (creditLimit > 9999999999999) {
+            setError('Hạn mức tiền tối đa không được vượt quá 13 chữ số (tối đa 9.999.999.999.999 đ)!');
+            return;
+        }
+
         if (maxDebtDays <= 0) {
             setError('Số ngày nợ tối đa phải lớn hơn 0 ngày!');
             return;
