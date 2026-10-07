@@ -814,6 +814,9 @@ export const AgencyManagementPage: React.FC = () => {
                             >
                               <BadgeDollarSign size={13} />
                               <span>{agency.pricingTier.name}</span>
+                              <span className="px-1.5 py-0.5 rounded-full bg-white/80 text-[10px] tracking-wide ml-0.5">
+                                CK {agency.pricingTier.discountPercent}%
+                              </span>
                             </div>
                           </div>
                         </td>

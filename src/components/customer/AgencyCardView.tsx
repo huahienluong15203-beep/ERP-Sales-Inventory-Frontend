@@ -104,6 +104,9 @@ export const AgencyCardView: React.FC<AgencyCardViewProps> = ({
                   >
                     <BadgeDollarSign size={11} />
                     <span>{agency.pricingTier.name}</span>
+                    <span className="px-1 py-0.2 rounded-full bg-white/80 text-[9px] ml-0.5">
+                      CK {agency.pricingTier.discountPercent}%
+                    </span>
                   </div>
                 </div>
 

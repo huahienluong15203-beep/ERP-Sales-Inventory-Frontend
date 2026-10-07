@@ -67,11 +67,40 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
         if (points.length > 0) {
           const defaultPt = points.find((p: DeliveryPoint) => p.isDefault) || points[0];
           onSelectDeliveryPoint(defaultPt);
+        } else if (selectedAgency.address) {
+          const fallbackPoint: DeliveryPoint = {
+            id: '',
+            agencyId: selectedAgency.id,
+            name: 'Địa chỉ trụ sở / Kho chính',
+            address: selectedAgency.address,
+            contactPerson: selectedAgency.name,
+            phone: selectedAgency.phone,
+            isDefault: true,
+            createdAt: '',
+            updatedAt: ''
+          };
+          onSelectDeliveryPoint(fallbackPoint);
         }
       })
-      .catch((err: unknown) => console.error('Lỗi tải điểm giao:', err))
+      .catch((err: unknown) => {
+        console.error('Lỗi tải điểm giao:', err);
+        if (selectedAgency.address) {
+          const fallbackPoint: DeliveryPoint = {
+            id: '',
+            agencyId: selectedAgency.id,
+            name: 'Địa chỉ trụ sở / Kho chính',
+            address: selectedAgency.address,
+            contactPerson: selectedAgency.name,
+            phone: selectedAgency.phone,
+            isDefault: true,
+            createdAt: '',
+            updatedAt: ''
+          };
+          onSelectDeliveryPoint(fallbackPoint);
+        }
+      })
       .finally(() => setLoadingPoints(false));
-  }, [selectedAgency?.id]);
+  }, [selectedAgency?.id, selectedAgency?.address]);
 
   // Lọc đại lý theo từ khóa
   const filteredAgencies = agenciesList.filter((a) => {
@@ -153,7 +182,7 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200/70 text-[11px]">
                 <span className="inline-flex items-center gap-1 text-gray-600">
                   <BadgeDollarSign size={12} className="text-[#F85606]" />
-                  Bảng giá: <strong>{selectedAgency.pricingTier.name}</strong>
+                  Bảng giá: <strong>{selectedAgency.pricingTier.name} (CK {selectedAgency.pricingTier.discountPercent}%)</strong>
                 </span>
                 <span className="text-gray-500">
                   Hạn mức: <strong className="text-gray-700">{formatCurrencyVND(selectedAgency.creditLimit)}</strong>
@@ -267,7 +296,11 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
             </span>
             {selectedAgency && (
               <span className="text-[10px] text-gray-400 font-normal">
-                ({deliveryPoints.length} điểm của khách)
+                ({deliveryPoints.length > 0
+                  ? `${deliveryPoints.length} điểm của khách`
+                  : selectedAgency.address
+                    ? '1 điểm tại hồ sơ'
+                    : '0 điểm của khách'})
               </span>
             )}
           </label>
@@ -281,10 +314,28 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
               Đang tải danh sách kho giao hàng...
             </div>
           ) : deliveryPoints.length === 0 ? (
-            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-1.5">
-              <AlertTriangle size={14} className="shrink-0 text-amber-600" />
-              <span>Đại lý chưa có điểm giao! Sử dụng địa chỉ chính tại hồ sơ.</span>
-            </div>
+            selectedAgency.address ? (
+              <div className="space-y-1.5">
+                <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl space-y-1 text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-blue-900">
+                    <MapPin size={13} className="text-blue-600 shrink-0" />
+                    <span>Điểm giao hàng mặc định (Địa chỉ trụ sở tại hồ sơ)</span>
+                  </div>
+                  <p className="font-semibold text-gray-800 pl-4">{selectedAgency.address}</p>
+                  {(selectedAgency.phone || selectedAgency.name) && (
+                    <div className="flex items-center gap-3 text-[11px] text-gray-500 pl-4 pt-0.5">
+                      <span>Người nhận: <strong>{selectedAgency.name}</strong></span>
+                      {selectedAgency.phone && <span>• SĐT: <strong>{selectedAgency.phone}</strong></span>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-1.5">
+                <AlertTriangle size={14} className="shrink-0 text-amber-600" />
+                <span>Đại lý chưa có điểm giao và chưa có địa chỉ trong hồ sơ!</span>
+              </div>
+            )
           ) : (
             <div className="space-y-1.5">
               <select
