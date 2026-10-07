@@ -209,17 +209,19 @@ export function buildBackendRequest(params: {
 }
 
 /**
- * 1. Gợi ý sản phẩm theo mã / tên (gõ ≥ 2 ký tự) kèm giá theo nhóm khách hàng của đại lý (S3-09)
- * Lỗi -> ném Error với thông báo của Backend (KHÔNG dùng danh mục mẫu thay thế).
+ * 1. Lấy danh sách sản phẩm theo bảng giá của đại lý (kèm tìm kiếm nếu có) (S3-09)
+ * Tự động tải sản phẩm của bảng giá đại lý ngay khi mở modal.
  */
 export async function fetchBackendProductOptions(
   customerId: string | number,
-  keyword: string
+  keyword: string = ''
 ): Promise<OrderProductCatalogItem[]> {
   const kw = keyword.trim();
-  if (!customerId || !/^\d+$/.test(String(customerId)) || kw.length < 2) return [];
+  if (!customerId || !/^\d+$/.test(String(customerId))) return [];
 
-  const url = `${API_BASE_URL}/api/orders/product-options?customerId=${customerId}&keyword=${encodeURIComponent(kw)}`;
+  const url = kw
+    ? `${API_BASE_URL}/api/orders/product-options?customerId=${customerId}&keyword=${encodeURIComponent(kw)}`
+    : `${API_BASE_URL}/api/orders/product-options?customerId=${customerId}`;
   const res = await callBackend(url);
   if (!res.ok) throw new Error(await readBackendError(res, 'Không tải được danh sách sản phẩm'));
   const data: ProductOptionBackendResponse[] = await res.json();
