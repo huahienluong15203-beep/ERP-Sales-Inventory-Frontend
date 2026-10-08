@@ -24,6 +24,7 @@ export interface OrderItemUnitOption {
   isBaseUnit: boolean;
   unitPrice: number;        // Đơn giá bán theo đơn vị này (đã nhân hệ số và tính theo bảng giá)
   floorPrice?: number;      // Giá sàn theo đơn vị này
+  availableStock?: number;  // Tồn khả dụng theo đơn vị này (S4-03)
 }
 
 /**
@@ -52,6 +53,15 @@ export interface OrderItem {
   floorPrice?: number;        // Giá sàn theo đơn vị tính đã chọn
   isCustomPrice?: boolean;    // Cờ đánh dấu đã sửa giá thủ công
   isBelowFloor?: boolean;     // Cờ đánh dấu bán dưới giá sàn
+  // S4-03: Quản lý tồn khả dụng & Chặn đặt vượt tồn
+  warehouseCode?: string;     // Mã kho phục vụ đại lý (vd: WH-MB01)
+  warehouseName?: string;     // Tên kho phục vụ đại lý (vd: Kho Tổng Miền Bắc)
+  physicalStock?: number;     // Tồn thực tế trong kho (theo ĐVT cơ sở)
+  reservedStock?: number;     // Tồn đang giữ chỗ cho đơn khác (theo ĐVT cơ sở)
+  availableStock?: number;    // Tồn khả dụng = physicalStock - reservedStock (theo ĐVT cơ sở)
+  availableInSelectedUnit?: number; // Tồn khả dụng theo ĐVT đã chọn
+  isOverStock?: boolean;      // Cờ đặt vượt tồn khả dụng
+  maxAllowedQuantity?: number;// Số lượng tối đa còn đặt được theo ĐVT đã chọn
 }
 
 /**
@@ -214,4 +224,9 @@ export interface ProductOptionBackendResponse {
   unitPrice?: number | null;
   priceListCode?: string | null;
   message?: string | null;
+  warehouseCode?: string | null;
+  warehouseName?: string | null;
+  physicalStock?: number | null;
+  reservedStock?: number | null;
+  availableStock?: number | null;
 }

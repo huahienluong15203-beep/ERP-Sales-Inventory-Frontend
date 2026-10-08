@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Agency, DeliveryPoint } from '../../types/agency';
 import { fetchAgencies, fetchDeliveryPoints } from '../../services/agencyApi';
-import { formatCurrencyVND } from '../../services/orderService';
+import { formatCurrencyVND, getServingWarehouseInfo } from '../../services/orderService';
 import {
   Building2,
   Truck,
@@ -11,7 +11,8 @@ import {
   MapPin,
   Phone,
   FileText,
-  BadgeDollarSign
+  BadgeDollarSign,
+  Package
 } from '../common/Icons';
 
 interface OrderHeaderCardProps {
@@ -178,7 +179,7 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                 </button>
               </div>
 
-              {/* Thông tin hạn mức và bảng giá tự động */}
+              {/* Thông tin hạn mức, bảng giá tự động & kho phục vụ (S4-03 AC1) */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200/70 text-[11px]">
                 {selectedAgency.priceList ? (
                   <span className="inline-flex items-center gap-1 text-gray-600">
@@ -194,6 +195,12 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                     Chưa có bảng giá hiệu lực
                   </span>
                 )}
+
+                <div className="inline-flex items-center gap-1.5 text-indigo-700 bg-indigo-50/80 px-2 py-0.5 rounded-md border border-indigo-200">
+                  <Package size={12} className="text-indigo-600 shrink-0" />
+                  <span>Kho xuất: <strong>{getServingWarehouseInfo(selectedAgency).name}</strong></span>
+                </div>
+
                 <span className="text-gray-500">
                   Hạn mức: <strong className="text-gray-700">{formatCurrencyVND(selectedAgency.creditLimit)}</strong>
                 </span>
