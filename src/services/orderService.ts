@@ -27,6 +27,7 @@ export interface OrderProductCatalogItem {
   category: string;
   baseUnit: string;
   basePrice: number;
+  floorPrice?: number;
   priceAvailable?: boolean;
   priceMessage?: string | null;
   priceListCode?: string | null;
@@ -65,51 +66,90 @@ export function buildItemUnitOptions(product: OrderProductCatalogItem): OrderIte
   const units = product.availableUnits.length
     ? product.availableUnits
     : [{ unitName: product.baseUnit, conversionFactor: 1, isBaseUnit: true }];
+  const baseFloor = product.floorPrice ?? Math.round(product.basePrice * 0.9);
   return units.map((u) => ({
     unitName: u.unitName,
     conversionFactor: u.conversionFactor,
     isBaseUnit: u.isBaseUnit,
-    unitPrice: Math.round(product.basePrice * u.conversionFactor)
+    unitPrice: Math.round(product.basePrice * u.conversionFactor),
+    floorPrice: Math.round(baseFloor * u.conversionFactor)
   }));
 }
 
 /**
- * Tính lại dòng hàng khi đổi số lượng / ĐVT (chỉ là TẠM TÍNH theo đơn giá đang có).
- * Chiết khấu sản lượng và thành tiền chính thức do Backend tính (/api/orders/preview) rồi ghi đè lên dòng.
+ * S4-01: Tính lại dòng hàng khi đổi số lượng / ĐVT / sửa giá thủ công / khôi phục giá gốc.
+ * Tự động nhảy số tiền tức thì (Optimistic calculation) trên UI.
  */
-export function recalculateOrderItem(item: OrderItem, newQuantity?: number, newUnitName?: string): OrderItem {
+export function recalculateOrderItem(
+  item: OrderItem,
+  newQuantity?: number,
+  newUnitName?: string,
+  newUnitPrice?: number,
+  resetToOriginalPrice?: boolean
+): OrderItem {
   const quantity = newQuantity !== undefined ? Math.max(1, newQuantity) : item.quantity;
   let selectedUnit = item.selectedUnit;
   let conversionFactor = item.conversionFactor;
+  let originalUnitPrice = item.originalUnitPrice ?? item.unitPrice;
+  let floorPrice = item.floorPrice;
   let unitPrice = item.unitPrice;
+  let isCustomPrice = item.isCustomPrice ?? false;
 
   if (newUnitName && newUnitName !== item.selectedUnit) {
     const matchedUnit = item.availableUnits.find((u) => u.unitName === newUnitName);
     if (matchedUnit) {
       selectedUnit = matchedUnit.unitName;
       conversionFactor = matchedUnit.conversionFactor;
-      unitPrice = matchedUnit.unitPrice;
+      originalUnitPrice = matchedUnit.unitPrice;
+      floorPrice =
+        matchedUnit.floorPrice ??
+        (floorPrice ? Math.round((floorPrice / (item.conversionFactor || 1)) * conversionFactor) : undefined);
+      if (!isCustomPrice) {
+        unitPrice = matchedUnit.unitPrice;
+      } else {
+        const oldFactor = item.conversionFactor || 1;
+        unitPrice = Math.round((unitPrice / oldFactor) * conversionFactor);
+      }
     }
   }
 
+  if (resetToOriginalPrice) {
+    unitPrice = originalUnitPrice;
+    isCustomPrice = false;
+  } else if (newUnitPrice !== undefined) {
+    unitPrice = Math.max(0, newUnitPrice);
+    isCustomPrice = Math.abs(unitPrice - originalUnitPrice) > 0.01;
+  }
+
+  const isBelowFloor = floorPrice !== undefined && floorPrice > 0 ? unitPrice < floorPrice : false;
   const rawAmount = quantity * unitPrice;
+  const discountPercent = item.discountPercent || 0;
+  const discountAmount =
+    discountPercent > 0 ? Math.round((rawAmount * discountPercent) / 100) : item.discountAmount || 0;
+  const finalAmount = Math.max(0, rawAmount - discountAmount);
+
   return {
     ...item,
     quantity,
     selectedUnit,
     conversionFactor,
     unitPrice,
+    originalUnitPrice,
+    floorPrice,
+    isCustomPrice,
+    isBelowFloor,
     baseQuantity: quantity * conversionFactor,
     rawAmount,
-    discountPercent: 0,
-    discountAmount: 0,
-    finalAmount: rawAmount,
-    appliedDiscountNote: undefined
+    discountPercent,
+    discountAmount,
+    finalAmount,
+    appliedDiscountNote: item.appliedDiscountNote
   };
 }
 
 /**
  * Ghi đè đơn giá, chiết khấu, thành tiền của các dòng bằng kết quả Backend tính (preview / đơn nháp đã lưu).
+ * Nếu người dùng đã sửa giá thủ công thì giữ đơn giá sửa và kiểm tra giá sàn của backend.
  */
 export function applyBackendLines(items: OrderItem[], order: OrderBackendResponse): OrderItem[] {
   return items.map((item) => {
@@ -118,18 +158,39 @@ export function applyBackendLines(items: OrderItem[], order: OrderBackendRespons
     const basePrice = Number(line.unitPrice);
     const gross = Number(line.grossAmount);
     const discount = Number(line.discountAmount);
+    const lineFactor = Number(line.conversionFactor || 1);
+    const lineFloorPrice =
+      line.floorPrice != null
+        ? Math.round(Number(line.floorPrice) * lineFactor)
+        : item.floorPrice ?? Math.round(Number(line.pricePerUnit) * 0.9);
+
+    const originalUnitPrice = Number(line.pricePerUnit);
+    const currentUnitPrice = item.isCustomPrice && item.unitPrice ? item.unitPrice : originalUnitPrice;
+    const isBelow = lineFloorPrice > 0 ? currentUnitPrice < lineFloorPrice : false;
+
+    const actualGross = item.isCustomPrice ? item.quantity * currentUnitPrice : gross;
+    const actualFinal = item.isCustomPrice ? Math.max(0, actualGross - discount) : Number(line.netAmount);
+
     return {
       ...item,
       selectedUnit: line.unitName,
-      conversionFactor: Number(line.conversionFactor || 1),
+      conversionFactor: lineFactor,
       baseQuantity: Number(line.baseQuantity),
-      unitPrice: Number(line.pricePerUnit),
-      rawAmount: gross,
+      unitPrice: currentUnitPrice,
+      originalUnitPrice,
+      floorPrice: lineFloorPrice,
+      isBelowFloor: isBelow,
+      rawAmount: actualGross,
       discountAmount: discount,
       discountPercent: gross > 0 ? Math.round((discount / gross) * 1000) / 10 : 0,
-      finalAmount: Number(line.netAmount),
+      finalAmount: actualFinal,
       appliedDiscountNote: line.discountPolicyCode ? `Chiết khấu sản lượng ${line.discountPolicyCode}` : undefined,
-      availableUnits: item.availableUnits.map((u) => ({ ...u, unitPrice: Math.round(basePrice * u.conversionFactor) }))
+      availableUnits: item.availableUnits.map((u) => ({
+        ...u,
+        unitPrice: Math.round(basePrice * u.conversionFactor),
+        floorPrice:
+          line.floorPrice != null ? Math.round(Number(line.floorPrice) * u.conversionFactor) : u.floorPrice
+      }))
     };
   });
 }
@@ -140,6 +201,8 @@ export function applyBackendLines(items: OrderItem[], order: OrderBackendRespons
 export function createOrderItemFromCatalog(product: OrderProductCatalogItem, initialQuantity = 1): OrderItem {
   const availableUnits = buildItemUnitOptions(product);
   const defaultUnit = availableUnits.find((u) => u.isBaseUnit) || availableUnits[0];
+  const baseFloor = product.floorPrice ?? Math.round(product.basePrice * 0.9);
+  const floorPrice = defaultUnit.floorPrice ?? Math.round(baseFloor * defaultUnit.conversionFactor);
 
   const initialItem: OrderItem = {
     id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -153,6 +216,10 @@ export function createOrderItemFromCatalog(product: OrderProductCatalogItem, ini
     quantity: initialQuantity,
     baseQuantity: initialQuantity * defaultUnit.conversionFactor,
     unitPrice: defaultUnit.unitPrice,
+    originalUnitPrice: defaultUnit.unitPrice,
+    floorPrice,
+    isCustomPrice: false,
+    isBelowFloor: false,
     rawAmount: initialQuantity * defaultUnit.unitPrice,
     discountPercent: 0,
     discountAmount: 0,
@@ -203,7 +270,8 @@ export function buildBackendRequest(params: {
     lines: params.items.map((it) => ({
       productSku: it.sku,
       unitName: it.selectedUnit,
-      quantity: it.quantity
+      quantity: it.quantity,
+      unitPrice: it.isCustomPrice ? it.unitPrice : undefined
     }))
   };
 }
