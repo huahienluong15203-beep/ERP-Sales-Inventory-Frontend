@@ -58,6 +58,42 @@ export const AuditLogFilter: React.FC<AuditLogFilterProps> = ({
     }
   };
 
+  const handleStartDateChange = (val: string) => {
+    if (!val) {
+      onChange({ startDate: undefined, quickTimeRange: 'ALL', page: 0 });
+      return;
+    }
+    // Nếu ngày bắt đầu lớn hơn ngày kết thúc hiện tại, tự động đồng bộ ngày kết thúc bằng ngày bắt đầu
+    const adjustedEndDate = filters.endDate && val > filters.endDate ? val : filters.endDate;
+    onChange({
+      startDate: val,
+      endDate: adjustedEndDate,
+      quickTimeRange: 'ALL',
+      page: 0
+    });
+  };
+
+  const handleEndDateChange = (val: string) => {
+    if (!val) {
+      onChange({ endDate: undefined, quickTimeRange: 'ALL', page: 0 });
+      return;
+    }
+    // Nếu ngày kết thúc nhỏ hơn ngày bắt đầu hiện tại, tự động đồng bộ ngày bắt đầu bằng ngày kết thúc
+    const adjustedStartDate = filters.startDate && val < filters.startDate ? val : filters.startDate;
+    onChange({
+      endDate: val,
+      startDate: adjustedStartDate,
+      quickTimeRange: 'ALL',
+      page: 0
+    });
+  };
+
+  const handleClearDateRange = () => {
+    onChange({ startDate: undefined, endDate: undefined, quickTimeRange: 'ALL', page: 0 });
+  };
+
+  const hasCustomDates = Boolean(filters.startDate || filters.endDate);
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
       {/* Header bộ lọc */}
@@ -152,26 +188,32 @@ export const AuditLogFilter: React.FC<AuditLogFilterProps> = ({
             <input
               type="date"
               value={filters.startDate || ''}
-              onChange={(e) =>
-                onChange({ startDate: e.target.value || undefined, quickTimeRange: 'ALL', page: 0 })
-              }
-              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-orange-500"
+              max={filters.endDate || undefined}
+              onChange={(e) => handleStartDateChange(e.target.value)}
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
+              title="Chọn ngày bắt đầu (không được lớn hơn ngày kết thúc)"
             />
-            <span>đến</span>
+            <span className="text-slate-400 font-medium">đến</span>
             <input
               type="date"
               value={filters.endDate || ''}
-              onChange={(e) =>
-                onChange({ endDate: e.target.value || undefined, quickTimeRange: 'ALL', page: 0 })
-              }
-              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-orange-500"
+              min={filters.startDate || undefined}
+              onChange={(e) => handleEndDateChange(e.target.value)}
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
+              title="Chọn ngày kết thúc (không được nhỏ hơn ngày bắt đầu)"
             />
+            {hasCustomDates && (
+              <button
+                type="button"
+                onClick={handleClearDateRange}
+                className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-slate-500 hover:text-orange-600 bg-slate-100 hover:bg-orange-50 rounded-md transition cursor-pointer border border-slate-200"
+                title="Xóa khoảng ngày đã chọn"
+              >
+                <span>Xóa ngày</span>
+              </button>
+            )}
           </div>
         </div>
-
-
-
-
       </div>
     </div>
   );
