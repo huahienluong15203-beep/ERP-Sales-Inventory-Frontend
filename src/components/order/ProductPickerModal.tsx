@@ -43,7 +43,7 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
     const kw = keyword.trim();
     setLoadError(null);
 
-    if (!agency?.id) {
+    if (!agency?.id || !agency?.priceList) {
       setProducts([]);
       setLoadingBackend(false);
       return;
@@ -73,7 +73,7 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
       alive = false;
       clearTimeout(timer);
     };
-  }, [isOpen, agency?.id, keyword]);
+  }, [isOpen, agency?.id, agency?.priceList, keyword]);
 
   // Reset từ khóa khi đóng mở modal
   useEffect(() => {
@@ -84,7 +84,7 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
 
   if (!isOpen) return null;
 
-  const priceListName = agency?.pricingTier?.name || agency?.priceList?.name || 'Bảng giá theo cấp đại lý';
+  const priceListName = agency?.priceList?.name || 'Chưa có bảng giá áp dụng';
   const groupLabel = agency?.customerGroupName || (agency?.customerGroup === 'TIER_1' ? 'Đại lý Cấp 1' : agency?.customerGroup === 'TIER_2' ? 'Đại lý Cấp 2' : 'Khách lẻ');
 
   return (
@@ -228,7 +228,15 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
 
         {/* Danh sách sản phẩm cuộn được */}
         <div className="p-3 sm:p-4 overflow-y-auto divide-y divide-gray-100 space-y-2 flex-1">
-          {!agency ? (
+          {agency && !agency.priceList ? (
+            <div className="py-12 text-center text-amber-800 space-y-2">
+              <AlertCircle size={36} className="mx-auto text-amber-500" />
+              <p className="text-xs font-bold text-amber-900">Đại lý chưa có bảng giá hiệu lực</p>
+              <p className="text-[11px] text-amber-700 max-w-sm mx-auto">
+                Nhóm khách hàng "{agency.customerGroupName}" hiện chưa có bảng giá nào đang hoạt động trong hệ thống. Vui lòng thiết lập bảng giá trước khi thêm sản phẩm vào đơn.
+              </p>
+            </div>
+          ) : !agency ? (
             <div className="py-12 text-center text-gray-400 space-y-1">
               <Package size={36} className="mx-auto text-gray-300" />
               <p className="text-xs font-semibold text-gray-700">Chưa chọn đại lý đặt hàng</p>

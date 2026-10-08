@@ -17,6 +17,37 @@ interface ProductFormModalProps {
   onSuccess: (message: string) => void;
   productToEdit?: Product | null;
 }
+ 
+/**
+ * Kiểm tra tính hợp lệ của đường dẫn ảnh sản phẩm.
+ * - Cho phép rỗng (ảnh không bắt buộc).
+ * - Bắt buộc phải là HTTP/HTTPS và có tên miền hợp lệ.
+ * - Kiểm tra định dạng đuôi tệp phổ biến nếu có phần mở rộng.
+ */
+export function validateImageUrl(url: string): string | null {
+  if (!url || !url.trim()) return null;
+  const trimmed = url.trim();
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return 'Đường dẫn ảnh phải bắt đầu bằng http:// hoặc https://';
+    }
+    if (!parsed.hostname.includes('.') && parsed.hostname !== 'localhost') {
+      return 'Tên miền không hợp lệ (ví dụ: https://example.com/anh.jpg)';
+    }
+    const pathname = parsed.pathname.toLowerCase();
+    const hasExtension = /\.[a-z0-9]+$/i.test(pathname);
+    if (hasExtension) {
+      const isImageExt = /\.(jpe?g|png|webp|gif|svg|avif|bmp|ico)$/i.test(pathname);
+      if (!isImageExt) {
+        return 'Định dạng tệp không được hỗ trợ (vui lòng dùng link ảnh .jpg, .png, .webp, .gif, .svg)';
+      }
+    }
+    return null;
+  } catch {
+    return 'Đường dẫn ảnh không đúng định dạng URL hợp lệ';
+  }
+}
 
 export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   isOpen,
@@ -43,6 +74,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreviewError, setImagePreviewError] = useState(false);
+  const [imageUrlError, setImageUrlError] = useState<string | null>(null);
 
   const isEditing = Boolean(productToEdit);
 
@@ -93,6 +125,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setSkuError(null);
       setGeneralError(null);
       setImagePreviewError(false);
+      setImageUrlError(null);
     }
   }, [isOpen, productToEdit]);
 
@@ -174,6 +207,17 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }
   };
 
+  const handleImageUrlChange = (val: string) => {
+    setImageUrl(val);
+    setImagePreviewError(false);
+    if (!val.trim()) {
+      setImageUrlError(null);
+      return;
+    }
+    const err = validateImageUrl(val);
+    setImageUrlError(err);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralError(null);
@@ -201,6 +245,20 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     if (!category.trim() && !categoryId) {
       setGeneralError('Vui lòng chọn nhóm hàng cho sản phẩm.');
       return;
+    }
+
+    if (imageUrl.trim()) {
+      const urlErr = validateImageUrl(imageUrl);
+      if (urlErr) {
+        setImageUrlError(urlErr);
+        setGeneralError(urlErr);
+        return;
+      }
+      if (imagePreviewError) {
+        setImageUrlError('Không thể tải hình ảnh từ đường dẫn này.');
+        setGeneralError('Hình ảnh không hợp lệ hoặc không tải được. Vui lòng kiểm tra lại liên kết ảnh hoặc xóa trống.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -512,27 +570,83 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
                 7. Đường dẫn hình ảnh (URL)
               </label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={(e) => {
-                    setImageUrl(e.target.value);
-                    setImagePreviewError(false);
-                  }}
-                  placeholder="https://example.com/images/coca-cola-330ml.jpg"
-                  disabled={isSubmitting}
-                  className="flex-1 px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
-                />
+              <div className="flex items-start gap-3">
+                <div className="flex-1">
+                  <div className="relative">
+                    <input
+                      type="url"
+                      value={imageUrl}
+                      onChange={(e) => handleImageUrlChange(e.target.value)}
+                      placeholder="https://example.com/images/coca-cola-330ml.jpg"
+                      disabled={isSubmitting}
+                      className={`w-full px-3.5 py-2.5 rounded-xl text-sm transition-all min-h-[44px] ${
+                        imageUrlError || imagePreviewError
+                          ? 'bg-red-50/50 border border-red-300 text-red-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                          : 'bg-gray-50 border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500'
+                      }`}
+                    />
+                    {imageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => handleImageUrlChange('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 rounded-lg cursor-pointer"
+                        title="Xóa link ảnh"
+                      >
+                        <Icons.X size={15} />
+                      </button>
+                    )}
+                  </div>
 
-                <div className="w-11 h-11 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0">
-                  {imageUrl && !imagePreviewError ? (
+                  {/* Thông báo trạng thái / lỗi URL ảnh */}
+                  {imageUrlError ? (
+                    <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1.5 font-medium">
+                      <Icons.AlertCircle size={14} className="shrink-0 text-red-500" />
+                      <span>{imageUrlError}</span>
+                    </p>
+                  ) : imagePreviewError ? (
+                    <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1.5 font-medium">
+                      <Icons.AlertCircle size={14} className="shrink-0 text-red-500" />
+                      <span>Không thể tải hình ảnh từ liên kết này (link lỗi, 404 hoặc không phải ảnh).</span>
+                    </p>
+                  ) : imageUrl.trim() ? (
+                    <p className="text-xs text-emerald-600 mt-1.5 flex items-center gap-1.5">
+                      <Icons.CheckCircle2 size={14} className="shrink-0 text-emerald-500" />
+                      <span>Đường dẫn ảnh hợp lệ</span>
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Hỗ trợ link ảnh trực tiếp từ internet (.jpg, .png, .webp...). Bỏ trống nếu chưa có ảnh.
+                    </p>
+                  )}
+                </div>
+
+                {/* Hộp xem trước ảnh (Preview) */}
+                <div
+                  className={`w-11 h-11 rounded-xl border flex items-center justify-center overflow-hidden shrink-0 transition-all ${
+                    imageUrlError || imagePreviewError
+                      ? 'bg-red-50 border-red-300 text-red-500 shadow-2xs'
+                      : imageUrl.trim()
+                      ? 'bg-white border-orange-200 shadow-2xs'
+                      : 'bg-gray-100 border-gray-200 text-gray-400'
+                  }`}
+                  title={
+                    imageUrlError || imagePreviewError
+                      ? 'Ảnh không hợp lệ hoặc không tải được'
+                      : imageUrl.trim()
+                      ? 'Ảnh xem trước'
+                      : 'Chưa có ảnh'
+                  }
+                >
+                  {imageUrl.trim() && !imageUrlError && !imagePreviewError ? (
                     <img
-                      src={imageUrl}
+                      src={imageUrl.trim()}
                       alt="Preview"
+                      onLoad={() => setImagePreviewError(false)}
                       onError={() => setImagePreviewError(true)}
                       className="w-full h-full object-cover"
                     />
+                  ) : imageUrlError || imagePreviewError ? (
+                    <Icons.AlertTriangle size={20} className="text-red-500" />
                   ) : (
                     <Icons.Package size={20} className="text-gray-400" />
                   )}
@@ -553,7 +667,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || Boolean(skuError)}
+              disabled={isSubmitting || Boolean(skuError) || Boolean(imageUrlError) || imagePreviewError}
               className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-sm font-semibold shadow-xs hover:shadow transition-all duration-200 flex items-center gap-2 min-h-[44px] disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (

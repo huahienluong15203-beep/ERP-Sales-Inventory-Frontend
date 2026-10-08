@@ -12,7 +12,8 @@ import {
   Copy,
   TrendingDown,
   TrendingUp,
-  ShieldCheck
+  ShieldCheck,
+  ArrowRight
 } from '../common/Icons';
 
 interface AuditLogDetailModalProps {
@@ -52,6 +53,13 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
         if ('transactionLocked' in obj) {
           return obj.transactionLocked ? 'Đã khóa giao dịch' : 'Đang mở giao dịch';
         }
+        if ('price' in obj) {
+          return `${Number(obj.price || 0).toLocaleString('vi-VN')} đ`;
+        }
+        // Format tổng quát các keys
+        return Object.entries(obj)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(' • ');
       } catch {
         // Fallback giữ nguyên chuỗi
       }
@@ -60,7 +68,7 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
   };
 
   const formatDeltaValue = (delta: string | undefined): string => {
-    if (!delta || delta === '—') return '—';
+    if (!delta || delta === '—') return '';
     // Phòng ngừa trường hợp chuỗi delta bị ghép thô từ JSON {"creditLimit":...} ➔ {"creditLimit":...}
     if (delta.includes('➔') && delta.includes('creditLimit')) {
       const parts = delta.split('➔').map((s) => s.trim());
@@ -73,7 +81,7 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
         if (diffLim !== 0) {
           return `${diffLim > 0 ? '+' : ''}${diffLim.toLocaleString('vi-VN')} đ`;
         }
-        return '—';
+        return '';
       } catch {
         // Fallback
       }
@@ -84,6 +92,9 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
   const displayOld = formatDetailValue(log.oldValue);
   const displayNew = formatDetailValue(log.newValue);
   const displayDelta = formatDeltaValue(log.deltaFormatted);
+
+  const hasDelta = Boolean(displayDelta && displayDelta !== '—');
+  const hasBothOldAndNew = displayOld !== '—' && displayNew !== '—';
 
   const handleCopyTrace = () => {
     const traceText = `[BẰNG CHỨNG KIỂM TOÁN HỆ THỐNG ERP]
@@ -163,7 +174,7 @@ Yêu Cầu HTTP: ${log.httpMethod || 'POST'} ${log.requestUri || ''}`;
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-4">
             <div>
               <span
-                className="text-xs font-bold px-2 py-0.5 rounded-md inline-block uppercase tracking-wider"
+                className="text-xs font-bold px-2.5 py-0.5 rounded-md inline-block uppercase tracking-wider"
                 style={{
                   backgroundColor: moduleMeta?.badgeBg || '#F1F5F9',
                   color: moduleMeta?.badgeColor || '#334155'
@@ -202,61 +213,96 @@ Yêu Cầu HTTP: ${log.httpMethod || 'POST'} ${log.requestUri || ''}`;
             </div>
           </div>
 
-          {/* Đối chiếu so sánh: Trước (Cũ) ➔ Sau (Mới) ➔ Chênh lệch */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {/* Trước điều chỉnh */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center min-w-0 overflow-hidden flex flex-col justify-between">
-              <div>
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                  Giá Trị Trước (Cũ)
+          {/* Đối chiếu so sánh linh hoạt theo phân hệ */}
+          {hasDelta ? (
+            /* Dạng 3 cột: Có số liệu chênh lệch (Tồn kho, kiểm kê, đơn vị tính...) */
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Trước điều chỉnh */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center min-w-0 overflow-hidden flex flex-col justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                    Giá Trị Trước (Cũ)
+                  </span>
+                  <div className="mt-2 text-sm sm:text-base font-bold text-slate-600 line-through break-words [overflow-wrap:anywhere]">
+                    {displayOld}
+                  </div>
+                </div>
+                <span className="text-[11px] text-slate-400 mt-2 block">
+                  Ghi nhận trước thời điểm sửa
                 </span>
-                <div className="mt-2 text-sm sm:text-base font-bold text-slate-600 line-through break-words [overflow-wrap:anywhere]">
+              </div>
+
+              {/* Mức chênh lệch */}
+              <div
+                className={`p-4 rounded-xl border text-center flex flex-col justify-between items-center min-w-0 overflow-hidden ${
+                  isDecrease
+                    ? 'bg-rose-50/70 border-rose-200 text-rose-700'
+                    : isIncrease
+                    ? 'bg-emerald-50/70 border-emerald-200 text-emerald-700'
+                    : 'bg-slate-50 border-slate-200 text-slate-600'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
+                  {isIncrease && <TrendingUp size={15} />}
+                  {isDecrease && <TrendingDown size={15} />}
+                  <span>
+                    {isDecrease ? 'Lệch Giảm / Hao Hụt' : isIncrease ? 'Lệch Tăng / Bổ Sung' : 'Điều Chỉnh'}
+                  </span>
+                </div>
+                <div className="my-2 text-sm sm:text-base md:text-lg font-black tracking-tight break-words [overflow-wrap:anywhere]">
+                  {displayDelta}
+                </div>
+                <span className="text-[11px] opacity-80 block">Biến động số liệu thực tế</span>
+              </div>
+
+              {/* Sau điều chỉnh */}
+              <div className="p-4 rounded-xl bg-orange-50/60 border border-orange-200 text-center min-w-0 overflow-hidden flex flex-col justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-orange-700 uppercase tracking-wider block">
+                    Giá Trị Sau (Mới)
+                  </span>
+                  <div className="mt-2 text-sm sm:text-base font-extrabold text-orange-900 break-words [overflow-wrap:anywhere]">
+                    {displayNew}
+                  </div>
+                </div>
+                <span className="text-[11px] text-orange-600/80 mt-2 block font-medium">
+                  Áp dụng kể từ khi lưu vết
+                </span>
+              </div>
+            </div>
+          ) : hasBothOldAndNew ? (
+            /* Dạng 2 cột có mũi tên chuyển giao: Đổi trạng thái, đổi người phụ trách, đổi cấu hình */
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 min-w-0">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                  Thông Tin Ban Đầu (Trước Sửa)
+                </span>
+                <div className="text-sm font-semibold text-slate-700 break-words [overflow-wrap:anywhere]">
                   {displayOld}
                 </div>
               </div>
-              <span className="text-[11px] text-slate-400 mt-2 block">
-                Ghi nhận trước thời điểm sửa
-              </span>
-            </div>
 
-            {/* Mức chênh lệch */}
-            <div
-              className={`p-4 rounded-xl border text-center flex flex-col justify-between items-center min-w-0 overflow-hidden ${
-                isDecrease
-                  ? 'bg-rose-50/70 border-rose-200 text-rose-700'
-                  : isIncrease
-                  ? 'bg-emerald-50/70 border-emerald-200 text-emerald-700'
-                  : 'bg-slate-50 border-slate-200 text-slate-600'
-              }`}
-            >
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
-                {isIncrease && <TrendingUp size={15} />}
-                {isDecrease && <TrendingDown size={15} />}
-                <span>
-                  {isDecrease ? 'Lệch Giảm / Hao Hụt' : isIncrease ? 'Lệch Tăng / Bổ Sung' : 'Điều Chỉnh'}
+              <div className="p-4 rounded-xl bg-orange-50/70 border border-orange-200 min-w-0">
+                <span className="text-xs font-semibold text-orange-700 uppercase tracking-wider block mb-1 flex items-center gap-1.5">
+                  <ArrowRight size={14} className="text-[#F85606]" />
+                  Thông Tin Áp Dụng (Sau Sửa)
                 </span>
-              </div>
-              <div className="my-2 text-sm sm:text-base md:text-lg font-black tracking-tight break-words [overflow-wrap:anywhere]">
-                {displayDelta || 'Thay đổi trạng thái'}
-              </div>
-              <span className="text-[11px] opacity-80 block">Biến động số liệu thực tế</span>
-            </div>
-
-            {/* Sau điều chỉnh */}
-            <div className="p-4 rounded-xl bg-orange-50/60 border border-orange-200 text-center min-w-0 overflow-hidden flex flex-col justify-between">
-              <div>
-                <span className="text-xs font-semibold text-orange-700 uppercase tracking-wider block">
-                  Giá Trị Sau (Mới)
-                </span>
-                <div className="mt-2 text-sm sm:text-base font-extrabold text-orange-900 break-words [overflow-wrap:anywhere]">
+                <div className="text-sm font-bold text-orange-950 break-words [overflow-wrap:anywhere]">
                   {displayNew}
                 </div>
               </div>
-              <span className="text-[11px] text-orange-600/80 mt-2 block font-medium">
-                Áp dụng kể từ khi lưu vết
-              </span>
             </div>
-          </div>
+          ) : (
+            /* Dạng đơn: Khởi tạo mới hoặc xóa */
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                Chi Tiết Dữ Liệu Ghi Nhận
+              </span>
+              <div className="text-sm font-medium text-slate-800 break-words [overflow-wrap:anywhere]">
+                {displayNew !== '—' ? displayNew : displayOld}
+              </div>
+            </div>
+          )}
 
           {/* Căn cứ & Lý do điều chỉnh (Then chốt để giải trình kiểm kê) */}
           <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/90 space-y-1.5">

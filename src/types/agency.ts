@@ -208,6 +208,8 @@ export interface UserRef {
 export interface CustomerAssignmentHistory {
   id: string | number;
   changeType: AssignmentChangeType;
+  customer?: { id: string | number; code: string; name: string } | null;
+  region?: { id: string | number; code: string; name: string } | null;
   fromSalesRep?: UserRef | null;
   toSalesRep?: UserRef | null;
   changedBy?: UserRef | null;

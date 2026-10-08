@@ -18,7 +18,12 @@ import {
 } from '../../services/api';
 import type { RoleName } from '../../types/user';
 import { ROLE_METADATA_MAP, getUserAvatarInitials } from '../../types/user';
-import { invalidateAgencyFormOptionsCache } from '../../services/agencyApi';
+import {
+  invalidateAgencyFormOptionsCache,
+  fetchAgencies,
+  transferAgencyTerritory
+} from '../../services/agencyApi';
+import type { Agency } from '../../types/agency';
 import {
   Users,
   Search,
@@ -36,7 +41,8 @@ import {
   X,
   Filter,
   Info,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ArrowRight
 } from '../../components/common/Icons';
 import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
 import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
@@ -173,11 +179,16 @@ export const UserManagementPage: React.FC = () => {
     regionIds: []
   });
 
-  // Modal Khóa / Mở Khóa (S1-10)
+  // Modal Khóa / Mở Khóa & Bàn Giao (S1-10 / S3-06)
   const [lockTargetUser, setLockTargetUser] = useState<AdminUserItem | null>(null);
   const [lockActionType, setLockActionType] = useState<'LOCK' | 'UNLOCK'>('LOCK');
   const [lockReason, setLockReason] = useState<string>('Quản trị viên tạm khóa để rà soát');
   const [lockLoading, setLockLoading] = useState<boolean>(false);
+  const [checkingAgencies, setCheckingAgencies] = useState<boolean>(false);
+  const [assignedAgencies, setAssignedAgencies] = useState<Agency[]>([]);
+  const [handoverCandidates, setHandoverCandidates] = useState<AdminUserItem[]>([]);
+  const [selectedHandoverUserId, setSelectedHandoverUserId] = useState<string>('');
+  const [isHandoverOnlyMode, setIsHandoverOnlyMode] = useState<boolean>(false);
 
   // Tải danh sách người dùng từ API
   const loadUsers = useCallback(async () => {
@@ -436,49 +447,120 @@ export const UserManagementPage: React.FC = () => {
     }
   };
 
-  // Mở modal Khóa / Mở Khóa (S1-10)
-  const handleOpenLockModal = (target: AdminUserItem) => {
+  // Mở modal Khóa / Mở Khóa (S1-10 / S3-06)
+  const handleOpenLockModal = async (target: AdminUserItem) => {
     if (currentUser && currentUser.username === target.username) {
       setActionAlert({ type: 'error', message: 'Bạn không thể tự khóa chính tài khoản đang đăng nhập của mình!' });
       return;
     }
     setLockTargetUser(target);
-    setLockActionType(target.status === 'LOCKED' ? 'UNLOCK' : 'LOCK');
-    setLockReason(''); // Bắt buộc admin phải nhập lý do khóa
+    setLockReason('');
+    setIsHandoverOnlyMode(false);
+
+    if (target.status === 'LOCKED') {
+      setLockActionType('UNLOCK');
+      setAssignedAgencies([]);
+      setHandoverCandidates([]);
+      setSelectedHandoverUserId('');
+      return;
+    }
+
+    setLockActionType('LOCK');
+    const isSales = target.roles.includes('ROLE_SALES_REP') || target.roles.includes('ROLE_SALES_MANAGER');
+    if (!isSales) {
+      setAssignedAgencies([]);
+      setHandoverCandidates([]);
+      setSelectedHandoverUserId('');
+      return;
+    }
+
+    // Nếu là nhân sự Kinh doanh: kiểm tra đại lý đang phụ trách & tìm ứng viên nhận bàn giao
+    setCheckingAgencies(true);
+    try {
+      const [agenciesRes, allUsersRes] = await Promise.all([
+        fetchAgencies({ salesRepId: String(target.id), size: 100 }),
+        fetchAdminUsers({ size: 100 })
+      ]);
+
+      const myAgencies = agenciesRes.content || [];
+      setAssignedAgencies(myAgencies);
+
+      // Tìm ứng viên nhận bàn giao: Active, khác target, có vai trò Sales
+      const candidates = (allUsersRes.content || []).filter(
+        (u) =>
+          u.id !== target.id &&
+          u.status === 'ACTIVE' &&
+          (u.roles.includes('ROLE_SALES_REP') || u.roles.includes('ROLE_SALES_MANAGER'))
+      );
+      setHandoverCandidates(candidates);
+
+      if (candidates.length > 0) {
+        // Ưu tiên ứng viên có cùng địa bàn nếu có
+        const sameReg = candidates.find((c) =>
+          c.regions?.some((r) => target.regions?.some((tr) => tr.id === r.id))
+        );
+        setSelectedHandoverUserId(String(sameReg ? sameReg.id : candidates[0].id));
+      } else {
+        setSelectedHandoverUserId('');
+      }
+    } catch (err) {
+      console.error('Lỗi kiểm tra đại lý của nhân viên:', err);
+      setAssignedAgencies([]);
+      setHandoverCandidates([]);
+      setSelectedHandoverUserId('');
+    } finally {
+      setCheckingAgencies(false);
+    }
   };
 
-  // Submit Khóa / Mở Khóa (S1-10)
+  // Mở modal bàn giao đại lý cho tài khoản đã bị khóa trước đó (S3-06)
+  const handleOpenHandoverOnlyModal = async (target: AdminUserItem) => {
+    setLockTargetUser(target);
+    setLockActionType('LOCK');
+    setIsHandoverOnlyMode(true);
+    setLockReason('Bàn giao đại lý sau khi nhân viên nghỉ việc / bị khóa tài khoản');
+    setCheckingAgencies(true);
+
+    try {
+      const [agenciesRes, allUsersRes] = await Promise.all([
+        fetchAgencies({ salesRepId: String(target.id), size: 100 }),
+        fetchAdminUsers({ size: 100 })
+      ]);
+
+      const myAgencies = agenciesRes.content || [];
+      setAssignedAgencies(myAgencies);
+
+      const candidates = (allUsersRes.content || []).filter(
+        (u) =>
+          u.id !== target.id &&
+          u.status === 'ACTIVE' &&
+          (u.roles.includes('ROLE_SALES_REP') || u.roles.includes('ROLE_SALES_MANAGER'))
+      );
+      setHandoverCandidates(candidates);
+
+      if (candidates.length > 0) {
+        const sameReg = candidates.find((c) =>
+          c.regions?.some((r) => target.regions?.some((tr) => tr.id === r.id))
+        );
+        setSelectedHandoverUserId(String(sameReg ? sameReg.id : candidates[0].id));
+      } else {
+        setSelectedHandoverUserId('');
+      }
+    } catch (err) {
+      console.error('Lỗi kiểm tra đại lý:', err);
+    } finally {
+      setCheckingAgencies(false);
+    }
+  };
+
+  // Submit Khóa / Mở Khóa / Bàn giao (S1-10 / S3-06)
   const handleConfirmLockToggle = async () => {
     if (!lockTargetUser) return;
 
-    // Bắt buộc ghi lý do khi khóa tài khoản
-    if (lockActionType === 'LOCK') {
-      if (!lockReason || lockReason.trim().length === 0) {
-        setActionAlert({
-          type: 'error',
-          message: 'Bắt buộc phải ghi rõ lý do khóa tài khoản!'
-        });
-        return;
-      }
-    }
-
-    setLockLoading(true);
-    try {
-      if (lockActionType === 'LOCK') {
-        const res = await lockAdminUser(lockTargetUser.id, lockReason.trim());
-        if (res.success) {
-          const isSales = lockTargetUser.roles.includes('ROLE_SALES_REP') || lockTargetUser.roles.includes('ROLE_SALES_MANAGER');
-          showToast(
-            'Đã khóa tài khoản!',
-            `Tài khoản [${lockTargetUser.username}] đã bị khóa và thu hồi phiên.${isSales ? ' (Cần bàn giao đại lý)' : ''}`,
-            'error'
-          );
-          loadUsers();
-          invalidateAgencyFormOptionsCache();
-        } else {
-          setActionAlert({ type: 'error', message: res.message });
-        }
-      } else {
+    // Chế độ mở khóa
+    if (lockActionType === 'UNLOCK') {
+      setLockLoading(true);
+      try {
         const res = await unlockAdminUser(lockTargetUser.id);
         if (res.success) {
           showToast(
@@ -487,15 +569,151 @@ export const UserManagementPage: React.FC = () => {
           );
           loadUsers();
           invalidateAgencyFormOptionsCache();
+          setLockTargetUser(null);
         } else {
           setActionAlert({ type: 'error', message: res.message });
         }
+      } catch {
+        setActionAlert({ type: 'error', message: 'Lỗi thực thi mở khóa tài khoản.' });
+      } finally {
+        setLockLoading(false);
+      }
+      return;
+    }
+
+    // Chế độ bàn giao riêng cho tài khoản đã khóa
+    if (isHandoverOnlyMode) {
+      if (!selectedHandoverUserId) {
+        setActionAlert({ type: 'error', message: 'Vui lòng chọn nhân viên nhận bàn giao!' });
+        return;
+      }
+      if (!lockReason || !lockReason.trim()) {
+        setActionAlert({ type: 'error', message: 'Vui lòng nhập lý do bàn giao!' });
+        return;
+      }
+
+      setLockLoading(true);
+      try {
+        const transferRes = await transferAgencyTerritory({
+          fromSalesRepId: String(lockTargetUser.id),
+          toSalesRepId: selectedHandoverUserId,
+          reason: lockReason.trim()
+        });
+
+        if (transferRes.success) {
+          const toUser = handoverCandidates.find((c) => String(c.id) === selectedHandoverUserId);
+          showToast(
+            'Bàn giao thành công!',
+            `Đã chuyển ${transferRes.count || assignedAgencies.length} đại lý sang cho nhân viên ${toUser?.fullName || 'mới'}.`,
+            'success'
+          );
+          loadUsers();
+          invalidateAgencyFormOptionsCache();
+          setLockTargetUser(null);
+        } else {
+          setActionAlert({ type: 'error', message: transferRes.message || 'Bàn giao thất bại.' });
+        }
+      } catch (err: any) {
+        setActionAlert({ type: 'error', message: err?.message || 'Lỗi khi bàn giao đại lý.' });
+      } finally {
+        setLockLoading(false);
+      }
+      return;
+    }
+
+    // Chế độ khóa tài khoản
+    if (!lockReason || lockReason.trim().length === 0) {
+      setActionAlert({
+        type: 'error',
+        message: 'Bắt buộc phải ghi rõ lý do khóa tài khoản!'
+      });
+      return;
+    }
+
+    // Nếu nhân sự đang có đại lý phụ trách -> BẮT BUỘC BÀN GIAO THÀNH CÔNG RỒI MỚI KHÓA
+    if (assignedAgencies.length > 0) {
+      if (handoverCandidates.length === 0) {
+        setActionAlert({
+          type: 'error',
+          message: 'Không thể khóa tài khoản: Nhân sự này đang phụ trách đại lý nhưng hệ thống không có nhân viên kinh doanh nào khác đang hoạt động để nhận bàn giao!'
+        });
+        return;
+      }
+      if (!selectedHandoverUserId) {
+        setActionAlert({
+          type: 'error',
+          message: 'Vui lòng chọn nhân viên nhận bàn giao đại lý trước khi khóa!'
+        });
+        return;
+      }
+
+      setLockLoading(true);
+      try {
+        // Bước 1: Bàn giao toàn bộ đại lý sang người mới
+        const transferRes = await transferAgencyTerritory({
+          fromSalesRepId: String(lockTargetUser.id),
+          toSalesRepId: selectedHandoverUserId,
+          reason: `Bàn giao trước khi khóa tài khoản: ${lockReason.trim()}`
+        });
+
+        if (!transferRes.success) {
+          setActionAlert({
+            type: 'error',
+            message: `Bàn giao đại lý thất bại: ${transferRes.message}. Tài khoản chưa bị khóa.`
+          });
+          setLockLoading(false);
+          return;
+        }
+
+        // Bước 2: Khóa tài khoản sau khi bàn giao thành công
+        const lockRes = await lockAdminUser(lockTargetUser.id, lockReason.trim());
+        if (lockRes.success) {
+          const toUser = handoverCandidates.find((c) => String(c.id) === selectedHandoverUserId);
+          showToast(
+            'Bàn giao & Khóa thành công!',
+            `Đã bàn giao ${transferRes.count || assignedAgencies.length} đại lý sang cho ${toUser?.fullName || 'nhân sự mới'} và khóa tài khoản [${lockTargetUser.username}].`,
+            'success'
+          );
+          loadUsers();
+          invalidateAgencyFormOptionsCache();
+          setLockTargetUser(null);
+        } else {
+          setActionAlert({
+            type: 'error',
+            message: `Đã bàn giao đại lý nhưng lỗi khóa tài khoản: ${lockRes.message}`
+          });
+        }
+      } catch (err: any) {
+        setActionAlert({
+          type: 'error',
+          message: err?.message || 'Lỗi thực thi quy trình bàn giao và khóa tài khoản.'
+        });
+      } finally {
+        setLockLoading(false);
+      }
+      return;
+    }
+
+    // Nếu không có đại lý nào: Khóa trực tiếp
+    setLockLoading(true);
+    try {
+      const res = await lockAdminUser(lockTargetUser.id, lockReason.trim());
+      if (res.success) {
+        showToast(
+          'Đã khóa tài khoản!',
+          `Tài khoản [${lockTargetUser.username}] đã bị khóa và thu hồi phiên.`,
+          'error'
+        );
+        loadUsers();
+        invalidateAgencyFormOptionsCache();
+        setLockTargetUser(null);
+      } else {
+        setActionAlert({ type: 'error', message: res.message });
       }
     } catch {
-      setActionAlert({ type: 'error', message: 'Lỗi thực thi yêu cầu khóa/mở khóa.' });
+      setActionAlert({ type: 'error', message: 'Lỗi thực thi yêu cầu khóa tài khoản.' });
     } finally {
       setLockLoading(false);
-      setLockTargetUser(null);
     }
   };
 
@@ -784,18 +1002,27 @@ export const UserManagementPage: React.FC = () => {
                               </span>
                             )}
 
-                          {isLocked && (item.handoverRequired || item.roles.includes('ROLE_SALES_REP') || item.roles.includes('ROLE_SALES_MANAGER')) && (
-                            <div style={{
-                              fontSize: 11,
-                              fontWeight: 700,
-                              color: '#B45309',
-                              background: '#FFFBEB',
-                              padding: '3px 8px',
-                              borderRadius: 6,
-                              border: '1px solid #FDE68A',
-                              marginTop: 4
-                            }}>
-                              ⚠️ Đại lý địa bàn cần bàn giao
+                          {isLocked && item.handoverRequired && (
+                            <div
+                              onClick={() => handleOpenHandoverOnlyModal(item)}
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: '#B45309',
+                                background: '#FFFBEB',
+                                padding: '4px 8px',
+                                borderRadius: 6,
+                                border: '1px solid #FDE68A',
+                                marginTop: 4,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4
+                              }}
+                              title="Nhấn để chuyển giao các đại lý của tài khoản này sang nhân viên khác"
+                            >
+                              <span>⚠️ Đại lý địa bàn cần bàn giao</span>
+                              <span style={{ textDecoration: 'underline', color: '#D97706', fontSize: 10 }}>[Bàn giao ngay]</span>
                             </div>
                           )}
                         </div>
@@ -1631,11 +1858,11 @@ export const UserManagementPage: React.FC = () => {
       )}
 
       {/* ======================================================== */}
-      {/* MODAL 3: XÁC NHẬN KHÓA / MỞ KHÓA TÀI KHOẢN (S1-10)       */}
+      {/* MODAL 3: XÁC NHẬN KHÓA / MỞ KHÓA & BÀN GIAO ĐẠI LÝ (S1-10 / S3-06) */}
       {/* ======================================================== */}
       {lockTargetUser && (
         <div className="user-mgmt-modal-overlay">
-          <div className="user-mgmt-modal-dialog" style={{ maxWidth: 440 }}>
+          <div className="user-mgmt-modal-dialog" style={{ maxWidth: 520 }}>
             <div
               style={{
                 padding: '24px 24px 16px',
@@ -1652,78 +1879,224 @@ export const UserManagementPage: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: lockActionType === 'LOCK' ? '#FEF2F2' : '#ECFDF5',
-                  color: lockActionType === 'LOCK' ? '#DC2626' : '#059669',
+                  background: isHandoverOnlyMode
+                    ? '#FEF3C7'
+                    : lockActionType === 'LOCK'
+                      ? '#FEF2F2'
+                      : '#ECFDF5',
+                  color: isHandoverOnlyMode
+                    ? '#D97706'
+                    : lockActionType === 'LOCK'
+                      ? '#DC2626'
+                      : '#059669',
                   flexShrink: 0
                 }}
               >
-                {lockActionType === 'LOCK' ? <Lock size={24} /> : <Unlock size={24} />}
+                {isHandoverOnlyMode ? (
+                  <ArrowRight size={24} />
+                ) : lockActionType === 'LOCK' ? (
+                  <Lock size={24} />
+                ) : (
+                  <Unlock size={24} />
+                )}
               </div>
-              <div>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <h3 className="user-mgmt-modal-title" style={{ fontSize: 16 }}>
-                  {lockActionType === 'LOCK' ? 'Khóa Tài Khoản Người Dùng' : 'Mở Khóa Tài Khoản'}
+                  {isHandoverOnlyMode
+                    ? 'Bàn Giao Đại Lý & Địa Bàn Phụ Trách'
+                    : lockActionType === 'LOCK'
+                      ? 'Khóa Tài Khoản Người Dùng'
+                      : 'Mở Khóa Tài Khoản'}
                 </h3>
                 <p className="user-mgmt-modal-desc">
                   Tài khoản: <strong>@{lockTargetUser.username}</strong> ({lockTargetUser.fullName})
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setLockTargetUser(null)}
+                className="user-mgmt-modal-close"
+                disabled={lockLoading}
+              >
+                <X size={18} />
+              </button>
             </div>
 
             <div style={{ padding: '0 24px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               {lockActionType === 'LOCK' ? (
                 <>
-                  <div style={{
-                    padding: '10px 14px',
-                    borderRadius: 10,
-                    background: '#FEF2F2',
-                    border: '1px solid #FECACA',
-                    color: '#991B1B',
-                    fontSize: 12.5,
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 8
-                  }}>
-                    <AlertTriangle size={16} style={{ color: '#DC2626', flexShrink: 0, marginTop: 1 }} />
-                    <div>
-                      <strong>Thu hồi phiên mở ngay lập tức:</strong> Khi bị khóa, tài khoản này sẽ bị thu hồi phiên làm việc (JWT) tức thì và bị từ chối đăng nhập cho đến khi được mở khóa.
-                    </div>
-                  </div>
-
-                  {/* Cảnh báo bàn giao đại lý cho Sales */}
-                  {(lockTargetUser.roles.includes('ROLE_SALES_REP') || lockTargetUser.roles.includes('ROLE_SALES_MANAGER')) && (
+                  {checkingAgencies ? (
                     <div style={{
-                      padding: '12px 14px',
-                      borderRadius: 10,
-                      background: '#FFFBEB',
-                      border: '1px solid #FCD34D',
-                      color: '#92400E',
-                      fontSize: 12.5,
+                      padding: 24,
+                      textAlign: 'center',
+                      background: '#F9FAFB',
+                      borderRadius: 12,
+                      border: '1px dashed #E5E7EB',
                       display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 8
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 8,
+                      fontSize: 12.5,
+                      color: '#4B5563'
                     }}>
-                      <AlertTriangle size={18} style={{ color: '#D97706', flexShrink: 0, marginTop: 2 }} />
-                      <div>
-                        <strong style={{ color: '#B45309' }}>⚠️ CẢNH BÁO BÀN GIAO ĐẠI LÝ:</strong> Nhân viên này thuộc khối <strong>Kinh doanh (Sales)</strong> đang phụ trách mạng lưới đại lý. Khi tài khoản bị khóa, hệ thống sẽ tự động kích hoạt cảnh báo <strong>cần bàn giao đại lý</strong> để cấp quản lý kịp thời phân công người phụ trách mới!
-                      </div>
+                      <RefreshCw size={20} className="animate-spin" style={{ color: '#F85606' }} />
+                      <span>Đang kiểm tra danh sách đại lý và tìm kiếm nhân sự nhận bàn giao...</span>
                     </div>
-                  )}
+                  ) : (
+                    <>
+                      {/* KHỐI BÀN GIAO ĐẠI LÝ NẾU NHÂN SỰ ĐANG PHỤ TRÁCH ĐẠI LÝ */}
+                      {assignedAgencies.length > 0 ? (
+                        <div style={{
+                          padding: '12px 14px',
+                          borderRadius: 12,
+                          background: '#FFFBEB',
+                          border: '1px solid #FCD34D',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 10
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                            <AlertTriangle size={18} style={{ color: '#D97706', flexShrink: 0, marginTop: 1 }} />
+                            <div>
+                              <strong style={{ color: '#B45309', fontSize: 13, display: 'block' }}>
+                                BẮT BUỘC BÀN GIAO ĐẠI LÝ TRƯỚC KHI KHÓA
+                              </strong>
+                              <span style={{ fontSize: 12, color: '#92400E' }}>
+                                Nhân viên này đang trực tiếp phụ trách <strong>{assignedAgencies.length} đại lý</strong>:
+                              </span>
+                            </div>
+                          </div>
 
-                  <div className="user-mgmt-form-group">
-                    <label className="user-mgmt-form-label">
-                      Lý do khóa tài khoản <span style={{ color: '#DC2626' }}>* (Bắt buộc)</span>:
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={lockReason}
-                      disabled={lockLoading}
-                      onChange={(e) => setLockReason(e.target.value)}
-                      placeholder="Nhập lý do khóa cụ thể (ví dụ: Nghỉ việc, vi phạm bảo mật...)"
-                      className="user-mgmt-form-input"
-                      autoFocus
-                    />
-                  </div>
+                          {/* Danh sách chip các đại lý đang phụ trách */}
+                          <div style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 6,
+                            maxHeight: 90,
+                            overflowY: 'auto',
+                            padding: '6px 8px',
+                            background: '#FFFFFF',
+                            borderRadius: 8,
+                            border: '1px solid #FDE68A'
+                          }}>
+                            {assignedAgencies.map((agency) => (
+                              <span
+                                key={agency.id}
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: '#78350F',
+                                  background: '#FEF3C7',
+                                  padding: '2px 7px',
+                                  borderRadius: 5,
+                                  border: '1px solid #FCD34D'
+                                }}
+                              >
+                                {agency.code} - {agency.name}
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* NẾU KHÔNG CÓ AI ĐỂ BÀN GIAO -> CHẶN KHÓA */}
+                          {handoverCandidates.length === 0 ? (
+                            <div style={{
+                              padding: '10px 12px',
+                              borderRadius: 8,
+                              background: '#FEE2E2',
+                              border: '1px solid #FCA5A5',
+                              color: '#991B1B',
+                              fontSize: 12,
+                              lineHeight: 1.4
+                            }}>
+                              <strong>🚫 KHÔNG THỂ KHÓA TÀI KHOẢN:</strong> Hiện tại hệ thống không có nhân viên kinh doanh nào khác đang hoạt động để nhận bàn giao {assignedAgencies.length} đại lý này. Theo quy định, không thể khóa tài khoản khi chưa có nhân sự tiếp quản địa bàn. Vui lòng tạo tài khoản mới hoặc kích hoạt lại một nhân sự kinh doanh khác trước khi khóa!
+                            </div>
+                          ) : (
+                            /* CÓ NGƯỜI ĐỂ BÀN GIAO -> CHỌN NGƯỜI NHẬN */
+                            <div className="user-mgmt-form-group" style={{ margin: 0 }}>
+                              <label className="user-mgmt-form-label" style={{ color: '#92400E' }}>
+                                Nhân viên nhận bàn giao <span style={{ color: '#DC2626' }}>* (Bắt buộc)</span>:
+                              </label>
+                              <select
+                                value={selectedHandoverUserId}
+                                onChange={(e) => setSelectedHandoverUserId(e.target.value)}
+                                disabled={lockLoading}
+                                className="user-mgmt-form-input"
+                                style={{ background: '#FFFFFF' }}
+                              >
+                                <option value="">-- Chọn nhân viên kinh doanh tiếp nhận --</option>
+                                {handoverCandidates.map((cand) => {
+                                  const isSameRegion = cand.regions?.some((r) =>
+                                    lockTargetUser.regions?.some((tr) => tr.id === r.id)
+                                  );
+                                  return (
+                                    <option key={cand.id} value={cand.id}>
+                                      {cand.fullName} (@{cand.username}){cand.phone ? ` - ${cand.phone}` : ''} {isSameRegion ? '⭐ [Cùng khu vực]' : ''}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                              <span style={{ fontSize: 11, color: '#B45309', marginTop: 2 }}>
+                                Toàn bộ {assignedAgencies.length} đại lý sẽ được chuyển giao sang nhân viên này khi xác nhận.
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        /* NẾU LÀ SALES NHƯNG 0 ĐẠI LÝ */
+                        (lockTargetUser.roles.includes('ROLE_SALES_REP') || lockTargetUser.roles.includes('ROLE_SALES_MANAGER')) && (
+                          <div style={{
+                            padding: '8px 12px',
+                            borderRadius: 8,
+                            background: '#F0FDF4',
+                            border: '1px solid #BBF7D0',
+                            color: '#166534',
+                            fontSize: 12,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6
+                          }}>
+                            <CheckCircle2 size={15} style={{ color: '#16A34A', flexShrink: 0 }} />
+                            <span>Nhân viên này hiện không phụ trách đại lý nào. Có thể tiến hành khóa trực tiếp.</span>
+                          </div>
+                        )
+                      )}
+
+                      {!isHandoverOnlyMode && (
+                        <div style={{
+                          padding: '10px 14px',
+                          borderRadius: 10,
+                          background: '#FEF2F2',
+                          border: '1px solid #FECACA',
+                          color: '#991B1B',
+                          fontSize: 12,
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 8
+                        }}>
+                          <AlertTriangle size={16} style={{ color: '#DC2626', flexShrink: 0, marginTop: 1 }} />
+                          <div>
+                            <strong>Thu hồi phiên ngay lập tức:</strong> Khi bị khóa, tài khoản này sẽ bị thu hồi phiên làm việc tức thì và không thể đăng nhập.
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="user-mgmt-form-group">
+                        <label className="user-mgmt-form-label">
+                          {isHandoverOnlyMode ? 'Lý do bàn giao' : 'Lý do khóa tài khoản'} <span style={{ color: '#DC2626' }}>* (Bắt buộc)</span>:
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={lockReason}
+                          disabled={lockLoading}
+                          onChange={(e) => setLockReason(e.target.value)}
+                          placeholder={isHandoverOnlyMode ? "Nhập lý do bàn giao địa bàn..." : "Nhập lý do khóa cụ thể (ví dụ: Nghỉ việc, chuyển công tác...)"}
+                          className="user-mgmt-form-input"
+                          autoFocus
+                        />
+                      </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.5 }}>
@@ -1745,22 +2118,41 @@ export const UserManagementPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleConfirmLockToggle}
-                disabled={lockLoading || (lockActionType === 'LOCK' && !lockReason.trim())}
+                disabled={
+                  lockLoading ||
+                  checkingAgencies ||
+                  (lockActionType === 'LOCK' && !lockReason.trim()) ||
+                  (assignedAgencies.length > 0 && handoverCandidates.length === 0) ||
+                  (assignedAgencies.length > 0 && !selectedHandoverUserId)
+                }
                 className="user-mgmt-btn-submit"
                 style={{
                   background:
-                    lockActionType === 'LOCK'
-                      ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
-                      : 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                    assignedAgencies.length > 0 && handoverCandidates.length === 0
+                      ? '#9CA3AF'
+                      : isHandoverOnlyMode
+                        ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
+                        : lockActionType === 'LOCK'
+                          ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
+                          : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                  cursor: (assignedAgencies.length > 0 && handoverCandidates.length === 0) ? 'not-allowed' : 'pointer'
                 }}
               >
                 {lockLoading && <RefreshCw size={15} className="animate-spin" />}
                 <span>
                   {lockLoading
                     ? 'Đang xử lý...'
-                    : lockActionType === 'LOCK'
-                      ? 'Xác nhận khóa'
-                      : 'Xác nhận mở khóa'}
+                    : checkingAgencies
+                      ? 'Đang kiểm tra...'
+                      : assignedAgencies.length > 0 && handoverCandidates.length === 0
+                        ? 'Không thể khóa (Thiếu người bàn giao)'
+                        : isHandoverOnlyMode
+                          ? 'Xác nhận bàn giao'
+                          : assignedAgencies.length > 0
+                            ? 'Bàn giao & Khóa tài khoản'
+                            : lockActionType === 'LOCK'
+                              ? 'Xác nhận khóa'
+                              : 'Xác nhận mở khóa'}
                 </span>
               </button>
             </div>
