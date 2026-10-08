@@ -29,7 +29,7 @@ export const AuditLogPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Thống kê toàn cục
-  const [allLogsForStats] = useState<AuditLogItem[]>(() => getLocalAuditLogs());
+  const [allLogsForStats, setAllLogsForStats] = useState<AuditLogItem[]>(() => getLocalAuditLogs());
 
   // Bộ lọc + trang lưu trên URL, vd: /logs?tab=audit&module=PRICING&range=TODAY&page=2
   const { params: urlParams, page, size, setPage, setSize, setFilters: setUrlFilters } = useUrlPaging({
@@ -56,6 +56,17 @@ export const AuditLogPage: React.FC = () => {
   const [selectedLog, setSelectedLog] = useState<AuditLogItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Cập nhật thống kê toàn cục từ backend
+  const refreshStats = useCallback(() => {
+    fetchAuditLogs({ size: 100 })
+      .then((res) => {
+        if (res.content.length > 0) {
+          setAllLogsForStats(res.content);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Tải dữ liệu theo trang và bộ lọc
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -68,12 +79,13 @@ export const AuditLogPage: React.FC = () => {
       setLogs(res.content);
       setTotalElements(res.totalElements);
       setTotalPages(res.totalPages);
+      refreshStats();
     } catch (err) {
       console.error('Lỗi khi tải nhật ký thao tác:', err);
     } finally {
       setLoading(false);
     }
-  }, [filters, page, size]);
+  }, [filters, page, size, refreshStats]);
 
   useEffect(() => {
     let ignore = false;
@@ -97,10 +109,12 @@ export const AuditLogPage: React.FC = () => {
         }
       });
 
+    refreshStats();
+
     return () => {
       ignore = true;
     };
-  }, [filters, page, size]);
+  }, [filters, page, size, refreshStats]);
 
   // Thống kê KPI
   const stats: AuditStatsSummary = useMemo(() => {

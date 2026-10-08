@@ -350,6 +350,15 @@ export async function fetchAuditLogs(
   const page = params.page ?? 0;
   const size = params.size ?? 15;
 
+  let startDate = params.startDate;
+  let endDate = params.endDate;
+  // Tự động hoán đổi ngày nếu ngày bắt đầu lớn hơn ngày kết thúc để tránh query rỗng sai logic
+  if (startDate && endDate && startDate > endDate) {
+    const temp = startDate;
+    startDate = endDate;
+    endDate = temp;
+  }
+
   if (token) {
     try {
       const query = new URLSearchParams();
@@ -357,8 +366,8 @@ export async function fetchAuditLogs(
       if (params.module && params.module !== 'ALL') query.set('module', params.module);
       if (params.targetType) query.set('targetType', params.targetType);
       if (params.actorId && params.actorId !== 'ALL') query.set('actorId', String(params.actorId));
-      if (params.startDate) query.set('startDate', `${params.startDate}T00:00:00`);
-      if (params.endDate) query.set('endDate', `${params.endDate}T23:59:59`);
+      if (startDate) query.set('startDate', `${startDate}T00:00:00`);
+      if (endDate) query.set('endDate', `${endDate}T23:59:59`);
       if (params.action) query.set('action', params.action);
       query.set('page', String(page));
       query.set('size', String(size));
@@ -401,7 +410,7 @@ export async function fetchAuditLogs(
           createdAt: string;
         }
 
-        if (json && Array.isArray(json.content) && json.content.length > 0) {
+        if (json && Array.isArray(json.content)) {
           const mappedContent: AuditLogItem[] = (json.content as BackendAuditLogItem[]).map((item) => {
             const moduleMeta = AUDIT_MODULE_OPTIONS.find((m) => m.value === item.module);
             const rawCode = item.targetCode || `#${item.targetId || item.id}`;
@@ -524,7 +533,7 @@ export async function fetchAuditLogs(
               targetName:
                 item.targetType === 'PRODUCT_UNIT'
                   ? (unitPart ? `Đơn vị: ${unitPart}` : 'Quy cách sản phẩm')
-                  : (item.targetName || item.targetType),
+                  : (item.targetName || unitPart || item.targetType),
               actorId: item.actorId,
               actorUsername: item.actorUsername || 'user',
               actorFullName: item.actorFullName || item.actorUsername || 'Người dùng',
@@ -547,17 +556,14 @@ export async function fetchAuditLogs(
             };
           });
 
-          // Trộn thêm các log cục bộ phát sinh gần đây (nếu có log mock hoặc fallback chưa kịp lên server)
-          const localLogs = getLocalAuditLogs().filter((l) => l.id > 1700000000000);
-          const combined = [...localLogs.filter((l) => !mappedContent.some((m) => m.id === l.id)), ...mappedContent];
-
+          // Sử dụng dữ liệu thực từ Backend (không trộn đè các log mock tĩnh lên đầu)
           return {
-            content: combined,
-            logs: combined,
-            totalElements: (json.totalElements || mappedContent.length) + localLogs.length,
-            totalPages: json.totalPages || Math.ceil(mappedContent.length / size),
-            page: json.page || page,
-            size: json.size || size
+            content: mappedContent,
+            logs: mappedContent,
+            totalElements: json.totalElements ?? mappedContent.length,
+            totalPages: json.totalPages ?? Math.max(1, Math.ceil(mappedContent.length / size)),
+            page: json.page ?? page,
+            size: json.size ?? size
           };
         }
       }
@@ -597,11 +603,11 @@ export async function fetchAuditLogs(
   }
 
   // 4. Lọc theo khoảng thời gian
-  if (params.startDate) {
-    logs = logs.filter((log) => log.createdAt >= params.startDate!);
+  if (startDate) {
+    logs = logs.filter((log) => log.createdAt >= startDate!);
   }
-  if (params.endDate) {
-    const endISO = `${params.endDate}T23:59:59`;
+  if (endDate) {
+    const endISO = `${endDate}T23:59:59`;
     logs = logs.filter((log) => log.createdAt <= endISO);
   }
 
