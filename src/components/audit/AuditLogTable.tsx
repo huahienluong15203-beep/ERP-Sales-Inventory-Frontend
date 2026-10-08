@@ -7,9 +7,7 @@ import {
   Lock,
   Eye,
   RefreshCw,
-  Info,
-  TrendingUp,
-  TrendingDown
+  Info
 } from '../common/Icons';
 import { Pagination } from '../common/Pagination';
 
@@ -55,37 +53,31 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
         </div>
       </div>
 
-      {/* Nội dung bảng */}
+      {/* Nội dung bảng tinh gọn */}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm border-collapse table-fixed">
           <colgroup>
-            <col style={{ width: '12%' }} />
-            <col style={{ width: '17%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '13%' }} />
-            <col style={{ width: '10%' }} />
-            <col style={{ width: '10%' }} />
+            <col style={{ width: '15%' }} />
+            <col style={{ width: '20%' }} />
+            <col style={{ width: '18%' }} />
+            <col style={{ width: '18%' }} />
+            <col style={{ width: '20%' }} />
             <col style={{ width: '9%' }} />
-            <col style={{ width: '9%' }} />
-            <col style={{ width: '6%' }} />
           </colgroup>
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
               <th className="py-3.5 px-3">Thời Điểm</th>
               <th className="py-3.5 px-3">Người Thực Hiện</th>
               <th className="py-3.5 px-3">Phân Hệ & Thao Tác</th>
-              <th className="py-3.5 px-3">Mã Đối Tượng (SKU/ĐL)</th>
-              <th className="py-3.5 px-3 text-right">Trước Đ/C</th>
-              <th className="py-3.5 px-3 text-right">Sau Đ/C</th>
-              <th className="py-3.5 px-2 text-center">Chênh Lệch</th>
-              <th className="py-3.5 px-3">Lý Do / Căn Cứ</th>
+              <th className="py-3.5 px-3">Đối Tượng Tác Động</th>
+              <th className="py-3.5 px-3">Nội Dung / Lý Do</th>
               <th className="py-3.5 px-2 text-center">Thao Tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr>
-                <td colSpan={9} className="py-12 text-center text-slate-500">
+                <td colSpan={6} className="py-12 text-center text-slate-500">
                   <div className="flex items-center justify-center gap-2">
                     <RefreshCw size={18} className="animate-spin text-orange-600" />
                     <span>Đang truy xuất nhật ký kiểm toán...</span>
@@ -94,7 +86,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
               </tr>
             ) : logs.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-12 text-center text-slate-500">
+                <td colSpan={6} className="py-12 text-center text-slate-500">
                   <Info size={32} className="mx-auto text-slate-400 mb-2" />
                   <p className="font-medium text-slate-700">Không tìm thấy bản ghi nhật ký phù hợp</p>
                   <p className="text-xs text-slate-400 mt-1">
@@ -105,8 +97,6 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
             ) : (
               logs.map((log) => {
                 const moduleMeta = AUDIT_MODULE_OPTIONS.find((m) => m.value === log.module);
-                const isDecrease = log.deltaType === 'decrease';
-                const isIncrease = log.deltaType === 'increase';
 
                 // Tách mã SKU sạch và tên quy cách (không kẹp chữ :Thùng vào mã SKU)
                 const cleanTargetCode = log.targetCode ? log.targetCode.split(':')[0] : '—';
@@ -124,17 +114,17 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
                     className="hover:bg-slate-50/80 transition cursor-pointer group"
                   >
                     {/* 1. Thời điểm */}
-                    <td className="py-3 px-3 overflow-hidden">
+                    <td className="py-3.5 px-3 overflow-hidden">
                       <div className="font-semibold text-slate-900 text-xs truncate" title={formatDateTime(log.createdAt)}>
                         {formatDateTime(log.createdAt)}
                       </div>
-                      <span className="text-[11px] text-slate-400 font-mono truncate block">
+                      <span className="text-[11px] text-slate-400 font-mono truncate block mt-0.5">
                         Log #{log.id}
                       </span>
                     </td>
 
                     {/* 2. Người thực hiện (Actor) - Đồng bộ Avatar */}
-                    <td className="py-3 px-3 overflow-hidden">
+                    <td className="py-3.5 px-3 overflow-hidden">
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-8 h-8 rounded-full bg-orange-100 border border-orange-200/80 flex items-center justify-center text-[#F85606] font-bold overflow-hidden shrink-0 shadow-2xs">
                           {log.actorAvatarUrl ? (
@@ -171,9 +161,9 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
                     </td>
 
                     {/* 3. Phân hệ & Thao tác */}
-                    <td className="py-3 px-3 overflow-hidden">
+                    <td className="py-3.5 px-3 overflow-hidden">
                       <span
-                        className="inline-block px-2 py-0.5 text-[11px] font-bold rounded-md truncate max-w-full"
+                        className="inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-md truncate max-w-full"
                         style={{
                           backgroundColor: moduleMeta?.badgeBg || '#F1F5F9',
                           color: moduleMeta?.badgeColor || '#334155'
@@ -182,13 +172,13 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
                       >
                         {log.moduleLabel}
                       </span>
-                      <div className="text-[11px] font-medium text-slate-600 mt-0.5 truncate" title={log.actionLabel || log.action}>
+                      <div className="text-[11px] font-medium text-slate-600 mt-1 truncate" title={log.actionLabel || log.action}>
                         {log.actionLabel || log.action}
                       </div>
                     </td>
 
-                    {/* 4. Mã đối tượng (SKU / Phiếu / Khách nợ) */}
-                    <td className="py-3 px-3 overflow-hidden">
+                    {/* 4. Đối tượng tác động (SKU / Đại lý / Phiếu) */}
+                    <td className="py-3.5 px-3 overflow-hidden">
                       <span className="font-mono font-bold text-orange-600 text-xs block truncate" title={cleanTargetCode}>
                         {cleanTargetCode}
                       </span>
@@ -199,58 +189,23 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
                       )}
                     </td>
 
-                    {/* 5. Giá trị trước (Old Value) */}
-                    <td className="py-3 px-3 text-right overflow-hidden">
-                      <span className="font-medium text-slate-500 line-through text-xs block truncate" title={log.oldValue}>
-                        {log.oldValue}
-                      </span>
-                    </td>
-
-                    {/* 6. Giá trị sau (New Value) */}
-                    <td className="py-3 px-3 text-right overflow-hidden">
-                      <span className="font-bold text-slate-900 text-xs block truncate" title={log.newValue}>
-                        {log.newValue}
-                      </span>
-                    </td>
-
-                    {/* 7. Chênh lệch (Delta) */}
-                    <td className="py-3 px-2 text-center overflow-hidden">
-                      {log.deltaFormatted ? (
-                        <span
-                          className={`inline-flex items-center justify-center gap-1 px-2 py-0.5 text-[11px] font-bold rounded-md max-w-full ${
-                            isDecrease
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                              : isIncrease
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-slate-100 text-slate-700'
-                          }`}
-                          title={log.deltaFormatted}
-                        >
-                          {isIncrease ? <TrendingUp size={12} className="shrink-0" /> : isDecrease ? <TrendingDown size={12} className="shrink-0" /> : null}
-                          <span className="truncate">{log.deltaFormatted}</span>
-                        </span>
-                      ) : (
-                        <span className="text-slate-300 text-xs">—</span>
-                      )}
-                    </td>
-
-                    {/* 8. Lý do / Căn cứ điều chỉnh */}
-                    <td className="py-3 px-3 overflow-hidden">
-                      <p className="text-xs text-slate-700 truncate" title={log.reason}>
-                        {log.reason}
+                    {/* 5. Nội dung / Căn cứ / Lý do */}
+                    <td className="py-3.5 px-3 overflow-hidden">
+                      <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed" title={log.reason}>
+                        {log.reason || '—'}
                       </p>
                     </td>
 
-                    {/* 9. Nút xem chi tiết kỹ thuật */}
-                    <td className="py-3 px-2 text-center overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                    {/* 6. Nút xem chi tiết kỹ thuật */}
+                    <td className="py-3.5 px-2 text-center overflow-hidden" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
                         onClick={() => onSelectLog(log)}
-                        className="inline-flex items-center justify-center px-2 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-orange-50 hover:text-orange-600 text-slate-700 transition cursor-pointer"
-                        title="Xem bằng chứng kiểm toán chi tiết"
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-orange-50 hover:bg-[#F85606] text-[#F85606] hover:text-white transition-colors cursor-pointer border border-orange-200/60 shadow-2xs"
+                        title="Xem chi tiết biến động kiểm toán"
                       >
                         <Eye size={13} />
-                        <span className="ml-1 hidden xl:inline">Xem</span>
+                        <span>Xem</span>
                       </button>
                     </td>
                   </tr>

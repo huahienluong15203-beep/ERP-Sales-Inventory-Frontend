@@ -1141,6 +1141,102 @@ export async function fetchAssignmentHistory(agencyId: string): Promise<Customer
   );
 }
 
+export interface AssignmentHistoryFilterParams {
+  keyword?: string;
+  customerId?: string;
+  fromSalesRepId?: string;
+  toSalesRepId?: string;
+  changeType?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  size?: number;
+}
+
+export interface AssignmentHistoryPageResponse {
+  content: CustomerAssignmentHistory[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+/**
+ * Lấy lịch sử phân công và chuyển giao địa bàn toàn hệ thống (dùng cho Nhật ký hệ thống)
+ */
+export async function fetchAllAssignmentHistories(
+  params: AssignmentHistoryFilterParams = {}
+): Promise<AssignmentHistoryPageResponse> {
+  const query = new URLSearchParams();
+  if (params.keyword?.trim()) query.set('keyword', params.keyword.trim());
+  if (params.customerId && params.customerId !== 'ALL') query.set('customerId', params.customerId);
+  if (params.fromSalesRepId && params.fromSalesRepId !== 'ALL') query.set('fromSalesRepId', params.fromSalesRepId);
+  if (params.toSalesRepId && params.toSalesRepId !== 'ALL') query.set('toSalesRepId', params.toSalesRepId);
+  if (params.changeType && params.changeType !== 'ALL') query.set('changeType', params.changeType);
+  if (params.startDate) query.set('startDate', params.startDate);
+  if (params.endDate) query.set('endDate', params.endDate);
+  query.set('page', String(params.page ?? 0));
+  query.set('size', String(params.size ?? 20));
+
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/customers/assignment-histories?${query.toString()}`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('Lỗi fetchAllAssignmentHistories backend, dùng mock fallback:', err);
+  }
+
+  // Fallback từ storedAssignmentHistories
+  const allHistoriesMap = getStoredAssignmentHistories();
+  let list: CustomerAssignmentHistory[] = [];
+  for (const [agencyId, items] of Object.entries(allHistoriesMap)) {
+    for (const item of items) {
+      list.push({
+        ...item,
+        customer: item.customer || { id: agencyId, code: agencyId, name: `Đại lý ${agencyId}` }
+      });
+    }
+  }
+
+  // Filter
+  if (params.keyword) {
+    const kw = params.keyword.toLowerCase();
+    list = list.filter(
+      (h) =>
+        h.customer?.name?.toLowerCase().includes(kw) ||
+        h.customer?.code?.toLowerCase().includes(kw) ||
+        h.reason?.toLowerCase().includes(kw) ||
+        h.fromSalesRep?.fullName?.toLowerCase().includes(kw) ||
+        h.toSalesRep?.fullName?.toLowerCase().includes(kw)
+    );
+  }
+  if (params.changeType && params.changeType !== 'ALL') {
+    list = list.filter((h) => h.changeType === params.changeType);
+  }
+  if (params.fromSalesRepId && params.fromSalesRepId !== 'ALL') {
+    list = list.filter((h) => String(h.fromSalesRep?.id) === params.fromSalesRepId);
+  }
+  if (params.toSalesRepId && params.toSalesRepId !== 'ALL') {
+    list = list.filter((h) => String(h.toSalesRep?.id) === params.toSalesRepId);
+  }
+
+  list.sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime());
+
+  const page = params.page ?? 0;
+  const size = params.size ?? 20;
+  const start = page * size;
+  const content = list.slice(start, start + size);
+
+  return {
+    content,
+    page,
+    size,
+    totalElements: list.length,
+    totalPages: Math.max(1, Math.ceil(list.length / size))
+  };
+}
+
 /**
  * Đổi nhân viên phụ trách chính cho một đại lý (S3-06)
  */
