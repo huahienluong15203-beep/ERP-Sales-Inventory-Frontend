@@ -758,7 +758,7 @@ export const AgencyManagementPage: React.FC = () => {
                   <th className="py-3.5 px-4 whitespace-nowrap min-w-[240px]">Mã & Tên Đại Lý</th>
                   <th className="py-3.5 px-4 whitespace-nowrap min-w-[200px]">Nhóm Khách Hàng / Bảng Giá</th>
                   <th className="py-3.5 px-4 whitespace-nowrap min-w-[170px]">Khu Vực & Phụ Trách</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap min-w-[150px]">Công Nợ</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap min-w-[175px]">Công Nợ & Hạn Mức</th>
                   <th className="py-3.5 px-4 whitespace-nowrap min-w-[150px] text-center">Trạng Thái</th>
                   <th className="py-3.5 px-4 whitespace-nowrap w-28 text-right pr-6">Thao Tác</th>
                 </tr>
@@ -887,22 +887,35 @@ export const AgencyManagementPage: React.FC = () => {
                           </div>
                         </td>
 
-                        {/* Cột 4: Công nợ nhanh & Icon xem chi tiết hạn mức */}
+                        {/* Cột 4: Công nợ hiện tại & Hạn mức tín dụng */}
                         <td className="py-4 px-4 whitespace-nowrap">
-                          <div className="inline-flex items-center gap-2">
-                            <div>
-                              <span className="text-[10px] text-gray-400 font-medium block">Công nợ</span>
-                              <span className={`font-mono font-bold text-xs ${
-                                agency.totalDebt > 0 ? 'text-rose-600' : 'text-gray-700'
-                              }`}>
-                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(agency.totalDebt)}
-                              </span>
+                          <div className="flex items-center gap-2.5">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-gray-400 font-medium">Nợ hiện tại:</span>
+                                <span className={`font-mono font-bold text-xs ${
+                                  agency.totalDebt > 0 ? 'text-rose-600' : 'text-gray-700'
+                                }`}>
+                                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(agency.totalDebt)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 text-[11px] text-gray-500">
+                                <span className="text-[10px] text-gray-400">Hạn mức:</span>
+                                <span className="font-mono font-bold text-gray-900">
+                                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(agency.creditLimit)}
+                                </span>
+                                {agency.maxDebtDays ? (
+                                  <span className="text-[10px] text-gray-400 font-normal">
+                                    • {agency.maxDebtDays} ngày
+                                  </span>
+                                ) : null}
+                              </div>
                             </div>
                             <button
                               type="button"
                               onClick={() => handleOpenCreditLimit(agency)}
                               className="p-1.5 rounded-lg border border-gray-200 hover:border-orange-300 hover:bg-orange-50 text-gray-400 hover:text-[#F85606] transition-colors cursor-pointer shrink-0"
-                              title={`Hạn mức nợ: ${new Intl.NumberFormat('vi-VN').format(agency.creditLimit)}đ • Tối đa ${agency.maxDebtDays || 30} ngày • ${agency.transactionCount} đơn hàng. Nhấn để xem chi tiết & điều chỉnh.`}
+                              title={`Thiết lập hạn mức nợ (Hiện tại: ${new Intl.NumberFormat('vi-VN').format(agency.creditLimit)}đ • ${agency.maxDebtDays || 30} ngày). Nhấn để điều chỉnh.`}
                             >
                               <CreditCard size={14} />
                             </button>
