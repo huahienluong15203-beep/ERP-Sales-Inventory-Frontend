@@ -1143,18 +1143,18 @@ export const CategoryManagement: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Bảng dữ liệu sản phẩm */}
-                <div className="overflow-x-auto rounded-xl border border-slate-200">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
-                        <th className="py-2.5 px-3">Mã SKU</th>
-                        <th className="py-2.5 px-3">Tên Sản Phẩm</th>
-                        <th className="py-2.5 px-3">ĐVT Cơ Sở</th>
-                        <th className="py-2.5 px-3">Nhóm Hiện Tại</th>
-                        <th className="py-2.5 px-3 text-right">Sản Lượng Bán</th>
-                        <th className="py-2.5 px-3 text-right">Doanh Số (VND)</th>
-                        {canManage && <th className="py-2.5 px-3 text-center">Thao Tác</th>}
+                {/* Bảng dữ liệu sản phẩm có thanh cuộn dọc cố định tiêu đề */}
+                <div className="overflow-x-auto overflow-y-auto max-h-[460px] sm:max-h-[500px] rounded-xl border border-slate-200">
+                  <table className="w-full text-left text-xs border-collapse relative">
+                    <thead className="sticky top-0 z-10 bg-slate-50 shadow-2xs">
+                      <tr className="border-b border-slate-200 text-slate-600 font-bold">
+                        <th className="py-2.5 px-3 bg-slate-50 whitespace-nowrap">Mã SKU</th>
+                        <th className="py-2.5 px-3 bg-slate-50 whitespace-nowrap">Tên Sản Phẩm</th>
+                        <th className="py-2.5 px-3 bg-slate-50 whitespace-nowrap">ĐVT Cơ Sở</th>
+                        <th className="py-2.5 px-3 bg-slate-50 whitespace-nowrap">Nhóm Hiện Tại</th>
+                        <th className="py-2.5 px-3 text-right bg-slate-50 whitespace-nowrap">Sản Lượng Bán</th>
+                        <th className="py-2.5 px-3 text-right bg-slate-50 whitespace-nowrap">Doanh Số (VND)</th>
+                        {canManage && <th className="py-2.5 px-3 text-center bg-slate-50 whitespace-nowrap">Thao Tác</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
