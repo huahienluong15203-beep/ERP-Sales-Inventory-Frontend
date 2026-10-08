@@ -149,15 +149,58 @@ export const OrderCreatePage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAgency, selectedDeliveryPoint, expectedDeliveryDate, orderNote, items, currentDraftId, backendDraftId]);
 
-  // Đổi đại lý: giữ các dòng hàng, Backend sẽ tính lại giá theo bảng giá của nhóm khách hàng mới
+  // Đổi đại lý: xử lý làm mới đơn hàng và bảng giá
   const handleSelectAgency = (agency: Agency) => {
+    if (selectedAgency && agency.id === selectedAgency.id) {
+      return;
+    }
+
+    const hadItems = items.length > 0;
     setSelectedAgency(agency);
     setSelectedDeliveryPoint(null);
+
+    // Khi đổi sang đại lý khác: Luôn làm mới danh sách mặt hàng để tránh lưu sản phẩm & giá cũ của đại lý trước
+    if (hadItems) {
+      setItems([]);
+      setPreview({ status: 'idle' });
+      setBackendWarnings([]);
+      setBackendDraftId(null);
+
+      if (!agency.priceList) {
+        showToast(
+          'Đại lý chưa có bảng giá',
+          `Đại lý "${agency.name}" chưa có bảng giá hiệu lực. Đã làm mới danh sách sản phẩm.`,
+          'error'
+        );
+      } else {
+        showToast(
+          'Đã đổi đại lý',
+          `Đã chuyển sang đại lý "${agency.name}". Danh sách sản phẩm được làm mới theo bảng giá mới.`,
+          'info'
+        );
+      }
+    } else {
+      if (!agency.priceList) {
+        showToast(
+          'Đại lý chưa có bảng giá',
+          `Đại lý "${agency.name}" chưa có bảng giá hiệu lực trong hệ thống.`,
+          'error'
+        );
+      }
+    }
   };
 
   const openProductPicker = () => {
     if (!selectedAgency) {
       showToast('Chưa chọn đại lý', 'Vui lòng chọn đại lý trước để lấy đúng bảng giá', 'error');
+      return;
+    }
+    if (!selectedAgency.priceList) {
+      showToast(
+        'Đại lý chưa có bảng giá',
+        `Đại lý "${selectedAgency.name}" chưa có bảng giá hiệu lực. Vui lòng thiết lập bảng giá trước khi lên đơn.`,
+        'error'
+      );
       return;
     }
     setIsProductPickerOpen(true);
@@ -258,6 +301,10 @@ export const OrderCreatePage: React.FC = () => {
   const handleSaveDraft = async () => {
     if (!selectedAgency) {
       showToast('Chưa chọn đại lý', 'Vui lòng chọn đại lý trước khi lưu nháp', 'error');
+      return;
+    }
+    if (!selectedAgency.priceList) {
+      showToast('Chưa có bảng giá', 'Đại lý chưa có bảng giá hiệu lực, không thể lưu nháp đơn hàng', 'error');
       return;
     }
     if (items.length === 0) {
@@ -409,7 +456,11 @@ export const OrderCreatePage: React.FC = () => {
             <button
               type="button"
               onClick={openProductPicker}
-              className="px-4 py-2 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 active:scale-98 transition cursor-pointer self-start sm:self-auto shrink-0"
+              className={`px-4 py-2 rounded-xl text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition cursor-pointer self-start sm:self-auto shrink-0 ${
+                selectedAgency && !selectedAgency.priceList
+                  ? 'bg-gray-400 hover:bg-gray-500 shadow-none'
+                  : 'bg-[#F85606] hover:bg-orange-600 shadow-orange-500/20 active:scale-98'
+              }`}
             >
               <Plus size={16} />
               <span>Thêm Sản Phẩm</span>
@@ -420,18 +471,42 @@ export const OrderCreatePage: React.FC = () => {
           {items.length === 0 ? (
             <div
               onClick={openProductPicker}
-              className="py-12 px-4 rounded-xl border border-dashed border-gray-200 hover:border-orange-300 bg-gray-50/50 hover:bg-orange-50/20 text-center space-y-3 cursor-pointer transition-colors group"
+              className={`py-12 px-4 rounded-xl border border-dashed text-center space-y-3 cursor-pointer transition-colors group ${
+                selectedAgency && !selectedAgency.priceList
+                  ? 'border-amber-200 bg-amber-50/40 hover:bg-amber-50/60'
+                  : 'border-gray-200 hover:border-orange-300 bg-gray-50/50 hover:bg-orange-50/20'
+              }`}
               title="Nhấn để tìm và thêm sản phẩm vào đơn hàng"
             >
-              <div className="w-14 h-14 rounded-2xl bg-orange-50 group-hover:bg-orange-100 text-[#F85606] flex items-center justify-center mx-auto transition-colors">
-                <ShoppingCart size={28} />
+              <div
+                className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto transition-colors ${
+                  selectedAgency && !selectedAgency.priceList
+                    ? 'bg-amber-100 text-amber-600'
+                    : 'bg-orange-50 group-hover:bg-orange-100 text-[#F85606]'
+                }`}
+              >
+                {selectedAgency && !selectedAgency.priceList ? (
+                  <AlertTriangle size={28} />
+                ) : (
+                  <ShoppingCart size={28} />
+                )}
               </div>
               <div>
-                <strong className="text-sm text-gray-800 font-bold block group-hover:text-[#F85606] transition-colors">
-                  Đơn hàng chưa có sản phẩm nào
+                <strong
+                  className={`text-sm font-bold block transition-colors ${
+                    selectedAgency && !selectedAgency.priceList
+                      ? 'text-amber-900'
+                      : 'text-gray-800 group-hover:text-[#F85606]'
+                  }`}
+                >
+                  {selectedAgency && !selectedAgency.priceList
+                    ? 'Đại lý chưa có bảng giá hiệu lực'
+                    : 'Đơn hàng chưa có sản phẩm nào'}
                 </strong>
                 <span className="text-xs text-gray-500 max-w-sm block mx-auto mt-0.5">
-                  Nhấn nút "+ Thêm Sản Phẩm" để tìm nhanh SKU theo danh mục và chọn đơn vị quy đổi (thùng/lốc/lon).
+                  {selectedAgency && !selectedAgency.priceList
+                    ? `Nhóm khách hàng "${selectedAgency.customerGroupName}" chưa có bảng giá nào đang hoạt động. Vui lòng thiết lập bảng giá trước khi lên đơn.`
+                    : 'Nhấn nút "+ Thêm Sản Phẩm" để tìm nhanh SKU theo danh mục và chọn đơn vị quy đổi (thùng/lốc/lon).'}
                 </span>
               </div>
             </div>
@@ -478,6 +553,14 @@ export const OrderCreatePage: React.FC = () => {
           {/* Tiền do Backend tính theo bảng giá + chính sách chiết khấu sản lượng đang hiệu lực */}
           {!selectedAgency ? (
             <p className="text-xs text-gray-500">Chọn đại lý và thêm sản phẩm để hệ thống tính tiền.</p>
+          ) : !selectedAgency.priceList ? (
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2">
+              <AlertTriangle size={16} className="shrink-0 mt-0.5 text-amber-600" />
+              <div>
+                <strong className="block">Đại lý chưa có bảng giá hiệu lực</strong>
+                <span>Cần có bảng giá đang áp dụng để tính tiền hàng và chiết khấu.</span>
+              </div>
+            </div>
           ) : items.length === 0 ? (
             <p className="text-xs text-gray-500">Thêm sản phẩm để hệ thống tính tiền.</p>
           ) : preview.status === 'error' ? (

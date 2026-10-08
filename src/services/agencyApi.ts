@@ -456,7 +456,14 @@ function mapCustomer(c: BackendCustomer): Agency {
       badgeColor: style.badgeColor
     };
   } else {
-    pricingTier = getPricingTierByGroup(groupId);
+    pricingTier = {
+      id: '',
+      code: '',
+      name: 'Chưa có bảng giá áp dụng',
+      description: 'Chưa có bảng giá hiệu lực cho nhóm này',
+      badgeBg: '#FEF2F2',
+      badgeColor: '#B91C1C'
+    };
   }
 
   return {

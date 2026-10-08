@@ -180,14 +180,39 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
 
               {/* Thông tin hạn mức và bảng giá tự động */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200/70 text-[11px]">
-                <span className="inline-flex items-center gap-1 text-gray-600">
-                  <BadgeDollarSign size={12} className="text-[#F85606]" />
-                  Bảng giá: <strong>{selectedAgency.pricingTier.name} (CK {selectedAgency.pricingTier.discountPercent}%)</strong>
-                </span>
+                {selectedAgency.priceList ? (
+                  <span className="inline-flex items-center gap-1 text-gray-600">
+                    <BadgeDollarSign size={12} className="text-[#F85606]" />
+                    Bảng giá: <strong>{selectedAgency.priceList.name || selectedAgency.pricingTier?.name}</strong>
+                    {selectedAgency.priceList.code && (
+                      <span className="text-[10px] text-gray-500 font-mono">({selectedAgency.priceList.code})</span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-semibold">
+                    <AlertTriangle size={12} className="text-amber-500 shrink-0" />
+                    Chưa có bảng giá hiệu lực
+                  </span>
+                )}
                 <span className="text-gray-500">
                   Hạn mức: <strong className="text-gray-700">{formatCurrencyVND(selectedAgency.creditLimit)}</strong>
                 </span>
               </div>
+
+              {/* CẢNH BÁO NẾU ĐẠI LÝ CHƯA CÓ BẢNG GIÁ HIỆU LỰC */}
+              {!selectedAgency.priceList && (
+                <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2 animate-in fade-in">
+                  <AlertTriangle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-bold block text-amber-900">
+                      Đại lý chưa có bảng giá hiệu lực!
+                    </strong>
+                    <span className="text-[11px] leading-tight block mt-0.5">
+                      Nhóm {selectedAgency.customerGroupName} hiện chưa có bảng giá nào đang hoạt động. Không thể tạo đơn hàng hoặc tính giá sản phẩm cho đại lý này.
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* CẢNH BÁO NẾU ĐẠI LÝ BỊ KHÓA GIAO DỊCH (S3-07 / Description 1) */}
               {selectedAgency.transactionLocked && (
@@ -272,6 +297,12 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                         <span>{agency.customerGroupName}</span>
                         <span>•</span>
                         <span>{agency.regionName}</span>
+                        {!agency.priceList && (
+                          <>
+                            <span>•</span>
+                            <span className="text-amber-600 font-medium">Chưa có bảng giá</span>
+                          </>
+                        )}
                       </div>
                     </div>
 
