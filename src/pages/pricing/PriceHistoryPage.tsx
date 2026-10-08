@@ -12,6 +12,7 @@ import {
   exportPriceHistoryToExcel,
   formatVND,
   formatDateTime,
+  formatDate,
   PRICE_TYPE_OPTIONS
 } from '../../services/priceHistoryApi';
 import { ProductPriceSummaryCards } from '../../components/pricing/ProductPriceSummaryCards';
@@ -404,7 +405,7 @@ export const PriceHistoryPage: React.FC = () => {
           <table className="w-full text-left text-sm border-collapse min-w-[900px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                <th className="py-3.5 px-4">Thời Điểm Áp Dụng</th>
+                <th className="py-3.5 px-4">Thời Điểm Sửa & Áp Dụng</th>
                 <th className="py-3.5 px-4">Sản Phẩm & SKU</th>
                 <th className="py-3.5 px-4">Biểu Giá</th>
                 <th className="py-3.5 px-4 text-right">Giá Cũ (Tháng trước)</th>
@@ -446,11 +447,16 @@ export const PriceHistoryPage: React.FC = () => {
                       onClick={() => handleOpenDetail(r)}
                       className="hover:bg-gray-50/80 transition cursor-pointer group"
                     >
-                      {/* Thời điểm áp dụng */}
+                      {/* Thời điểm sửa & áp dụng */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="font-semibold text-gray-900">
-                          {formatDateTime(r.effectiveDate)}
+                        <div className="font-semibold text-gray-900" title="Thời điểm thay đổi giá thực tế">
+                          {formatDateTime(r.createdAt || r.effectiveDate)}
                         </div>
+                        {r.effectiveDate && (
+                          <div className="text-[11px] text-gray-500 font-medium">
+                            Hiệu lực: {formatDate(r.effectiveDate)}
+                          </div>
+                        )}
                         <span className="text-[11px] text-gray-400 font-mono">
                           Mã: {r.id}
                         </span>

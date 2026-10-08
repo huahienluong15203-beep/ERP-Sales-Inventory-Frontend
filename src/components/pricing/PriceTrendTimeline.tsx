@@ -1,6 +1,6 @@
 import React from 'react';
 import type { PriceChangeRecord } from '../../types/pricing';
-import { formatVND, formatDateTime } from '../../services/priceHistoryApi';
+import { formatVND, formatDateTime, formatDate } from '../../services/priceHistoryApi';
 import {
   TrendingUp,
   TrendingDown,
@@ -23,10 +23,13 @@ export const PriceTrendTimeline: React.FC<PriceTrendTimelineProps> = ({
   productSku,
   onSelectRecord
 }) => {
-  // Sắp xếp tăng dần theo thời gian để vẽ timeline từ quá khứ đến hiện tại
-  const sortedRecords = [...records].sort(
-    (a, b) => new Date(a.effectiveDate).getTime() - new Date(b.effectiveDate).getTime()
-  );
+  // Sắp xếp tăng dần theo thời gian thực tế để vẽ timeline từ quá khứ đến hiện tại
+  const sortedRecords = [...records].sort((a, b) => {
+    const timeA = new Date(a.createdAt || a.effectiveDate).getTime();
+    const timeB = new Date(b.createdAt || b.effectiveDate).getTime();
+    if (!isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) return timeA - timeB;
+    return Number(a.id) - Number(b.id);
+  });
 
   if (sortedRecords.length === 0) {
     return null;
@@ -102,10 +105,15 @@ export const PriceTrendTimeline: React.FC<PriceTrendTimelineProps> = ({
                 }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-gray-700">
-                      {formatDateTime(item.effectiveDate)}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold text-gray-800" title="Thời điểm thay đổi giá (Thời gian thực)">
+                      {formatDateTime(item.createdAt || item.effectiveDate)}
                     </span>
+                    {item.effectiveDate && (
+                      <span className="text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-medium" title="Ngày bắt đầu hiệu lực bảng giá">
+                        Hiệu lực: {formatDate(item.effectiveDate)}
+                      </span>
+                    )}
                     {isLatest && (
                       <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-blue-600 text-white shadow-xs">
                         Đang áp dụng

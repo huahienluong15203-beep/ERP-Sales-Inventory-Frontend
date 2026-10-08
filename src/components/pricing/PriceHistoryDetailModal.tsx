@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { PriceChangeRecord } from '../../types/pricing';
-import { formatVND, formatDateTime } from '../../services/priceHistoryApi';
+import { formatVND, formatDateTime, formatDate } from '../../services/priceHistoryApi';
 import {
   X,
   Lock,
@@ -35,7 +35,7 @@ export const PriceHistoryDetailModal: React.FC<PriceHistoryDetailModalProps> = (
   const isDecrease = record.difference < 0;
 
   const handleCopyExplanation = () => {
-    const textToCopy = `[Giải thích biến động giá] Sản phẩm: ${record.productName} (${record.productSku})\nBiểu giá: ${record.priceTypeName}\nGiá cũ: ${formatVND(record.oldPrice)} ➔ Giá mới: ${formatVND(record.newPrice)} (${isIncrease ? '+' : ''}${record.percentageChange.toFixed(2)}%)\nThời điểm áp dụng: ${formatDateTime(record.effectiveDate)}\nCăn cứ: ${record.decisionCode}\nNội dung giải thích: ${record.explanationForAgency}`;
+    const textToCopy = `[Giải thích biến động giá] Sản phẩm: ${record.productName} (${record.productSku})\nBiểu giá: ${record.priceTypeName}\nGiá cũ: ${formatVND(record.oldPrice)} ➔ Giá mới: ${formatVND(record.newPrice)} (${isIncrease ? '+' : ''}${record.percentageChange.toFixed(2)}%)\nThời điểm thực hiện: ${formatDateTime(record.createdAt)}\nHiệu lực: ${formatDate(record.effectiveDate)}\nCăn cứ: ${record.decisionCode}\nNội dung giải thích: ${record.explanationForAgency}`;
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
@@ -149,7 +149,7 @@ export const PriceHistoryDetailModal: React.FC<PriceHistoryDetailModalProps> = (
                 {formatVND(record.newPrice)}
               </div>
               <span className="text-[11px] text-blue-600/80 mt-1 block font-medium">
-                Có hiệu lực từ {formatDateTime(record.effectiveDate)}
+                Có hiệu lực từ {formatDate(record.effectiveDate)}
               </span>
             </div>
           </div>
@@ -163,21 +163,21 @@ export const PriceHistoryDetailModal: React.FC<PriceHistoryDetailModalProps> = (
               </div>
               <div className="text-sm space-y-1 pt-1">
                 <div className="flex justify-between">
-                  <span className="text-gray-500 text-xs">Thời điểm hiệu lực:</span>
+                  <span className="text-gray-500 text-xs">Thời điểm sửa (Thực tế):</span>
+                  <span className="font-bold text-gray-900 text-xs font-mono">
+                    {formatDateTime(record.createdAt)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500 text-xs">Ngày hiệu lực bảng giá:</span>
                   <span className="font-semibold text-gray-800 text-xs">
-                    {formatDateTime(record.effectiveDate)}
+                    {formatDate(record.effectiveDate)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500 text-xs">Số quyết định / Mã căn cứ:</span>
                   <span className="font-mono font-bold text-blue-600 text-xs">
                     {record.decisionCode}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500 text-xs">Thời điểm ghi nhận CSDL:</span>
-                  <span className="text-gray-600 text-xs font-mono">
-                    {formatDateTime(record.createdAt)}
                   </span>
                 </div>
               </div>
