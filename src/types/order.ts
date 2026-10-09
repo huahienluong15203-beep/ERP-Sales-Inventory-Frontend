@@ -233,6 +233,62 @@ export interface ProductOptionBackendResponse {
 }
 
 /**
+ * S4-07: Một dòng trong danh sách đơn hàng (khớp OrderSummaryResponse backend)
+ */
+export interface OrderSummaryItem {
+  id: number;
+  code: string;
+  status: string;
+  customerId: number;
+  customerCode: string;
+  customerName: string;
+  desiredDeliveryDate?: string | null;
+  lineCount: number;
+  totalAmount: number;
+  createdByUsername?: string | null;
+  updatedAt?: string | null;
+  salesRepId?: number | null;
+  salesRepName?: string | null;
+  regionId?: number | null;
+  regionName?: string | null;
+  createdAt: string;
+}
+
+/**
+ * S4-07: Tổng số đơn và tổng tiền toàn bộ kết quả đang lọc (khớp OrderTotalsResponse backend)
+ */
+export interface OrderTotalsSummary {
+  orderCount: number;
+  totalAmount: number;
+}
+
+/**
+ * S4-07: Tiêu chí lọc danh sách đơn hàng
+ */
+export interface OrderFilterCriteria {
+  statuses?: string[];
+  customerId?: number | string | null;
+  salesRepId?: number | string | null;
+  regionId?: number | string | null;
+  fromDate?: string | null;
+  toDate?: string | null;
+  keyword?: string | null;
+  page?: number;
+  size?: number;
+}
+
+/**
+ * S4-07: Phân trang danh sách đơn hàng từ Backend
+ */
+export interface OrderPageResponse {
+  content: OrderSummaryItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+/**
  * Story S4-04: Xem lịch sử mua hàng của đại lý khi gõ đơn hàng
  * 1. Hiển thị các mặt hàng đại lý đã mua trong 3 tháng gần nhất kèm số lượng bình quân (AC1)
  * 2. Thêm nhanh cả nhóm hàng đã mua lần trước vào đơn mới (AC2)

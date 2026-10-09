@@ -34,13 +34,22 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
-    title: 'Đơn hàng đại lý',
-    path: '/orders/create',
+    title: 'Danh sách đơn hàng',
+    path: '/orders',
     group: 'Bán hàng',
     icon: 'ShoppingCart',
     epic: 'Đặt hàng & Duyệt ngoại lệ',
+    description: '',
+    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
+  },
+
+  {
+    title: 'Tạo đơn mới',
+    path: '/orders/create',
+    group: 'Bán hàng',
+    icon: 'ShoppingBag',
+    epic: 'Đặt hàng & Duyệt ngoại lệ',
     description: 'Lên đơn nhanh tại điểm bán, tự động áp giá & chiết khấu sản lượng',
-    // Kế toán không tạo đơn (Backend chặn) -> không hiện menu để tránh bị văng ra màn đăng nhập
     allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
   },
 
