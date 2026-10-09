@@ -117,6 +117,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Phiếu chuyển kho',
+    path: '/inventory/transfers',
+    group: 'Sản phẩm & Kho',
+    icon: 'Truck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Lập phiếu chuyển kho nội bộ, theo dõi hàng đang đi đường và xác nhận nhận đủ (S5-07)',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
+  },
+
+  {
     title: 'Bảng giá sản phẩm',
     path: '/pricing',
     group: 'Giá & Chiết khấu',
