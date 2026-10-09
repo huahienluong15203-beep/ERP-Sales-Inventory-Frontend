@@ -10,7 +10,10 @@ import type {
   OrderItemUnitOption,
   OrderDraftBackendRequest,
   OrderBackendResponse,
-  ProductOptionBackendResponse
+  ProductOptionBackendResponse,
+  OrderTotalsSummary,
+  OrderFilterCriteria,
+  OrderPageResponse
 } from '../types/order';
 import type { CustomerGroupId } from '../types/agency';
 
@@ -507,7 +510,7 @@ export async function fetchBackendDrafts(keyword?: string): Promise<OrderDraft[]
   if (!res.ok) throw new Error(await readBackendError(res, 'Không tải được danh sách đơn nháp'));
   const data = await res.json();
   if (data && Array.isArray(data.content)) {
-    return data.content.map((item: any) => ({
+    return data.content.map((item: { id: number | string; code?: string; customerId?: string | number; customerCode?: string; customerName?: string; desiredDeliveryDate?: string; lineCount?: number; totalAmount?: number; createdByUsername?: string; updatedAt?: string; [key: string]: unknown }) => ({
       id: `BACKEND-DRAFT-${item.id}`,
       backendDraftId: item.id,
       orderNumber: item.code,
@@ -653,4 +656,60 @@ export function formatCurrencyVND(val: number): string {
  */
 export function formatQuantity(val: number): string {
   return new Intl.NumberFormat('vi-VN').format(val);
+}
+
+// ======================== S4-07: QUẢN LÝ DANH SÁCH ĐƠN HÀNG & BỘ LỌC TOÀN CÔNG TY ========================
+
+/**
+ * S4-07: Tải danh sách đơn hàng có phân trang và bộ lọc đa tiêu chí
+ * Backend: GET /api/orders
+ */
+export async function fetchOrders(criteria: OrderFilterCriteria = {}): Promise<OrderPageResponse> {
+  const query = new URLSearchParams();
+  if (criteria.statuses && criteria.statuses.length > 0) {
+    query.set('status', criteria.statuses.join(','));
+  }
+  if (criteria.customerId) query.set('customerId', String(criteria.customerId));
+  if (criteria.salesRepId) query.set('salesRepId', String(criteria.salesRepId));
+  if (criteria.regionId) query.set('regionId', String(criteria.regionId));
+  if (criteria.fromDate) query.set('fromDate', criteria.fromDate);
+  if (criteria.toDate) query.set('toDate', criteria.toDate);
+  if (criteria.keyword && criteria.keyword.trim()) query.set('keyword', criteria.keyword.trim());
+  query.set('page', String(criteria.page ?? 0));
+  query.set('size', String(criteria.size ?? 20));
+
+  const res = await callBackend(`${API_BASE_URL}/api/orders?${query.toString()}`);
+  if (!res.ok) throw new Error(await readBackendError(res, 'Không tải được danh sách đơn hàng'));
+  return res.json();
+}
+
+/**
+ * S4-07: Tải tổng số đơn và tổng doanh số/tiền hàng của toàn bộ kết quả đang lọc từ Database
+ * Backend: GET /api/orders/totals
+ */
+export async function fetchOrderTotals(criteria: OrderFilterCriteria = {}): Promise<OrderTotalsSummary> {
+  const query = new URLSearchParams();
+  if (criteria.statuses && criteria.statuses.length > 0) {
+    query.set('status', criteria.statuses.join(','));
+  }
+  if (criteria.customerId) query.set('customerId', String(criteria.customerId));
+  if (criteria.salesRepId) query.set('salesRepId', String(criteria.salesRepId));
+  if (criteria.regionId) query.set('regionId', String(criteria.regionId));
+  if (criteria.fromDate) query.set('fromDate', criteria.fromDate);
+  if (criteria.toDate) query.set('toDate', criteria.toDate);
+  if (criteria.keyword && criteria.keyword.trim()) query.set('keyword', criteria.keyword.trim());
+
+  const res = await callBackend(`${API_BASE_URL}/api/orders/totals?${query.toString()}`);
+  if (!res.ok) throw new Error(await readBackendError(res, 'Không tải được tổng tiền đơn hàng'));
+  return res.json();
+}
+
+/**
+ * S4-07 / S3-09: Tải chi tiết đơn hàng theo ID (kèm danh sách dòng hàng và thông tin duyệt)
+ * Backend: GET /api/orders/{id}
+ */
+export async function fetchOrderDetail(id: number | string): Promise<OrderBackendResponse> {
+  const res = await callBackend(`${API_BASE_URL}/api/orders/${id}`);
+  if (!res.ok) throw new Error(await readBackendError(res, 'Không tải được chi tiết đơn hàng'));
+  return res.json();
 }

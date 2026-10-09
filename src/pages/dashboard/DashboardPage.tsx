@@ -512,7 +512,7 @@ export const DashboardPage: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={() => navigate('/orders/create')}
+              onClick={() => navigate('/orders')}
               style={{
                 fontSize: '13px',
                 fontWeight: 600,

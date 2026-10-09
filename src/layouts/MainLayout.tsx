@@ -58,6 +58,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
   // Đóng Mobile Drawer khi đổi route
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
@@ -150,7 +151,9 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
       ? 'Thông tin cá nhân & thiết lập an toàn tài khoản'
       : location.pathname === '/products/import'
         ? 'Tải tệp mẫu, xem trước từng dòng và nhập hàng loạt đến 5.000 SKU'
-        : currentMenu?.description || 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống';
+        : location.pathname === '/orders'
+          ? ''
+          : (currentMenu?.description ?? 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống');
 
   return (
     <div className="erp-app-shell">
@@ -322,7 +325,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             {/* Tiêu đề trang + mô tả hoạt động bên dưới */}
             <div className="erp-page-title-box">
               <h1 className="erp-page-heading">{pageTitle}</h1>
-              {location.pathname !== '/categories' && (
+              {location.pathname !== '/categories' && location.pathname !== '/orders' && Boolean(pageSubtitle) && (
                 <span className="erp-page-subheading">{pageSubtitle}</span>
               )}
             </div>

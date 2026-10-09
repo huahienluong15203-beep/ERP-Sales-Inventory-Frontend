@@ -14,6 +14,7 @@ import { PriceListPage } from '../pages/pricing/PriceListPage';
 import { VolumeDiscountPage } from '../pages/pricing/VolumeDiscountPage';
 import { CategoryManagementPage } from '../pages/category/CategoryManagementPage';
 import { OrderCreatePage } from '../pages/order/OrderCreatePage';
+import { OrderListPage } from '../pages/order/OrderListPage';
 import { SupplierManagementPage } from '../pages/supplier/SupplierManagementPage';
 import { SystemLogPage } from '../pages/system-log/SystemLogPage';
 import { ModulePage } from '../pages/common/ModulePage';
@@ -215,6 +216,7 @@ export const AppRoutes: React.FC = () => {
             </ProtectedRoute>
           }
         />
+        {/* S4-07: Danh sách đơn hàng có bộ lọc đa chiều & tổng tiền (Quản lý kinh doanh, NVKD, Admin, Kế toán) */}
         <Route
           path="/orders"
           element={
@@ -222,10 +224,11 @@ export const AppRoutes: React.FC = () => {
               allowedRoles={[
                 'ROLE_SALES_REP',
                 'ROLE_SALES_MANAGER',
-                'ROLE_ADMIN'
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
               ]}
             >
-              <OrderCreatePage />
+              <OrderListPage />
             </ProtectedRoute>
           }
         />
