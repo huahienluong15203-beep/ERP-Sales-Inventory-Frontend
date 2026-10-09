@@ -536,7 +536,14 @@ export function getRealPriceListForGroup(
       badgeColor: style.badgeColor
     };
   }
-  return getPricingTierByGroup(groupId);
+  return {
+    id: '',
+    code: '',
+    name: 'Chưa có bảng giá áp dụng',
+    description: 'Chưa có bảng giá hiệu lực cho nhóm khách hàng này trong hệ thống',
+    badgeBg: '#FEF2F2',
+    badgeColor: '#B91C1C'
+  };
 }
 
 /** Khu vực + nhân viên kinh doanh + bảng giá thật từ Backend (GET /api/customers/form-options). */
