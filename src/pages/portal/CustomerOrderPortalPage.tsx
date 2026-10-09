@@ -15,7 +15,8 @@ import {
   Send,
   Eye,
   X,
-  ShieldAlert
+  ShieldAlert,
+  RotateCcw
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { CustomerPortalLayout } from '../../layouts/CustomerPortalLayout';
@@ -36,6 +37,7 @@ import {
   fetchCustomerCreditStatus
 } from '../../services/agencyApi';
 import { OrderDetailModal } from '../../components/order/OrderDetailModal';
+import { CustomerReorderModal, type ReorderItemDraft } from '../../components/order/CustomerReorderModal';
 
 // Giao diện một món trong giỏ hàng đại lý B2B
 interface CartItem {
@@ -81,6 +83,48 @@ export const CustomerOrderPortalPage: React.FC = () => {
   const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
   const [selectedDetailOrderId, setSelectedDetailOrderId] = useState<number | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
+
+  // S5-02: Modal mua lại đơn cũ & UI cảnh báo
+  const [reorderModalOrderId, setReorderModalOrderId] = useState<number | string | null>(null);
+  const [isReorderModalOpen, setIsReorderModalOpen] = useState<boolean>(false);
+
+  const handleConfirmReorder = (items: ReorderItemDraft[]) => {
+    if (items.length === 0) return;
+    setCart((prev) => {
+      const next = [...prev];
+      items.forEach((item) => {
+        const existingIdx = next.findIndex(
+          (c) => c.productId === item.productId && c.selectedUnit === item.selectedUnit
+        );
+        if (existingIdx >= 0) {
+          next[existingIdx] = {
+            ...next[existingIdx],
+            quantity: next[existingIdx].quantity + item.quantity
+          };
+        } else {
+          next.push({
+            productId: item.productId,
+            sku: item.sku,
+            name: item.name,
+            selectedUnit: item.selectedUnit,
+            conversionFactor: item.conversionFactor,
+            unitPrice: item.unitPrice,
+            quantity: item.quantity,
+            availableUnits: item.availableUnits
+          });
+        }
+      });
+      return next;
+    });
+
+    setIsCartDrawerOpen(true);
+    showToast(
+      'Đã đưa vào giỏ hàng (S5-02)',
+      `Đã lấy lại ${items.length} mặt hàng theo bảng giá hiện hành!`,
+      'success',
+      4000
+    );
+  };
 
   // 1. TẢI THÔNG TIN ĐẠI LÝ LIÊN KẾT VỚI TÀI KHOẢN ĐĂNG NHẬP
   useEffect(() => {
@@ -583,17 +627,31 @@ export const CustomerOrderPortalPage: React.FC = () => {
                       <span className="text-gray-400 block text-[11px]">NVKD Phụ trách</span>
                       <span className="font-semibold text-gray-700">{o.salesRepName || 'Chưa gán'}</span>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex items-center justify-end gap-1.5">
+                      {/* S5-02: Nút Mua lại đơn cũ */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReorderModalOrderId(o.id);
+                          setIsReorderModalOpen(true);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#F85606] border border-orange-200 font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer"
+                        title="Đặt lại các mặt hàng trong đơn này (S5-02)"
+                      >
+                        <RotateCcw size={13} />
+                        <span>Mua lại</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => {
                           setSelectedDetailOrderId(o.id);
                           setIsDetailModalOpen(true);
                         }}
-                        className="px-3 py-1.5 rounded-xl border border-orange-200 text-[#F85606] hover:bg-orange-50 font-bold text-xs inline-flex items-center gap-1 transition cursor-pointer"
+                        className="px-3 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-xs inline-flex items-center gap-1 transition cursor-pointer"
                       >
                         <Eye size={13} />
-                        <span>Xem chi tiết & Timeline</span>
+                        <span>Chi tiết</span>
                       </button>
                     </div>
                   </div>
@@ -927,6 +985,18 @@ export const CustomerOrderPortalPage: React.FC = () => {
           setSelectedDetailOrderId(null);
         }}
         onOrderUpdated={loadOrderHistory}
+      />
+
+      {/* S5-02: MODAL MUA LẠI ĐƠN HÀNG CŨ & UI CẢNH BÁO MẶT HÀNG NGỪNG KINH DOANH */}
+      <CustomerReorderModal
+        isOpen={isReorderModalOpen}
+        orderId={reorderModalOrderId}
+        agencyId={agency?.id || null}
+        onClose={() => {
+          setIsReorderModalOpen(false);
+          setReorderModalOrderId(null);
+        }}
+        onConfirmReorder={handleConfirmReorder}
       />
     </CustomerPortalLayout>
   );
