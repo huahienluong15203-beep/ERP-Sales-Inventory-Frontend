@@ -24,6 +24,7 @@ import { LoginPage } from '../pages/auth/LoginPage';
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
 import { CustomerOrderPortalPage } from '../pages/portal/CustomerOrderPortalPage';
 import { GoodsReceiptManagementPage } from '../pages/inventory/GoodsReceiptManagementPage';
+import { StockTransferManagementPage } from '../pages/inventory/StockTransferManagementPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -168,6 +169,23 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <GoodsReceiptManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S5-07: Phiếu chuyển kho nội bộ (Kho & Quản lý kho) */}
+        <Route
+          path="/inventory/transfers"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockTransferManagementPage />
             </ProtectedRoute>
           }
         />
