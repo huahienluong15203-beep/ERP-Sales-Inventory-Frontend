@@ -14,24 +14,59 @@ import {
   Edit,
   Copy,
   Phone,
-  RefreshCw
+  RefreshCw,
+  RotateCcw,
+  History
 } from 'lucide-react';
-import type { OrderBackendResponse } from '../../types/order';
-import { fetchOrderDetail, formatCurrencyVND, formatQuantity } from '../../services/orderService';
+import type { OrderBackendResponse, OrderApprovalHistoryResponse } from '../../types/order';
+import { fetchOrderDetail, fetchOrderApprovalHistory, formatCurrencyVND, formatQuantity } from '../../services/orderService';
 import { useNavigate } from '../../routes/Router';
+import { useAuth } from '../../contexts/AuthContext';
+import { OrderApprovalActionModal, type ApprovalActionType } from './OrderApprovalActionModal';
 
 interface OrderDetailModalProps {
   orderId: number | null;
   isOpen: boolean;
   onClose: () => void;
   onCloneOrder?: (orderId: number | string) => void;
+  onOrderUpdated?: () => void;
 }
 
-export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isOpen, onClose, onCloneOrder }) => {
+export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isOpen, onClose, onCloneOrder, onOrderUpdated }) => {
   const navigate = useNavigate();
+  const { user, currentRole } = useAuth();
   const [loading, setLoading] = useState<boolean>(false);
   const [order, setOrder] = useState<OrderBackendResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [approvalHistory, setApprovalHistory] = useState<OrderApprovalHistoryResponse[]>([]);
+  const [approvalModalState, setApprovalModalState] = useState<{
+    isOpen: boolean;
+    actionType: ApprovalActionType;
+  }>({ isOpen: false, actionType: 'APPROVE' });
+
+  const isManagerOrAdmin =
+    currentRole === 'ROLE_SALES_MANAGER' ||
+    currentRole === 'ROLE_ADMIN' ||
+    Boolean(user?.roles?.includes('ROLE_SALES_MANAGER') || user?.roles?.includes('ROLE_ADMIN'));
+
+  const loadOrderDetailAndHistory = (id: number) => {
+    setLoading(true);
+    setError(null);
+    fetchOrderDetail(id)
+      .then((data) => {
+        setOrder(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Lỗi tải chi tiết đơn hàng:', err);
+        setError(err.message || 'Không thể tải thông tin chi tiết đơn hàng');
+        setLoading(false);
+      });
+
+    fetchOrderApprovalHistory(id)
+      .then(setApprovalHistory)
+      .catch(() => setApprovalHistory([]));
+  };
 
   useEffect(() => {
     if (!isOpen || !orderId) {
@@ -360,13 +395,71 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
                   </div>
                 </div>
               </div>
+
+              {/* S4-05 AC4: KHỐI 4: LỊCH SỬ PHÊ DUYỆT ĐƠN HÀNG (BẤT BIẾN - CHỈ XEM) */}
+              <div className="p-4 rounded-xl bg-gray-50/80 border border-gray-200/90 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <History size={14} className="text-[#F85606]" />
+                    <span>Lịch Sử Phê Duyệt Đơn Hàng (S4-05)</span>
+                  </h4>
+                  <span className="text-[10px] text-gray-400 font-medium italic">
+                    * Bất biến — Không thể chỉnh sửa hoặc xóa
+                  </span>
+                </div>
+
+                {approvalHistory.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic py-1">
+                    Chưa có lịch sử phê duyệt cho đơn hàng này.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {approvalHistory.map((item, idx) => (
+                      <div
+                        key={item.id || idx}
+                        className="p-2.5 rounded-lg bg-white border border-gray-200/80 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                item.action === 'APPROVE'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : item.action === 'REJECT'
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : item.action === 'RETURN'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}
+                            >
+                              {item.actionLabel || item.action}
+                            </span>
+                            <span className="text-gray-500 text-[11px]">
+                              bởi <strong>{item.actorFullName || item.actorUsername}</strong>
+                            </span>
+                          </div>
+                          {item.comment && (
+                            <p className="text-[11px] text-gray-700 italic pl-1">
+                              &ldquo;{item.comment}&rdquo;
+                            </p>
+                          )}
+                        </div>
+
+                        <span className="text-[10px] text-gray-400 shrink-0 font-mono">
+                          {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
 
         {/* Footer Actions */}
-        <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
-          <div>
+        <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
             {activeOrder?.status === 'DRAFT' && (
               <button
                 type="button"
@@ -374,11 +467,44 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
                   onClose();
                   navigate(`/orders/create?draftId=${activeOrder.id}`);
                 }}
-                className="px-4 py-2 rounded-xl bg-white border border-orange-300 text-[#F85606] hover:bg-orange-50 font-bold text-xs flex items-center gap-1.5 shadow-2xs transition"
+                className="px-4 py-2 rounded-xl bg-white border border-orange-300 text-[#F85606] hover:bg-orange-50 font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
               >
                 <Edit size={14} />
                 <span>Tiếp tục chỉnh sửa đơn nháp</span>
               </button>
+            )}
+
+            {/* S4-05 AC2: Ba hành động Duyệt, Trả lại sửa, Từ chối (Dành cho Quản lý KD & Admin) */}
+            {activeOrder?.status === 'PENDING_APPROVAL' && isManagerOrAdmin && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setApprovalModalState({ isOpen: true, actionType: 'APPROVE' })}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                  title="Phê duyệt đơn hàng"
+                >
+                  <CheckCircle2 size={14} />
+                  <span>Duyệt đơn</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setApprovalModalState({ isOpen: true, actionType: 'RETURN' })}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                  title="Trả lại yêu cầu NVKD sửa (bắt buộc nhập lý do)"
+                >
+                  <RotateCcw size={14} />
+                  <span>Trả lại sửa</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setApprovalModalState({ isOpen: true, actionType: 'REJECT' })}
+                  className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                  title="Từ chối đơn hàng (bắt buộc nhập lý do)"
+                >
+                  <XCircle size={14} />
+                  <span>Từ chối</span>
+                </button>
+              </div>
             )}
           </div>
 
@@ -409,6 +535,18 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
             </button>
           </div>
         </div>
+
+        {/* Modal nhập lý do Duyệt / Từ chối / Trả lại sửa (S4-05) */}
+        <OrderApprovalActionModal
+          isOpen={approvalModalState.isOpen}
+          order={activeOrder}
+          actionType={approvalModalState.actionType}
+          onClose={() => setApprovalModalState((s) => ({ ...s, isOpen: false }))}
+          onSuccess={() => {
+            if (orderId) loadOrderDetailAndHistory(orderId);
+            if (onOrderUpdated) onOrderUpdated();
+          }}
+        />
       </div>
     </div>
   );

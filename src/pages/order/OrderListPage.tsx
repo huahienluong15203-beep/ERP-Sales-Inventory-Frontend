@@ -33,8 +33,9 @@ import {
 } from '../../services/orderService';
 import { fetchAgencies, fetchAgencyFormOptions } from '../../services/agencyApi';
 import type { Agency, RegionOption, SalesRepOption } from '../../types/agency';
-import type { OrderSummaryItem, OrderTotalsSummary, OrderFilterCriteria } from '../../types/order';
+import type { OrderSummaryItem, OrderTotalsSummary, OrderFilterCriteria, PendingOrderResponse } from '../../types/order';
 import { OrderDetailModal } from '../../components/order/OrderDetailModal';
+import { OrderApprovalActionModal, type ApprovalActionType } from '../../components/order/OrderApprovalActionModal';
 
 // Danh sách tabs trạng thái nhanh
 const STATUS_TABS = [
@@ -93,6 +94,11 @@ export const OrderListPage: React.FC = () => {
   // Modal xem chi tiết đơn
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
+
+  // S4-05: Modal duyệt / từ chối / trả lại sửa
+  const [approvalModalOrder, setApprovalModalOrder] = useState<PendingOrderResponse | null>(null);
+  const [approvalModalAction, setApprovalModalAction] = useState<ApprovalActionType>('APPROVE');
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState<boolean>(false);
 
   // S4-09: Sao chép đơn cũ thành đơn mới cho khách quen trong vài giây
   const handleCloneOrder = async (orderId: number | string) => {
@@ -737,6 +743,83 @@ export const OrderListPage: React.FC = () => {
                             <Edit size={16} />
                           </button>
                         )}
+
+                        {/* S4-05: Nút thao tác nhanh Duyệt / Trả lại / Từ chối (Dành cho Quản lý KD & Admin) */}
+                        {o.status === 'PENDING_APPROVAL' && isManagerOrAdmin && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setApprovalModalOrder({
+                                  id: Number(o.id),
+                                  code: o.code,
+                                  customerId: Number(o.customerId || 0),
+                                  customerCode: o.customerCode || '',
+                                  customerName: o.customerName || '',
+                                  lineCount: o.lineCount || 0,
+                                  totalAmount: Number(o.totalAmount || 0),
+                                  submittedByUsername: o.salesRepName || '',
+                                  submittedAt: o.createdAt || '',
+                                  reasons: []
+                                });
+                                setApprovalModalAction('APPROVE');
+                                setIsApprovalModalOpen(true);
+                              }}
+                              className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition cursor-pointer"
+                              title="Phê duyệt đơn hàng (S4-05)"
+                            >
+                              <CheckCircle2 size={16} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setApprovalModalOrder({
+                                  id: Number(o.id),
+                                  code: o.code,
+                                  customerId: Number(o.customerId || 0),
+                                  customerCode: o.customerCode || '',
+                                  customerName: o.customerName || '',
+                                  lineCount: o.lineCount || 0,
+                                  totalAmount: Number(o.totalAmount || 0),
+                                  submittedByUsername: o.salesRepName || '',
+                                  submittedAt: o.createdAt || '',
+                                  reasons: []
+                                });
+                                setApprovalModalAction('RETURN');
+                                setIsApprovalModalOpen(true);
+                              }}
+                              className="p-1.5 rounded-lg text-amber-600 hover:text-amber-800 hover:bg-amber-50 transition cursor-pointer"
+                              title="Trả lại yêu cầu NVKD sửa (S4-05)"
+                            >
+                              <RotateCcw size={16} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setApprovalModalOrder({
+                                  id: Number(o.id),
+                                  code: o.code,
+                                  customerId: Number(o.customerId || 0),
+                                  customerCode: o.customerCode || '',
+                                  customerName: o.customerName || '',
+                                  lineCount: o.lineCount || 0,
+                                  totalAmount: Number(o.totalAmount || 0),
+                                  submittedByUsername: o.salesRepName || '',
+                                  submittedAt: o.createdAt || '',
+                                  reasons: []
+                                });
+                                setApprovalModalAction('REJECT');
+                                setIsApprovalModalOpen(true);
+                              }}
+                              className="p-1.5 rounded-lg text-rose-600 hover:text-rose-800 hover:bg-rose-50 transition cursor-pointer"
+                              title="Từ chối đơn hàng (S4-05)"
+                            >
+                              <XCircle size={16} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -805,10 +888,23 @@ export const OrderListPage: React.FC = () => {
         orderId={selectedOrderId}
         isOpen={isDetailModalOpen}
         onCloneOrder={handleCloneOrder}
+        onOrderUpdated={() => setRefreshKey((k) => k + 1)}
         onClose={() => {
           setIsDetailModalOpen(false);
           setSelectedOrderId(null);
         }}
+      />
+
+      {/* 7. S4-05: MODAL DUYỆT / TỪ CHỐI / TRẢ LẠI SỬA TỪ DANH SÁCH */}
+      <OrderApprovalActionModal
+        isOpen={isApprovalModalOpen}
+        order={approvalModalOrder}
+        actionType={approvalModalAction}
+        onClose={() => {
+          setIsApprovalModalOpen(false);
+          setApprovalModalOrder(null);
+        }}
+        onSuccess={() => setRefreshKey((k) => k + 1)}
       />
     </div>
   );
