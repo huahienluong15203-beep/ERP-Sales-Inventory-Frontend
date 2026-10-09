@@ -1,9 +1,16 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { Agency, DeliveryPoint } from '../../types/agency';
-import type { OrderDraft, OrderItem, OrderBackendResponse } from '../../types/order';
+import type {
+  OrderDraft,
+  OrderItem,
+  OrderBackendResponse,
+  CustomerPurchaseHistoryItem,
+  CustomerLastOrderItem
+} from '../../types/order';
 import type { OrderProductCatalogItem } from '../../services/orderService';
 import {
   createOrderItemFromCatalog,
+  createOrderItemFromHistory,
   recalculateOrderItem,
   calculateOrderTotals,
   applyBackendLines,
@@ -16,6 +23,7 @@ import {
   saveDraftToBackend,
   fetchBackendDrafts,
   fetchBackendDraftById,
+  fetchBackendProductOptions,
   getServingWarehouseInfo
 } from '../../services/orderService';
 import { fetchAgencies, fetchDeliveryPointsByAgency } from '../../services/agencyApi';
@@ -24,6 +32,7 @@ import { OrderHeaderCard } from '../../components/order/OrderHeaderCard';
 import { OrderItemRow } from '../../components/order/OrderItemRow';
 import { ProductPickerModal } from '../../components/order/ProductPickerModal';
 import { OrderDraftsModal } from '../../components/order/OrderDraftsModal';
+import { CustomerPurchaseHistoryCard } from '../../components/order/CustomerPurchaseHistoryCard';
 import {
   ShoppingCart,
   Plus,
@@ -226,6 +235,140 @@ export const OrderCreatePage: React.FC = () => {
     });
 
     showToast('Đã thêm sản phẩm vào đơn', `Đã thêm ${product.name} vào danh sách`, 'success');
+  };
+
+  // S4-04 AC2: Thêm nhanh cả nhóm hàng đã mua lần trước vào đơn mới
+  const handleQuickAddAllLastOrder = async (lastOrderItems: CustomerLastOrderItem[]) => {
+    if (!selectedAgency) {
+      showToast('Chưa chọn đại lý', 'Vui lòng chọn đại lý trước khi thêm hàng', 'error');
+      return;
+    }
+    if (!selectedAgency.priceList) {
+      showToast(
+        'Đại lý chưa có bảng giá',
+        `Đại lý "${selectedAgency.name}" chưa có bảng giá hiệu lực để tính tiền.`,
+        'error'
+      );
+      return;
+    }
+
+    try {
+      let catalog: OrderProductCatalogItem[] = [];
+      if (isBackendId(selectedAgency.id)) {
+        try {
+          catalog = await fetchBackendProductOptions(selectedAgency.id, '', servingWarehouse);
+        } catch {
+          // Bỏ qua lỗi mạng
+        }
+      }
+      if (catalog.length === 0) {
+        try {
+          catalog = await fetchBackendProductOptions(1, '', servingWarehouse);
+        } catch {
+          // Bỏ qua
+        }
+      }
+
+      setItems((prev) => {
+        const updated = [...prev];
+
+        lastOrderItems.forEach((lastItem) => {
+          const catItem = catalog.find((c) => c.sku === lastItem.sku);
+          const existingIdx = updated.findIndex((it) => it.sku === lastItem.sku);
+
+          if (existingIdx >= 0) {
+            const curr = updated[existingIdx];
+            updated[existingIdx] = recalculateOrderItem(
+              curr,
+              lastItem.quantity,
+              lastItem.unitName || curr.selectedUnit
+            );
+          } else if (catItem) {
+            const newItem = createOrderItemFromCatalog(catItem, lastItem.quantity, servingWarehouse);
+            updated.push(recalculateOrderItem(newItem, lastItem.quantity, lastItem.unitName));
+          } else {
+            const fallbackHistory: CustomerPurchaseHistoryItem = {
+              productId: lastItem.productId,
+              sku: lastItem.sku,
+              name: lastItem.name,
+              baseUnit: lastItem.unitName,
+              preferredUnit: lastItem.unitName,
+              preferredConversionFactor: lastItem.conversionFactor || 1,
+              totalQuantity3M: lastItem.quantity * 3,
+              orderCount3M: 3,
+              avgQuantityPerMonth: lastItem.quantity,
+              avgQuantityPerOrder: lastItem.quantity,
+              lastOrderedDate: new Date().toISOString().slice(0, 10),
+              lastUnitPrice: lastItem.unitPrice
+            };
+            updated.push(createOrderItemFromHistory(fallbackHistory, undefined, lastItem.quantity, servingWarehouse));
+          }
+        });
+
+        return updated;
+      });
+
+      showToast(
+        'Đã thêm nhóm hàng lần trước',
+        `Đã thêm nhanh ${lastOrderItems.length} mặt hàng từ đơn trước vào đơn mới thành công!`,
+        'success'
+      );
+    } catch (err) {
+      console.error('Lỗi khi thêm nhanh đơn cũ:', err);
+      showToast('Có lỗi xảy ra', 'Không thể thêm nhóm hàng đã mua lần trước', 'error');
+    }
+  };
+
+  // S4-04 AC1: Thêm nhanh 1 mặt hàng từ danh sách thường mua
+  const handleQuickAddSingleProduct = async (historyItem: CustomerPurchaseHistoryItem) => {
+    if (!selectedAgency) {
+      showToast('Chưa chọn đại lý', 'Vui lòng chọn đại lý trước', 'error');
+      return;
+    }
+
+    try {
+      let catalogItem: OrderProductCatalogItem | undefined;
+      if (isBackendId(selectedAgency.id)) {
+        try {
+          const catalog = await fetchBackendProductOptions(selectedAgency.id, historyItem.sku, servingWarehouse);
+          catalogItem = catalog.find((c) => c.sku === historyItem.sku);
+        } catch {
+          // Bỏ qua
+        }
+      }
+      if (!catalogItem) {
+        try {
+          const catalog = await fetchBackendProductOptions(1, historyItem.sku, servingWarehouse);
+          catalogItem = catalog.find((c) => c.sku === historyItem.sku);
+        } catch {
+          // Bỏ qua
+        }
+      }
+
+      const suggestedQty = Math.max(1, Math.round(historyItem.avgQuantityPerOrder) || 1);
+
+      setItems((prev) => {
+        const existingIdx = prev.findIndex((i) => i.sku === historyItem.sku);
+        if (existingIdx >= 0) {
+          const updated = [...prev];
+          const curr = updated[existingIdx];
+          updated[existingIdx] = recalculateOrderItem(curr, curr.quantity + suggestedQty, curr.selectedUnit);
+          return updated;
+        }
+
+        const newItem = createOrderItemFromHistory(historyItem, catalogItem, suggestedQty, servingWarehouse);
+        return [...prev, newItem];
+      });
+
+      showToast(
+        'Đã thêm sản phẩm gợi ý',
+        `Đã thêm ${historyItem.name} (${suggestedQty} ${historyItem.preferredUnit}) vào đơn hàng`,
+        'success'
+      );
+    } catch (err) {
+      console.error('Lỗi khi thêm sản phẩm gợi ý:', err);
+      showToast('Có lỗi xảy ra', 'Không thể thêm sản phẩm gợi ý', 'error');
+    }
   };
 
   // Cập nhật số lượng
@@ -541,6 +684,18 @@ export const OrderCreatePage: React.FC = () => {
           orderNote={orderNote}
           onChangeOrderNote={setOrderNote}
         />
+
+        {/* S4-04: GỢI Ý & LỊCH SỬ MUA HÀNG 3 THÁNG CỦA ĐẠI LÝ */}
+        {selectedAgency && (
+          <CustomerPurchaseHistoryCard
+            selectedAgency={selectedAgency}
+            currentUser={user}
+            servingWarehouse={servingWarehouse}
+            existingCartItems={items}
+            onQuickAddAllLastOrder={handleQuickAddAllLastOrder}
+            onQuickAddSingleProduct={handleQuickAddSingleProduct}
+          />
+        )}
 
         {/* 3. KHỐI 2: DANH SÁCH DÒNG SẢN PHẨM ĐẶT HÀNG */}
         <div className="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-4 sm:p-5 space-y-4">
