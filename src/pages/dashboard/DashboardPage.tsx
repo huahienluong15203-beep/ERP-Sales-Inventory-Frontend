@@ -16,6 +16,7 @@ import {
 import { productService } from '../../services/productService';
 import { fetchAgencyStats } from '../../services/agencyApi';
 import { authFetch, API_BASE_URL } from '../../services/api';
+import { WarehouseMinStockDashboardAlert } from '../../components/inventory/WarehouseMinStockDashboardAlert';
 
 interface RecentOrderItem {
   id: string | number;
@@ -197,6 +198,9 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="erp-fade-in">
+      {/* S5-09 (Nguyễn Văn Minh): Cảnh báo tồn tối thiểu nổi bật trên Dashboard kho (AC2) */}
+      <WarehouseMinStockDashboardAlert />
+
       {/* 1. HÀNG 4 STAT CARDS HOẠT ĐỘNG CHUNG (DỮ LIỆU THẬT) */}
       <div className="erp-stat-grid">
         {/* Thẻ 1: Tổng Doanh Thu */}
