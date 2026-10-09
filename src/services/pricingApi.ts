@@ -53,7 +53,11 @@ async function request<T>(url: string, init: RequestInit, fallback: string): Pro
   if (!res.ok) {
     throw new Error(await readError(res, fallback));
   }
-  return res.json() as Promise<T>;
+  if (res.status === 204) {
+    return undefined as unknown as T;
+  }
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 /**
