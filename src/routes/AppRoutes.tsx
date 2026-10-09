@@ -23,6 +23,7 @@ import { NotFoundPage } from '../pages/common/NotFoundPage';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
 import { CustomerOrderPortalPage } from '../pages/portal/CustomerOrderPortalPage';
+import { GoodsReceiptManagementPage } from '../pages/inventory/GoodsReceiptManagementPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -153,6 +154,24 @@ export const AppRoutes: React.FC = () => {
             </ProtectedRoute>
           }
         />
+
+        {/* S5-04: Phiếu nhập kho từ nhà cung cấp (Kho & Kế toán) */}
+        <Route
+          path="/inventory/receipts"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <GoodsReceiptManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/inventory" element={<Navigate to="/inventory/receipts" replace />} />
 
         {/* Quản lý bảng giá sản phẩm (S2-10 / SCRUM-55 / EP-02) */}
         <Route
@@ -294,6 +313,7 @@ export const AppRoutes: React.FC = () => {
             m.path !== '/orders/create' &&
             m.path !== '/orders' &&
             m.path !== '/portal' &&
+            m.path !== '/inventory/receipts' &&
             m.path !== '/audit-logs' &&
             m.path !== '/admin/audit-logs' &&
             m.path !== '/logs'

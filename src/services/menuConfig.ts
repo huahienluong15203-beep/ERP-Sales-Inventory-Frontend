@@ -107,6 +107,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Phiếu nhập kho',
+    path: '/inventory/receipts',
+    group: 'Sản phẩm & Kho',
+    icon: 'Package',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Lập phiếu nhập kho từ nhà cung cấp, ghi nhận số lô, hạn dùng và quy đổi đơn vị cơ sở (S5-04)',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
+  },
+
+  {
     title: 'Bảng giá sản phẩm',
     path: '/pricing',
     group: 'Giá & Chiết khấu',
