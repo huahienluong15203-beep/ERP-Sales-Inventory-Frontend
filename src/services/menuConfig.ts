@@ -107,6 +107,36 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Phiếu nhập kho',
+    path: '/inventory/receipts',
+    group: 'Sản phẩm & Kho',
+    icon: 'Package',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Lập phiếu nhập kho từ nhà cung cấp, ghi nhận số lô, hạn dùng và quy đổi đơn vị cơ sở (S5-04)',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
+  },
+
+  {
+    title: 'Phiếu chuyển kho',
+    path: '/inventory/transfers',
+    group: 'Sản phẩm & Kho',
+    icon: 'Truck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Lập phiếu chuyển kho nội bộ, theo dõi hàng đang đi đường và xác nhận nhận đủ (S5-07)',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
+  },
+
+  {
+    title: 'Sổ tồn & Cảnh báo',
+    path: '/inventory/ledger',
+    group: 'Sản phẩm & Kho',
+    icon: 'Boxes',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Khai báo định mức tồn tối thiểu theo SKU và kho, cảnh báo đỏ nguy cơ đứt hàng (S5-09)',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
+  },
+
+  {
     title: 'Bảng giá sản phẩm',
     path: '/pricing',
     group: 'Giá & Chiết khấu',

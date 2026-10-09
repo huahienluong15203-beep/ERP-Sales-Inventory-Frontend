@@ -23,6 +23,9 @@ import { NotFoundPage } from '../pages/common/NotFoundPage';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
 import { CustomerOrderPortalPage } from '../pages/portal/CustomerOrderPortalPage';
+import { GoodsReceiptManagementPage } from '../pages/inventory/GoodsReceiptManagementPage';
+import { StockTransferManagementPage } from '../pages/inventory/StockTransferManagementPage';
+import { StockLedgerPage } from '../pages/inventory/StockLedgerPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -153,6 +156,58 @@ export const AppRoutes: React.FC = () => {
             </ProtectedRoute>
           }
         />
+
+        {/* S5-04: Phiếu nhập kho từ nhà cung cấp (Kho & Kế toán) */}
+        <Route
+          path="/inventory/receipts"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <GoodsReceiptManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S5-07: Phiếu chuyển kho nội bộ (Kho & Quản lý kho) */}
+        <Route
+          path="/inventory/transfers"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockTransferManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S5-09: Sổ tồn kho & Cảnh báo tồn tối thiểu (Kho & Quản lý kho) */}
+        <Route
+          path="/inventory/ledger"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockLedgerPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/inventory" element={<Navigate to="/inventory/receipts" replace />} />
 
         {/* Quản lý bảng giá sản phẩm (S2-10 / SCRUM-55 / EP-02) */}
         <Route
@@ -294,6 +349,7 @@ export const AppRoutes: React.FC = () => {
             m.path !== '/orders/create' &&
             m.path !== '/orders' &&
             m.path !== '/portal' &&
+            m.path !== '/inventory/receipts' &&
             m.path !== '/audit-logs' &&
             m.path !== '/admin/audit-logs' &&
             m.path !== '/logs'
