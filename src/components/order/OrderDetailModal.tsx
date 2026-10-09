@@ -16,13 +16,16 @@ import {
   Phone,
   RefreshCw,
   RotateCcw,
-  History
+  History,
+  Ban
 } from 'lucide-react';
 import type { OrderBackendResponse, OrderApprovalHistoryResponse } from '../../types/order';
 import { fetchOrderDetail, fetchOrderApprovalHistory, formatCurrencyVND, formatQuantity } from '../../services/orderService';
 import { useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
 import { OrderApprovalActionModal, type ApprovalActionType } from './OrderApprovalActionModal';
+import { OrderLifecycleTimeline } from './OrderLifecycleTimeline';
+import { OrderCancelModal } from './OrderCancelModal';
 
 interface OrderDetailModalProps {
   orderId: number | null;
@@ -43,6 +46,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
     isOpen: boolean;
     actionType: ApprovalActionType;
   }>({ isOpen: false, actionType: 'APPROVE' });
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState<boolean>(false);
 
   const isManagerOrAdmin =
     currentRole === 'ROLE_SALES_MANAGER' ||
@@ -208,6 +212,15 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
 
           {!loading && activeOrder && (
             <>
+              {/* S4-06: TIMELINE HÀNH TRÌNH VÒNG ĐỜI ĐƠN HÀNG */}
+              <OrderLifecycleTimeline
+                status={activeOrder.status}
+                cancelReason={((activeOrder as unknown as { lastApprovalComment?: string }).lastApprovalComment) || undefined}
+                approvalHistory={approvalHistory}
+                createdAt={activeOrder.createdAt}
+                desiredDeliveryDate={activeOrder.desiredDeliveryDate || undefined}
+              />
+
               {/* Khối 1: Thông tin đại lý & Người phụ trách */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-gray-50/70 border border-gray-100 space-y-2.5">
@@ -509,6 +522,19 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
           </div>
 
           <div className="flex items-center gap-2">
+            {/* S4-06: Nút hủy đơn hàng khi chưa xuất kho */}
+            {activeOrder && !['CANCELLED', 'REJECTED', 'CLOSED'].includes(activeOrder.status) && (
+              <button
+                type="button"
+                onClick={() => setIsCancelModalOpen(true)}
+                className="px-3.5 py-2 rounded-xl border border-rose-300 text-rose-700 hover:bg-rose-50 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                title="Hủy đơn hàng (S4-06)"
+              >
+                <Ban size={14} />
+                <span>Hủy đơn</span>
+              </button>
+            )}
+
             {activeOrder && activeOrder.id != null && (
               <button
                 type="button"
@@ -542,6 +568,17 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
           order={activeOrder}
           actionType={approvalModalState.actionType}
           onClose={() => setApprovalModalState((s) => ({ ...s, isOpen: false }))}
+          onSuccess={() => {
+            if (orderId) loadOrderDetailAndHistory(orderId);
+            if (onOrderUpdated) onOrderUpdated();
+          }}
+        />
+
+        {/* Modal hủy đơn hàng bắt buộc nhập lý do (S4-06) */}
+        <OrderCancelModal
+          isOpen={isCancelModalOpen}
+          order={activeOrder}
+          onClose={() => setIsCancelModalOpen(false)}
           onSuccess={() => {
             if (orderId) loadOrderDetailAndHistory(orderId);
             if (onOrderUpdated) onOrderUpdated();
