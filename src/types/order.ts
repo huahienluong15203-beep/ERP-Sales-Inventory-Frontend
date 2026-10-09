@@ -222,6 +222,7 @@ export interface ProductOptionBackendResponse {
   }>;
   priceAvailable: boolean;
   unitPrice?: number | null;
+  floorPrice?: number | null;
   priceListCode?: string | null;
   message?: string | null;
   warehouseCode?: string | null;

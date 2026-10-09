@@ -451,6 +451,7 @@ export async function fetchBackendProductOptions(
       category: '',
       baseUnit: item.baseUnit,
       basePrice: Number(item.unitPrice || 0),
+      floorPrice: item.floorPrice != null ? Number(item.floorPrice) : undefined,
       priceAvailable: item.priceAvailable,
       priceMessage: item.message,
       priceListCode: item.priceListCode,
