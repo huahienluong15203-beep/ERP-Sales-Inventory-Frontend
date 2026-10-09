@@ -22,6 +22,7 @@ import { ForbiddenPage } from '../pages/common/ForbiddenPage';
 import { NotFoundPage } from '../pages/common/NotFoundPage';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
+import { CustomerOrderPortalPage } from '../pages/portal/CustomerOrderPortalPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -31,7 +32,7 @@ import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
  */
 export const AppRoutes: React.FC = () => {
   const { pathname } = useLocation();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, currentRole } = useAuth();
 
   // 1. Tuyến đường trang Đăng nhập
   if (pathname === '/login') {
@@ -46,6 +47,12 @@ export const AppRoutes: React.FC = () => {
   // 2. Nếu chưa đăng nhập -> Chuyển hướng về /login
   if (!isAuthenticated && !isLoading) {
     return <Navigate to="/login" replace />;
+  }
+
+  // 2b. S4-10: Cổng đại lý đặt hàng (B2B Customer Portal)
+  // Sử dụng Layout portal riêng cho Đại lý (CustomerPortalLayout) thay vì MainLayout
+  if (pathname === '/portal' || (pathname === '/' && currentRole === 'ROLE_CUSTOMER')) {
+    return <CustomerOrderPortalPage />;
   }
 
   // 3. Toàn bộ các trang nghiệp vụ bên trong dùng chung MainLayout
@@ -286,6 +293,7 @@ export const AppRoutes: React.FC = () => {
             m.path !== '/pricing/history' &&
             m.path !== '/orders/create' &&
             m.path !== '/orders' &&
+            m.path !== '/portal' &&
             m.path !== '/audit-logs' &&
             m.path !== '/admin/audit-logs' &&
             m.path !== '/logs'

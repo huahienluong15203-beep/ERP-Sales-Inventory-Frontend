@@ -350,3 +350,49 @@ export interface CustomerPurchaseHistoryData {
   lastOrder: CustomerLastOrderSummary | null;
 }
 
+/**
+ * S4-05: Lý do đơn cần duyệt và mức vi phạm
+ */
+export interface ApprovalReason {
+  code: string;
+  label: string;
+  detail: string;
+  violationAmount?: number;
+  violationPercent?: number;
+}
+
+/**
+ * S4-05: Đơn hàng trong danh sách chờ duyệt
+ */
+export interface PendingOrderResponse {
+  id: number;
+  code: string;
+  customerId: number;
+  customerCode: string;
+  customerName: string;
+  lineCount: number;
+  totalAmount: number;
+  submittedByUsername: string;
+  submittedAt: string;
+  reasons: ApprovalReason[];
+}
+
+/**
+ * S4-05: Lịch sử phê duyệt đơn hàng (chỉ đọc, không sửa / xóa)
+ */
+export interface OrderApprovalHistoryResponse {
+  id: number;
+  action: string;
+  actionLabel: string;
+  fromStatus: string;
+  toStatus: string;
+  comment?: string;
+  actorUsername: string;
+  actorFullName: string;
+  createdAt: string;
+}
+
+export interface OrderApprovalActionRequest {
+  comment?: string;
+}
+

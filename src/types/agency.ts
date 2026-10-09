@@ -81,6 +81,8 @@ export interface Agency {
   transactionLocked?: boolean;       // S3-07: Khóa giao dịch rủi ro công nợ (chặn tạo đơn mới trên mọi nền tảng)
   transactionLockReason?: string;   // S3-07: Lý do khóa / mở giao dịch (bắt buộc nhập)
   transactionLockedAt?: string;     // S3-07: Thời điểm khóa giao dịch
+  hasOverdueDebt?: boolean;         // S4-02: Có khoản nợ quá hạn
+  overdueDays?: number;             // S4-02: Số ngày quá hạn
 }
 
 /**
@@ -252,4 +254,27 @@ export interface OrderCreationCheckResponse {
   creditLimit?: number;
   maxDebtDays?: number;
   transactionLocked: boolean;
+}
+
+/**
+ * S4-02: Tình trạng công nợ và hạn mức của đại lý khi tạo đơn
+ */
+export interface CreditStatusResponse {
+  customerId: number | string;
+  customerCode: string;
+  customerName: string;
+  creditLimit: number;
+  currentDebt: number;
+  availableCredit: number;
+  orderAmount: number;
+  debtAfterOrder: number;
+  exceedsLimit: boolean;
+  exceededAmount: number;
+  maxDebtDays?: number;
+  overdue: boolean;
+  overdueOrderCount: number;
+  overdueAmount: number;
+  overdueDays: number;
+  blocked: boolean;
+  message?: string | null;
 }

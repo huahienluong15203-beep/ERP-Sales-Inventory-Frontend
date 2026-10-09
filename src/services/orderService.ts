@@ -17,7 +17,9 @@ import type {
   CustomerPurchaseHistoryItem,
   CustomerLastOrderItem,
   CustomerLastOrderSummary,
-  CustomerPurchaseHistoryData
+  CustomerPurchaseHistoryData,
+  PendingOrderResponse,
+  OrderApprovalHistoryResponse
 } from '../types/order';
 import type { Agency, CustomerGroupId } from '../types/agency';
 import type { UserProfile } from '../types/user';
@@ -505,6 +507,103 @@ export async function saveDraftToBackend(
   if (!res.ok) throw new Error(await readBackendError(res, 'Không lưu được đơn nháp'));
   return (await res.json()) as OrderBackendResponse;
 }
+
+/**
+ * S4-05 & S4-02: Chốt đơn hàng từ đơn nháp (POST /api/orders/{id}/submit)
+ * - Nếu không vi phạm: đơn sang ĐÃ DUYỆT (APPROVED).
+ * - Nếu vượt hạn mức hoặc bán dưới giá sàn: đơn sang CHỜ DUYỆT (PENDING_APPROVAL).
+ */
+export async function submitOrderToBackend(orderId: number | string): Promise<OrderBackendResponse> {
+  const res = await callBackend(`${API_BASE_URL}/api/orders/${orderId}/submit`, {
+    method: 'POST'
+  });
+  if (!res.ok) throw new Error(await readBackendError(res, 'Không thể chốt đơn hàng'));
+  return (await res.json()) as OrderBackendResponse;
+}
+
+/**
+ * S4-05: Lấy danh sách đơn hàng chờ duyệt kèm lý do vi phạm (GET /api/orders/pending-approval)
+ * Sắp xếp: Đơn chờ lâu nhất lên đầu.
+ */
+export async function fetchPendingApprovalOrders(
+  keyword?: string,
+  page: number = 0,
+  size: number = 20
+): Promise<{ content: PendingOrderResponse[]; totalElements: number; totalPages: number }> {
+  const kw = keyword && keyword.trim() ? encodeURIComponent(keyword.trim()) : '';
+  const url = `${API_BASE_URL}/api/orders/pending-approval?page=${page}&size=${size}${kw ? `&keyword=${kw}` : ''}`;
+  const res = await callBackend(url);
+  if (!res.ok) {
+    throw new Error(await readBackendError(res, 'Không tải được danh sách đơn chờ duyệt'));
+  }
+  const data = await res.json();
+  return {
+    content: Array.isArray(data?.content) ? data.content : [],
+    totalElements: Number(data?.totalElements || 0),
+    totalPages: Math.max(1, Number(data?.totalPages || 1))
+  };
+}
+
+/**
+ * S4-05: Duyệt đơn hàng (POST /api/orders/{id}/approve) - chuyển trạng thái ĐÃ DUYỆT (APPROVED)
+ */
+export async function approveOrder(id: number | string, comment?: string): Promise<OrderBackendResponse> {
+  const res = await callBackend(`${API_BASE_URL}/api/orders/${id}/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ comment: comment?.trim() || null })
+  });
+  if (!res.ok) {
+    throw new Error(await readBackendError(res, 'Không thể duyệt đơn hàng'));
+  }
+  return await res.json();
+}
+
+/**
+ * S4-05: Từ chối đơn hàng (POST /api/orders/{id}/reject) - bắt buộc nhập lý do
+ */
+export async function rejectOrder(id: number | string, comment: string): Promise<OrderBackendResponse> {
+  if (!comment || !comment.trim()) {
+    throw new Error('Bắt buộc nhập lý do khi từ chối đơn hàng!');
+  }
+  const res = await callBackend(`${API_BASE_URL}/api/orders/${id}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ comment: comment.trim() })
+  });
+  if (!res.ok) {
+    throw new Error(await readBackendError(res, 'Không thể từ chối đơn hàng'));
+  }
+  return await res.json();
+}
+
+/**
+ * S4-05: Trả lại sửa (POST /api/orders/{id}/return) - chuyển đơn về Nháp, bắt buộc nhập ý kiến
+ */
+export async function returnOrderForEdit(id: number | string, comment: string): Promise<OrderBackendResponse> {
+  if (!comment || !comment.trim()) {
+    throw new Error('Bắt buộc nhập ý kiến khi trả lại đơn hàng!');
+  }
+  const res = await callBackend(`${API_BASE_URL}/api/orders/${id}/return`, {
+    method: 'POST',
+    body: JSON.stringify({ comment: comment.trim() })
+  });
+  if (!res.ok) {
+    throw new Error(await readBackendError(res, 'Không thể trả lại đơn hàng'));
+  }
+  return await res.json();
+}
+
+/**
+ * S4-05: Lịch sử phê duyệt đơn hàng (GET /api/orders/{id}/approval-history)
+ */
+export async function fetchOrderApprovalHistory(id: number | string): Promise<OrderApprovalHistoryResponse[]> {
+  const res = await callBackend(`${API_BASE_URL}/api/orders/${id}/approval-history`);
+  if (!res.ok) {
+    return [];
+  }
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
 
 /**
  * 4. Tải danh sách đơn nháp từ Backend (GET /api/orders?status=DRAFT)

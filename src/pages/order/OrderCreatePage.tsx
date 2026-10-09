@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import type { Agency, DeliveryPoint } from '../../types/agency';
+import type { Agency, DeliveryPoint, CreditStatusResponse } from '../../types/agency';
 import type {
   OrderDraft,
   OrderItem,
@@ -21,13 +21,15 @@ import {
   formatCurrencyVND,
   previewOrderOnBackend,
   saveDraftToBackend,
+  submitOrderToBackend,
   fetchBackendDrafts,
   fetchBackendDraftById,
   fetchBackendProductOptions,
   getServingWarehouseInfo
 } from '../../services/orderService';
-import { fetchAgencies, fetchDeliveryPointsByAgency } from '../../services/agencyApi';
+import { fetchAgencies, fetchDeliveryPointsByAgency, fetchCustomerCreditStatus } from '../../services/agencyApi';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from '../../routes/Router';
 import { OrderHeaderCard } from '../../components/order/OrderHeaderCard';
 import { OrderItemRow } from '../../components/order/OrderItemRow';
 import { ProductPickerModal } from '../../components/order/ProductPickerModal';
@@ -57,12 +59,16 @@ type PreviewState =
 const isBackendId = (id?: string | null) => Boolean(id && /^\d+$/.test(id));
 
 export const OrderCreatePage: React.FC = () => {
+  const navigate = useNavigate();
   const { user, showToast } = useAuth();
 
   // Dữ liệu đơn hàng hiện tại
   const [currentDraftId, setCurrentDraftId] = useState<string>(() => `DRAFT-${Date.now()}`);
   const [backendDraftId, setBackendDraftId] = useState<number | null>(null);
   const [backendWarnings, setBackendWarnings] = useState<string[]>([]);
+  const [creditStatus, setCreditStatus] = useState<CreditStatusResponse | null>(null);
+  const [loadingCreditStatus, setLoadingCreditStatus] = useState<boolean>(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
   const [selectedAgency, setSelectedAgency] = useState<Agency | null>(null);
   const [selectedDeliveryPoint, setSelectedDeliveryPoint] = useState<DeliveryPoint | null>(null);
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<string>(() => {
@@ -183,6 +189,24 @@ export const OrderCreatePage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAgency, selectedDeliveryPoint, expectedDeliveryDate, orderNote, items, currentDraftId, backendDraftId]);
 
+  // S4-02: Lấy thông tin công nợ, hạn mức và kiểm tra vượt hạn mức / quá hạn
+  useEffect(() => {
+    if (!selectedAgency) {
+      setCreditStatus(null);
+      return;
+    }
+    const currentOrderAmount = preview.status === 'ok' ? Number(preview.order.totalAmount || 0) : totals.totalPayable;
+    setLoadingCreditStatus(true);
+    fetchCustomerCreditStatus(selectedAgency.id, currentOrderAmount)
+      .then((res) => {
+        setCreditStatus(res);
+      })
+      .catch((err) => {
+        console.warn('Lỗi kiểm tra công nợ đại lý:', err);
+      })
+      .finally(() => setLoadingCreditStatus(false));
+  }, [selectedAgency?.id, preview.status === 'ok' ? preview.order.totalAmount : totals.totalPayable]);
+
   // Đổi đại lý: xử lý làm mới đơn hàng và bảng giá
   const handleSelectAgency = (agency: Agency) => {
     if (selectedAgency && agency.id === selectedAgency.id) {
@@ -227,6 +251,14 @@ export const OrderCreatePage: React.FC = () => {
   const openProductPicker = () => {
     if (!selectedAgency) {
       showToast('Chưa chọn đại lý', 'Vui lòng chọn đại lý trước để lấy đúng bảng giá', 'error');
+      return;
+    }
+    if (creditStatus?.blocked || creditStatus?.overdue) {
+      showToast(
+        'Chặn tạo đơn hoàn toàn (S4-02)',
+        creditStatus.message || 'Đại lý có khoản nợ quá hạn hoặc đang bị khóa giao dịch. Không thể tạo đơn mới.',
+        'error'
+      );
       return;
     }
     if (!selectedAgency.priceList) {
@@ -516,6 +548,15 @@ export const OrderCreatePage: React.FC = () => {
       return;
     }
 
+    if (creditStatus?.blocked || creditStatus?.overdue) {
+      showToast(
+        'Chặn tạo đơn hoàn toàn (S4-02)',
+        creditStatus.message || 'Đại lý có khoản nợ quá hạn hoặc bị khóa. Không thể lưu nháp theo quy định S4-02.',
+        'error'
+      );
+      return;
+    }
+
     if (overStockItems.length > 0) {
       showToast(
         'Vượt tồn khả dụng',
@@ -552,6 +593,77 @@ export const OrderCreatePage: React.FC = () => {
     }
   };
 
+  // S4-02 & S4-05: Chốt đơn đặt hàng
+  const handleSubmitOrder = async () => {
+    if (!selectedAgency) {
+      showToast('Chưa chọn đại lý', 'Vui lòng chọn đại lý trước khi chốt đơn', 'error');
+      return;
+    }
+    if (creditStatus?.blocked || creditStatus?.overdue) {
+      showToast(
+        'Chặn tạo đơn hoàn toàn (S4-02)',
+        creditStatus.message || 'Đại lý có nợ quá hạn hoặc đang bị khóa, hệ thống chặn chốt đơn theo quy định S4-02.',
+        'error'
+      );
+      return;
+    }
+    if (!selectedAgency.priceList) {
+      showToast('Chưa có bảng giá', 'Đại lý chưa có bảng giá hiệu lực, không thể chốt đơn', 'error');
+      return;
+    }
+    if (items.length === 0) {
+      showToast('Chưa có sản phẩm', 'Vui lòng thêm ít nhất 1 sản phẩm trước khi chốt đơn', 'error');
+      return;
+    }
+    if (overStockItems.length > 0) {
+      showToast('Vượt tồn khả dụng', 'Có sản phẩm vượt tồn kho khả dụng. Vui lòng chỉnh số lượng trước khi chốt đơn.', 'error');
+      return;
+    }
+
+    setIsSubmittingOrder(true);
+    try {
+      // Lưu nháp trước để đảm bảo dữ liệu mới nhất trên backend
+      const request = buildBackendRequest({
+        draftId: backendDraftId,
+        agencyId: selectedAgency.id,
+        deliveryPointId: selectedDeliveryPoint?.id,
+        expectedDeliveryDate,
+        note: orderNote,
+        items
+      });
+      const saved = await saveDraftToBackend(request, backendDraftId);
+      const targetId = saved.id || backendDraftId;
+      if (!targetId) {
+        throw new Error('Không lấy được mã đơn hàng để chốt đơn');
+      }
+
+      // Gửi yêu cầu chốt đơn
+      const submitted = await submitOrderToBackend(targetId);
+      clearActiveDraft();
+
+      if (submitted.status === 'APPROVED') {
+        showToast(
+          'Chốt đơn thành công',
+          `Đơn hàng [${submitted.code || targetId}] đã được duyệt tự động thành công (không vượt nợ, không dưới giá sàn).`,
+          'success',
+          6000
+        );
+      } else {
+        showToast(
+          'Đơn chuyển sang Chờ duyệt (S4-05)',
+          `Đơn hàng [${submitted.code || targetId}] đã chuyển sang trạng thái CHỜ DUYỆT do vượt hạn mức công nợ hoặc bán dưới giá sàn.`,
+          'info',
+          7000
+        );
+      }
+      navigate('/orders');
+    } catch (err: unknown) {
+      showToast('Chốt đơn thất bại', err instanceof Error ? err.message : 'Có lỗi xảy ra khi chốt đơn hàng', 'error');
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
+
   // Mở danh sách đơn nháp trên máy chủ
   const handleOpenDraftsModal = async () => {
     setIsDraftsModalOpen(true);
@@ -585,8 +697,11 @@ export const OrderCreatePage: React.FC = () => {
   const isAgencyLocked = Boolean(selectedAgency?.transactionLocked);
   const money = preview.status === 'ok' ? preview.order : null;
 
-  // S4-03 AC3: Chặn chốt đơn nếu có mặt hàng vượt tồn kho khả dụng
+  // S4-02 & S4-03: Lý do chặn chốt đơn (quá hạn công nợ, vượt tồn khả dụng, khóa giao dịch)
   const submitBlockedReason = useMemo(() => {
+    if (creditStatus?.overdue || creditStatus?.blocked) {
+      return creditStatus?.message || `Chặn tạo đơn hoàn toàn: Đại lý có nợ quá hạn (${creditStatus?.overdueDays || 0} ngày) hoặc đang bị khóa giao dịch (S4-02).`;
+    }
     if (overStockItems.length > 0) {
       return `Chặn chốt đơn: Có ${overStockItems.length} mặt hàng vượt quá tồn khả dụng tại kho ${servingWarehouse.name}. Vui lòng chỉnh số lượng.`;
     }
@@ -594,7 +709,7 @@ export const OrderCreatePage: React.FC = () => {
       return 'Đại lý đang bị khóa giao dịch - chặn tạo đơn mới (S3-07).';
     }
     return undefined;
-  }, [overStockItems.length, servingWarehouse.name, isAgencyLocked]);
+  }, [creditStatus?.overdue, creditStatus?.blocked, creditStatus?.message, creditStatus?.overdueDays, overStockItems.length, servingWarehouse.name, isAgencyLocked]);
 
   return (
     <div className="w-full min-w-0 space-y-5 animate-in fade-in duration-300 pb-10">
@@ -739,6 +854,8 @@ export const OrderCreatePage: React.FC = () => {
           onChangeExpectedDeliveryDate={setExpectedDeliveryDate}
           orderNote={orderNote}
           onChangeOrderNote={setOrderNote}
+          creditStatus={creditStatus}
+          loadingCreditStatus={loadingCreditStatus}
         />
 
         {/* S4-04: GỢI Ý & LỊCH SỬ MUA HÀNG 3 THÁNG CỦA ĐẠI LÝ */}
@@ -944,6 +1061,32 @@ export const OrderCreatePage: React.FC = () => {
                 </div>
               )}
 
+              {/* S4-02: Dòng cảnh báo đơn vượt hạn mức công nợ */}
+              {creditStatus?.exceedsLimit && !creditStatus.overdue && (
+                <div className="flex justify-between items-center text-amber-900 font-semibold bg-amber-100/80 p-2.5 rounded-xl border border-amber-300 animate-in fade-in">
+                  <span className="flex items-center gap-1.5 text-[11px]">
+                    <AlertTriangle size={14} className="text-amber-600 shrink-0" />
+                    <span>Đơn vượt hạn mức nợ (Vượt {formatCurrencyVND(creditStatus.exceededAmount)}):</span>
+                  </span>
+                  <span className="font-bold text-xs bg-amber-200 px-2 py-0.5 rounded-full text-amber-900">
+                    Cần Quản lý duyệt
+                  </span>
+                </div>
+              )}
+
+              {/* S4-02: Dòng cảnh báo nợ quá hạn chặn tạo đơn hoàn toàn */}
+              {creditStatus?.overdue && (
+                <div className="flex justify-between items-center text-rose-950 font-semibold bg-rose-100/90 p-2.5 rounded-xl border border-rose-300 animate-in fade-in">
+                  <span className="flex items-center gap-1.5 text-[11px]">
+                    <AlertTriangle size={14} className="text-rose-600 shrink-0" />
+                    <span>Nợ quá hạn {creditStatus.overdueDays} ngày ({formatCurrencyVND(creditStatus.overdueAmount)}):</span>
+                  </span>
+                  <span className="font-bold text-xs bg-rose-200 text-rose-900 px-2 py-0.5 rounded-full">
+                    Chặn tạo đơn hoàn toàn
+                  </span>
+                </div>
+              )}
+
               <div className="flex justify-between items-baseline text-sm sm:text-base font-bold text-gray-900 pt-2 border-t border-gray-100">
                 <span className="flex items-center gap-1.5">
                   <span className="text-[#F85606]">●</span>
@@ -960,7 +1103,7 @@ export const OrderCreatePage: React.FC = () => {
             <Tag size={14} className="shrink-0 text-amber-600 mt-0.5" />
             <div>
               Đơn giá lấy từ <strong>bảng giá đang hiệu lực</strong> của nhóm khách hàng mà đại lý thuộc về; chiết khấu sản lượng
-              tự động nhảy lại theo <strong>chính sách chiết khấu</strong> mỗi khi số lượng hoặc đơn giá thay đổi. Nếu sửa giá dưới giá sàn, đơn sẽ được chuyển sang <strong>Chờ Quản lý duyệt</strong>.
+              tự động nhảy lại theo <strong>chính sách chiết khấu</strong> mỗi khi số lượng hoặc đơn giá thay đổi. Nếu sửa giá dưới giá sàn hoặc đơn vượt hạn mức công nợ, đơn sẽ chuyển sang <strong>Chờ Quản lý duyệt</strong>.
             </div>
           </div>
 
@@ -969,23 +1112,29 @@ export const OrderCreatePage: React.FC = () => {
             <button
               type="button"
               onClick={handleSaveDraft}
-              disabled={isSavingDraft || overStockItems.length > 0}
+              disabled={isSavingDraft || overStockItems.length > 0 || Boolean(creditStatus?.blocked || creditStatus?.overdue)}
               className={`h-10 px-4 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer ${
-                overStockItems.length > 0
+                creditStatus?.blocked || creditStatus?.overdue
+                  ? 'border-rose-300 bg-rose-50 text-rose-800 cursor-not-allowed opacity-60'
+                  : overStockItems.length > 0
                   ? 'border-rose-300 bg-rose-50 text-rose-800 cursor-not-allowed opacity-60'
                   : belowFloorItems.length > 0
                   ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'
                   : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700'
               }`}
               title={
-                overStockItems.length > 0
+                creditStatus?.blocked || creditStatus?.overdue
+                  ? 'Không thể lưu nháp do đại lý bị chặn nợ quá hạn (S4-02)'
+                  : overStockItems.length > 0
                   ? 'Không thể lưu nháp khi có mặt hàng vượt tồn khả dụng'
                   : belowFloorItems.length > 0
                   ? 'Lưu đơn nháp (đơn có dòng dưới giá sàn sẽ ở trạng thái cần duyệt)'
                   : 'Lưu nháp đơn hàng để tiếp tục sau'
               }
             >
-              {overStockItems.length > 0 ? (
+              {creditStatus?.blocked || creditStatus?.overdue ? (
+                <AlertTriangle size={15} className="text-rose-600" />
+              ) : overStockItems.length > 0 ? (
                 <AlertTriangle size={15} className="text-rose-600" />
               ) : belowFloorItems.length > 0 ? (
                 <AlertTriangle size={15} className="text-amber-600" />
@@ -995,6 +1144,8 @@ export const OrderCreatePage: React.FC = () => {
               <span>
                 {isSavingDraft
                   ? 'Đang lưu...'
+                  : creditStatus?.blocked || creditStatus?.overdue
+                  ? 'Bị Chặn (Nợ Quá Hạn)'
                   : overStockItems.length > 0
                   ? 'Bị Chặn (Vượt Tồn Kho)'
                   : belowFloorItems.length > 0
@@ -1005,12 +1156,32 @@ export const OrderCreatePage: React.FC = () => {
 
             <button
               type="button"
-              disabled
+              onClick={handleSubmitOrder}
+              disabled={
+                isSubmittingOrder ||
+                isSavingDraft ||
+                items.length === 0 ||
+                overStockItems.length > 0 ||
+                Boolean(creditStatus?.blocked || creditStatus?.overdue) ||
+                isAgencyLocked
+              }
               title={submitBlockedReason}
-              className="h-10 px-5 rounded-xl font-bold text-xs sm:text-sm text-white flex items-center gap-1.5 bg-gray-400 cursor-not-allowed opacity-70"
+              className={`h-10 px-5 rounded-xl font-bold text-xs sm:text-sm text-white flex items-center gap-1.5 transition shadow-xs cursor-pointer ${
+                submitBlockedReason || items.length === 0
+                  ? 'bg-gray-400 cursor-not-allowed opacity-70'
+                  : creditStatus?.exceedsLimit || belowFloorItems.length > 0
+                  ? 'bg-amber-600 hover:bg-amber-700 active:scale-98 shadow-amber-600/25'
+                  : 'bg-[#F85606] hover:bg-[#d94800] active:scale-98 shadow-orange-500/25'
+              }`}
             >
               <CheckCircle2 size={16} />
-              <span>Chốt Đơn Đặt Hàng</span>
+              <span>
+                {isSubmittingOrder
+                  ? 'Đang chốt đơn...'
+                  : creditStatus?.exceedsLimit || belowFloorItems.length > 0
+                  ? 'Chốt Đơn (Gửi Phê Duyệt)'
+                  : 'Chốt Đơn Đặt Hàng'}
+              </span>
             </button>
           </div>
           <p className="text-[11px] text-gray-500 text-right">
