@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Agency, DeliveryPoint } from '../../types/agency';
+import type { Agency, DeliveryPoint, CreditStatusResponse } from '../../types/agency';
 import { fetchAgencies, fetchDeliveryPoints } from '../../services/agencyApi';
 import { formatCurrencyVND, getServingWarehouseInfo } from '../../services/orderService';
 import {
@@ -12,7 +12,8 @@ import {
   Phone,
   FileText,
   BadgeDollarSign,
-  Package
+  Package,
+  CreditCard
 } from '../common/Icons';
 
 interface OrderHeaderCardProps {
@@ -24,6 +25,8 @@ interface OrderHeaderCardProps {
   onChangeExpectedDeliveryDate: (date: string) => void;
   orderNote: string;
   onChangeOrderNote: (note: string) => void;
+  creditStatus?: CreditStatusResponse | null;
+  loadingCreditStatus?: boolean;
 }
 
 export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
@@ -34,7 +37,9 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
   expectedDeliveryDate,
   onChangeExpectedDeliveryDate,
   orderNote,
-  onChangeOrderNote
+  onChangeOrderNote,
+  creditStatus,
+  loadingCreditStatus
 }) => {
   const [agenciesList, setAgenciesList] = useState<Agency[]>([]);
   const [deliveryPoints, setDeliveryPoints] = useState<DeliveryPoint[]>([]);
@@ -201,9 +206,99 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                   <span>Kho xuất: <strong>{getServingWarehouseInfo(selectedAgency).name}</strong></span>
                 </div>
 
-                <span className="text-gray-500">
-                  Hạn mức: <strong className="text-gray-700">{formatCurrencyVND(selectedAgency.creditLimit)}</strong>
-                </span>
+                {/* S4-02: THÔNG TIN CÔNG NỢ, HẠN MỨC & PHẦN CÒN LẠI */}
+              </div>
+
+              {/* S4-02: BẢNG CHỈ SỐ CÔNG NỢ & HẠN MỨC */}
+              <div className="pt-2 border-t border-gray-200/80 space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-gray-700">
+                  <span className="flex items-center gap-1.5 text-gray-800">
+                    <CreditCard size={13} className="text-[#F85606]" />
+                    <span>Hạn Mức & Dư Nợ Đại Lý (S4-02)</span>
+                  </span>
+                  {loadingCreditStatus && (
+                    <span className="text-[10px] text-gray-400 font-normal animate-pulse">
+                      Đang đồng bộ số liệu nợ...
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {/* Hạn mức công nợ */}
+                  <div className="p-2 rounded-xl bg-white border border-gray-200 shadow-2xs">
+                    <span className="text-[10px] text-gray-500 block">Hạn mức cấp</span>
+                    <span className="text-xs font-bold font-mono text-gray-800">
+                      {formatCurrencyVND(creditStatus ? creditStatus.creditLimit : selectedAgency.creditLimit)}
+                    </span>
+                  </div>
+
+                  {/* Công nợ hiện tại */}
+                  <div className="p-2 rounded-xl bg-white border border-gray-200 shadow-2xs">
+                    <span className="text-[10px] text-gray-500 block">Nợ hiện tại</span>
+                    <span className="text-xs font-bold font-mono text-gray-800">
+                      {formatCurrencyVND(creditStatus ? creditStatus.currentDebt : selectedAgency.totalDebt)}
+                    </span>
+                  </div>
+
+                  {/* Phần còn lại */}
+                  {(() => {
+                    const avail = creditStatus ? creditStatus.availableCredit : (selectedAgency.creditLimit - selectedAgency.totalDebt);
+                    const isExceeded = avail < 0;
+                    return (
+                      <div className={`p-2 rounded-xl border shadow-2xs ${
+                        isExceeded
+                          ? 'bg-rose-50/80 border-rose-200 text-rose-800'
+                          : 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
+                      }`}>
+                        <span className="text-[10px] block opacity-80">Phần còn lại</span>
+                        <span className="text-xs font-bold font-mono">
+                          {formatCurrencyVND(avail)}
+                        </span>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Thời hạn nợ */}
+                  <div className="p-2 rounded-xl bg-white border border-gray-200 shadow-2xs">
+                    <span className="text-[10px] text-gray-500 block">Số ngày nợ tối đa</span>
+                    <span className="text-xs font-bold text-gray-700">
+                      {creditStatus?.maxDebtDays || selectedAgency.maxDebtDays || 30} ngày
+                    </span>
+                  </div>
+                </div>
+
+                {/* S4-02 AC3: CẢNH BÁO CHẶN TẠO ĐƠN HOÀN TOÀN KHI CÓ NỢ QUÁ HẠN */}
+                {creditStatus?.overdue && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-900 text-xs flex items-start gap-2 animate-in fade-in shadow-xs">
+                    <AlertTriangle size={16} className="text-rose-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="font-bold block text-rose-950 uppercase tracking-wide text-[11px]">
+                        Chặn tạo đơn hoàn toàn (S4-02)
+                      </strong>
+                      <span className="text-[11px] leading-relaxed block mt-0.5 text-rose-800">
+                        Đại lý có khoản nợ quá hạn <strong>{creditStatus.overdueDays} ngày</strong> (vượt quá {creditStatus.maxDebtDays || 30} ngày cho phép).
+                        Số tiền quá hạn: <strong>{formatCurrencyVND(creditStatus.overdueAmount)}</strong>.
+                        Hệ thống chặn tạo đơn mới hoàn toàn cho đến khi hoàn tất thanh toán nợ quá hạn.
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* S4-02 AC2: CẢNH BÁO ĐƠN LÀM VƯỢT HẠN MỨC CẦN DUYỆT */}
+                {creditStatus?.exceedsLimit && !creditStatus.overdue && !selectedAgency.transactionLocked && (
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-start gap-2 animate-in fade-in">
+                    <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="font-bold block text-amber-950 text-[11px]">
+                        Đơn hàng làm vượt hạn mức công nợ (S4-02)
+                      </strong>
+                      <span className="text-[11px] leading-relaxed block mt-0.5 text-amber-800">
+                        Tổng đơn + công nợ hiện tại = <strong>{formatCurrencyVND(creditStatus.debtAfterOrder)}</strong> (Vượt hạn mức <strong>{formatCurrencyVND(creditStatus.exceededAmount)}</strong>).
+                        Đơn hàng sẽ được đánh dấu <strong>Cần Quản lý duyệt</strong> khi chốt đơn.
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* CẢNH BÁO NẾU ĐẠI LÝ CHƯA CÓ BẢNG GIÁ HIỆU LỰC */}
