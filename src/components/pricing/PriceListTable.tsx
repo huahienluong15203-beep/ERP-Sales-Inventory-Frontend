@@ -12,6 +12,7 @@ interface PriceListTableProps {
   onEdit: (priceList: PriceList) => void;
   onCloneVersion: (priceList: PriceList) => void;
   onToggleStatus: (priceList: PriceList) => void;
+  onDelete: (priceList: PriceList) => void;
   // Bộ lọc (lưu trên URL ở trang cha)
   keyword: string;
   onKeywordChange: (value: string) => void;
@@ -36,6 +37,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
   onEdit,
   onCloneVersion,
   onToggleStatus,
+  onDelete,
   keyword,
   onKeywordChange,
   selectedGroup,
@@ -327,6 +329,33 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
                         >
                           <Icons.Edit size={16} />
                         </button>
+
+                        {/* Xoá bảng giá */}
+                        {canManage && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (item.hasOrders) {
+                                alert(`Bảng giá ${item.code} đã phát sinh đơn hàng nên không thể xoá.`);
+                              } else {
+                                onDelete(item);
+                              }
+                            }}
+                            disabled={item.hasOrders}
+                            title={
+                              item.hasOrders
+                                ? 'Bảng giá đã có đơn hàng (không thể xoá)'
+                                : 'Xoá bảng giá'
+                            }
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              item.hasOrders
+                                ? 'text-gray-300 cursor-not-allowed opacity-40'
+                                : 'text-gray-600 hover:text-rose-600 hover:bg-rose-50 cursor-pointer'
+                            }`}
+                          >
+                            <Icons.Trash2 size={16} />
+                          </button>
+                        )}
 
                         {/* Nút Tạo phiên bản mới luôn khả dụng */}
                         <button

@@ -169,6 +169,18 @@ export async function deletePriceListItem(id: number, itemId: number): Promise<P
 }
 
 /**
+ * Xoá toàn bộ bảng giá (chỉ khi bảng giá chưa phát sinh đơn hàng)
+ */
+export async function deletePriceList(id: number): Promise<void> {
+  return request<void>(
+    `${PRICE_LISTS_URL}/${id}`,
+    { method: 'DELETE' },
+    'Không thể xoá bảng giá'
+  );
+}
+
+
+/**
  * S2-10 Tra cứu nhanh giá bán niêm yết và mức giá sàn theo Nhóm khách hàng + SKU + Ngày
  */
 export async function lookupPrice(params: {

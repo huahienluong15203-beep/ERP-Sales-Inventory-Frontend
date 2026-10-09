@@ -4,7 +4,8 @@ import type { PriceList, CustomerGroupType } from '../../types/pricing';
 import {
   fetchPriceLists,
   fetchPriceListStats,
-  changePriceListStatus
+  changePriceListStatus,
+  deletePriceList
 } from '../../services/pricingApi';
 import type { PriceListStatsData } from '../../services/pricingApi';
 import { useUrlPaging } from '../../hooks/useUrlParams';
@@ -152,6 +153,33 @@ export const PriceListPage: React.FC = () => {
     loadData();
   };
 
+  const handleDeletePriceList = async (item: PriceList) => {
+    if (item.hasOrders) {
+      alert(`Bảng giá ${item.code} đã phát sinh đơn hàng nên không thể xoá.`);
+      return;
+    }
+    const confirmed = window.confirm(
+      `Bạn có chắc chắn muốn xoá bảng giá "${item.code} - ${item.name}" không?\n\nThao tác này sẽ xoá bảng giá và toàn bộ danh mục giá cấu hình bên trong. Thao tác không thể hoàn tác!`
+    );
+    if (!confirmed) return;
+
+    try {
+      await deletePriceList(item.id);
+      showToast?.(
+        'Thành công',
+        `Đã xoá bảng giá ${item.code} thành công!`,
+        'success'
+      );
+      loadData();
+    } catch (err) {
+      showToast?.(
+        'Lỗi xoá bảng giá',
+        err instanceof Error ? err.message : 'Không thể xoá bảng giá',
+        'error'
+      );
+    }
+  };
+
   return (
     <div className="w-full min-w-0 space-y-6">
       {/* Nút thao tác chính */}
@@ -231,6 +259,7 @@ export const PriceListPage: React.FC = () => {
           onEdit={handleOpenEdit}
           onCloneVersion={handleOpenClone}
           onToggleStatus={handleToggleStatus}
+          onDelete={handleDeletePriceList}
           keyword={keywordInput}
           onKeywordChange={setKeywordInput}
           selectedGroup={urlParams.group}

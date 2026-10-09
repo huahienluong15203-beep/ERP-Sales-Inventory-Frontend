@@ -145,18 +145,6 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
       .slice(0, 30);
   }, [productOptions, productSearchInput]);
 
-  const handleAddItemRow = () => {
-    setItems((prev) => [
-      ...prev,
-      {
-        productSku: '',
-        productName: '',
-        price: '',
-        floorPrice: ''
-      }
-    ]);
-  };
-
   const handleAddRealProduct = (prod: ProductOptionItem) => {
     if (!prod) return;
 
@@ -550,15 +538,6 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                     </button>
                   )}
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleAddItemRow}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-50 hover:bg-orange-100 text-[#F85606] text-xs font-semibold rounded-xl border border-orange-200 transition-colors cursor-pointer shrink-0"
-                >
-                  <Icons.Plus size={14} />
-                  <span>Thêm dòng trống</span>
-                </button>
               </div>
             </div>
 
@@ -568,7 +547,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200 text-[11px] uppercase tracking-wider text-gray-500 font-semibold">
                     <th className="py-2.5 px-3 w-10 text-center">STT</th>
-                    <th className="py-2.5 px-3 w-40">Mã SKU *</th>
+                    <th className="py-2.5 px-3 w-40">Mã SKU</th>
                     <th className="py-2.5 px-3">Tên sản phẩm</th>
                     <th className="py-2.5 px-3 w-36 text-right">Giá niêm yết (đ) *</th>
                     <th className="py-2.5 px-3 w-36 text-right">Mức giá sàn (đ) *</th>
@@ -582,7 +561,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                       <td colSpan={7} className="py-8 text-center text-gray-400">
                         {itemFilter
                           ? `Không tìm thấy dòng giá nào khớp với từ khóa "${itemFilter}".`
-                          : 'Chưa có sản phẩm nào. Hãy tìm kiếm sản phẩm phía trên hoặc bấm "Thêm dòng trống" để bắt đầu định giá.'}
+                          : 'Chưa có sản phẩm nào. Hãy tìm kiếm sản phẩm thật trong danh mục phía trên và bấm "Thêm" để bắt đầu định giá.'}
                       </td>
                     </tr>
                   ) : (
@@ -603,23 +582,14 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                             <span>{rowNumber}</span>
                           </td>
                           <td className="py-2 px-3">
-                            <input
-                              type="text"
-                              value={item.productSku}
-                              onChange={(e) => handleUpdateItem(originalIndex, 'productSku', e.target.value)}
-                              placeholder="SKU-001"
-                              className="w-full px-2 py-1 bg-white border border-gray-300 rounded-lg text-xs font-mono uppercase font-bold"
-                              required
-                            />
+                            <span className="inline-block font-mono font-bold text-[11px] text-gray-900 bg-gray-100 border border-gray-200 px-2 py-1 rounded-md">
+                              {item.productSku}
+                            </span>
                           </td>
                           <td className="py-2 px-3">
-                            <input
-                              type="text"
-                              value={item.productName}
-                              onChange={(e) => handleUpdateItem(originalIndex, 'productName', e.target.value)}
-                              placeholder="Tên sản phẩm..."
-                              className="w-full px-2 py-1 bg-white border border-gray-300 rounded-lg text-xs"
-                            />
+                            <span className="text-xs text-gray-800 font-medium line-clamp-1" title={item.productName}>
+                              {item.productName || item.productSku}
+                            </span>
                           </td>
                           <td className="py-2 px-3">
                             <input
