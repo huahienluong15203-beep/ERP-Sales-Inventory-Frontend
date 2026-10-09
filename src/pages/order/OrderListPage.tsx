@@ -16,6 +16,7 @@ import {
   Eye,
   Edit,
   Copy,
+  Printer,
   ChevronLeft,
   ChevronRight,
   TrendingUp,
@@ -27,15 +28,23 @@ import { useNavigate } from '../../routes/Router';
 import {
   fetchOrders,
   fetchOrderTotals,
+  fetchOrderDetail,
   cloneOrderToDraft,
   formatCurrencyVND,
   formatQuantity
 } from '../../services/orderService';
 import { fetchAgencies, fetchAgencyFormOptions } from '../../services/agencyApi';
 import type { Agency, RegionOption, SalesRepOption } from '../../types/agency';
-import type { OrderSummaryItem, OrderTotalsSummary, OrderFilterCriteria, PendingOrderResponse } from '../../types/order';
+import type {
+  OrderSummaryItem,
+  OrderTotalsSummary,
+  OrderFilterCriteria,
+  PendingOrderResponse,
+  OrderBackendResponse
+} from '../../types/order';
 import { OrderDetailModal } from '../../components/order/OrderDetailModal';
 import { OrderApprovalActionModal, type ApprovalActionType } from '../../components/order/OrderApprovalActionModal';
+import { OrderPdfPreviewModal } from '../../components/order/OrderPdfPreviewModal';
 
 // Danh sách tabs trạng thái nhanh
 const STATUS_TABS = [
@@ -99,6 +108,25 @@ export const OrderListPage: React.FC = () => {
   const [approvalModalOrder, setApprovalModalOrder] = useState<PendingOrderResponse | null>(null);
   const [approvalModalAction, setApprovalModalAction] = useState<ApprovalActionType>('APPROVE');
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState<boolean>(false);
+
+  // S4-08: Modal xem trước và in PDF đơn hàng
+  const [pdfPreviewOrder, setPdfPreviewOrder] = useState<OrderBackendResponse | null>(null);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
+  const [loadingPdfId, setLoadingPdfId] = useState<number | string | null>(null);
+
+  const handleOpenPdfPreview = async (orderId: number | string) => {
+    try {
+      setLoadingPdfId(orderId);
+      const detail = await fetchOrderDetail(orderId);
+      setPdfPreviewOrder(detail);
+      setIsPdfModalOpen(true);
+    } catch (err: unknown) {
+      console.error('Lỗi tải chi tiết đơn hàng để in PDF:', err);
+      showToast('Lỗi tải PDF', err instanceof Error ? err.message : 'Không thể tải chi tiết đơn hàng để in', 'error');
+    } finally {
+      setLoadingPdfId(null);
+    }
+  };
 
   // S4-09: Sao chép đơn cũ thành đơn mới cho khách quen trong vài giây
   const handleCloneOrder = async (orderId: number | string) => {
@@ -733,6 +761,17 @@ export const OrderListPage: React.FC = () => {
                           <Copy size={16} className={cloningOrderId === o.id ? 'animate-spin' : ''} />
                         </button>
 
+                        {/* S4-08: Nút in / tải PDF đơn hàng */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPdfPreview(o.id)}
+                          disabled={loadingPdfId === o.id}
+                          className="p-1.5 rounded-lg text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 transition cursor-pointer"
+                          title="In / Xuất PDF (S4-08)"
+                        >
+                          <Printer size={16} className={loadingPdfId === o.id ? 'animate-spin' : ''} />
+                        </button>
+
                         {o.status === 'DRAFT' && (
                           <button
                             type="button"
@@ -905,6 +944,16 @@ export const OrderListPage: React.FC = () => {
           setApprovalModalOrder(null);
         }}
         onSuccess={() => setRefreshKey((k) => k + 1)}
+      />
+
+      {/* 8. S4-08: MODAL XEM TRƯỚC VÀ IN PDF ĐƠN HÀNG */}
+      <OrderPdfPreviewModal
+        isOpen={isPdfModalOpen}
+        order={pdfPreviewOrder}
+        onClose={() => {
+          setIsPdfModalOpen(false);
+          setPdfPreviewOrder(null);
+        }}
       />
     </div>
   );

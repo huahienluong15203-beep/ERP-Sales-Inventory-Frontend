@@ -17,7 +17,8 @@ import {
   RefreshCw,
   RotateCcw,
   History,
-  Ban
+  Ban,
+  Printer
 } from 'lucide-react';
 import type { OrderBackendResponse, OrderApprovalHistoryResponse } from '../../types/order';
 import { fetchOrderDetail, fetchOrderApprovalHistory, formatCurrencyVND, formatQuantity } from '../../services/orderService';
@@ -26,6 +27,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { OrderApprovalActionModal, type ApprovalActionType } from './OrderApprovalActionModal';
 import { OrderLifecycleTimeline } from './OrderLifecycleTimeline';
 import { OrderCancelModal } from './OrderCancelModal';
+import { OrderPdfPreviewModal } from './OrderPdfPreviewModal';
 
 interface OrderDetailModalProps {
   orderId: number | null;
@@ -47,6 +49,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
     actionType: ApprovalActionType;
   }>({ isOpen: false, actionType: 'APPROVE' });
   const [isCancelModalOpen, setIsCancelModalOpen] = useState<boolean>(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
 
   const isManagerOrAdmin =
     currentRole === 'ROLE_SALES_MANAGER' ||
@@ -535,6 +538,19 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
               </button>
             )}
 
+            {/* S4-08: Nút Xem trước và Tải file PDF */}
+            {activeOrder && (
+              <button
+                type="button"
+                onClick={() => setIsPdfModalOpen(true)}
+                className="px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                title="Xem trước & Tải file PDF (S4-08)"
+              >
+                <Printer size={14} />
+                <span>In / Xuất PDF</span>
+              </button>
+            )}
+
             {activeOrder && activeOrder.id != null && (
               <button
                 type="button"
@@ -583,6 +599,13 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
             if (orderId) loadOrderDetailAndHistory(orderId);
             if (onOrderUpdated) onOrderUpdated();
           }}
+        />
+
+        {/* Modal xem trước và tải PDF đơn hàng (S4-08) */}
+        <OrderPdfPreviewModal
+          isOpen={isPdfModalOpen}
+          order={activeOrder}
+          onClose={() => setIsPdfModalOpen(false)}
         />
       </div>
     </div>
