@@ -15,7 +15,8 @@ import {
   previewOrderOnBackend,
   saveDraftToBackend,
   fetchBackendDrafts,
-  fetchBackendDraftById
+  fetchBackendDraftById,
+  getServingWarehouseInfo
 } from '../../services/orderService';
 import { fetchAgencies, fetchDeliveryPointsByAgency } from '../../services/agencyApi';
 import { useAuth } from '../../contexts/AuthContext';
@@ -32,7 +33,8 @@ import {
   Tag,
   AlertTriangle,
   AlertCircle,
-  Save
+  Save,
+  Check
 } from '../../components/common/Icons';
 
 /** Kết quả Backend tính tiền cho đơn đang gõ (S3-09: tiền hàng, chiết khấu, tổng phải thu) */
@@ -206,6 +208,9 @@ export const OrderCreatePage: React.FC = () => {
     setIsProductPickerOpen(true);
   };
 
+  // Xác định kho phục vụ đại lý (S4-03 AC1)
+  const servingWarehouse = useMemo(() => getServingWarehouseInfo(selectedAgency), [selectedAgency]);
+
   // Thêm sản phẩm từ picker vào đơn hàng
   const handleAddProduct = (product: OrderProductCatalogItem) => {
     setItems((prev) => {
@@ -217,7 +222,7 @@ export const OrderCreatePage: React.FC = () => {
         updated[existingIdx] = recalculateOrderItem(curr, curr.quantity + 1, curr.selectedUnit);
         return updated;
       }
-      return [...prev, createOrderItemFromCatalog(product, 1)];
+      return [...prev, createOrderItemFromCatalog(product, 1, servingWarehouse)];
     });
 
     showToast('Đã thêm sản phẩm vào đơn', `Đã thêm ${product.name} vào danh sách`, 'success');
@@ -251,6 +256,21 @@ export const OrderCreatePage: React.FC = () => {
 
   // Danh sách các dòng bán dưới giá sàn (S4-01 AC3)
   const belowFloorItems = useMemo(() => items.filter((i) => i.isBelowFloor), [items]);
+
+  // S4-03 AC3: Danh sách các dòng đặt vượt tồn khả dụng
+  const overStockItems = useMemo(() => items.filter((i) => i.isOverStock), [items]);
+
+  // S4-03 AC3: Tự động điều chỉnh tất cả mặt hàng vượt tồn về mức tồn tối đa còn đặt được
+  const handleAutoFixOverStock = () => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (!item.isOverStock) return item;
+        const maxAllowed = item.maxAllowedQuantity ?? item.availableInSelectedUnit ?? 0;
+        return recalculateOrderItem(item, Math.max(1, maxAllowed));
+      })
+    );
+    showToast('Đã chỉnh về tồn tối đa', 'Đã tự động điều chỉnh số lượng các mặt hàng về mức tồn khả dụng', 'success');
+  };
 
   // Xóa dòng hàng
   const handleRemoveItem = (id: string) => {
@@ -329,6 +349,15 @@ export const OrderCreatePage: React.FC = () => {
       return;
     }
 
+    if (overStockItems.length > 0) {
+      showToast(
+        'Vượt tồn khả dụng',
+        `Có ${overStockItems.length} mặt hàng đặt vượt tồn khả dụng tại ${servingWarehouse.name}. Vui lòng chỉnh số lượng trước khi lưu.`,
+        'error'
+      );
+      return;
+    }
+
     setIsSavingDraft(true);
     try {
       const request = buildBackendRequest({
@@ -386,12 +415,19 @@ export const OrderCreatePage: React.FC = () => {
     }
   };
 
-  // Chốt đơn chính thức (giữ chỗ tồn, kiểm hạn mức, duyệt giá sàn) thuộc Sprint 4 (S4-02, S4-03, S4-05, S4-06):
-  // Backend chưa có API chốt đơn nên KHÔNG giả lập "tạo đơn thành công" ở trình duyệt.
-  const submitBlockedReason = undefined;
-
   const isAgencyLocked = Boolean(selectedAgency?.transactionLocked);
   const money = preview.status === 'ok' ? preview.order : null;
+
+  // S4-03 AC3: Chặn chốt đơn nếu có mặt hàng vượt tồn kho khả dụng
+  const submitBlockedReason = useMemo(() => {
+    if (overStockItems.length > 0) {
+      return `Chặn chốt đơn: Có ${overStockItems.length} mặt hàng vượt quá tồn khả dụng tại kho ${servingWarehouse.name}. Vui lòng chỉnh số lượng.`;
+    }
+    if (isAgencyLocked) {
+      return 'Đại lý đang bị khóa giao dịch - chặn tạo đơn mới (S3-07).';
+    }
+    return undefined;
+  }, [overStockItems.length, servingWarehouse.name, isAgencyLocked]);
 
   return (
     <div className="w-full min-w-0 space-y-5 animate-in fade-in duration-300 pb-10">
@@ -439,6 +475,37 @@ export const OrderCreatePage: React.FC = () => {
                 <span>{warn}</span>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* CẢNH BÁO VƯỢT TỒN KHẢ DỤNG - CHẶN ĐẶT HÀNG (S4-03 AC3) */}
+        {overStockItems.length > 0 && (
+          <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-400 text-rose-950 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
+            <div className="flex items-start gap-3 min-w-0">
+              <AlertTriangle size={22} className="text-rose-600 shrink-0 mt-0.5" />
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-xs sm:text-sm font-bold text-rose-900">
+                    Chặn đặt hàng: Có {overStockItems.length} mặt hàng vượt quá tồn khả dụng tại {servingWarehouse.name}!
+                  </h4>
+                  <span className="px-2 py-0.5 rounded-full bg-rose-200 text-rose-900 text-[10px] font-bold">
+                    CHẶN LƯU & CHỐT ĐƠN
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-rose-800 leading-relaxed">
+                  Các sản phẩm ({overStockItems.map((i) => `${i.name} [Đang đặt: ${i.quantity} ${i.selectedUnit} / Tồn: ${i.maxAllowedQuantity ?? 0} ${i.selectedUnit}]`).join('; ')}) vượt quá khả năng xuất kho. Hệ thống chặn lưu và chốt đơn để không thất hứa với đại lý.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleAutoFixOverStock}
+              className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shrink-0 shadow-sm cursor-pointer transition active:scale-95 flex items-center gap-1.5 self-end sm:self-center"
+              title="Tự động chỉnh số lượng tất cả mặt hàng về mức tồn khả dụng tối đa"
+            >
+              <Check size={14} />
+              <span>Chỉnh tất cả về tồn tối đa</span>
+            </button>
           </div>
         )}
 
@@ -631,6 +698,28 @@ export const OrderCreatePage: React.FC = () => {
                 </div>
               )}
 
+              {/* Dòng cảnh báo mặt hàng vượt tồn khả dụng (S4-03 AC3) */}
+              {overStockItems.length > 0 && (
+                <div className="flex justify-between items-center text-rose-950 font-semibold bg-rose-100/90 p-2.5 rounded-xl border border-rose-300">
+                  <span className="flex items-center gap-1.5 text-[11px]">
+                    <AlertTriangle size={14} className="text-rose-600 shrink-0" />
+                    <span>Mặt hàng vượt tồn khả dụng:</span>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs bg-rose-200 text-rose-900 px-2 py-0.5 rounded-full">
+                      {overStockItems.length} mặt hàng (Bị chặn)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleAutoFixOverStock}
+                      className="text-[11px] text-rose-700 underline font-bold hover:text-rose-900 cursor-pointer"
+                    >
+                      Tự động chỉnh
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Dòng cảnh báo mặt hàng dưới giá sàn (AC3) */}
               {belowFloorItems.length > 0 && (
                 <div className="flex justify-between items-center text-amber-900 font-semibold bg-amber-100/80 p-2 rounded-xl border border-amber-300">
@@ -669,19 +758,25 @@ export const OrderCreatePage: React.FC = () => {
             <button
               type="button"
               onClick={handleSaveDraft}
-              disabled={isSavingDraft}
+              disabled={isSavingDraft || overStockItems.length > 0}
               className={`h-10 px-4 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer ${
-                belowFloorItems.length > 0
+                overStockItems.length > 0
+                  ? 'border-rose-300 bg-rose-50 text-rose-800 cursor-not-allowed opacity-60'
+                  : belowFloorItems.length > 0
                   ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'
                   : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700'
               }`}
               title={
-                belowFloorItems.length > 0
+                overStockItems.length > 0
+                  ? 'Không thể lưu nháp khi có mặt hàng vượt tồn khả dụng'
+                  : belowFloorItems.length > 0
                   ? 'Lưu đơn nháp (đơn có dòng dưới giá sàn sẽ ở trạng thái cần duyệt)'
                   : 'Lưu nháp đơn hàng để tiếp tục sau'
               }
             >
-              {belowFloorItems.length > 0 ? (
+              {overStockItems.length > 0 ? (
+                <AlertTriangle size={15} className="text-rose-600" />
+              ) : belowFloorItems.length > 0 ? (
                 <AlertTriangle size={15} className="text-amber-600" />
               ) : (
                 <Save size={15} className="text-gray-600" />
@@ -689,6 +784,8 @@ export const OrderCreatePage: React.FC = () => {
               <span>
                 {isSavingDraft
                   ? 'Đang lưu...'
+                  : overStockItems.length > 0
+                  ? 'Bị Chặn (Vượt Tồn Kho)'
                   : belowFloorItems.length > 0
                   ? 'Lưu Đơn (Cần Duyệt Giá)'
                   : 'Lưu Nháp'}
@@ -719,6 +816,9 @@ export const OrderCreatePage: React.FC = () => {
         onSelectProduct={handleAddProduct}
         addedSkuList={addedSkuList}
         agency={selectedAgency}
+        cartItems={items}
+        onUpdateQuantity={handleUpdateQuantity}
+        onRemoveItem={handleRemoveItem}
       />
 
       {/* MODAL 2: XEM VÀ MỞ LẠI ĐƠN NHÁP */}

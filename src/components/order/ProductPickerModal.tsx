@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import type { Agency } from '../../types/agency';
+import type { OrderItem } from '../../types/order';
 import type { OrderProductCatalogItem } from '../../services/orderService';
-import { fetchBackendProductOptions, formatCurrencyVND } from '../../services/orderService';
+import { fetchBackendProductOptions, formatCurrencyVND, getServingWarehouseInfo } from '../../services/orderService';
 import {
   Search,
   X,
   Plus,
-  Check,
+  Minus,
   Package,
   AlertCircle,
   Building2,
@@ -22,6 +23,9 @@ interface ProductPickerModalProps {
   onSelectProduct: (product: OrderProductCatalogItem) => void;
   addedSkuList: string[];
   agency?: Agency | null;
+  cartItems?: OrderItem[];
+  onUpdateQuantity?: (id: string, newQty: number) => void;
+  onRemoveItem?: (id: string) => void;
 }
 
 export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
@@ -29,12 +33,17 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
   onClose,
   onSelectProduct,
   addedSkuList,
-  agency
+  agency,
+  cartItems,
+  onUpdateQuantity,
+  onRemoveItem
 }) => {
   const [keyword, setKeyword] = useState<string>('');
   const [products, setProducts] = useState<OrderProductCatalogItem[]>([]);
   const [loadingBackend, setLoadingBackend] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const servingWarehouse = getServingWarehouseInfo(agency);
 
   // Tự động tải sản phẩm theo cấp đại lý ngay khi mở modal, và lọc khi người dùng gõ từ khóa
   useEffect(() => {
@@ -55,7 +64,7 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
     // Nếu kw rỗng thì tải ngay không delay; nếu có gõ từ khóa thì debounce 250ms
     const delay = kw === '' ? 0 : 250;
     const timer = setTimeout(() => {
-      fetchBackendProductOptions(agency.id, kw)
+      fetchBackendProductOptions(agency.id, kw, servingWarehouse)
         .then((items) => {
           if (alive) setProducts(items);
         })
@@ -73,7 +82,7 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
       alive = false;
       clearTimeout(timer);
     };
-  }, [isOpen, agency?.id, agency?.priceList, keyword]);
+  }, [isOpen, agency?.id, agency?.priceList, keyword, servingWarehouse.code]);
 
   // Reset từ khóa khi đóng mở modal
   useEffect(() => {
@@ -155,7 +164,7 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
               </span>
             </div>
 
-            {/* Hàng 2: Bảng giá áp dụng & Hạn mức công nợ */}
+            {/* Hàng 2: Bảng giá áp dụng, Kho xuất phục vụ & Hạn mức công nợ */}
             <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-orange-200/60 text-[11px]">
               <div className="inline-flex items-center gap-1.5 text-gray-700 min-w-0">
                 <BadgeDollarSign size={14} className="text-[#F85606] shrink-0" />
@@ -163,6 +172,11 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
                 <strong className="text-gray-900 truncate" title={priceListName}>
                   {priceListName}
                 </strong>
+              </div>
+              <div className="inline-flex items-center gap-1.5 text-indigo-700 bg-indigo-50/80 px-2 py-0.5 rounded-md border border-indigo-200">
+                <Package size={13} className="text-indigo-600 shrink-0" />
+                <span className="text-gray-500">Kho xuất:</span>
+                <strong className="text-indigo-900">{servingWarehouse.name} ({servingWarehouse.code})</strong>
               </div>
               <div className="inline-flex items-center gap-1.5 text-gray-600 shrink-0">
                 <CreditCard size={13} className="text-emerald-600" />
@@ -279,21 +293,35 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
             </div>
           ) : (
             products.map((p) => {
-              const isAdded = addedSkuList.includes(p.sku);
+              const cartItem = cartItems?.find((i) => i.sku === p.sku);
+              const cartBaseQty = cartItem ? cartItem.baseQuantity : 0;
+              const availableStock = p.availableStock ?? 0;
+              const isOutOfStock = availableStock <= 0;
+              const isMaxInCart = availableStock > 0 && cartBaseQty >= availableStock;
+              const isBlocked = p.priceAvailable === false || isOutOfStock || isMaxInCart;
 
               return (
                 <div
                   key={p.id}
-                  className="pt-2.5 pb-2.5 flex items-center justify-between gap-3 hover:bg-gray-50/90 rounded-xl px-2.5 transition-colors"
+                  className={`pt-2.5 pb-2.5 flex items-center justify-between gap-3 rounded-xl px-2.5 transition-colors ${
+                    isOutOfStock
+                      ? 'bg-rose-50/30 hover:bg-rose-50/50'
+                      : 'hover:bg-gray-50/90'
+                  }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 shrink-0">
                         {p.sku}
                       </span>
                       <strong className="text-xs sm:text-sm text-gray-900 truncate block">
                         {p.name}
                       </strong>
+                      {isOutOfStock && (
+                        <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold border border-rose-300 shrink-0">
+                          Hết hàng
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-gray-500">
@@ -303,6 +331,27 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
                           <span>•</span>
                           <span>Quy cách: {p.availableUnits.map((u) => u.unitName).join(', ')}</span>
                         </>
+                      )}
+                    </div>
+
+                    {/* Hiển thị tồn khả dụng (S4-03 AC1 & AC2) */}
+                    <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px]">
+                      <span
+                        className={`font-semibold px-1.5 py-0.5 rounded ${
+                          isOutOfStock
+                            ? 'text-rose-700 bg-rose-100 border border-rose-200'
+                            : 'text-emerald-700 bg-emerald-50 border border-emerald-200'
+                        }`}
+                      >
+                        Tồn khả dụng: <strong className="font-mono">{availableStock}</strong> {p.baseUnit}
+                      </span>
+                      <span className="text-gray-400 text-[10px]">
+                        (Thực tế: {p.physicalStock ?? availableStock} | Giữ chỗ: {p.reservedStock ?? 0})
+                      </span>
+                      {cartBaseQty > 0 && (
+                        <span className="text-blue-700 text-[10px] font-medium bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                          Đã chọn: {cartItem?.quantity} {cartItem?.selectedUnit} ({cartBaseQty} {p.baseUnit})
+                        </span>
                       )}
                     </div>
 
@@ -325,33 +374,73 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
                     )}
                   </div>
 
-                  <button
-                    type="button"
-                    disabled={p.priceAvailable === false}
-                    onClick={() => onSelectProduct(p)}
-                    title={p.priceAvailable === false ? (p.priceMessage || 'Sản phẩm chưa có giá áp dụng') : undefined}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all shadow-xs cursor-pointer ${
-                      p.priceAvailable === false
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                        : isAdded
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100'
-                        : 'bg-[#F85606] hover:bg-orange-600 active:scale-98 text-white'
-                    }`}
-                  >
-                    {p.priceAvailable === false ? (
-                      <span>Chặn thêm</span>
-                    ) : isAdded ? (
-                      <>
-                        <Check size={14} className="text-emerald-600" />
-                        <span>Thêm tiếp</span>
-                      </>
-                    ) : (
-                      <>
-                        <Plus size={14} />
-                        <span>Thêm vào đơn</span>
-                      </>
-                    )}
-                  </button>
+                  {/* Cụm thao tác thêm / sửa số lượng trực tiếp trong Modal */}
+                  {cartItem && onUpdateQuantity ? (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center h-8 rounded-xl border border-orange-300 bg-orange-50/60 overflow-hidden shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (cartItem.quantity <= 1 && onRemoveItem) {
+                              onRemoveItem(cartItem.id);
+                            } else {
+                              onUpdateQuantity(cartItem.id, Math.max(1, cartItem.quantity - 1));
+                            }
+                          }}
+                          className="w-8 h-full flex items-center justify-center text-gray-700 hover:bg-orange-200 active:bg-orange-300 transition cursor-pointer"
+                          title={cartItem.quantity <= 1 ? 'Xóa khỏi đơn' : 'Giảm 1'}
+                        >
+                          <Minus size={13} />
+                        </button>
+                        <span className="w-10 h-full flex items-center justify-center text-xs font-bold text-gray-900 bg-white border-x border-orange-200 font-mono">
+                          {cartItem.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={isMaxInCart}
+                          onClick={() => onUpdateQuantity(cartItem.id, cartItem.quantity + 1)}
+                          className="w-8 h-full flex items-center justify-center text-gray-700 hover:bg-orange-200 active:bg-orange-300 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+                          title={isMaxInCart ? `Đã đạt tồn tối đa (${availableStock} ${p.baseUnit})` : 'Tăng 1'}
+                        >
+                          <Plus size={13} />
+                        </button>
+                      </div>
+                      <span className="text-[11px] text-gray-600 font-medium">
+                        {cartItem.selectedUnit}
+                      </span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={isBlocked}
+                      onClick={() => onSelectProduct(p)}
+                      title={
+                        p.priceAvailable === false
+                          ? (p.priceMessage || 'Sản phẩm chưa có giá áp dụng')
+                          : isOutOfStock
+                          ? 'Kho phục vụ đã hết hàng (Tồn khả dụng = 0)'
+                          : isMaxInCart
+                          ? `Đã thêm tối đa ${availableStock} ${p.baseUnit} vào đơn`
+                          : undefined
+                      }
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all shadow-xs cursor-pointer ${
+                        isBlocked
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                          : 'bg-[#F85606] hover:bg-orange-600 active:scale-98 text-white'
+                      }`}
+                    >
+                      {p.priceAvailable === false ? (
+                        <span>Chặn thêm</span>
+                      ) : isOutOfStock ? (
+                        <span className="text-rose-600 font-bold">Hết hàng</span>
+                      ) : (
+                        <>
+                          <Plus size={14} />
+                          <span>Thêm vào đơn</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               );
             })

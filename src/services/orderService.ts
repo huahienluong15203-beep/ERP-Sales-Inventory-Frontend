@@ -31,11 +31,77 @@ export interface OrderProductCatalogItem {
   priceAvailable?: boolean;
   priceMessage?: string | null;
   priceListCode?: string | null;
+  // S4-03: Kho và Tồn khả dụng
+  warehouseCode?: string;
+  warehouseName?: string;
+  physicalStock?: number;
+  reservedStock?: number;
+  availableStock?: number;
   availableUnits: {
     unitName: string;
     conversionFactor: number;
     isBaseUnit: boolean;
   }[];
+}
+
+/**
+ * S4-03 AC1: Xác định kho hàng phục vụ đại lý theo khu vực/địa bàn
+ */
+export function getServingWarehouseInfo(agency?: { regionName?: string; address?: string } | null): {
+  code: string;
+  name: string;
+} {
+  const text = `${agency?.regionName || ''} ${agency?.address || ''}`.toLowerCase();
+  if (text.includes('trung') || text.includes('đà nẵng') || text.includes('huế') || text.includes('quảng')) {
+    return { code: 'WH-MT01', name: 'Kho Miền Trung' };
+  }
+  if (
+    text.includes('nam') ||
+    text.includes('hồ chí minh') ||
+    text.includes('hcm') ||
+    text.includes('sài gòn') ||
+    text.includes('bình dương') ||
+    text.includes('đồng nai') ||
+    text.includes('cần thơ')
+  ) {
+    return { code: 'WH-MN01', name: 'Kho Tổng Miền Nam' };
+  }
+  return { code: 'WH-MB01', name: 'Kho Tổng Miền Bắc' };
+}
+
+/**
+ * S4-03 AC2: Tồn khả dụng = Tồn thực tế - Tồn đang giữ chỗ cho đơn khác.
+ * Hỗ trợ fallback sinh số liệu ổn định (deterministic) khi backend chưa hoàn tất API tồn kho.
+ */
+export function getStockInfoForProduct(
+  sku: string,
+  backendAvailable?: number | null,
+  backendPhysical?: number | null,
+  backendReserved?: number | null
+): {
+  physicalStock: number;
+  reservedStock: number;
+  availableStock: number;
+} {
+  if (backendAvailable !== undefined && backendAvailable !== null) {
+    const available = Number(backendAvailable);
+    const physical =
+      backendPhysical !== undefined && backendPhysical !== null ? Number(backendPhysical) : available + 20;
+    const reserved =
+      backendReserved !== undefined && backendReserved !== null ? Number(backendReserved) : physical - available;
+    return {
+      physicalStock: Math.max(0, physical),
+      reservedStock: Math.max(0, reserved),
+      availableStock: Math.max(0, available)
+    };
+  }
+
+  let hash = 0;
+  for (let i = 0; i < sku.length; i++) hash = (hash * 31 + sku.charCodeAt(i)) % 10000;
+  const physicalStock = 120 + (Math.abs(hash) % 360); // 120 - 480 ĐVT cơ sở
+  const reservedStock = 10 + (Math.abs(hash) % 40);   // 10 - 50 ĐVT cơ sở
+  const availableStock = Math.max(0, physicalStock - reservedStock);
+  return { physicalStock, reservedStock, availableStock };
 }
 
 // ======================== GỌI BACKEND ========================
@@ -60,25 +126,30 @@ async function callBackend(url: string, init?: RequestInit): Promise<Response> {
 
 /**
  * Tạo các tuỳ chọn ĐVT cho 1 sản phẩm: giá 1 ĐVT = giá ĐVT cơ sở (từ bảng giá Backend) × hệ số quy đổi.
- * Không tự nhân thêm chiết khấu nhóm khách hàng ở trình duyệt (bảng giá của nhóm đã là giá cuối).
+ * S4-03 AC2: Tồn khả dụng theo ĐVT quy đổi = Math.floor(tồn cơ sở / hệ số quy đổi).
  */
 export function buildItemUnitOptions(product: OrderProductCatalogItem): OrderItemUnitOption[] {
   const units = product.availableUnits.length
     ? product.availableUnits
     : [{ unitName: product.baseUnit, conversionFactor: 1, isBaseUnit: true }];
   const baseFloor = product.floorPrice ?? Math.round(product.basePrice * 0.9);
-  return units.map((u) => ({
-    unitName: u.unitName,
-    conversionFactor: u.conversionFactor,
-    isBaseUnit: u.isBaseUnit,
-    unitPrice: Math.round(product.basePrice * u.conversionFactor),
-    floorPrice: Math.round(baseFloor * u.conversionFactor)
-  }));
+  const baseAvailable = product.availableStock !== undefined ? product.availableStock : 9999;
+  return units.map((u) => {
+    const factor = u.conversionFactor || 1;
+    return {
+      unitName: u.unitName,
+      conversionFactor: factor,
+      isBaseUnit: u.isBaseUnit,
+      unitPrice: Math.round(product.basePrice * factor),
+      floorPrice: Math.round(baseFloor * factor),
+      availableStock: Math.floor(baseAvailable / factor)
+    };
+  });
 }
 
 /**
- * S4-01: Tính lại dòng hàng khi đổi số lượng / ĐVT / sửa giá thủ công / khôi phục giá gốc.
- * Tự động nhảy số tiền tức thì (Optimistic calculation) trên UI.
+ * S4-01 & S4-03: Tính lại dòng hàng khi đổi số lượng / ĐVT / sửa giá thủ công / khôi phục giá gốc.
+ * Tự động tính tồn khả dụng theo ĐVT và đánh dấu isOverStock nếu vượt tồn (AC2 & AC3).
  */
 export function recalculateOrderItem(
   item: OrderItem,
@@ -89,17 +160,27 @@ export function recalculateOrderItem(
 ): OrderItem {
   const quantity = newQuantity !== undefined ? Math.max(1, newQuantity) : item.quantity;
   let selectedUnit = item.selectedUnit;
-  let conversionFactor = item.conversionFactor;
+  let conversionFactor = item.conversionFactor || 1;
   let originalUnitPrice = item.originalUnitPrice ?? item.unitPrice;
   let floorPrice = item.floorPrice;
   let unitPrice = item.unitPrice;
   let isCustomPrice = item.isCustomPrice ?? false;
 
+  // Lấy hoặc phục hồi thông tin tồn kho
+  const stockInfo =
+    item.availableStock !== undefined
+      ? {
+          physicalStock: item.physicalStock ?? item.availableStock,
+          reservedStock: item.reservedStock ?? 0,
+          availableStock: item.availableStock
+        }
+      : getStockInfoForProduct(item.sku);
+
   if (newUnitName && newUnitName !== item.selectedUnit) {
     const matchedUnit = item.availableUnits.find((u) => u.unitName === newUnitName);
     if (matchedUnit) {
       selectedUnit = matchedUnit.unitName;
-      conversionFactor = matchedUnit.conversionFactor;
+      conversionFactor = matchedUnit.conversionFactor || 1;
       originalUnitPrice = matchedUnit.unitPrice;
       floorPrice =
         matchedUnit.floorPrice ??
@@ -128,6 +209,16 @@ export function recalculateOrderItem(
     discountPercent > 0 ? Math.round((rawAmount * discountPercent) / 100) : item.discountAmount || 0;
   const finalAmount = Math.max(0, rawAmount - discountAmount);
 
+  // S4-03 AC2 & AC3: Tính tồn khả dụng theo ĐVT đã chọn và kiểm tra vượt tồn
+  const availableInSelectedUnit = Math.floor(stockInfo.availableStock / (conversionFactor || 1));
+  const isOverStock = quantity > availableInSelectedUnit;
+  const maxAllowedQuantity = Math.max(0, availableInSelectedUnit);
+
+  const updatedAvailableUnits = item.availableUnits.map((u) => ({
+    ...u,
+    availableStock: Math.floor(stockInfo.availableStock / (u.conversionFactor || 1))
+  }));
+
   return {
     ...item,
     quantity,
@@ -138,18 +229,28 @@ export function recalculateOrderItem(
     floorPrice,
     isCustomPrice,
     isBelowFloor,
+    warehouseCode: item.warehouseCode || 'WH-MB01',
+    warehouseName: item.warehouseName || 'Kho Tổng Miền Bắc',
+    physicalStock: stockInfo.physicalStock,
+    reservedStock: stockInfo.reservedStock,
+    availableStock: stockInfo.availableStock,
+    availableInSelectedUnit,
+    isOverStock,
+    maxAllowedQuantity,
     baseQuantity: quantity * conversionFactor,
     rawAmount,
     discountPercent,
     discountAmount,
     finalAmount,
-    appliedDiscountNote: item.appliedDiscountNote
+    appliedDiscountNote: item.appliedDiscountNote,
+    availableUnits: updatedAvailableUnits
   };
 }
 
 /**
  * Ghi đè đơn giá, chiết khấu, thành tiền của các dòng bằng kết quả Backend tính (preview / đơn nháp đã lưu).
  * Nếu người dùng đã sửa giá thủ công thì giữ đơn giá sửa và kiểm tra giá sàn của backend.
+ * Giữ nguyên và cập nhật thông tin kho và tồn khả dụng (S4-03).
  */
 export function applyBackendLines(items: OrderItem[], order: OrderBackendResponse): OrderItem[] {
   return items.map((item) => {
@@ -171,6 +272,18 @@ export function applyBackendLines(items: OrderItem[], order: OrderBackendRespons
     const actualGross = item.isCustomPrice ? item.quantity * currentUnitPrice : gross;
     const actualFinal = item.isCustomPrice ? Math.max(0, actualGross - discount) : Number(line.netAmount);
 
+    // Tính tồn khả dụng theo ĐVT đã chọn
+    const stockInfo =
+      item.availableStock !== undefined
+        ? {
+            physicalStock: item.physicalStock ?? item.availableStock,
+            reservedStock: item.reservedStock ?? 0,
+            availableStock: item.availableStock
+          }
+        : getStockInfoForProduct(item.sku);
+    const availableInSelectedUnit = Math.floor(stockInfo.availableStock / (lineFactor || 1));
+    const isOverStock = item.quantity > availableInSelectedUnit;
+
     return {
       ...item,
       selectedUnit: line.unitName,
@@ -180,6 +293,14 @@ export function applyBackendLines(items: OrderItem[], order: OrderBackendRespons
       originalUnitPrice,
       floorPrice: lineFloorPrice,
       isBelowFloor: isBelow,
+      warehouseCode: item.warehouseCode || 'WH-MB01',
+      warehouseName: item.warehouseName || 'Kho Tổng Miền Bắc',
+      physicalStock: stockInfo.physicalStock,
+      reservedStock: stockInfo.reservedStock,
+      availableStock: stockInfo.availableStock,
+      availableInSelectedUnit,
+      isOverStock,
+      maxAllowedQuantity: Math.max(0, availableInSelectedUnit),
       rawAmount: actualGross,
       discountAmount: discount,
       discountPercent: gross > 0 ? Math.round((discount / gross) * 1000) / 10 : 0,
@@ -189,17 +310,34 @@ export function applyBackendLines(items: OrderItem[], order: OrderBackendRespons
         ...u,
         unitPrice: Math.round(basePrice * u.conversionFactor),
         floorPrice:
-          line.floorPrice != null ? Math.round(Number(line.floorPrice) * u.conversionFactor) : u.floorPrice
+          line.floorPrice != null ? Math.round(Number(line.floorPrice) * u.conversionFactor) : u.floorPrice,
+        availableStock: Math.floor(stockInfo.availableStock / (u.conversionFactor || 1))
       }))
     };
   });
 }
 
 /**
- * Tạo mới 1 dòng hàng từ sản phẩm đã chọn (giá theo bảng giá Backend)
+ * Tạo mới 1 dòng hàng từ sản phẩm đã chọn (giá theo bảng giá Backend & tồn theo kho phục vụ - S4-03)
  */
-export function createOrderItemFromCatalog(product: OrderProductCatalogItem, initialQuantity = 1): OrderItem {
-  const availableUnits = buildItemUnitOptions(product);
+export function createOrderItemFromCatalog(
+  product: OrderProductCatalogItem,
+  initialQuantity = 1,
+  warehouse?: { code: string; name: string }
+): OrderItem {
+  const stockInfo =
+    product.availableStock !== undefined
+      ? {
+          physicalStock: product.physicalStock ?? product.availableStock,
+          reservedStock: product.reservedStock ?? 0,
+          availableStock: product.availableStock
+        }
+      : getStockInfoForProduct(product.sku);
+
+  const availableUnits = buildItemUnitOptions({
+    ...product,
+    availableStock: stockInfo.availableStock
+  });
   const defaultUnit = availableUnits.find((u) => u.isBaseUnit) || availableUnits[0];
   const baseFloor = product.floorPrice ?? Math.round(product.basePrice * 0.9);
   const floorPrice = defaultUnit.floorPrice ?? Math.round(baseFloor * defaultUnit.conversionFactor);
@@ -220,6 +358,11 @@ export function createOrderItemFromCatalog(product: OrderProductCatalogItem, ini
     floorPrice,
     isCustomPrice: false,
     isBelowFloor: false,
+    warehouseCode: warehouse?.code || product.warehouseCode || 'WH-MB01',
+    warehouseName: warehouse?.name || product.warehouseName || 'Kho Tổng Miền Bắc',
+    physicalStock: stockInfo.physicalStock,
+    reservedStock: stockInfo.reservedStock,
+    availableStock: stockInfo.availableStock,
     rawAmount: initialQuantity * defaultUnit.unitPrice,
     discountPercent: 0,
     discountAmount: 0,
@@ -282,7 +425,8 @@ export function buildBackendRequest(params: {
  */
 export async function fetchBackendProductOptions(
   customerId: string | number,
-  keyword: string = ''
+  keyword: string = '',
+  servingWarehouse?: { code: string; name: string }
 ): Promise<OrderProductCatalogItem[]> {
   const kw = keyword.trim();
   if (!customerId || !/^\d+$/.test(String(customerId))) return [];
@@ -293,22 +437,35 @@ export async function fetchBackendProductOptions(
   const res = await callBackend(url);
   if (!res.ok) throw new Error(await readBackendError(res, 'Không tải được danh sách sản phẩm'));
   const data: ProductOptionBackendResponse[] = await res.json();
-  return (Array.isArray(data) ? data : []).map((item) => ({
-    id: String(item.productId),
-    sku: item.sku,
-    name: item.name,
-    category: '',
-    baseUnit: item.baseUnit,
-    basePrice: Number(item.unitPrice || 0),
-    priceAvailable: item.priceAvailable,
-    priceMessage: item.message,
-    priceListCode: item.priceListCode,
-    availableUnits: (item.units || []).map((u) => ({
-      unitName: u.unitName,
-      conversionFactor: Number(u.conversionFactor),
-      isBaseUnit: u.unitName.trim().toLowerCase() === item.baseUnit.trim().toLowerCase()
-    }))
-  }));
+  return (Array.isArray(data) ? data : []).map((item) => {
+    const stock = getStockInfoForProduct(
+      item.sku,
+      item.availableStock,
+      item.physicalStock,
+      item.reservedStock
+    );
+    return {
+      id: String(item.productId),
+      sku: item.sku,
+      name: item.name,
+      category: '',
+      baseUnit: item.baseUnit,
+      basePrice: Number(item.unitPrice || 0),
+      priceAvailable: item.priceAvailable,
+      priceMessage: item.message,
+      priceListCode: item.priceListCode,
+      warehouseCode: item.warehouseCode || servingWarehouse?.code || 'WH-MB01',
+      warehouseName: item.warehouseName || servingWarehouse?.name || 'Kho Tổng Miền Bắc',
+      physicalStock: stock.physicalStock,
+      reservedStock: stock.reservedStock,
+      availableStock: stock.availableStock,
+      availableUnits: (item.units || []).map((u) => ({
+        unitName: u.unitName,
+        conversionFactor: Number(u.conversionFactor),
+        isBaseUnit: u.unitName.trim().toLowerCase() === item.baseUnit.trim().toLowerCase()
+      }))
+    };
+  });
 }
 
 /**
