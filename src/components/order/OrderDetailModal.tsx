@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Package,
   Edit,
+  Copy,
   Phone,
   RefreshCw
 } from 'lucide-react';
@@ -23,9 +24,10 @@ interface OrderDetailModalProps {
   orderId: number | null;
   isOpen: boolean;
   onClose: () => void;
+  onCloneOrder?: (orderId: number | string) => void;
 }
 
-export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isOpen, onClose }) => {
+export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isOpen, onClose, onCloneOrder }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(false);
   const [order, setOrder] = useState<OrderBackendResponse | null>(null);
@@ -381,10 +383,27 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
           </div>
 
           <div className="flex items-center gap-2">
+            {activeOrder && activeOrder.id != null && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  if (onCloneOrder && activeOrder.id != null) {
+                    onCloneOrder(activeOrder.id);
+                  }
+                }}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition cursor-pointer"
+                title="Sao chép"
+              >
+                <Copy size={14} />
+                <span>Sao chép</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-xs transition"
+              className="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-xs transition cursor-pointer"
             >
               Đóng
             </button>

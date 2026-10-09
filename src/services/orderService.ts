@@ -719,6 +719,184 @@ export async function fetchOrderDetail(id: number | string): Promise<OrderBacken
   return res.json();
 }
 
+// ======================== S4-09: SAO CHÉP ĐƠN CŨ THÀNH ĐƠN MỚI (CHỐT ĐƠN ĐỊNH KỲ) ========================
+
+/**
+ * Story S4-09: Sao chép một đơn cũ thành đơn mới
+ * 1. AC1: Sao chép toàn bộ dòng hàng (SKU, ĐVT, số lượng) của đơn đã chọn.
+ * 2. AC2: Đơn giá và chiết khấu được áp lại theo bảng giá hiện hành, không kế thừa giá cũ (isCustomPrice = false).
+ * 3. AC3: Bản sao luôn bắt đầu ở trạng thái Nháp (DRAFT), chưa có mã đơn chính thức.
+ */
+export async function cloneOrderToDraft(orderId: number | string): Promise<{
+  draft: OrderDraft;
+  sourceCode: string;
+  itemCount: number;
+}> {
+  // 1. Tải chi tiết đơn gốc
+  const source = await fetchOrderDetail(orderId);
+  const customerId = source.customerId;
+  if (!customerId) {
+    throw new Error('Đơn hàng không có thông tin đại lý');
+  }
+
+  // 2. Tải danh mục sản phẩm của đại lý theo bảng giá hiện hành
+  let catalog: OrderProductCatalogItem[] = [];
+  try {
+    catalog = await fetchBackendProductOptions(customerId);
+  } catch (err) {
+    console.warn('Không tải được catalog theo bảng giá đại lý:', err);
+  }
+
+  // 3. Sao chép các dòng hàng, áp lại giá theo bảng giá hiện hành (AC1 & AC2)
+  const lines = source.lines || [];
+  const clonedItems: OrderItem[] = lines.map((line, idx) => {
+    const catItem = catalog.find((c) => c.sku === line.productSku);
+    const factor = Number(line.conversionFactor || 1);
+    const qty = Number(line.quantity || 1);
+
+    // Xây dựng availableUnits chuẩn
+    let availableUnits: OrderItemUnitOption[];
+    let currentUnitPrice: number;
+    let originalUnitPrice: number;
+    let floorPrice: number | undefined;
+
+    if (catItem && catItem.availableUnits && catItem.availableUnits.length > 0) {
+      availableUnits = buildItemUnitOptions(catItem);
+      const matchedUnit =
+        availableUnits.find((u) => u.unitName.trim().toLowerCase() === line.unitName.trim().toLowerCase()) ||
+        availableUnits[0];
+      currentUnitPrice = matchedUnit.unitPrice;
+      originalUnitPrice = matchedUnit.unitPrice;
+      floorPrice = matchedUnit.floorPrice;
+    } else {
+      currentUnitPrice = Number(line.pricePerUnit || 0);
+      originalUnitPrice = currentUnitPrice;
+      availableUnits = [
+        {
+          unitName: line.unitName,
+          conversionFactor: factor,
+          isBaseUnit: line.unitName === line.baseUnit,
+          unitPrice: currentUnitPrice
+        }
+      ];
+    }
+
+    const rawAmount = qty * currentUnitPrice;
+
+    const stockInfo = catItem
+      ? {
+          physicalStock: catItem.physicalStock ?? 100,
+          reservedStock: catItem.reservedStock ?? 0,
+          availableStock: catItem.availableStock ?? 100
+        }
+      : getStockInfoForProduct(line.productSku);
+
+    const availableInSelectedUnit = Math.floor(stockInfo.availableStock / (factor || 1));
+
+    const item: OrderItem = {
+      id: `clone-item-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+      productId: line.productId || (catItem ? catItem.id : idx + 1),
+      sku: line.productSku,
+      name: line.productName,
+      category: catItem?.category || '',
+      baseUnit: line.baseUnit,
+      selectedUnit: line.unitName,
+      conversionFactor: factor,
+      quantity: qty,
+      baseQuantity: qty * factor,
+      unitPrice: currentUnitPrice,
+      originalUnitPrice,
+      floorPrice,
+      isCustomPrice: false, // AC2: Bỏ giá cũ, áp giá hiện hành
+      isBelowFloor: false,
+      warehouseCode: catItem?.warehouseCode || 'WH-MB01',
+      warehouseName: catItem?.warehouseName || 'Kho Tổng Miền Bắc',
+      physicalStock: stockInfo.physicalStock,
+      reservedStock: stockInfo.reservedStock,
+      availableStock: stockInfo.availableStock,
+      availableInSelectedUnit,
+      isOverStock: qty > availableInSelectedUnit,
+      maxAllowedQuantity: Math.max(0, availableInSelectedUnit),
+      rawAmount,
+      discountPercent: 0,
+      discountAmount: 0,
+      finalAmount: rawAmount,
+      availableUnits
+    };
+
+    return recalculateOrderItem(item, qty, line.unitName);
+  });
+
+  // 4. Ngày giao dự kiến mới (ngày mai)
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+  const grpId: CustomerGroupId =
+    source.customerGroup === 'DEALER_LEVEL_1'
+      ? 'TIER_1'
+      : source.customerGroup === 'DEALER_LEVEL_2'
+      ? 'TIER_2'
+      : 'RETAIL_SHOWROOM';
+
+  // 5. Tạo đơn nháp mới (AC3: Trạng thái DRAFT, không có orderNumber cũ)
+  const clonedDraft: OrderDraft = {
+    id: `DRAFT-${Date.now()}`,
+    backendDraftId: undefined,
+    orderNumber: undefined,
+    status: 'DRAFT',
+    agencyId: String(source.customerId),
+    agencyCode: source.customerCode,
+    agencyName: source.customerName,
+    customerGroup: grpId,
+    customerGroupName: source.customerGroupLabel || 'Đại lý',
+    pricingTierCode: source.lines?.[0]?.priceListCode || 'BG-STANDARD',
+    pricingTierName: source.lines?.[0]?.priceListCode || 'Bảng giá hiện hành',
+    deliveryPointId: source.deliveryAddress ? String(source.deliveryAddress.id) : '',
+    deliveryPointName: source.deliveryAddress?.label || 'Kho đại lý',
+    deliveryAddress: source.deliveryAddress?.address || '',
+    expectedDeliveryDate: tomorrowStr,
+    note: source.note
+      ? `${source.note} (Sao chép từ đơn ${source.code || orderId})`
+      : `Sao chép từ đơn ${source.code || orderId}`,
+    items: clonedItems,
+    totalItemsCount: clonedItems.length,
+    totalQuantity: clonedItems.reduce((s, i) => s + i.quantity, 0),
+    subtotalAmount: clonedItems.reduce((s, i) => s + i.rawAmount, 0),
+    discountAmount: 0,
+    totalPayable: clonedItems.reduce((s, i) => s + i.rawAmount, 0),
+    salesRepId: '',
+    salesRepName: '',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  // 6. Lưu vào active draft
+  setActiveDraft(clonedDraft);
+
+  // 7. Ghi nhận cờ thông báo sao chép vào sessionStorage
+  const sourceCode = source.code || `DH-${orderId}`;
+  try {
+    sessionStorage.setItem(
+      'erp_order_clone_notice',
+      JSON.stringify({
+        sourceCode,
+        sourceId: orderId,
+        itemCount: clonedItems.length,
+        timestamp: Date.now()
+      })
+    );
+  } catch (err) {
+    console.warn('Không lưu được clone notice vào sessionStorage:', err);
+  }
+
+  return {
+    draft: clonedDraft,
+    sourceCode,
+    itemCount: clonedItems.length
+  };
+}
+
 // ======================== S4-04: XEM LỊCH SỬ MUA HÀNG ĐẠI LÝ & GỢI Ý ĐẶT HÀNG ========================
 
 /**

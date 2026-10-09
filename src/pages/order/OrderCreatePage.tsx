@@ -45,6 +45,7 @@ import {
   Save,
   Check
 } from '../../components/common/Icons';
+import { Copy, X } from 'lucide-react';
 
 /** Kết quả Backend tính tiền cho đơn đang gõ (S3-09: tiền hàng, chiết khấu, tổng phải thu) */
 type PreviewState =
@@ -78,6 +79,18 @@ export const OrderCreatePage: React.FC = () => {
   const [savedDrafts, setSavedDrafts] = useState<OrderDraft[]>([]);
   const [isSavingDraft, setIsSavingDraft] = useState<boolean>(false);
   const [preview, setPreview] = useState<PreviewState>({ status: 'idle' });
+  const [cloneNotice, setCloneNotice] = useState<{ sourceCode: string; itemCount: number } | null>(() => {
+    try {
+      const rawNotice = sessionStorage.getItem('erp_order_clone_notice');
+      if (rawNotice) {
+        sessionStorage.removeItem('erp_order_clone_notice');
+        return JSON.parse(rawNotice);
+      }
+    } catch {
+      // Bỏ qua
+    }
+    return null;
+  });
 
   // Đếm số mặt hàng / số lượng (tiền lấy từ Backend, xem `preview`)
   const totals = useMemo(() => calculateOrderTotals(items), [items]);
@@ -105,8 +118,18 @@ export const OrderCreatePage: React.FC = () => {
 
   // Khôi phục đơn đang gõ dở trên máy này khi vào lại trang (giá sẽ được Backend tính lại)
   useEffect(() => {
+    if (cloneNotice) {
+      showToast(
+        'Đã sao chép đơn cũ (S4-09)',
+        `Đã sao chép ${cloneNotice.itemCount} dòng hàng từ đơn ${cloneNotice.sourceCode}. Đơn giá và chiết khấu đã được tự động tính lại theo bảng giá hiện hành!`,
+        'success',
+        5000
+      );
+    }
+
     const active = getActiveDraft();
     if (active && active.items && active.items.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentDraftId(active.id);
       setBackendDraftId(active.backendDraftId || null);
       setExpectedDeliveryDate(active.expectedDeliveryDate || expectedDeliveryDate);
@@ -451,6 +474,7 @@ export const OrderCreatePage: React.FC = () => {
   const previewSeq = useRef(0);
   useEffect(() => {
     if (!previewKey) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPreview({ status: 'idle' });
       setBackendWarnings([]);
       return;
@@ -608,6 +632,38 @@ export const OrderCreatePage: React.FC = () => {
 
       {/* Nội dung tạo đơn */}
       <div className="space-y-5">
+
+        {/* S4-09: BANNER THÔNG BÁO SAO CHÉP ĐƠN CŨ */}
+        {cloneNotice && (
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/70 to-blue-50 border-2 border-blue-200 text-blue-950 shadow-xs flex items-start justify-between gap-3 animate-in fade-in">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/25 mt-0.5">
+                <Copy size={20} />
+              </div>
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-xs sm:text-sm font-bold text-blue-900">
+                    Đã sao chép từ đơn cũ {cloneNotice.sourceCode} (Story S4-09)
+                  </h4>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-200/80 text-blue-900 text-[10px] font-bold">
+                    BẢN SAO NHÁP MỚI
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-blue-800 leading-relaxed">
+                  Toàn bộ <strong>{cloneNotice.itemCount} dòng hàng</strong> đã được sao chép thành công. Theo quy chuẩn tài chính Story S4-09, <strong>đơn giá và chiết khấu đã được tự động áp lại theo bảng giá hiện hành</strong> (không kế thừa giá cũ). Đơn đang ở trạng thái Nháp để bạn thoải mái chỉnh sửa số lượng trước khi chốt đơn!
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCloneNotice(null)}
+              className="p-1 rounded-lg text-blue-400 hover:text-blue-700 hover:bg-blue-100/60 transition cursor-pointer shrink-0"
+              title="Đóng thông báo"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
 
         {/* CẢNH BÁO TỪ BACKEND NẾU CÓ (S3-07 / S3-09) */}
         {backendWarnings.length > 0 && (

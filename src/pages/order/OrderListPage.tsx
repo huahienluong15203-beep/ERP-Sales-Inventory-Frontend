@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Eye,
   Edit,
+  Copy,
   ChevronLeft,
   ChevronRight,
   TrendingUp,
@@ -26,6 +27,7 @@ import { useNavigate } from '../../routes/Router';
 import {
   fetchOrders,
   fetchOrderTotals,
+  cloneOrderToDraft,
   formatCurrencyVND,
   formatQuantity
 } from '../../services/orderService';
@@ -45,7 +47,8 @@ const STATUS_TABS = [
 
 export const OrderListPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, currentRole } = useAuth();
+  const { user, currentRole, showToast } = useAuth();
+  const [cloningOrderId, setCloningOrderId] = useState<number | string | null>(null);
 
   // Xác định quyền hạn: Quản lý kinh doanh & Admin được xem toàn bộ và lọc theo NVKD
   const isManagerOrAdmin = useMemo(() => {
@@ -90,6 +93,25 @@ export const OrderListPage: React.FC = () => {
   // Modal xem chi tiết đơn
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
+
+  // S4-09: Sao chép đơn cũ thành đơn mới cho khách quen trong vài giây
+  const handleCloneOrder = async (orderId: number | string) => {
+    try {
+      setCloningOrderId(orderId);
+      const res = await cloneOrderToDraft(orderId);
+      showToast(
+        'Đã sao chép đơn cũ (S4-09)',
+        `Đã sao chép ${res.itemCount} dòng hàng từ đơn ${res.sourceCode}. Đơn giá và chiết khấu đã được tự động tính lại theo bảng giá hiện hành!`,
+        'success'
+      );
+      navigate('/orders/create');
+    } catch (err: unknown) {
+      console.error('Lỗi sao chép đơn hàng:', err);
+      showToast('Sao chép thất bại', err instanceof Error ? err.message : 'Không thể sao chép đơn hàng', 'error');
+    } finally {
+      setCloningOrderId(null);
+    }
+  };
 
   // Tải danh mục phục vụ bộ lọc (Đại lý, Khu vực, NVKD)
   useEffect(() => {
@@ -694,6 +716,17 @@ export const OrderListPage: React.FC = () => {
                           <Eye size={16} />
                         </button>
 
+                        {/* S4-09: Sao chép đơn cũ thành đơn mới */}
+                        <button
+                          type="button"
+                          onClick={() => handleCloneOrder(o.id)}
+                          disabled={cloningOrderId === o.id}
+                          className="p-1.5 rounded-lg text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition cursor-pointer"
+                          title="Sao chép"
+                        >
+                          <Copy size={16} className={cloningOrderId === o.id ? 'animate-spin' : ''} />
+                        </button>
+
                         {o.status === 'DRAFT' && (
                           <button
                             type="button"
@@ -771,6 +804,7 @@ export const OrderListPage: React.FC = () => {
       <OrderDetailModal
         orderId={selectedOrderId}
         isOpen={isDetailModalOpen}
+        onCloneOrder={handleCloneOrder}
         onClose={() => {
           setIsDetailModalOpen(false);
           setSelectedOrderId(null);
