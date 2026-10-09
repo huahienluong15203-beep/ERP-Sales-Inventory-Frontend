@@ -234,7 +234,7 @@ export const AgencyManagementPage: React.FC = () => {
   // Khu vực thật từ Backend cho ô lọc
   const [regionOptions, setRegionOptions] = useState<RegionOption[]>([]);
   useEffect(() => {
-    fetchAgencyFormOptions()
+    fetchAgencyFormOptions(true)
       .then((options) => setRegionOptions(options.regions))
       .catch(() => setRegionOptions([]));
   }, []);
