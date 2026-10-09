@@ -23,6 +23,7 @@ export interface OrderItemUnitOption {
   conversionFactor: number; // Hệ số nhân so với đơn vị tính cơ sở (vd: Thùng 24 lon => factor = 24)
   isBaseUnit: boolean;
   unitPrice: number;        // Đơn giá bán theo đơn vị này (đã nhân hệ số và tính theo bảng giá)
+  floorPrice?: number;      // Giá sàn theo đơn vị này
 }
 
 /**
@@ -46,6 +47,11 @@ export interface OrderItem {
   finalAmount: number;      // Thành tiền sau chiết khấu = rawAmount - discountAmount
   appliedDiscountNote?: string; // Ghi chú chính sách chiết khấu đã hưởng
   availableUnits: OrderItemUnitOption[]; // Danh sách đơn vị tính hỗ trợ quy đổi
+  // S4-01: Áp giá tự động & Sửa giá thủ công
+  originalUnitPrice?: number; // Đơn giá gốc từ bảng giá hiệu lực
+  floorPrice?: number;        // Giá sàn theo đơn vị tính đã chọn
+  isCustomPrice?: boolean;    // Cờ đánh dấu đã sửa giá thủ công
+  isBelowFloor?: boolean;     // Cờ đánh dấu bán dưới giá sàn
 }
 
 /**
@@ -142,6 +148,7 @@ export interface OrderDraftBackendRequest {
     productSku: string;
     unitName?: string | null;
     quantity: number;
+    unitPrice?: number | null;
   }>;
 }
 

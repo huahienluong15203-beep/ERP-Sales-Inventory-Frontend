@@ -235,6 +235,23 @@ export const OrderCreatePage: React.FC = () => {
     );
   };
 
+  // S4-01: Cập nhật đơn giá thủ công / khôi phục giá niêm yết
+  const handleUpdatePrice = (id: string, newPrice: number, resetToOriginal?: boolean) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? recalculateOrderItem(item, undefined, undefined, newPrice, resetToOriginal) : item
+      )
+    );
+    if (resetToOriginal) {
+      showToast('Đã khôi phục giá', 'Đơn giá đã được đặt lại theo giá niêm yết của bảng giá', 'info');
+    } else {
+      showToast('Đã cập nhật đơn giá', 'Đơn giá mới đã áp dụng, hệ thống đang tính lại tiền', 'success');
+    }
+  };
+
+  // Danh sách các dòng bán dưới giá sàn (S4-01 AC3)
+  const belowFloorItems = useMemo(() => items.filter((i) => i.isBelowFloor), [items]);
+
   // Xóa dòng hàng
   const handleRemoveItem = (id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
@@ -425,6 +442,27 @@ export const OrderCreatePage: React.FC = () => {
           </div>
         )}
 
+        {/* CẢNH BÁO ĐƠN GIÁ DƯỚI GIÁ SÀN - CẦN QUẢN LÝ DUYỆT (S4-01 AC3) */}
+        {belowFloorItems.length > 0 && (
+          <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-400 text-amber-900 shadow-xs flex items-start gap-3 animate-in fade-in">
+            <AlertTriangle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-1 min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-xs sm:text-sm font-bold text-amber-900">
+                  Cảnh báo: Có {belowFloorItems.length} mặt hàng bán dưới giá sàn!
+                </h4>
+                <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[10px] font-bold">
+                  Trạng thái đơn: CẦN DUYỆT
+                </span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-amber-800 leading-relaxed">
+                Các sản phẩm ({belowFloorItems.map((i) => `${i.name} [${i.sku}]`).join(', ')}) có đơn giá thấp hơn giá sàn quy định.
+                Đơn hàng khi chốt sẽ chuyển sang trạng thái <strong>"Chờ duyệt" (Pending Approval)</strong> và cần Quản lý kinh doanh phê duyệt trước khi xuất kho.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* 2. KHỐI 1: CHỌN ĐẠI LÝ & ĐIỂM GIAO HÀNG */}
         <OrderHeaderCard
           selectedAgency={selectedAgency}
@@ -519,6 +557,7 @@ export const OrderCreatePage: React.FC = () => {
                   itemIndex={idx}
                   onUpdateQuantity={handleUpdateQuantity}
                   onUpdateUnit={handleUpdateUnit}
+                  onUpdatePrice={handleUpdatePrice}
                   onRemoveItem={handleRemoveItem}
                 />
               ))}
@@ -550,7 +589,7 @@ export const OrderCreatePage: React.FC = () => {
             </span>
           </div>
 
-          {/* Tiền do Backend tính theo bảng giá + chính sách chiết khấu sản lượng đang hiệu lực */}
+          {/* Tiền do Backend tính theo bảng giá + chính sách chiết khấu sản lượng đang hiệu lực (Nhảy số tức thì trên client) */}
           {!selectedAgency ? (
             <p className="text-xs text-gray-500">Chọn đại lý và thêm sản phẩm để hệ thống tính tiền.</p>
           ) : !selectedAgency.priceList ? (
@@ -572,19 +611,36 @@ export const OrderCreatePage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className={`space-y-2 text-xs ${preview.status === 'loading' ? 'opacity-60' : ''}`}>
+            <div className={`space-y-2.5 text-xs transition-opacity ${preview.status === 'loading' ? 'opacity-75' : ''}`}>
               <div className="flex justify-between text-gray-600">
-                <span>Tổng tiền hàng (theo bảng giá):</span>
-                <span className="font-mono font-medium">{money ? formatCurrencyVND(Number(money.subtotal)) : '—'}</span>
+                <span>Tổng tiền hàng (trước chiết khấu):</span>
+                <span className="font-mono font-bold text-gray-900">
+                  {formatCurrencyVND(money ? Number(money.subtotal) : totals.subtotalAmount)}
+                </span>
               </div>
 
-              {money && Number(money.discountTotal) > 0 && (
+              {(money ? Number(money.discountTotal) > 0 : totals.discountAmount > 0) && (
                 <div className="flex justify-between text-emerald-700 font-medium">
                   <span className="flex items-center gap-1">
                     <Tag size={12} />
-                    <span>Chiết khấu sản lượng:</span>
+                    <span>Chiết khấu sản lượng tự động:</span>
                   </span>
-                  <span className="font-mono font-bold">-{formatCurrencyVND(Number(money.discountTotal))}</span>
+                  <span className="font-mono font-bold">
+                    -{formatCurrencyVND(money ? Number(money.discountTotal) : totals.discountAmount)}
+                  </span>
+                </div>
+              )}
+
+              {/* Dòng cảnh báo mặt hàng dưới giá sàn (AC3) */}
+              {belowFloorItems.length > 0 && (
+                <div className="flex justify-between items-center text-amber-900 font-semibold bg-amber-100/80 p-2 rounded-xl border border-amber-300">
+                  <span className="flex items-center gap-1.5 text-[11px]">
+                    <AlertTriangle size={14} className="text-amber-600 shrink-0" />
+                    <span>Mặt hàng bán dưới giá sàn:</span>
+                  </span>
+                  <span className="font-bold text-xs bg-amber-200 px-2 py-0.5 rounded-full text-amber-900">
+                    {belowFloorItems.length} mặt hàng (Cần Quản lý duyệt)
+                  </span>
                 </div>
               )}
 
@@ -594,7 +650,7 @@ export const OrderCreatePage: React.FC = () => {
                   <span>Tổng tiền phải thu:</span>
                 </span>
                 <strong className="text-lg sm:text-xl font-black text-[#F85606] font-mono">
-                  {money ? formatCurrencyVND(Number(money.totalAmount)) : 'Đang tính...'}
+                  {formatCurrencyVND(money ? Number(money.totalAmount) : totals.totalPayable)}
                 </strong>
               </div>
             </div>
@@ -604,7 +660,7 @@ export const OrderCreatePage: React.FC = () => {
             <Tag size={14} className="shrink-0 text-amber-600 mt-0.5" />
             <div>
               Đơn giá lấy từ <strong>bảng giá đang hiệu lực</strong> của nhóm khách hàng mà đại lý thuộc về; chiết khấu sản lượng
-              theo <strong>chính sách chiết khấu</strong> đang áp dụng. Hệ thống tự tính lại mỗi khi đổi số lượng hoặc đơn vị tính.
+              tự động nhảy lại theo <strong>chính sách chiết khấu</strong> mỗi khi số lượng hoặc đơn giá thay đổi. Nếu sửa giá dưới giá sàn, đơn sẽ được chuyển sang <strong>Chờ Quản lý duyệt</strong>.
             </div>
           </div>
 
@@ -614,11 +670,29 @@ export const OrderCreatePage: React.FC = () => {
               type="button"
               onClick={handleSaveDraft}
               disabled={isSavingDraft}
-              className="h-10 px-4 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50"
-              title="Lưu nháp đơn hàng để tiếp tục sau"
+              className={`h-10 px-4 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer ${
+                belowFloorItems.length > 0
+                  ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'
+                  : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700'
+              }`}
+              title={
+                belowFloorItems.length > 0
+                  ? 'Lưu đơn nháp (đơn có dòng dưới giá sàn sẽ ở trạng thái cần duyệt)'
+                  : 'Lưu nháp đơn hàng để tiếp tục sau'
+              }
             >
-              <Save size={15} className="text-gray-600" />
-              <span>{isSavingDraft ? 'Đang lưu...' : 'Lưu Nháp'}</span>
+              {belowFloorItems.length > 0 ? (
+                <AlertTriangle size={15} className="text-amber-600" />
+              ) : (
+                <Save size={15} className="text-gray-600" />
+              )}
+              <span>
+                {isSavingDraft
+                  ? 'Đang lưu...'
+                  : belowFloorItems.length > 0
+                  ? 'Lưu Đơn (Cần Duyệt Giá)'
+                  : 'Lưu Nháp'}
+              </span>
             </button>
 
             <button
