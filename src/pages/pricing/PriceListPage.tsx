@@ -4,7 +4,8 @@ import type { PriceList, CustomerGroupType } from '../../types/pricing';
 import {
   fetchPriceLists,
   fetchPriceListStats,
-  changePriceListStatus
+  changePriceListStatus,
+  deletePriceList
 } from '../../services/pricingApi';
 import type { PriceListStatsData } from '../../services/pricingApi';
 import { useUrlPaging } from '../../hooks/useUrlParams';
@@ -15,6 +16,7 @@ import { PriceListTable } from '../../components/pricing/PriceListTable';
 import { PriceListDetailModal } from '../../components/pricing/PriceListDetailModal';
 import { PriceListFormModal } from '../../components/pricing/PriceListFormModal';
 import { CloneVersionModal } from '../../components/pricing/CloneVersionModal';
+import { DeletePriceListModal } from '../../components/pricing/DeletePriceListModal';
 import { Icons } from '../../components/common/Icons';
 
 export const PriceListPage: React.FC = () => {
@@ -61,6 +63,7 @@ export const PriceListPage: React.FC = () => {
   const [formModalOpen, setFormModalOpen] = useState<boolean>(false);
   const [editingItem, setEditingItem] = useState<PriceList | null>(null);
   const [cloneModalItem, setCloneModalItem] = useState<PriceList | null>(null);
+  const [deleteModalItem, setDeleteModalItem] = useState<PriceList | null>(null);
 
   // Tải 1 trang bảng giá (Backend lọc + phân trang) và số liệu thẻ đầu trang
   const loadData = useCallback(async () => {
@@ -152,6 +155,20 @@ export const PriceListPage: React.FC = () => {
     loadData();
   };
 
+  const handleDeletePriceList = (item: PriceList) => {
+    setDeleteModalItem(item);
+  };
+
+  const handleConfirmDeletePriceList = async (item: PriceList) => {
+    await deletePriceList(item.id);
+    showToast?.(
+      'Thành công',
+      `Đã xoá bảng giá ${item.code} thành công!`,
+      'success'
+    );
+    loadData();
+  };
+
   return (
     <div className="w-full min-w-0 space-y-6">
       {/* Nút thao tác chính */}
@@ -231,6 +248,7 @@ export const PriceListPage: React.FC = () => {
           onEdit={handleOpenEdit}
           onCloneVersion={handleOpenClone}
           onToggleStatus={handleToggleStatus}
+          onDelete={handleDeletePriceList}
           keyword={keywordInput}
           onKeywordChange={setKeywordInput}
           selectedGroup={urlParams.group}
@@ -285,6 +303,20 @@ export const PriceListPage: React.FC = () => {
           originalList={cloneModalItem}
           onClose={() => setCloneModalItem(null)}
           onSuccess={handleCloneSuccess}
+        />
+      )}
+
+      {/* Modal Xác nhận xoá bảng giá */}
+      {deleteModalItem && (
+        <DeletePriceListModal
+          isOpen={!!deleteModalItem}
+          priceList={deleteModalItem}
+          onClose={() => setDeleteModalItem(null)}
+          onConfirm={handleConfirmDeletePriceList}
+          onCloneVersion={(item) => {
+            setDeleteModalItem(null);
+            handleOpenClone(item);
+          }}
         />
       )}
     </div>

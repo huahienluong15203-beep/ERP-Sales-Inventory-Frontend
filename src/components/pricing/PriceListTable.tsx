@@ -12,6 +12,7 @@ interface PriceListTableProps {
   onEdit: (priceList: PriceList) => void;
   onCloneVersion: (priceList: PriceList) => void;
   onToggleStatus: (priceList: PriceList) => void;
+  onDelete: (priceList: PriceList) => void;
   // Bộ lọc (lưu trên URL ở trang cha)
   keyword: string;
   onKeywordChange: (value: string) => void;
@@ -36,6 +37,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
   onEdit,
   onCloneVersion,
   onToggleStatus,
+  onDelete,
   keyword,
   onKeywordChange,
   selectedGroup,
@@ -303,13 +305,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
                         <button
                           onClick={() => {
                             if (item.hasOrders) {
-                              if (
-                                window.confirm(
-                                  `Bảng giá ${item.code} đã phát sinh đơn hàng nên không thể sửa trực tiếp. Bạn có muốn tạo phiên bản mới (v${(item.version || 1) + 1}) không?`
-                                )
-                              ) {
-                                onCloneVersion(item);
-                              }
+                              onCloneVersion(item);
                             } else {
                               onEdit(item);
                             }
@@ -327,6 +323,26 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
                         >
                           <Icons.Edit size={16} />
                         </button>
+
+                        {/* Xoá bảng giá */}
+                        {canManage && (
+                          <button
+                            type="button"
+                            onClick={() => onDelete(item)}
+                            title={
+                              item.hasOrders
+                                ? 'Bảng giá đã có đơn hàng (xem thông tin ràng buộc)'
+                                : 'Xoá bảng giá'
+                            }
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                              item.hasOrders
+                                ? 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
+                                : 'text-gray-600 hover:text-rose-600 hover:bg-rose-50'
+                            }`}
+                          >
+                            <Icons.Trash2 size={16} />
+                          </button>
+                        )}
 
                         {/* Nút Tạo phiên bản mới luôn khả dụng */}
                         <button

@@ -57,7 +57,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      fetchAgencyFormOptions()
+      fetchAgencyFormOptions(true)
         .then((options) => {
           setRegions(options.regions);
           setSalesReps(options.salesReps);
@@ -71,13 +71,17 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
         })
         .catch(() => setError('Không tải được danh mục khu vực và nhân viên kinh doanh. Vui lòng thử lại!'));
     }
-  }, [isOpen]);
+  }, [isOpen, initialData]);
 
   // Bảng giá hiện thời được ánh xạ trực tiếp từ Nhóm khách hàng đã chọn (dữ liệu thật trong hệ thống)
-  const activePricingTier = useMemo(
-    () => getRealPriceListForGroup(customerGroup, priceLists),
-    [customerGroup, priceLists]
-  );
+  const activePricingTier = useMemo(() => {
+    const calculated = getRealPriceListForGroup(customerGroup, priceLists);
+    if (calculated.id) return calculated;
+    if (initialData?.customerGroup === customerGroup && initialData?.pricingTier?.id) {
+      return initialData.pricingTier;
+    }
+    return calculated;
+  }, [customerGroup, priceLists, initialData]);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
