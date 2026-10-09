@@ -305,13 +305,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
                         <button
                           onClick={() => {
                             if (item.hasOrders) {
-                              if (
-                                window.confirm(
-                                  `Bảng giá ${item.code} đã phát sinh đơn hàng nên không thể sửa trực tiếp. Bạn có muốn tạo phiên bản mới (v${(item.version || 1) + 1}) không?`
-                                )
-                              ) {
-                                onCloneVersion(item);
-                              }
+                              onCloneVersion(item);
                             } else {
                               onEdit(item);
                             }
@@ -334,23 +328,16 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
                         {canManage && (
                           <button
                             type="button"
-                            onClick={() => {
-                              if (item.hasOrders) {
-                                alert(`Bảng giá ${item.code} đã phát sinh đơn hàng nên không thể xoá.`);
-                              } else {
-                                onDelete(item);
-                              }
-                            }}
-                            disabled={item.hasOrders}
+                            onClick={() => onDelete(item)}
                             title={
                               item.hasOrders
-                                ? 'Bảng giá đã có đơn hàng (không thể xoá)'
+                                ? 'Bảng giá đã có đơn hàng (xem thông tin ràng buộc)'
                                 : 'Xoá bảng giá'
                             }
-                            className={`p-1.5 rounded-lg transition-colors ${
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                               item.hasOrders
-                                ? 'text-gray-300 cursor-not-allowed opacity-40'
-                                : 'text-gray-600 hover:text-rose-600 hover:bg-rose-50 cursor-pointer'
+                                ? 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
+                                : 'text-gray-600 hover:text-rose-600 hover:bg-rose-50'
                             }`}
                           >
                             <Icons.Trash2 size={16} />
