@@ -507,6 +507,19 @@ export async function saveDraftToBackend(
 }
 
 /**
+ * S4-05 & S4-02: Chốt đơn hàng từ đơn nháp (POST /api/orders/{id}/submit)
+ * - Nếu không vi phạm: đơn sang ĐÃ DUYỆT (APPROVED).
+ * - Nếu vượt hạn mức hoặc bán dưới giá sàn: đơn sang CHỜ DUYỆT (PENDING_APPROVAL).
+ */
+export async function submitOrderToBackend(orderId: number | string): Promise<OrderBackendResponse> {
+  const res = await callBackend(`${API_BASE_URL}/api/orders/${orderId}/submit`, {
+    method: 'POST'
+  });
+  if (!res.ok) throw new Error(await readBackendError(res, 'Không thể chốt đơn hàng'));
+  return (await res.json()) as OrderBackendResponse;
+}
+
+/**
  * 4. Tải danh sách đơn nháp từ Backend (GET /api/orders?status=DRAFT)
  */
 export async function fetchBackendDrafts(keyword?: string): Promise<OrderDraft[]> {

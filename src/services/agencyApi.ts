@@ -28,6 +28,7 @@ import type {
   TransferCustomersPayload,
   CustomerTransactionLockPayload,
   OrderCreationCheckResponse,
+  CreditStatusResponse,
   PricingTier,
   PriceListOption
 } from '../types/agency';
@@ -1595,6 +1596,72 @@ export async function checkCustomerOrderCreation(
     creditLimit: target.creditLimit,
     maxDebtDays: target.maxDebtDays || 30,
     transactionLocked: false
+  };
+}
+
+/**
+ * S4-02: Lấy thông tin công nợ hiện tại, hạn mức và kiểm tra vượt hạn mức / quá hạn khi tạo đơn
+ * Endpoint Backend: GET /api/customers/{id}/credit-status?orderAmount={amount}
+ */
+export async function fetchCustomerCreditStatus(
+  agencyId: string | number,
+  orderAmount: number = 0
+): Promise<CreditStatusResponse> {
+  const isBackendId = /^\d+$/.test(String(agencyId));
+  if (isBackendId) {
+    try {
+      const url = `${API_BASE_URL}/api/customers/${agencyId}/credit-status${
+        orderAmount ? `?orderAmount=${orderAmount}` : ''
+      }`;
+      const res = await authFetch(url);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Fallback xuống mock
+    }
+  }
+
+  // Dữ liệu fallback
+  const list = getStoredAgencies();
+  const target = list.find((a) => a.id === String(agencyId));
+  const creditLimit = Number(target?.creditLimit ?? 50000000);
+  const currentDebt = Number(target?.totalDebt ?? 0);
+  const availableCredit = creditLimit - currentDebt;
+  const debtAfterOrder = currentDebt + orderAmount;
+  const exceedsLimit = debtAfterOrder > creditLimit;
+  const exceededAmount = exceedsLimit ? debtAfterOrder - creditLimit : 0;
+  const maxDebtDays = Number(target?.maxDebtDays ?? 30);
+  const overdue = Boolean(target?.hasOverdueDebt);
+  const blocked = Boolean(target?.transactionLocked || overdue);
+
+  let message = '';
+  if (blocked) {
+    message = overdue
+      ? `Đại lý có khoản nợ quá hạn ${maxDebtDays} ngày, hệ thống chặn tạo đơn mới hoàn toàn.`
+      : 'Đại lý đang bị khóa giao dịch, không thể tạo đơn hàng mới.';
+  } else if (exceedsLimit) {
+    message = `Đơn hàng làm vượt hạn mức công nợ (${exceededAmount.toLocaleString('vi-VN')} đ), đơn sẽ cần Quản lý duyệt.`;
+  }
+
+  return {
+    customerId: agencyId,
+    customerCode: target?.code || '',
+    customerName: target?.name || '',
+    creditLimit,
+    currentDebt,
+    availableCredit,
+    orderAmount,
+    debtAfterOrder,
+    exceedsLimit,
+    exceededAmount,
+    maxDebtDays,
+    overdue,
+    overdueOrderCount: overdue ? 1 : 0,
+    overdueAmount: overdue ? currentDebt : 0,
+    overdueDays: overdue ? 45 : 0,
+    blocked,
+    message
   };
 }
 
