@@ -24,6 +24,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Cổng đặt hàng đại lý',
+    path: '/portal',
+    group: 'Bán hàng',
+    icon: 'ShoppingBag',
+    epic: 'Đặt hàng & Duyệt ngoại lệ',
+    description: 'Cổng đại lý tự đặt hàng trực tuyến B2B lúc nửa đêm, quản lý công nợ (S4-10)',
+    allowedRoles: ['ROLE_CUSTOMER', 'ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+  },
+
+  {
     title: 'Hồ sơ đại lý',
     path: '/customers',
     group: 'Bán hàng',

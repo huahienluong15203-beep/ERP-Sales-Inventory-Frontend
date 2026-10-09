@@ -119,7 +119,7 @@ export const ROLE_METADATA_MAP: Record<RoleName, RoleMetadata> = {
     description: 'Tự đặt hàng trực tuyến, theo dõi đơn giao và đối soát công nợ',
     badgeColor: '#16a34a',
     badgeBg: '#f0fdf4',
-    defaultPath: '/orders/create',
+    defaultPath: '/portal',
     sampleLocation: 'Điểm nhận hàng: Kho Đại lý Cần Thơ'
   }
 };
