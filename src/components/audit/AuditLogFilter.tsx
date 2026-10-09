@@ -5,7 +5,8 @@ import {
   Search,
   SlidersHorizontal,
   RotateCcw,
-  Clock
+  Clock,
+  AlertCircle
 } from '../common/Icons';
 
 interface AuditLogFilterProps {
@@ -58,16 +59,22 @@ export const AuditLogFilter: React.FC<AuditLogFilterProps> = ({
     }
   };
 
+  const isValidYear = (val: string) => {
+    if (!val) return true;
+    const parts = val.split('-');
+    if (parts.length !== 3) return false;
+    const year = parseInt(parts[0], 10);
+    return !isNaN(year) && year >= 1970 && year <= 2099 && parts[0].length === 4;
+  };
+
   const handleStartDateChange = (val: string) => {
     if (!val) {
       onChange({ startDate: undefined, quickTimeRange: 'ALL', page: 0 });
       return;
     }
-    // Nếu ngày bắt đầu lớn hơn ngày kết thúc hiện tại, tự động đồng bộ ngày kết thúc bằng ngày bắt đầu
-    const adjustedEndDate = filters.endDate && val > filters.endDate ? val : filters.endDate;
+    if (!isValidYear(val)) return;
     onChange({
       startDate: val,
-      endDate: adjustedEndDate,
       quickTimeRange: 'ALL',
       page: 0
     });
@@ -78,15 +85,27 @@ export const AuditLogFilter: React.FC<AuditLogFilterProps> = ({
       onChange({ endDate: undefined, quickTimeRange: 'ALL', page: 0 });
       return;
     }
-    // Nếu ngày kết thúc nhỏ hơn ngày bắt đầu hiện tại, tự động đồng bộ ngày bắt đầu bằng ngày kết thúc
-    const adjustedStartDate = filters.startDate && val < filters.startDate ? val : filters.startDate;
+    if (!isValidYear(val)) return;
     onChange({
       endDate: val,
-      startDate: adjustedStartDate,
       quickTimeRange: 'ALL',
       page: 0
     });
   };
+
+  const handleSwapDates = () => {
+    if (!filters.startDate || !filters.endDate) return;
+    onChange({
+      startDate: filters.endDate,
+      endDate: filters.startDate,
+      quickTimeRange: 'ALL',
+      page: 0
+    });
+  };
+
+  const isDateRangeInvalid = Boolean(
+    filters.startDate && filters.endDate && filters.startDate > filters.endDate
+  );
 
   const handleClearDateRange = () => {
     onChange({ startDate: undefined, endDate: undefined, quickTimeRange: 'ALL', page: 0 });
@@ -178,29 +197,35 @@ export const AuditLogFilter: React.FC<AuditLogFilterProps> = ({
       </div>
 
       {/* Tùy chọn ngày chi tiết (Từ ngày - Đến ngày) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-xs text-slate-500">
+      <div className="flex flex-col gap-2 pt-1 text-xs text-slate-500">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-semibold text-slate-600 flex items-center gap-1">
             <Clock size={14} className="text-orange-500" />
             <span>Khoảng ngày cụ thể:</span>
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="date"
               value={filters.startDate || ''}
-              max={filters.endDate || undefined}
               onChange={(e) => handleStartDateChange(e.target.value)}
-              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
-              title="Chọn ngày bắt đầu (không được lớn hơn ngày kết thúc)"
+              className={`px-2.5 py-1.5 bg-slate-50 border rounded-lg text-slate-800 focus:outline-none focus:ring-1 cursor-pointer transition ${
+                isDateRangeInvalid
+                  ? 'border-rose-400 bg-rose-50/40 focus:ring-rose-500 text-rose-900'
+                  : 'border-slate-200 focus:ring-orange-500'
+              }`}
+              title="Chọn hoặc nhập ngày bắt đầu"
             />
             <span className="text-slate-400 font-medium">đến</span>
             <input
               type="date"
               value={filters.endDate || ''}
-              min={filters.startDate || undefined}
               onChange={(e) => handleEndDateChange(e.target.value)}
-              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
-              title="Chọn ngày kết thúc (không được nhỏ hơn ngày bắt đầu)"
+              className={`px-2.5 py-1.5 bg-slate-50 border rounded-lg text-slate-800 focus:outline-none focus:ring-1 cursor-pointer transition ${
+                isDateRangeInvalid
+                  ? 'border-rose-400 bg-rose-50/40 focus:ring-rose-500 text-rose-900'
+                  : 'border-slate-200 focus:ring-orange-500'
+              }`}
+              title="Chọn hoặc nhập ngày kết thúc"
             />
             {hasCustomDates && (
               <button
@@ -211,6 +236,20 @@ export const AuditLogFilter: React.FC<AuditLogFilterProps> = ({
               >
                 <span>Xóa ngày</span>
               </button>
+            )}
+            {isDateRangeInvalid && (
+              <div className="inline-flex items-center gap-1.5 text-xs text-rose-600 font-medium bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg">
+                <AlertCircle size={14} className="shrink-0 text-rose-500" />
+                <span>Ngày kết thúc không được nhỏ hơn ngày bắt đầu</span>
+                <button
+                  type="button"
+                  onClick={handleSwapDates}
+                  className="ml-1 text-[11px] font-bold text-orange-600 hover:text-orange-700 underline cursor-pointer"
+                  title="Đảo thứ tự ngày bắt đầu và kết thúc"
+                >
+                  Đảo lại ngày
+                </button>
+              </div>
             )}
           </div>
         </div>

@@ -288,3 +288,65 @@ export interface OrderPageResponse {
   totalPages: number;
 }
 
+/**
+ * Story S4-04: Xem lịch sử mua hàng của đại lý khi gõ đơn hàng
+ * 1. Hiển thị các mặt hàng đại lý đã mua trong 3 tháng gần nhất kèm số lượng bình quân (AC1)
+ * 2. Thêm nhanh cả nhóm hàng đã mua lần trước vào đơn mới (AC2)
+ * 3. Chỉ hiện với đại lý mà nhân viên được phân công (AC3)
+ */
+export interface CustomerPurchaseHistoryItem {
+  productId: string | number;
+  sku: string;
+  name: string;
+  category?: string;
+  baseUnit: string;
+  preferredUnit: string;             // ĐVT đại lý hay đặt nhất (vd: Thùng)
+  preferredConversionFactor: number; // Hệ số quy đổi của ĐVT hay đặt
+  totalQuantity3M: number;           // Tổng số lượng mua trong 3 tháng gần nhất (theo preferredUnit)
+  orderCount3M: number;              // Số đơn hàng trong 3 tháng có chứa sản phẩm này
+  avgQuantityPerMonth: number;       // Số lượng bình quân mỗi tháng (totalQuantity3M / 3)
+  avgQuantityPerOrder: number;       // Số lượng bình quân mỗi lần đặt
+  lastOrderedDate: string;           // Ngày đặt mua gần nhất (YYYY-MM-DD)
+  lastUnitPrice: number;             // Đơn giá mua lần gần nhất (VND)
+  currentUnitPrice?: number;         // Đơn giá hiện tại theo bảng giá hiệu lực
+  availableStock?: number;           // Tồn khả dụng hiện tại (ĐVT cơ sở)
+  availableInPreferredUnit?: number; // Tồn khả dụng theo ĐVT hay mua
+}
+
+export interface CustomerLastOrderItem {
+  productId: string | number;
+  sku: string;
+  name: string;
+  unitName: string;
+  conversionFactor: number;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface CustomerLastOrderSummary {
+  orderId: string | number;
+  orderCode: string;                 // Mã đơn hàng gần nhất (vd: DH2609-0012)
+  orderDate: string;                 // Ngày tạo đơn (YYYY-MM-DD)
+  itemCount: number;                 // Số loại mặt hàng
+  totalQuantity: number;             // Tổng số kiện hàng
+  totalAmount: number;               // Tổng tiền đơn hàng trước
+  items: CustomerLastOrderItem[];    // Chi tiết danh sách sản phẩm để thêm nhanh
+}
+
+export interface CustomerPurchaseHistoryData {
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  assignedRepId?: string;
+  assignedRepName?: string;
+  threeMonthsSummary: {
+    totalOrders: number;
+    totalRevenue: number;
+    distinctProductCount: number;
+    startDate: string;
+    endDate: string;
+  };
+  frequentProducts: CustomerPurchaseHistoryItem[];
+  lastOrder: CustomerLastOrderSummary | null;
+}
+
