@@ -204,8 +204,12 @@ export async function createGoodsReceipt(
     if (res.ok) {
       return await res.json();
     }
-  } catch {
-    // Fallback
+    const errData = await res.json().catch(() => null);
+    throw new Error(errData?.message || `Lỗi máy chủ (${res.status}) khi lập phiếu nhập kho`);
+  } catch (err: unknown) {
+    if (err instanceof Error && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
   }
 
   const list = getLocalReceipts();
@@ -265,8 +269,12 @@ export async function confirmGoodsReceipt(
     if (res.ok) {
       return await res.json();
     }
-  } catch {
-    // Fallback
+    const errData = await res.json().catch(() => null);
+    throw new Error(errData?.message || `Lỗi máy chủ (${res.status}) khi xác nhận phiếu nhập kho`);
+  } catch (err: unknown) {
+    if (err instanceof Error && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
   }
 
   const list = getLocalReceipts();
