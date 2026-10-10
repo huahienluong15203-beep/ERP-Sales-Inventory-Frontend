@@ -11,12 +11,8 @@ import {
   Minus,
   ShieldAlert
 } from 'lucide-react';
-import type { OrderBackendResponse } from '../../types/order';
-import {
-  fetchOrderDetail,
-  fetchBackendProductOptions,
-  formatCurrencyVND
-} from '../../services/orderService';
+import { formatCurrencyVND } from '../../services/orderService';
+import { fetchPortalProducts, previewPortalReorder } from '../../services/portalApi';
 
 export interface ReorderItemDraft {
   productId: string;
@@ -41,13 +37,16 @@ export interface RemovedDiscontinuedItem {
 interface CustomerReorderModalProps {
   isOpen: boolean;
   orderId: number | string | null;
-  agencyId: number | string | null;
+  /** Không còn dùng: Backend tự xác định đại lý theo tài khoản đăng nhập */
+  agencyId?: number | string | null;
   onClose: () => void;
   onConfirmReorder: (items: ReorderItemDraft[]) => void;
 }
 
 /**
  * S5-02: Modal "Mua lại" đơn cũ cho Cổng đại lý B2B
+ * Dữ liệu lấy từ Backend POST /api/portal/orders/{id}/reorder-preview: server loại hàng ngừng kinh doanh / không còn
+ * giá kèm lý do và áp lại giá theo bảng giá hiện hành; giá trong giỏ chỉ để hiển thị, khi gửi đơn Backend tính lại.
  * - AC1: Chọn đặt lại toàn bộ hoặc một phần dòng hàng (checkbox từng dòng)
  * - AC2: Mặt hàng đã ngừng kinh doanh được tự động loại bỏ khỏi đơn mới kèm cảnh báo rõ ràng
  * - AC3: Đơn giá được tự động áp lại theo bảng giá hiện hành của nhóm đại lý
@@ -55,13 +54,12 @@ interface CustomerReorderModalProps {
 export const CustomerReorderModal: React.FC<CustomerReorderModalProps> = ({
   isOpen,
   orderId,
-  agencyId,
   onClose,
   onConfirmReorder
 }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [sourceOrder, setSourceOrder] = useState<OrderBackendResponse | null>(null);
+  const [sourceOrderCode, setSourceOrderCode] = useState<string | null>(null);
 
   // Danh sách dòng hàng hợp lệ có thể đặt lại
   const [reorderItems, setReorderItems] = useState<ReorderItemDraft[]>([]);
@@ -70,67 +68,55 @@ export const CustomerReorderModal: React.FC<CustomerReorderModalProps> = ({
   const [removedItems, setRemovedItems] = useState<RemovedDiscontinuedItem[]>([]);
 
   useEffect(() => {
-    if (!isOpen || !orderId || !agencyId) return;
+    if (!isOpen || !orderId) return;
 
     let isMounted = true;
     setLoading(true);
     setError(null);
+    setSourceOrderCode(null);
     setReorderItems([]);
     setRemovedItems([]);
 
-    Promise.all([
-      fetchOrderDetail(orderId),
-      fetchBackendProductOptions(agencyId)
-    ])
-      .then(([order, catalog]) => {
+    Promise.all([previewPortalReorder(orderId), fetchPortalProducts()])
+      .then(([result, catalog]) => {
         if (!isMounted) return;
-        setSourceOrder(order);
+        setSourceOrderCode(result.sourceOrderCode || null);
 
-        const valid: ReorderItemDraft[] = [];
-        const removed: RemovedDiscontinuedItem[] = [];
-
-        const lines = order.lines || [];
-        lines.forEach((line) => {
-          // Đối chiếu với danh mục và bảng giá hiện hành
-          const catItem = catalog.find((c) => c.sku === line.productSku);
-
-          // Kiểm tra xem mặt hàng có ngừng bán hoặc không có bảng giá không (AC2)
-          if (!catItem || catItem.priceAvailable === false) {
-            removed.push({
-              sku: line.productSku,
-              name: line.productName,
-              unitName: line.unitName,
-              quantity: Number(line.quantity || 1),
-              reason: !catItem
-                ? 'Sản phẩm đã ngừng kinh doanh / loại khỏi danh mục'
-                : 'Sản phẩm tạm thời không có trong bảng giá áp dụng cho đại lý'
-            });
-            return;
-          }
-
-          // Mặt hàng còn kinh doanh: áp dụng đơn vị tính và giá hiện hành (AC3)
-          const factor = Number(line.conversionFactor || 1);
-          const activeUnit =
-            catItem.availableUnits.find(
-              (u) => u.unitName.trim().toLowerCase() === line.unitName.trim().toLowerCase()
-            ) || catItem.availableUnits[0];
-
-          const unitName = activeUnit?.unitName || line.unitName;
-          const unitFactor = activeUnit?.conversionFactor || factor;
-          const currentPrice = catItem.basePrice * unitFactor;
-
-          valid.push({
-            productId: catItem.id,
-            sku: catItem.sku,
-            name: catItem.name,
-            selectedUnit: unitName,
-            conversionFactor: unitFactor,
-            unitPrice: currentPrice, // Áp giá hiện hành (AC3)
-            quantity: Number(line.quantity || 1),
+        const previewLines = result.preview?.lines || [];
+        const valid: ReorderItemDraft[] = result.keptLines.map((kept) => {
+          const sku = kept.productSku.trim().toLowerCase();
+          const unit = kept.unitName.trim().toLowerCase();
+          const priced =
+            previewLines.find(
+              (l) => l.productSku.trim().toLowerCase() === sku && l.unitName.trim().toLowerCase() === unit
+            ) || previewLines.find((l) => l.productSku.trim().toLowerCase() === sku);
+          const catItem = catalog.find((c) => c.sku.trim().toLowerCase() === sku);
+          const factor =
+            priced?.conversionFactor ||
+            catItem?.availableUnits.find((u) => u.unitName.trim().toLowerCase() === unit)?.conversionFactor ||
+            1;
+          return {
+            productId: catItem?.id || String(priced?.productId ?? kept.productSku),
+            sku: catItem?.sku || kept.productSku,
+            name: catItem?.name || priced?.productName || kept.productSku,
+            selectedUnit: kept.unitName,
+            conversionFactor: factor,
+            // AC3: giá 1 ĐVT theo bảng giá hiện hành do Backend tính
+            unitPrice: priced ? priced.pricePerUnit : (catItem?.basePrice || 0) * factor,
+            quantity: kept.quantity,
             isSelected: true, // Mặc định chọn tất cả, đại lý có thể bỏ chọn từng dòng (AC1)
-            availableUnits: catItem.availableUnits
-          });
+            availableUnits: catItem?.availableUnits || [{ unitName: kept.unitName, conversionFactor: factor }]
+          };
         });
+
+        // AC2: Backend đã loại các dòng ngừng kinh doanh / không còn giá, kèm lý do
+        const removed: RemovedDiscontinuedItem[] = result.removedLines.map((l) => ({
+          sku: l.productSku,
+          name: l.productName,
+          unitName: l.unitName,
+          quantity: l.quantity,
+          reason: l.reason
+        }));
 
         setReorderItems(valid);
         setRemovedItems(removed);
@@ -138,15 +124,15 @@ export const CustomerReorderModal: React.FC<CustomerReorderModalProps> = ({
       })
       .catch((err) => {
         if (!isMounted) return;
-        console.error('Lỗi phân tích đơn hàng để mua lại:', err);
-        setError(err.message || 'Không thể tải chi tiết đơn hàng cũ để mua lại');
+        console.error('Lỗi lấy lại đơn hàng cũ:', err);
+        setError(err instanceof Error && err.message ? err.message : 'Không thể tải đơn hàng cũ để mua lại');
         setLoading(false);
       });
 
     return () => {
       isMounted = false;
     };
-  }, [isOpen, orderId, agencyId]);
+  }, [isOpen, orderId]);
 
   if (!isOpen) return null;
 
@@ -194,9 +180,9 @@ export const CustomerReorderModal: React.FC<CustomerReorderModalProps> = ({
             <div>
               <h2 className="font-black text-base sm:text-lg text-gray-900 flex items-center gap-2">
                 <span>Đặt Lại Đơn Hàng</span>
-                {sourceOrder?.code && (
+                {sourceOrderCode && (
                   <span className="font-mono text-xs px-2 py-0.5 rounded-md bg-orange-100 text-[#F85606]">
-                    {sourceOrder.code}
+                    {sourceOrderCode}
                   </span>
                 )}
               </h2>
@@ -234,7 +220,7 @@ export const CustomerReorderModal: React.FC<CustomerReorderModalProps> = ({
                   <div className="flex items-center gap-2 text-rose-800 font-bold text-xs sm:text-sm">
                     <ShieldAlert size={18} className="text-rose-600 shrink-0" />
                     <span>
-                      Cảnh báo: Đã loại bỏ {removedItems.length} mặt hàng ngừng kinh doanh (S5-02 AC2)
+                      Cảnh báo: Đã loại bỏ {removedItems.length} mặt hàng không đặt lại được
                     </span>
                   </div>
                   <p className="text-[11px] text-rose-700">
@@ -291,7 +277,7 @@ export const CustomerReorderModal: React.FC<CustomerReorderModalProps> = ({
                 {reorderItems.length === 0 ? (
                   <div className="py-8 text-center text-gray-400 space-y-1">
                     <Package size={32} className="mx-auto text-gray-300" />
-                    <p className="text-xs font-semibold">Tất cả mặt hàng trong đơn cũ đều đã ngừng kinh doanh.</p>
+                    <p className="text-xs font-semibold">Không còn mặt hàng nào trong đơn cũ đặt lại được.</p>
                   </div>
                 ) : (
                   <div className="border border-gray-200 rounded-2xl divide-y divide-gray-100 overflow-hidden">
