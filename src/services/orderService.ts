@@ -604,6 +604,43 @@ export async function fetchOrderApprovalHistory(id: number | string): Promise<Or
   return Array.isArray(data) ? data : [];
 }
 
+/**
+ * S4-06 / SCRUM-158 AC2: Hủy đơn hàng và tự động nhả tồn đang giữ chỗ (POST /api/orders/{id}/cancel)
+ * Bắt buộc nhập lý do hủy theo quy chuẩn S4-06 AC2. Đơn đã xuất kho không thể hủy (AC3).
+ */
+export async function cancelOrder(id: number | string, reason: string): Promise<OrderBackendResponse> {
+  if (!reason || !reason.trim()) {
+    throw new Error('Bắt buộc nhập lý do hủy đơn hàng theo quy chuẩn S4-06 AC2!');
+  }
+  const res = await callBackend(`${API_BASE_URL}/api/orders/${id}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify({ reason: reason.trim() })
+  });
+  if (!res.ok) {
+    throw new Error(await readBackendError(res, 'Không thể hủy đơn hàng'));
+  }
+  return await res.json();
+}
+
+/**
+ * S4-06 / SCRUM-158: Chuyển trạng thái đơn hàng theo vòng đời (POST /api/orders/{id}/status)
+ * APPROVED -> PICKING -> DISPATCHED -> DELIVERED -> CLOSED
+ */
+export async function updateOrderStatus(
+  id: number | string,
+  status: string,
+  note?: string
+): Promise<OrderBackendResponse> {
+  const res = await callBackend(`${API_BASE_URL}/api/orders/${id}/status`, {
+    method: 'POST',
+    body: JSON.stringify({ status, note: note ? note.trim() : undefined })
+  });
+  if (!res.ok) {
+    throw new Error(await readBackendError(res, 'Không thể chuyển trạng thái đơn hàng'));
+  }
+  return await res.json();
+}
+
 
 /**
  * 4. Tải danh sách đơn nháp từ Backend (GET /api/orders?status=DRAFT)
