@@ -199,8 +199,13 @@ export async function updateMinStockThreshold(payload: UpdateMinThresholdPayload
     if (res.ok) {
       return await res.json();
     }
-  } catch {
-    // fallback
+    const errData = await res.json().catch(() => null);
+    throw new Error(errData?.message || `Lỗi lưu định mức (HTTP ${res.status})`);
+  } catch (err: unknown) {
+    if (err instanceof Error && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
+    // fallback nếu mất mạng
   }
 
   const list = getLocalConfigs();
