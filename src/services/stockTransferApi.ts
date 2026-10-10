@@ -230,8 +230,12 @@ export async function createStockTransfer(
     if (res.ok) {
       return await res.json();
     }
-  } catch {
-    // fallback
+    const errData = await res.json().catch(() => null);
+    throw new Error(errData?.message || `Lỗi máy chủ (${res.status}) khi lập phiếu chuyển kho`);
+  } catch (err: unknown) {
+    if (err instanceof Error && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
   }
 
   const existing = getLocalTransfers();
@@ -286,8 +290,12 @@ export async function dispatchStockTransfer(id: string): Promise<StockTransfer> 
     if (res.ok) {
       return await res.json();
     }
-  } catch {
-    // fallback
+    const errData = await res.json().catch(() => null);
+    throw new Error(errData?.message || `Lỗi máy chủ (${res.status}) khi xuất chuyển kho`);
+  } catch (err: unknown) {
+    if (err instanceof Error && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
   }
 
   const list = getLocalTransfers();
@@ -321,8 +329,12 @@ export async function receiveStockTransfer(payload: ReceiveTransferPayload): Pro
     if (res.ok) {
       return await res.json();
     }
-  } catch {
-    // fallback
+    const errData = await res.json().catch(() => null);
+    throw new Error(errData?.message || `Lỗi máy chủ (${res.status}) khi xác nhận nhận hàng`);
+  } catch (err: unknown) {
+    if (err instanceof Error && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
   }
 
   const list = getLocalTransfers();
