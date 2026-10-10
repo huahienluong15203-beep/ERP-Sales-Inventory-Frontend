@@ -657,7 +657,6 @@ export function exportAuditLogsToExcel(logs: AuditLogItem[], fileName = 'Nhat_Ky
     'Mã Nhật Ký': `#${item.id}`,
     'Thời Điểm': formatDateTime(item.createdAt),
     'Phân Hệ': item.moduleLabel,
-    'Hành Động': item.actionLabel || item.action,
     'Mã Đối Tượng (SKU / Phiếu / KH)': item.targetCode,
     'Tên Đối Tượng': item.targetName || '—',
     'Người Thực Hiện': `${item.actorFullName} (@${item.actorUsername})`,
@@ -666,8 +665,6 @@ export function exportAuditLogsToExcel(logs: AuditLogItem[], fileName = 'Nhat_Ky
     'Giá Trị Sau (Mới)': item.newValue,
     'Biến Động (Chênh Lệch)': item.deltaFormatted || '—',
     'Lý Do & Căn Cứ Điều Chỉnh': item.reason,
-    'Địa Chỉ IP': item.ipAddress || '—',
-    'Giao Thức & URI': `${item.httpMethod || 'POST'} ${item.requestUri || ''}`,
     'Tính Bất Biến': 'Bất biến (Chỉ đọc - Cấm sửa/xóa)'
   }));
 

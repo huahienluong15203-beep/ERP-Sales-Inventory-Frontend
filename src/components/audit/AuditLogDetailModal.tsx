@@ -101,15 +101,12 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
 Mã Nhật Ký: #${log.id}
 Thời Điểm: ${formatDateTime(log.createdAt)}
 Người Thực Hiện: ${log.actorFullName} (@${log.actorUsername}) - ${log.actorRole || 'Nhân sự'}
-Phân Hệ: ${log.moduleLabel} (${log.module})
-Hành Động: ${log.actionLabel || log.action}
+Phân Hệ: ${log.moduleLabel}
 Đối Tượng: ${cleanTargetCode} (${log.targetName || ''})
 Giá Trị Trước: ${displayOld}
 Giá Trị Sau: ${displayNew}
 Chênh Lệch: ${displayDelta || 'N/A'}
-Lý Do & Căn Cứ: ${log.reason}
-Địa Chỉ IP: ${log.ipAddress || '127.0.0.1'}
-Yêu Cầu HTTP: ${log.httpMethod || 'POST'} ${log.requestUri || ''}`;
+Lý Do & Căn Cứ: ${log.reason}`;
 
     navigator.clipboard.writeText(traceText);
     setCopied(true);
@@ -180,7 +177,7 @@ Yêu Cầu HTTP: ${log.httpMethod || 'POST'} ${log.requestUri || ''}`;
                   color: moduleMeta?.badgeColor || '#334155'
                 }}
               >
-                {log.moduleLabel} ({log.actionLabel || log.action})
+                {log.moduleLabel}
               </span>
               <h4 className="text-base font-bold text-slate-900 mt-1.5">
                 {log.targetName || log.targetType}
@@ -315,15 +312,14 @@ Yêu Cầu HTTP: ${log.httpMethod || 'POST'} ${log.requestUri || ''}`;
             </p>
           </div>
 
-          {/* Chi tiết người thực hiện & Thông tin kỹ thuật mạng */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Thông tin nhân sự - Đồng bộ Avatar */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                <User size={15} className="text-emerald-500" />
-                <span>Nhân Sự Thực Hiện Thao Tác</span>
-              </div>
-              <div className="flex items-center gap-3 pt-1 border-b border-slate-100 pb-2">
+          {/* Chi tiết người thực hiện */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-white">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5">
+              <User size={15} className="text-emerald-500" />
+              <span>Nhân Sự Thực Hiện Thao Tác</span>
+            </div>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-orange-100 border border-orange-200 flex items-center justify-center text-[#F85606] font-bold overflow-hidden shrink-0 shadow-2xs">
                   {log.actorAvatarUrl ? (
                     <img
@@ -347,42 +343,14 @@ Yêu Cầu HTTP: ${log.httpMethod || 'POST'} ${log.requestUri || ''}`;
                     </span>
                   )}
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0">
                   <div className="font-bold text-slate-900 text-sm truncate">{log.actorFullName}</div>
                   <div className="text-xs text-orange-600 font-mono">@{log.actorUsername}</div>
                 </div>
               </div>
-              <div className="text-xs space-y-1.5 pt-1">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Vị trí / Phụ trách:</span>
-                  <span className="text-slate-700 font-medium">{log.actorRole || 'Chưa cập nhật'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Thông số kỹ thuật ghi vết */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                <ShieldCheck size={15} className="text-blue-500" />
-                <span>Giao Thức Mạng & IP Client</span>
-              </div>
-              <div className="text-xs space-y-1.5 pt-1">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Địa chỉ IP:</span>
-                  <span className="font-mono font-bold text-slate-800">
-                    {log.ipAddress || '192.168.1.100'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Phương thức & URI:</span>
-                  <span className="font-mono text-blue-600 font-semibold">
-                    {log.httpMethod || 'POST'} {log.requestUri || '/api/inventory'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Bảo mật:</span>
-                  <span className="text-emerald-700 font-medium">Bảo toàn băm SHA-256</span>
-                </div>
+              <div className="text-xs text-slate-600 flex items-center gap-2 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200/80">
+                <span className="text-slate-400">Vị trí / Phụ trách:</span>
+                <span className="font-semibold text-slate-800">{log.actorRole || 'Chưa cập nhật'}</span>
               </div>
             </div>
           </div>
