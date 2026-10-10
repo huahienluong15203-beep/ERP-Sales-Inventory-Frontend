@@ -838,7 +838,43 @@ export async function cloneOrderToDraft(orderId: number | string): Promise<{
     throw new Error('Đơn hàng không có thông tin đại lý');
   }
 
-  // 2. Tải danh mục sản phẩm của đại lý theo bảng giá hiện hành
+  // 2. Gọi API Backend POST /api/orders/{id}/copy (S4-09 / SCRUM-159 do BE xử lý)
+  try {
+    const copyRes = await callBackend(`${API_BASE_URL}/api/orders/${orderId}/copy`, {
+      method: 'POST',
+      body: JSON.stringify({})
+    });
+    if (copyRes.ok) {
+      const copiedOrder: OrderBackendResponse = await copyRes.json();
+      const draft = await fetchBackendDraftById(copiedOrder.id);
+      setActiveDraft(draft);
+
+      const sourceCode = source.code || `DH-${orderId}`;
+      try {
+        sessionStorage.setItem(
+          'erp_order_clone_notice',
+          JSON.stringify({
+            sourceCode,
+            sourceId: orderId,
+            itemCount: draft.items.length,
+            timestamp: Date.now()
+          })
+        );
+      } catch (e) {
+        console.warn('Không lưu được clone notice vào sessionStorage:', e);
+      }
+
+      return {
+        draft,
+        sourceCode,
+        itemCount: draft.items.length
+      };
+    }
+  } catch (backendErr) {
+    console.warn('Backend copy API chưa sẵn sàng hoặc gặp lỗi, dùng phương thức fallback client-side:', backendErr);
+  }
+
+  // 3. Fallback: Tải danh mục sản phẩm của đại lý theo bảng giá hiện hành
   let catalog: OrderProductCatalogItem[] = [];
   try {
     catalog = await fetchBackendProductOptions(customerId);
@@ -846,7 +882,7 @@ export async function cloneOrderToDraft(orderId: number | string): Promise<{
     console.warn('Không tải được catalog theo bảng giá đại lý:', err);
   }
 
-  // 3. Sao chép các dòng hàng, áp lại giá theo bảng giá hiện hành (AC1 & AC2)
+  // 4. Sao chép các dòng hàng, áp lại giá theo bảng giá hiện hành (AC1 & AC2)
   const lines = source.lines || [];
   const clonedItems: OrderItem[] = lines.map((line, idx) => {
     const catItem = catalog.find((c) => c.sku === line.productSku);
