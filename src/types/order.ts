@@ -181,6 +181,11 @@ export interface OrderLineBackendResponse {
   discountPolicyCode?: string | null;
   discountAmount: number;
   netAmount: number;
+  // S5-01: Giao hàng & theo dõi giao thiếu
+  deliveredQuantity?: number | null;
+  shortageQuantity?: number | null;
+  isShortage?: boolean | null;
+  shortageReason?: string | null;
 }
 
 export interface OrderBackendResponse {
@@ -209,6 +214,9 @@ export interface OrderBackendResponse {
   createdAt?: string;
   updatedAt?: string;
   warnings?: string[];
+  // S5-01: Cảnh báo giao thiếu hàng
+  hasShortage?: boolean | null;
+  shortageLineCount?: number | null;
 }
 
 export interface ProductOptionBackendResponse {
@@ -248,6 +256,8 @@ export interface OrderSummaryItem {
   createdByUsername?: string | null;
   updatedAt?: string | null;
   salesRepId?: number | null;
+  // S5-01: Cảnh báo giao thiếu hàng
+  hasShortage?: boolean | null;
   salesRepName?: string | null;
   regionId?: number | null;
   regionName?: string | null;

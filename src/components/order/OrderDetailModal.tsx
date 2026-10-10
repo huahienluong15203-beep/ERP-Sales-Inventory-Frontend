@@ -325,6 +325,19 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
                 </div>
               )}
 
+              {/* S5-01: Cảnh báo đơn hàng giao thiếu */}
+              {activeOrder.hasShortage && (
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs space-y-1">
+                  <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                    <AlertTriangle size={15} className="text-amber-600" />
+                    <span>Cảnh báo đơn hàng giao thiếu ({activeOrder.shortageLineCount || 1} mặt hàng):</span>
+                  </div>
+                  <p className="text-amber-800 pl-5">
+                    Hệ thống ghi nhận đơn hàng có mặt hàng thực tế giao ít hơn số lượng đặt. Quý khách vui lòng đối chiếu cột <strong>Thực giao</strong> bên dưới.
+                  </p>
+                </div>
+              )}
+
               {/* Khối 2: Danh sách dòng hàng */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
@@ -334,58 +347,98 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
                   </h4>
                 </div>
 
-                <div className="rounded-xl border border-gray-200 overflow-hidden shadow-2xs">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs text-left">
-                      <thead className="bg-gray-50/80 text-gray-700 font-bold border-b border-gray-200">
-                        <tr>
-                          <th className="py-2.5 px-3 text-center w-12">#</th>
-                          <th className="py-2.5 px-3">Mã SKU</th>
-                          <th className="py-2.5 px-3">Tên sản phẩm</th>
-                          <th className="py-2.5 px-3 text-center">ĐVT</th>
-                          <th className="py-2.5 px-3 text-right">Số lượng</th>
-                          <th className="py-2.5 px-3 text-right">Đơn giá</th>
-                          <th className="py-2.5 px-3 text-right">Chiết khấu</th>
-                          <th className="py-2.5 px-3 text-right font-bold">Thành tiền</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {activeOrder.lines && activeOrder.lines.length > 0 ? (
-                          activeOrder.lines.map((line, index) => (
-                            <tr key={line.id || index} className="hover:bg-orange-50/25 transition-colors">
-                              <td className="py-2.5 px-3 text-center text-gray-500">{line.lineNo || index + 1}</td>
-                              <td className="py-2.5 px-3 font-mono font-bold text-gray-800">{line.productSku}</td>
-                              <td className="py-2.5 px-3 font-medium text-gray-900">{line.productName}</td>
-                              <td className="py-2.5 px-3 text-center">
-                                <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-[11px] font-semibold">
-                                  {line.unitName || line.baseUnit}
-                                </span>
-                              </td>
-                              <td className="py-2.5 px-3 text-right font-bold text-gray-900">
-                                {formatQuantity(line.quantity)}
-                              </td>
-                              <td className="py-2.5 px-3 text-right text-gray-700">
-                                {formatCurrencyVND(line.pricePerUnit || line.unitPrice)}
-                              </td>
-                              <td className="py-2.5 px-3 text-right text-rose-600 font-medium">
-                                {line.discountAmount > 0 ? `-${formatCurrencyVND(line.discountAmount)}` : '0 đ'}
-                              </td>
-                              <td className="py-2.5 px-3 text-right font-bold text-[#F85606]">
-                                {formatCurrencyVND(line.netAmount || line.grossAmount - line.discountAmount)}
-                              </td>
+                {(() => {
+                  const hasDeliveryInfo = Boolean(
+                    activeOrder.hasShortage ||
+                    ['DELIVERED', 'CLOSED'].includes(activeOrder.status) ||
+                    activeOrder.lines?.some((l) => l.deliveredQuantity !== undefined && l.deliveredQuantity !== null)
+                  );
+
+                  return (
+                    <div className="rounded-xl border border-gray-200 overflow-hidden shadow-2xs">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs text-left">
+                          <thead className="bg-gray-50/80 text-gray-700 font-bold border-b border-gray-200">
+                            <tr>
+                              <th className="py-2.5 px-3 text-center w-12">#</th>
+                              <th className="py-2.5 px-3">Mã SKU</th>
+                              <th className="py-2.5 px-3">Tên sản phẩm</th>
+                              <th className="py-2.5 px-3 text-center">ĐVT</th>
+                              <th className="py-2.5 px-3 text-right">{hasDeliveryInfo ? 'Số lượng đặt' : 'Số lượng'}</th>
+                              {hasDeliveryInfo && (
+                                <th className="py-2.5 px-3 text-right font-bold text-orange-900 bg-orange-50/50">Thực giao</th>
+                              )}
+                              <th className="py-2.5 px-3 text-right">Đơn giá</th>
+                              <th className="py-2.5 px-3 text-right">Chiết khấu</th>
+                              <th className="py-2.5 px-3 text-right font-bold">Thành tiền</th>
                             </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={8} className="py-6 text-center text-gray-400">
-                              Đơn hàng chưa có dòng sản phẩm nào
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {activeOrder.lines && activeOrder.lines.length > 0 ? (
+                              activeOrder.lines.map((line, index) => (
+                                <tr key={line.id || index} className={`hover:bg-orange-50/25 transition-colors ${line.isShortage ? 'bg-amber-50/30' : ''}`}>
+                                  <td className="py-2.5 px-3 text-center text-gray-500">{line.lineNo || index + 1}</td>
+                                  <td className="py-2.5 px-3 font-mono font-bold text-gray-800">{line.productSku}</td>
+                                  <td className="py-2.5 px-3 font-medium text-gray-900">{line.productName}</td>
+                                  <td className="py-2.5 px-3 text-center">
+                                    <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-[11px] font-semibold">
+                                      {line.unitName || line.baseUnit}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right font-semibold text-gray-800">
+                                    {formatQuantity(line.quantity)}
+                                  </td>
+                                  {hasDeliveryInfo && (
+                                    <td className="py-2.5 px-3 text-right bg-orange-50/20">
+                                      {line.deliveredQuantity !== undefined && line.deliveredQuantity !== null ? (
+                                        line.isShortage ? (
+                                          <div className="space-y-0.5">
+                                            <span className="font-black text-rose-600 font-mono">
+                                              {formatQuantity(line.deliveredQuantity)}
+                                            </span>
+                                            <span className="block text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-1 py-0.5 rounded">
+                                              Thiếu {formatQuantity(line.shortageQuantity ?? Math.max(0, line.quantity - line.deliveredQuantity))}
+                                            </span>
+                                            {line.shortageReason && (
+                                              <span className="block text-[10px] text-gray-500 italic max-w-[140px] ml-auto truncate" title={line.shortageReason}>
+                                                Lý do: {line.shortageReason}
+                                              </span>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <span className="font-bold text-emerald-600 font-mono">
+                                            {formatQuantity(line.deliveredQuantity)} (Đủ)
+                                          </span>
+                                        )
+                                      ) : (
+                                        <span className="text-gray-400 italic">Chờ giao</span>
+                                      )}
+                                    </td>
+                                  )}
+                                  <td className="py-2.5 px-3 text-right text-gray-700">
+                                    {formatCurrencyVND(line.pricePerUnit || line.unitPrice)}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right text-rose-600 font-medium">
+                                    {line.discountAmount > 0 ? `-${formatCurrencyVND(line.discountAmount)}` : '0 đ'}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right font-bold text-[#F85606]">
+                                    {formatCurrencyVND(line.netAmount || line.grossAmount - line.discountAmount)}
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan={hasDeliveryInfo ? 9 : 8} className="py-6 text-center text-gray-400">
+                                  Đơn hàng chưa có dòng sản phẩm nào
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Khối 3: Bảng tổng kết tiền */}
