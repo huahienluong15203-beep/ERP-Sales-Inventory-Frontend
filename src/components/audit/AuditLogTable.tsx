@@ -68,7 +68,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
             <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
               <th className="py-3.5 px-3">Thời Điểm</th>
               <th className="py-3.5 px-3">Người Thực Hiện</th>
-              <th className="py-3.5 px-3">Phân Hệ & Thao Tác</th>
+              <th className="py-3.5 px-3">Phân Hệ</th>
               <th className="py-3.5 px-3">Đối Tượng Tác Động</th>
               <th className="py-3.5 px-3">Nội Dung / Lý Do</th>
               <th className="py-3.5 px-2 text-center">Thao Tác</th>
@@ -160,7 +160,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
                       </div>
                     </td>
 
-                    {/* 3. Phân hệ & Thao tác */}
+                    {/* 3. Phân hệ */}
                     <td className="py-3.5 px-3 overflow-hidden">
                       <span
                         className="inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-md truncate max-w-full"
@@ -172,9 +172,6 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
                       >
                         {log.moduleLabel}
                       </span>
-                      <div className="text-[11px] font-medium text-slate-600 mt-1 truncate" title={log.actionLabel || log.action}>
-                        {log.actionLabel || log.action}
-                      </div>
                     </td>
 
                     {/* 4. Đối tượng tác động (SKU / Đại lý / Phiếu) */}
