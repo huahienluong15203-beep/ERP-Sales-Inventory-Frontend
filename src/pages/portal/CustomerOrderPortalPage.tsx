@@ -21,21 +21,17 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { CustomerPortalLayout } from '../../layouts/CustomerPortalLayout';
 import type { Agency, DeliveryPoint, CreditStatusResponse } from '../../types/agency';
-import type { OrderSummaryItem, OrderBackendResponse } from '../../types/order';
+import type { OrderSummaryItem } from '../../types/order';
 import type { OrderProductCatalogItem } from '../../services/orderService';
+import { formatCurrencyVND, formatQuantity, fetchOrders } from '../../services/orderService';
 import {
-  fetchBackendProductOptions,
-  saveDraftToBackend,
-  submitOrderToBackend,
-  formatCurrencyVND,
-  formatQuantity,
-  fetchOrders
-} from '../../services/orderService';
-import {
-  fetchAgencies,
-  fetchDeliveryPointsByAgency,
-  fetchCustomerCreditStatus
-} from '../../services/agencyApi';
+  fetchPortalMe,
+  fetchPortalProducts,
+  fetchPortalCreditStatus,
+  fetchPortalDeliveryPoints,
+  placePortalOrder,
+  type PortalOrderResult
+} from '../../services/portalApi';
 import { OrderDetailModal } from '../../components/order/OrderDetailModal';
 import { CustomerReorderModal, type ReorderItemDraft } from '../../components/order/CustomerReorderModal';
 
@@ -76,7 +72,9 @@ export const CustomerOrderPortalPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Modal thông báo đặt hàng thành công
-  const [successOrder, setSuccessOrder] = useState<OrderBackendResponse | null>(null);
+  const [successOrder, setSuccessOrder] = useState<PortalOrderResult | null>(null);
+  // Lỗi tải thông tin đại lý (vd: tài khoản chưa được gắn với đại lý nào)
+  const [agencyError, setAgencyError] = useState<string | null>(null);
 
   // Lịch sử đơn hàng của đại lý
   const [ordersHistory, setOrdersHistory] = useState<OrderSummaryItem[]>([]);
@@ -126,49 +124,43 @@ export const CustomerOrderPortalPage: React.FC = () => {
     );
   };
 
-  // 1. TẢI THÔNG TIN ĐẠI LÝ LIÊN KẾT VỚI TÀI KHOẢN ĐĂNG NHẬP
+  // 1. TẢI THÔNG TIN ĐẠI LÝ LIÊN KẾT VỚI TÀI KHOẢN ĐĂNG NHẬP (S4-10: GET /api/portal/me)
+  // Backend tự xác định đại lý theo tài khoản đăng nhập, không chọn đại lý ở Frontend.
   useEffect(() => {
+    let cancelled = false;
     const loadCustomerData = async () => {
       try {
-        const agencyRes = await fetchAgencies({ size: 50 });
-        const list = agencyRes.content || [];
+        const me = await fetchPortalMe();
+        if (cancelled) return;
+        setAgency(me);
+        setAgencyError(null);
 
-        // Tìm đại lý tương ứng với user
-        // Đối với tài khoản mẫu 'customer_agent' (Đại Lý Minh Phát), gắn với DL-HN-001 (id: 3)
-        let matched = list.find(
-          (a) =>
-            a.code === 'DL-HN-001' ||
-            a.name.toLowerCase().includes('minh phát') ||
-            (user?.username && a.code.toLowerCase().includes(user.username.toLowerCase()))
-        );
+        // Tải hạn mức & công nợ hiện tại
+        fetchPortalCreditStatus()
+          .then((cs) => !cancelled && setCreditStatus(cs))
+          .catch(() => !cancelled && setCreditStatus(null));
 
-        if (!matched && list.length > 0) {
-          matched = list[0]; // Fallback đại lý đầu tiên
-        }
-
-        if (matched) {
-          setAgency(matched);
-
-          // Tải hạn mức & công nợ hiện tại
-          fetchCustomerCreditStatus(matched.id)
-            .then(setCreditStatus)
-            .catch(() => setCreditStatus(null));
-
-          // Tải danh sách điểm giao hàng
-          fetchDeliveryPointsByAgency(matched.id)
-            .then((pts) => {
-              setDeliveryPoints(pts);
-              const defaultPt = pts.find((p) => p.isDefault) || pts[0];
-              if (defaultPt) setSelectedDeliveryPointId(defaultPt.id);
-            })
-            .catch(() => setDeliveryPoints([]));
-        }
+        // Tải danh sách điểm giao hàng
+        fetchPortalDeliveryPoints()
+          .then((pts) => {
+            if (cancelled) return;
+            setDeliveryPoints(pts);
+            const defaultPt = pts.find((p) => p.isDefault) || pts[0];
+            if (defaultPt) setSelectedDeliveryPointId(defaultPt.id);
+          })
+          .catch(() => !cancelled && setDeliveryPoints([]));
       } catch (err) {
-        console.error('Lỗi tải thông tin đại lý:', err);
+        if (cancelled) return;
+        setAgency(null);
+        setLoadingProducts(false);
+        setAgencyError(err instanceof Error ? err.message : 'Không tải được thông tin đại lý');
       }
     };
 
     loadCustomerData();
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   // 2. TẢI DANH MỤC SẢN PHẨM THEO NHÓM BẢNG GIÁ CỦA ĐẠI LÝ (AC1)
@@ -176,13 +168,16 @@ export const CustomerOrderPortalPage: React.FC = () => {
     if (!agency?.id) return;
     setLoadingProducts(true);
     try {
-      // Backend /api/orders/product-options?customerId={agency.id}
-      // Tự động áp dụng bảng giá hiệu lực thuộc nhóm khách hàng của đại lý đó
-      const items = await fetchBackendProductOptions(agency.id);
+      // Backend GET /api/portal/products: giá theo bảng giá hiệu lực của nhóm khách hàng đại lý
+      const items = await fetchPortalProducts();
       setProducts(items);
     } catch (err) {
       console.error('Lỗi tải sản phẩm theo bảng giá đại lý:', err);
-      showToast('Lỗi tải sản phẩm', 'Không thể tải danh sách sản phẩm theo bảng giá', 'error');
+      showToast(
+        'Lỗi tải sản phẩm',
+        err instanceof Error ? err.message : 'Không thể tải danh sách sản phẩm theo bảng giá',
+        'error'
+      );
     } finally {
       setLoadingProducts(false);
     }
@@ -344,29 +339,21 @@ export const CustomerOrderPortalPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // 1. Tạo đơn nháp
-      const draftPayload = {
-        customerId: Number(agency.id),
+      // S4-10: POST /api/portal/orders – chỉ gửi SKU / ĐVT / số lượng; Backend tính giá theo bảng giá hiện hành,
+      // kiểm tồn, hạn mức và luôn đưa đơn về trạng thái Chờ duyệt (AC3) để nhân viên phụ trách xác nhận.
+      const submittedOrder = await placePortalOrder({
         deliveryAddressId: selectedDeliveryPointId ? Number(selectedDeliveryPointId) : null,
-        note: orderNote.trim() ? `[Đại lý tự đặt qua B2B Portal] ${orderNote.trim()}` : '[Đại lý tự đặt qua B2B Portal]',
+        note: orderNote.trim() || null,
         lines: cart.map((c) => ({
           productSku: c.sku,
           unitName: c.selectedUnit,
-          quantity: c.quantity,
-          unitPrice: c.unitPrice
+          quantity: c.quantity
         }))
-      };
+      });
 
-      const savedDraft = await saveDraftToBackend(draftPayload);
-      if (!savedDraft?.id) {
-        throw new Error('Không thể tạo mã đơn hàng từ máy chủ');
-      }
-
-      // 2. Chốt đơn hàng gửi lên máy chủ -> Chuyển sang PENDING_APPROVAL (Chờ duyệt) (AC3)
-      const submittedOrder = await submitOrderToBackend(savedDraft.id);
-
-      // 3. Làm trống giỏ hàng & hiển thị kết quả
+      // Làm trống giỏ hàng & hiển thị kết quả
       setCart([]);
+      setOrderNote('');
       setIsCartDrawerOpen(false);
       setSuccessOrder(submittedOrder);
       showToast(
@@ -377,7 +364,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
       );
 
       // Cập nhật lại hạn mức công nợ & lịch sử
-      fetchCustomerCreditStatus(agency.id).then(setCreditStatus).catch(() => {});
+      fetchPortalCreditStatus().then(setCreditStatus).catch(() => {});
       loadOrderHistory();
     } catch (err: unknown) {
       console.error('Lỗi gửi đơn hàng đại lý:', err);
@@ -400,6 +387,16 @@ export const CustomerOrderPortalPage: React.FC = () => {
       {/* ============================================================== */}
       {/* TAB 1: DANH MỤC SẢN PHẨM VÀ ĐẶT HÀNG (CATALOG & ORDERING) */}
       {/* ============================================================== */}
+      {agencyError && (
+        <div className="mb-4 bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3 text-rose-700 text-sm">
+          <ShieldAlert size={18} className="shrink-0 mt-0.5" />
+          <div>
+            <div className="font-bold">Chưa đặt hàng được</div>
+            <div className="text-xs mt-0.5">{agencyError}</div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'catalog' && (
         <div className="space-y-4">
           {/* BANNER THÔNG TIN ĐẠI LÝ & TÀI CHÍNH TRÊN ĐẦU TRANG */}
@@ -411,7 +408,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                     {agency?.customerGroupName || 'Đại Lý Cấp 1'}
                   </span>
                   <span className="text-orange-100 text-xs font-mono font-medium">
-                    Mã ĐL: {agency?.code || 'DL-HN-001'}
+                    Mã ĐL: {agency?.code || '—'}
                   </span>
                 </div>
                 <h1 className="text-lg sm:text-2xl font-black tracking-tight">
@@ -419,7 +416,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                 </h1>
                 <p className="text-orange-100 text-xs mt-1 flex items-center gap-1.5">
                   <MapPin size={13} className="shrink-0" />
-                  <span className="truncate">{agency?.address || 'Khu đô thị Định Công, Hà Nội'}</span>
+                  <span className="truncate">{agency?.address || '—'}</span>
                 </p>
               </div>
 

@@ -22,43 +22,73 @@ interface OrderPdfPreviewModalProps {
   onClose: () => void;
 }
 
+// Bảng độ rộng vạch chuẩn Code 128 (giá trị 0..106), giống backend (Code128Svg.java)
+const CODE128_PATTERNS = [
+  '212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312', '132212', '221213',
+  '221312', '231212', '112232', '122132', '122231', '113222', '123122', '123221', '223211', '221132',
+  '221231', '213212', '223112', '312131', '311222', '321122', '321221', '312212', '322112', '322211',
+  '212123', '212321', '232121', '111323', '131123', '131321', '112313', '132113', '132311', '211313',
+  '231113', '231311', '112133', '112331', '132131', '113123', '113321', '133121', '313121', '211331',
+  '231131', '213113', '213311', '213131', '311123', '311321', '331121', '312113', '312311', '332111',
+  '314111', '221411', '431111', '111224', '111422', '121124', '121421', '141122', '141221', '112214',
+  '112412', '122114', '122411', '142112', '142211', '241211', '221114', '413111', '241112', '134111',
+  '111242', '121142', '121241', '114212', '124112', '124211', '411212', '421112', '421211', '212141',
+  '214121', '412121', '111143', '111341', '131141', '114113', '114311', '411113', '411311', '113141',
+  '114131', '311141', '411131', '211412', '211214', '211232', '2331112'
+];
+
+/** Code 128 bộ B: Start B (104) + dữ liệu + checksum mod 103 + Stop (106). Trả null nếu có ký tự ngoài ASCII. */
+function code128Symbols(data: string): number[] | null {
+  if (!data) return null;
+  const values = [104];
+  let checksum = 104;
+  for (let i = 0; i < data.length; i++) {
+    const c = data.charCodeAt(i);
+    if (c < 32 || c > 126) return null;
+    values.push(c - 32);
+    checksum += (c - 32) * (i + 1);
+  }
+  values.push(checksum % 103, 106);
+  return values;
+}
+
 /**
- * Tạo đồ họa mã vạch (Barcode Code 128 giả lập chính xác) bằng SVG thuần
- * Phục vụ kho tra cứu quét mã nhanh bằng máy barcode scanner (S4-08 AC2)
+ * S4-08 AC2: Mã vạch Code 128 THẬT (máy quét đọc được) của mã đơn, vẽ bằng SVG.
+ * Bản in chính thức lấy từ backend (GET /api/orders/{id}/print) cũng dùng đúng thuật toán này.
  */
 const BarcodeSvg: React.FC<{ code: string }> = ({ code }) => {
-  // Sinh mẫu vạch dựa trên chuỗi mã
-  const cleanCode = (code || 'ORDER-000').toUpperCase();
-  const bars: number[] = [];
-  let sum = 0;
-  for (let i = 0; i < cleanCode.length; i++) {
-    const charCode = cleanCode.charCodeAt(i);
-    sum += charCode;
-    bars.push((charCode % 3) + 1); // 1px, 2px, 3px
-    bars.push(((charCode * 7) % 2) + 1); // khoảng trắng 1-2px
+  const symbols = code128Symbols(code);
+  if (!symbols) {
+    return <span className="font-mono text-[11px] font-bold text-gray-800">{code}</span>;
   }
-  bars.push(2, 1, 3, 2, 1);
+  const rects: { x: number; w: number }[] = [];
+  let x = 10; // khoảng trắng 10 mô-đun
+  symbols.forEach((v) => {
+    const pattern = CODE128_PATTERNS[v];
+    for (let i = 0; i < pattern.length; i++) {
+      const w = Number(pattern[i]);
+      if (i % 2 === 0) rects.push({ x, w });
+      x += w;
+    }
+  });
+  const width = x + 10;
 
   return (
     <div className="flex flex-col items-center">
       <svg
-        className="h-10 w-44"
-        viewBox="0 0 160 40"
+        className="h-12 w-56"
+        viewBox={`0 0 ${width} 40`}
         preserveAspectRatio="none"
         xmlns="http://www.w3.org/2000/svg"
+        role="img"
+        aria-label={`Mã vạch ${code}`}
       >
         <rect width="100%" height="100%" fill="white" />
-        {bars.map((width, idx) => {
-          const xPos = idx * 3.5;
-          const isBar = idx % 2 === 0;
-          return isBar ? (
-            <rect key={idx} x={xPos} y="2" width={width} height="36" fill="black" />
-          ) : null;
-        })}
+        {rects.map((r) => (
+          <rect key={r.x} x={r.x} y="0" width={r.w} height="40" fill="black" />
+        ))}
       </svg>
-      <span className="font-mono text-[11px] tracking-widest font-bold text-gray-800 mt-0.5">
-        *{cleanCode}*
-      </span>
+      <span className="font-mono text-[11px] tracking-widest font-bold text-gray-800 mt-0.5">{code}</span>
     </div>
   );
 };
@@ -73,41 +103,60 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
 
   if (!isOpen || !order) return null;
 
-  // Xử lý in trực tiếp qua trình duyệt với định dạng trang in tối ưu
-  const handlePrint = () => {
-    window.print();
-  };
-
-  // Xử lý tải file PDF (Gọi Backend API nếu có hoặc in ra file PDF)
-  const handleDownloadPdf = async () => {
+  /**
+   * S4-08: Lấy mẫu in chuẩn từ backend (GET /api/orders/{id}/print, có mã vạch Code 128, đã kiểm quyền ở server)
+   * rồi in qua một khung ẩn. "Tải file PDF" = chọn máy in "Lưu dưới dạng PDF" (Save as PDF) trong hộp thoại in.
+   */
+  const printFromBackend = async (savePdf: boolean) => {
+    let html: string;
     try {
-      // Kiểm tra xem Backend có sinh file PDF không (Trần Vũ Minh - BE subtask)
-      const res = await authFetch(`${API_BASE_URL}/api/orders/${order.id}/pdf`).catch(() => null);
-      if (res && res.ok) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Don_hang_${order.code || order.id}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        showToast('Tải PDF thành công', `Đã tải xuống file PDF đơn hàng [${order.code || order.id}]`, 'success');
+      const res = await authFetch(`${API_BASE_URL}/api/orders/${order.id}/print`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        showToast('Không in được đơn', data?.message || 'Máy chủ không trả về mẫu in đơn hàng.', 'error');
         return;
       }
+      html = await res.text();
     } catch {
-      // Fallback
+      showToast('Không in được đơn', 'Không kết nối được máy chủ. Vui lòng thử lại!', 'error');
+      return;
     }
 
-    // Fallback: Mở hộp thoại in và cho phép chọn "Lưu dưới dạng PDF" (Save as PDF)
-    showToast(
-      'Xuất PDF',
-      'Đang mở giao diện in. Bạn có thể chọn mục "Lưu dưới dạng PDF" (Save as PDF) để tải file về máy!',
-      'info',
-      5000
-    );
-    window.print();
+    if (savePdf) {
+      showToast(
+        'Xuất PDF',
+        'Trong hộp thoại in, chọn máy in "Lưu dưới dạng PDF" (Save as PDF) để tải file về máy.',
+        'info',
+        5000
+      );
+    }
+
+    const frame = document.createElement('iframe');
+    frame.style.position = 'fixed';
+    frame.style.right = '0';
+    frame.style.bottom = '0';
+    frame.style.width = '0';
+    frame.style.height = '0';
+    frame.style.border = '0';
+    frame.setAttribute('aria-hidden', 'true');
+    frame.onload = () => {
+      const win = frame.contentWindow;
+      if (!win) return;
+      win.focus();
+      win.print();
+      // Gỡ khung sau khi hộp thoại in đóng
+      setTimeout(() => frame.remove(), 60000);
+    };
+    frame.srcdoc = html;
+    document.body.appendChild(frame);
+  };
+
+  const handlePrint = () => {
+    void printFromBackend(false);
+  };
+
+  const handleDownloadPdf = () => {
+    void printFromBackend(true);
   };
 
   const lines = order.lines || [];

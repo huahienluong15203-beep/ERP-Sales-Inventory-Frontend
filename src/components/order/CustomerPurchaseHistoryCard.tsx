@@ -47,6 +47,7 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(false);
   const [historyData, setHistoryData] = useState<CustomerPurchaseHistoryData | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [isAddingAll, setIsAddingAll] = useState<boolean>(false);
 
@@ -63,19 +64,24 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
 
     let isSubscribed = true;
     const timer = setTimeout(() => {
-      if (isSubscribed) setLoading(true);
+      if (isSubscribed) {
+        setLoading(true);
+        setLoadError(null);
+      }
     }, 0);
 
-    fetchCustomerPurchaseHistory(selectedAgency, servingWarehouse)
+    // servingWarehouse đổi thì tải lại để số tồn khả dụng theo đúng kho đang phục vụ
+    fetchCustomerPurchaseHistory(selectedAgency)
       .then((data) => {
         if (isSubscribed) {
           setHistoryData(data);
           setLoading(false);
         }
       })
-      .catch((err) => {
-        console.warn('Lỗi tải lịch sử mua hàng:', err);
+      .catch((err: unknown) => {
         if (isSubscribed) {
+          setHistoryData(null);
+          setLoadError(err instanceof Error ? err.message : 'Không tải được lịch sử mua hàng của đại lý.');
           setLoading(false);
         }
       });
@@ -381,7 +387,13 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
             </>
           )}
 
-          {!loading && (!activeHistoryData || activeHistoryData.frequentProducts.length === 0) && (
+          {!loading && loadError && (
+            <div className="py-4 px-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-medium">
+              {loadError}
+            </div>
+          )}
+
+          {!loading && !loadError && (!activeHistoryData || activeHistoryData.frequentProducts.length === 0) && (
             <div className="py-8 px-4 text-center rounded-xl border border-dashed border-gray-200 text-gray-500 space-y-2 bg-gray-50/50">
               <Package size={28} className="mx-auto text-gray-400" />
               <p className="text-xs font-semibold text-gray-700">

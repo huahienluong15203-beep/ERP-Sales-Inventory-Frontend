@@ -15,8 +15,6 @@ import type {
   OrderFilterCriteria,
   OrderPageResponse,
   CustomerPurchaseHistoryItem,
-  CustomerLastOrderItem,
-  CustomerLastOrderSummary,
   CustomerPurchaseHistoryData,
   PendingOrderResponse,
   OrderApprovalHistoryResponse
@@ -1073,7 +1071,8 @@ export async function cloneOrderToDraft(orderId: number | string): Promise<{
 
 /**
  * S4-04 AC3: Kiểm tra quyền xem lịch sử mua hàng của đại lý.
- * - Quản trị viên (ROLE_ADMIN), Quản lý kinh doanh (ROLE_SALES_MANAGER), Kế toán (ROLE_ACCOUNTANT), Thủ kho (ROLE_WH_MANAGER): Xem được mọi đại lý.
+ * - Quản trị viên (ROLE_ADMIN), Quản lý kinh doanh (ROLE_SALES_MANAGER), Kế toán (ROLE_ACCOUNTANT): Xem được mọi đại lý.
+ * - Server mới là nơi chặn thật (GET /api/customers/{id}/purchase-history), ở đây chỉ để ẩn / hiện thẻ.
  * - Nhân viên kinh doanh (ROLE_SALES_REP): Chỉ được xem lịch sử của đại lý mình được phân công phụ trách.
  */
 export function canViewCustomerPurchaseHistory(
@@ -1084,10 +1083,10 @@ export function canViewCustomerPurchaseHistory(
     return { allowed: false, reason: 'Chưa có thông tin đại lý hoặc người dùng' };
   }
 
-  // Quản trị viên, Quản lý kinh doanh, Kế toán, Quản lý kho: Xem toàn bộ
+  // Quản trị viên, Quản lý kinh doanh, Kế toán: Xem toàn bộ
   const userRoles: string[] = user.roles && user.roles.length > 0 ? user.roles : [user.role];
   const hasFullAccess = userRoles.some(
-    (r) => r === 'ROLE_ADMIN' || r === 'ROLE_SALES_MANAGER' || r === 'ROLE_ACCOUNTANT' || r === 'ROLE_WH_MANAGER'
+    (r) => r === 'ROLE_ADMIN' || r === 'ROLE_SALES_MANAGER' || r === 'ROLE_ACCOUNTANT'
   );
   if (hasFullAccess) {
     return { allowed: true };
@@ -1118,351 +1117,126 @@ export function canViewCustomerPurchaseHistory(
   };
 }
 
-/**
- * Danh mục sản phẩm THẬT và Đơn vị tính THẬT của hệ thống ERP (S2-05 & S2-07)
- * Khớp chuẩn 100% với cơ sở dữ liệu thực tế (/api/products & /api/products/{id}/units)
- */
-export const REAL_SYSTEM_PRODUCTS = [
-  {
-    productId: '5',
-    sku: 'SP-NUOCMAN',
-    name: 'Nước Mắm nam ngư',
-    category: 'Nước mắm Nam Ngư',
-    baseUnit: 'Chai',
-    preferredUnit: 'Thùng',
-    preferredConversionFactor: 12,
-    unitPrice: 120000,
-    basePrice: 10000
-  },
-  {
-    productId: '1',
-    sku: 'SP-COCACOLA-01',
-    name: 'Cocacola-500ml',
-    category: 'Nước giải khát',
-    baseUnit: 'Lon',
-    preferredUnit: 'Lon',
-    preferredConversionFactor: 1,
-    unitPrice: 144000,
-    basePrice: 144000
-  },
-  {
-    productId: '4',
-    sku: 'SP-GIAVI',
-    name: 'Muối trắng có tinh',
-    category: 'Gia vị & Hạt nêm',
-    baseUnit: 'Gói',
-    preferredUnit: 'Gói',
-    preferredConversionFactor: 1,
-    unitPrice: 144000,
-    basePrice: 144000
-  },
-  {
-    productId: '3',
-    sku: 'SP-GIAVI-01',
-    name: 'Tương ớt có mùi',
-    category: 'Gia vị & Hạt nêm',
-    baseUnit: 'Chai',
-    preferredUnit: 'Chai',
-    preferredConversionFactor: 1,
-    unitPrice: 144000,
-    basePrice: 144000
-  },
-  {
-    productId: '2',
-    sku: 'SP-NUOCNGOT-01',
-    name: 'Nước Đào',
-    category: 'Nước giải khát',
-    baseUnit: 'Chai',
-    preferredUnit: 'Chai',
-    preferredConversionFactor: 1,
-    unitPrice: 144000,
-    basePrice: 144000
-  }
-];
-
-/**
- * S4-04: Tạo dữ liệu lịch sử mua hàng 3 tháng chân thực và ổn định theo đại lý (chỉ dùng hàng thật và ĐVT thật)
- */
-function generateDeterministicPurchaseHistory(
-  agency: Agency,
-  catalog: OrderProductCatalogItem[]
-): CustomerPurchaseHistoryData {
-  let hash = 0;
-  const seedStr = `${agency.id || ''}-${agency.code || ''}-${agency.name || ''}`;
-  for (let i = 0; i < seedStr.length; i++) hash = (hash * 31 + seedStr.charCodeAt(i)) % 10000;
-  hash = Math.abs(hash);
-
-  const now = new Date();
-  const threeMonthsAgo = new Date();
-  threeMonthsAgo.setDate(threeMonthsAgo.getDate() - 90);
-
-  // Lấy ngày đơn gần nhất (cách đây 3 đến 8 ngày)
-  const daysAgo = 3 + (hash % 6);
-  const lastOrderDateObj = new Date();
-  lastOrderDateObj.setDate(lastOrderDateObj.getDate() - daysAgo);
-  const lastOrderDateStr = lastOrderDateObj.toISOString().slice(0, 10);
-
-  // Chọn nguồn sản phẩm: ưu tiên catalog thực tế của đại lý nếu có
-  const frequentProducts: CustomerPurchaseHistoryItem[] = [];
-
-  if (catalog.length > 0) {
-    // Dùng danh mục sản phẩm THẬT từ bảng giá đại lý
-    const count = Math.min(catalog.length, 5);
-    for (let idx = 0; idx < count; idx++) {
-      const cat = catalog[idx];
-      const factorUnit = cat.availableUnits.find((u) => !u.isBaseUnit) || cat.availableUnits[0];
-      const factor = factorUnit?.conversionFactor || 1;
-      const unitName = factorUnit?.unitName || cat.baseUnit;
-
-      const orderMultiplier = 3 + ((hash + idx * 7) % 6); // 3 đến 8 lần đặt trong 3 tháng
-      const qtyPerOrder = 10 + ((hash + idx * 11) % 25);   // 10 đến 34 kiện mỗi đơn
-      const totalQuantity3M = qtyPerOrder * orderMultiplier;
-      const avgMonthly = Math.round((totalQuantity3M / 3) * 10) / 10;
-      const avgOrder = Math.round((totalQuantity3M / orderMultiplier) * 10) / 10;
-      const stock = cat.availableStock ?? getStockInfoForProduct(cat.sku).availableStock;
-      const pricePerUnit = Math.round(cat.basePrice * factor);
-
-      frequentProducts.push({
-        productId: cat.id,
-        sku: cat.sku,
-        name: cat.name,
-        category: cat.category || 'Hàng tiêu dùng',
-        baseUnit: cat.baseUnit,
-        preferredUnit: unitName,
-        preferredConversionFactor: factor,
-        totalQuantity3M,
-        orderCount3M: orderMultiplier,
-        avgQuantityPerMonth: avgMonthly,
-        avgQuantityPerOrder: avgOrder,
-        lastOrderedDate: lastOrderDateStr,
-        lastUnitPrice: pricePerUnit,
-        currentUnitPrice: pricePerUnit,
-        availableStock: stock,
-        availableInPreferredUnit: Math.floor(stock / factor)
-      });
-    }
-  } else {
-    // Dùng danh mục sản phẩm THẬT và ĐVT THẬT của hệ thống ERP
-    REAL_SYSTEM_PRODUCTS.forEach((prod, idx) => {
-      const orderMultiplier = 4 + ((hash + idx * 5) % 5);
-      const qtyPerOrder = 12 + ((hash + idx * 9) % 20);
-      const totalQuantity3M = qtyPerOrder * orderMultiplier;
-      const avgMonthly = Math.round((totalQuantity3M / 3) * 10) / 10;
-      const avgOrder = Math.round((totalQuantity3M / orderMultiplier) * 10) / 10;
-      const stock = getStockInfoForProduct(prod.sku).availableStock;
-
-      frequentProducts.push({
-        productId: prod.productId,
-        sku: prod.sku,
-        name: prod.name,
-        category: prod.category,
-        baseUnit: prod.baseUnit,
-        preferredUnit: prod.preferredUnit,
-        preferredConversionFactor: prod.preferredConversionFactor,
-        totalQuantity3M,
-        orderCount3M: orderMultiplier,
-        avgQuantityPerMonth: avgMonthly,
-        avgQuantityPerOrder: avgOrder,
-        lastOrderedDate: lastOrderDateStr,
-        lastUnitPrice: prod.unitPrice,
-        currentUnitPrice: prod.unitPrice,
-        availableStock: stock,
-        availableInPreferredUnit: Math.floor(stock / prod.preferredConversionFactor)
-      });
-    });
-  }
-
-  // Tạo đơn hàng gần nhất (gồm 3-4 mặt hàng đầu)
-  const lastOrderItemsCount = Math.min(frequentProducts.length, 3 + (hash % 2));
-  const lastOrderLines: CustomerLastOrderItem[] = [];
-  let totalLastOrderAmount = 0;
-  let totalLastOrderQty = 0;
-
-  for (let i = 0; i < lastOrderItemsCount; i++) {
-    const p = frequentProducts[i];
-    const qty = Math.max(2, Math.round(p.avgQuantityPerOrder));
-    const lineTotal = qty * p.lastUnitPrice;
-    totalLastOrderAmount += lineTotal;
-    totalLastOrderQty += qty;
-
-    lastOrderLines.push({
-      productId: p.productId,
-      sku: p.sku,
-      name: p.name,
-      unitName: p.preferredUnit,
-      conversionFactor: p.preferredConversionFactor,
-      quantity: qty,
-      unitPrice: p.lastUnitPrice
-    });
-  }
-
-  const lastOrderSummary: CustomerLastOrderSummary = {
-    orderId: `ORD-${hash % 900 + 100}`,
-    orderCode: `DH2609-${String(hash % 900 + 100).padStart(4, '0')}`,
-    orderDate: lastOrderDateStr,
-    itemCount: lastOrderLines.length,
-    totalQuantity: totalLastOrderQty,
-    totalAmount: totalLastOrderAmount,
-    items: lastOrderLines
+/** Dữ liệu thô từ Backend GET /api/customers/{id}/purchase-history (số tiền / số lượng là số JSON). */
+interface PurchaseHistoryBackendResponse {
+  customerId: number;
+  customerCode: string;
+  customerName: string;
+  assignedRepId?: number | null;
+  assignedRepName?: string | null;
+  months: number;
+  threeMonthsSummary: {
+    totalOrders: number;
+    totalRevenue: number;
+    distinctProductCount: number;
+    startDate: string;
+    endDate: string;
   };
-
-  const totalOrdersIn3M = Math.max(4, Math.round(frequentProducts.reduce((s, p) => s + p.orderCount3M, 0) / frequentProducts.length));
-  const estimatedRevenue3M = frequentProducts.reduce((s, p) => s + p.totalQuantity3M * p.lastUnitPrice, 0);
-
-  return {
-    customerId: String(agency.id),
-    customerCode: agency.code,
-    customerName: agency.name,
-    assignedRepId: agency.assignedRepId,
-    assignedRepName: agency.assignedRepName,
-    threeMonthsSummary: {
-      totalOrders: totalOrdersIn3M,
-      totalRevenue: estimatedRevenue3M,
-      distinctProductCount: frequentProducts.length,
-      startDate: threeMonthsAgo.toISOString().slice(0, 10),
-      endDate: now.toISOString().slice(0, 10)
-    },
-    frequentProducts,
-    lastOrder: lastOrderSummary
-  };
+  frequentProducts: Array<{
+    productId: number;
+    sku: string;
+    name: string;
+    category?: string | null;
+    baseUnit: string;
+    preferredUnit: string;
+    preferredConversionFactor: number;
+    totalQuantity3M: number;
+    orderCount3M: number;
+    avgQuantityPerMonth: number;
+    avgQuantityPerOrder: number;
+    lastOrderedDate?: string | null;
+    lastUnitPrice?: number | null;
+    currentUnitPrice?: number | null;
+    availableStock?: number | null;
+    availableInPreferredUnit?: number | null;
+  }>;
+  lastOrder: {
+    orderId: number;
+    orderCode: string;
+    orderDate?: string | null;
+    itemCount: number;
+    totalQuantity: number;
+    totalAmount: number;
+    items: Array<{
+      productId?: number | null;
+      sku: string;
+      name: string;
+      unitName: string;
+      conversionFactor?: number | null;
+      quantity: number;
+      unitPrice?: number | null;
+    }>;
+  } | null;
 }
 
 /**
- * S4-04: Tải dữ liệu lịch sử mua hàng 3 tháng của đại lý
- * Thử gọi API Backend trước, nếu backend chưa có đơn hoặc lỗi thì tự động fallback dữ liệu nhất quán.
+ * S4-04: Tải lịch sử mua hàng 3 tháng của đại lý từ Backend (GET /api/customers/{id}/purchase-history).
+ * Server tự kiểm quyền: NV kinh doanh chỉ xem được đại lý mình phụ trách (khác -> lỗi "không tìm thấy").
+ * Không còn dữ liệu giả: lỗi thì ném Error để giao diện báo lỗi.
  */
-export async function fetchCustomerPurchaseHistory(
-  agency: Agency,
-  servingWarehouse?: { code: string; name: string }
-): Promise<CustomerPurchaseHistoryData> {
-  const customerId = agency.id;
-  const isRealCustomer = /^\d+$/.test(String(customerId));
-
-  // 1. Tải catalog sản phẩm theo bảng giá đại lý để lấy đơn giá & tồn kho chuẩn
-  let catalog: OrderProductCatalogItem[] = [];
-  try {
-    if (isRealCustomer) {
-      catalog = await fetchBackendProductOptions(customerId, '', servingWarehouse);
-    }
-    // Nếu catalog rỗng (đại lý mock AG-001...), thử tải từ đại lý thật ID=1 để luôn lấy sản phẩm thật
-    if (catalog.length === 0) {
-      try {
-        catalog = await fetchBackendProductOptions(1, '', servingWarehouse);
-      } catch {
-        // bỏ qua
-      }
-    }
-  } catch (err) {
-    console.warn('Lỗi lấy catalog cho purchase history:', err);
+export async function fetchCustomerPurchaseHistory(agency: Agency, months = 3): Promise<CustomerPurchaseHistoryData> {
+  if (!/^\d+$/.test(String(agency.id))) {
+    throw new Error('Đại lý chưa được lưu trên hệ thống nên chưa có lịch sử mua hàng.');
   }
+  const res = await callBackend(`${API_BASE_URL}/api/customers/${agency.id}/purchase-history?months=${months}`);
+  if (!res.ok) {
+    throw new Error(await readBackendError(res, 'Không tải được lịch sử mua hàng của đại lý.'));
+  }
+  const data = (await res.json()) as PurchaseHistoryBackendResponse;
+  const num = (v: number | null | undefined) => (v == null ? 0 : Number(v));
+  const opt = (v: number | null | undefined) => (v == null ? undefined : Number(v));
 
-  // 2. Thử truy vấn danh sách đơn hàng đã phát sinh từ Backend (/api/orders?customerId=...)
-  if (isRealCustomer) {
-    try {
-      const ordersRes = await callBackend(`${API_BASE_URL}/api/orders?customerId=${customerId}&size=20`);
-      if (ordersRes.ok) {
-        const orderPage = await ordersRes.json();
-        const orders = orderPage?.content || [];
-
-        if (Array.isArray(orders) && orders.length > 0) {
-          const latestOrderSummary = orders[0];
-          let lastOrderDetails: CustomerLastOrderSummary | null = null;
-
-          try {
-            const detailRes = await callBackend(`${API_BASE_URL}/api/orders/${latestOrderSummary.id}`);
-            if (detailRes.ok) {
-              const fullOrder = await detailRes.json();
-              if (fullOrder?.lines && fullOrder.lines.length > 0) {
-                lastOrderDetails = {
-                  orderId: fullOrder.id,
-                  orderCode: fullOrder.code || `DH-${fullOrder.id}`,
-                  orderDate: fullOrder.createdAt ? fullOrder.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
-                  itemCount: fullOrder.lines.length,
-                  totalQuantity: fullOrder.lines.reduce((s: number, l: { quantity?: number }) => s + Number(l.quantity || 0), 0),
-                  totalAmount: Number(fullOrder.totalAmount || 0),
-                  items: fullOrder.lines.map((l: { productId?: number | string; productSku: string; productName: string; unitName: string; conversionFactor?: number; quantity?: number; pricePerUnit?: number; unitPrice?: number }) => ({
-                    productId: l.productId,
-                    sku: l.productSku,
-                    name: l.productName,
-                    unitName: l.unitName,
-                    conversionFactor: Number(l.conversionFactor || 1),
-                    quantity: Number(l.quantity || 1),
-                    unitPrice: Number(l.pricePerUnit || l.unitPrice || 0)
-                  }))
-                };
-              }
-            }
-          } catch (e) {
-            console.warn('Không tải được chi tiết đơn gần nhất:', e);
-          }
-
-          const now = new Date();
-          const threeMonthsAgo = new Date();
-          threeMonthsAgo.setDate(threeMonthsAgo.getDate() - 90);
-
-          const recentOrders = orders.filter((o: { createdAt?: string; updatedAt?: string }) => {
-            const dateStr = o.createdAt || o.updatedAt;
-            if (!dateStr) return false;
-            const d = new Date(dateStr);
-            return !isNaN(d.getTime()) && d >= threeMonthsAgo;
-          });
-
-          if (lastOrderDetails && lastOrderDetails.items.length > 0) {
-            const frequentProducts: CustomerPurchaseHistoryItem[] = lastOrderDetails.items.map((line) => {
-              const catItem = catalog.find((c) => c.sku === line.sku);
-              const stock = catItem
-                ? (catItem.availableStock ?? 100)
-                : getStockInfoForProduct(line.sku).availableStock;
-              const factor = line.conversionFactor || 1;
-              const totalQty3M = line.quantity * Math.max(1, recentOrders.length || 2);
-              const orderCount3M = Math.max(1, recentOrders.length || 1);
-
-              return {
-                productId: line.productId,
-                sku: line.sku,
-                name: line.name,
-                category: catItem?.category || 'Đồ uống & Tiêu dùng',
-                baseUnit: catItem?.baseUnit || 'Lon',
-                preferredUnit: line.unitName,
-                preferredConversionFactor: factor,
-                totalQuantity3M: totalQty3M,
-                orderCount3M,
-                avgQuantityPerMonth: Math.round((totalQty3M / 3) * 10) / 10,
-                avgQuantityPerOrder: Math.round((totalQty3M / orderCount3M) * 10) / 10,
-                lastOrderedDate: lastOrderDetails!.orderDate,
-                lastUnitPrice: line.unitPrice,
-                currentUnitPrice: catItem ? catItem.basePrice * factor : line.unitPrice,
-                availableStock: stock,
-                availableInPreferredUnit: Math.floor(stock / factor)
-              };
-            });
-
-            return {
-              customerId: String(agency.id),
-              customerCode: agency.code,
-              customerName: agency.name,
-              assignedRepId: agency.assignedRepId,
-              assignedRepName: agency.assignedRepName,
-              threeMonthsSummary: {
-                totalOrders: Math.max(1, recentOrders.length),
-                totalRevenue: recentOrders.reduce((sum: number, o: { totalAmount?: number }) => sum + Number(o.totalAmount || 0), 0) || lastOrderDetails.totalAmount,
-                distinctProductCount: frequentProducts.length,
-                startDate: threeMonthsAgo.toISOString().slice(0, 10),
-                endDate: now.toISOString().slice(0, 10)
-              },
-              frequentProducts,
-              lastOrder: lastOrderDetails
-            };
-          }
+  return {
+    customerId: String(data.customerId),
+    customerCode: data.customerCode,
+    customerName: data.customerName,
+    assignedRepId: data.assignedRepId != null ? String(data.assignedRepId) : undefined,
+    assignedRepName: data.assignedRepName ?? undefined,
+    threeMonthsSummary: {
+      totalOrders: num(data.threeMonthsSummary?.totalOrders),
+      totalRevenue: num(data.threeMonthsSummary?.totalRevenue),
+      distinctProductCount: num(data.threeMonthsSummary?.distinctProductCount),
+      startDate: data.threeMonthsSummary?.startDate ?? '',
+      endDate: data.threeMonthsSummary?.endDate ?? ''
+    },
+    frequentProducts: (data.frequentProducts || []).map((p) => ({
+      productId: p.productId,
+      sku: p.sku,
+      name: p.name,
+      category: p.category ?? undefined,
+      baseUnit: p.baseUnit,
+      preferredUnit: p.preferredUnit,
+      preferredConversionFactor: num(p.preferredConversionFactor) || 1,
+      totalQuantity3M: num(p.totalQuantity3M),
+      orderCount3M: num(p.orderCount3M),
+      avgQuantityPerMonth: num(p.avgQuantityPerMonth),
+      avgQuantityPerOrder: num(p.avgQuantityPerOrder),
+      lastOrderedDate: p.lastOrderedDate ?? '',
+      lastUnitPrice: num(p.lastUnitPrice ?? p.currentUnitPrice),
+      currentUnitPrice: opt(p.currentUnitPrice),
+      availableStock: opt(p.availableStock),
+      availableInPreferredUnit: opt(p.availableInPreferredUnit)
+    })),
+    lastOrder: data.lastOrder
+      ? {
+          orderId: data.lastOrder.orderId,
+          orderCode: data.lastOrder.orderCode,
+          orderDate: data.lastOrder.orderDate ?? '',
+          itemCount: num(data.lastOrder.itemCount),
+          totalQuantity: num(data.lastOrder.totalQuantity),
+          totalAmount: num(data.lastOrder.totalAmount),
+          items: (data.lastOrder.items || []).map((i) => ({
+            productId: i.productId ?? i.sku,
+            sku: i.sku,
+            name: i.name,
+            unitName: i.unitName,
+            conversionFactor: num(i.conversionFactor) || 1,
+            quantity: num(i.quantity),
+            unitPrice: num(i.unitPrice)
+          }))
         }
-      }
-    } catch (err) {
-      console.warn('Lỗi gọi API đơn hàng backend:', err);
-    }
-  }
-
-  // 3. Fallback: Sinh dữ liệu mẫu chân thực & ổn định
-  return generateDeterministicPurchaseHistory(agency, catalog);
+      : null
+  };
 }
 
 /**

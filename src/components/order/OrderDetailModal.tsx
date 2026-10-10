@@ -111,6 +111,13 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
 
   const activeOrder = (!isOpen || !orderId) ? null : order;
 
+  // S4-10: Đơn đại lý tự đặt qua cổng (Backend ghi tiền tố này vào ghi chú) – NV kinh doanh phụ trách được xác nhận.
+  // Đơn có vi phạm (giá sàn, hạn mức, nợ quá hạn...) Backend vẫn bắt Quản lý KD duyệt và trả thông báo rõ.
+  const isPortalOrder = Boolean(activeOrder?.note?.startsWith('[Đại lý tự đặt qua cổng]'));
+  const isSalesRep =
+    currentRole === 'ROLE_SALES_REP' || Boolean(user?.roles?.includes('ROLE_SALES_REP'));
+  const canDecideApproval = isManagerOrAdmin || (isSalesRep && isPortalOrder);
+
   if (!isOpen) return null;
 
   const renderStatusBadge = (status: string) => {
@@ -543,8 +550,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
               </button>
             )}
 
-            {/* S4-05 AC2: Ba hành động Duyệt, Trả lại sửa, Từ chối (Dành cho Quản lý KD & Admin) */}
-            {activeOrder?.status === 'PENDING_APPROVAL' && isManagerOrAdmin && (
+            {/* S4-05 AC2: Ba hành động Duyệt, Trả lại sửa, Từ chối (Quản lý KD & Admin; NVKD với đơn đại lý tự đặt - S4-10) */}
+            {activeOrder?.status === 'PENDING_APPROVAL' && canDecideApproval && (
               <div className="flex items-center gap-2">
                 <button
                   type="button"
