@@ -597,17 +597,32 @@ export const CustomerOrderPortalPage: React.FC = () => {
                   className="bg-white rounded-2xl border border-gray-200 p-4 shadow-2xs hover:border-orange-200 transition space-y-3"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono font-black text-sm text-[#F85606]">
                         {o.code}
                       </span>
                       <span className="text-xs text-gray-400">•</span>
-                      <span className="text-xs text-gray-500 flex items-center gap-1">
-                        <Calendar size={13} />
+                      <span className="text-xs text-gray-500 flex items-center gap-1" title="Ngày đặt hàng">
+                        <Clock size={13} />
                         {new Date(o.createdAt).toLocaleDateString('vi-VN')}
                       </span>
+                      {o.desiredDeliveryDate && (
+                        <>
+                          <span className="text-xs text-gray-400">•</span>
+                          <span className="text-xs text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md flex items-center gap-1 font-semibold" title="Ngày giao dự kiến">
+                            <Calendar size={12} className="text-blue-600" />
+                            <span>Giao dự kiến: {new Date(o.desiredDeliveryDate).toLocaleDateString('vi-VN')}</span>
+                          </span>
+                        </>
+                      )}
                     </div>
-                    <div>
+                    <div className="flex items-center gap-2">
+                      {o.hasShortage && (
+                        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1" title="Đơn hàng được ghi nhận có mặt hàng giao thiếu">
+                          <AlertTriangle size={12} className="text-amber-600" />
+                          <span>Giao thiếu hàng</span>
+                        </span>
+                      )}
                       {renderStatusBadge(o.status)}
                     </div>
                   </div>
@@ -618,14 +633,17 @@ export const CustomerOrderPortalPage: React.FC = () => {
                       <span className="font-bold text-gray-800">{o.lineCount} SKU</span>
                     </div>
                     <div>
+                      <span className="text-gray-400 block text-[11px]">Ngày giao dự kiến</span>
+                      <span className="font-semibold text-gray-800 flex items-center gap-1">
+                        <Calendar size={12} className="text-gray-400" />
+                        <span>{o.desiredDeliveryDate ? new Date(o.desiredDeliveryDate).toLocaleDateString('vi-VN') : 'Chưa xếp lịch'}</span>
+                      </span>
+                    </div>
+                    <div>
                       <span className="text-gray-400 block text-[11px]">Tổng giá trị</span>
                       <span className="font-black text-[#F85606] font-mono">
                         {formatCurrencyVND(o.totalAmount)}
                       </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-400 block text-[11px]">NVKD Phụ trách</span>
-                      <span className="font-semibold text-gray-700">{o.salesRepName || 'Chưa gán'}</span>
                     </div>
                     <div className="text-right flex items-center justify-end gap-1.5">
                       {/* S5-02: Nút Mua lại đơn cũ */}

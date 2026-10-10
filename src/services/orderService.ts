@@ -883,7 +883,7 @@ export async function cloneOrderToDraft(orderId: number | string): Promise<{
     });
     if (copyRes.ok) {
       const copiedOrder: OrderBackendResponse = await copyRes.json();
-      const draft = await fetchBackendDraftById(copiedOrder.id);
+      const draft = await fetchBackendDraftById(Number(copiedOrder.id));
       setActiveDraft(draft);
 
       const sourceCode = source.code || `DH-${orderId}`;
