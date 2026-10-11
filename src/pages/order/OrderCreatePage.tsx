@@ -490,6 +490,7 @@ export const OrderCreatePage: React.FC = () => {
   // Yêu cầu tính tiền gửi Backend: chỉ đổi khi đại lý / điểm giao / ngày / ghi chú / SKU-ĐVT-số lượng đổi
   const previewKey = useMemo(() => {
     if (!selectedAgency || !isBackendId(selectedAgency.id) || items.length === 0) return '';
+    if (items.some((it) => !it.quantity || it.quantity <= 0)) return '';
     return JSON.stringify(
       buildBackendRequest({
         draftId: backendDraftId,

@@ -57,14 +57,16 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
   };
 
   const handleDecrease = () => {
-    const current = parseInt(localQtyText, 10) || item.quantity || 1;
+    const num = parseInt(localQtyText, 10);
+    const current = isNaN(num) ? 1 : num;
     const next = Math.max(1, current - 1);
     setLocalQtyText(String(next));
     onUpdateQuantity(item.id, next);
   };
 
   const handleIncrease = () => {
-    const current = parseInt(localQtyText, 10) || item.quantity || 0;
+    const num = parseInt(localQtyText, 10);
+    const current = isNaN(num) ? 0 : num;
     const next = current + 1;
     setLocalQtyText(String(next));
     onUpdateQuantity(item.id, next);
