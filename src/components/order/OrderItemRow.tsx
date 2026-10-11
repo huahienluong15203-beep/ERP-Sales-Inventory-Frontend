@@ -49,17 +49,22 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
   };
 
   const handleQuantityBlur = () => {
-    // Khi rời khỏi ô input: loại bỏ số 0 vô nghĩa ở đầu ("05" -> "5"), tối thiểu là 1
-    const num = parseInt(localQtyText, 10);
-    const cleanNum = isNaN(num) || num <= 0 ? 1 : num;
-    setLocalQtyText(String(cleanNum));
-    onUpdateQuantity(item.id, cleanNum);
+    // Khi rời khỏi ô: chỉ loại bỏ các số 0 thừa ở đầu khi có số khác sau (vd: "05" -> "5", "012" -> "12")
+    // Nếu là "0" hoặc chuỗi rỗng thì giữ "0" (không tự ép thành 1 để tránh lỗi khi người dùng bấm +)
+    if (localQtyText === '' || parseInt(localQtyText, 10) === 0) {
+      setLocalQtyText('0');
+      onUpdateQuantity(item.id, 0);
+    } else {
+      const num = parseInt(localQtyText, 10);
+      setLocalQtyText(String(num));
+      onUpdateQuantity(item.id, num);
+    }
   };
 
   const handleDecrease = () => {
     const num = parseInt(localQtyText, 10);
-    const current = isNaN(num) ? 1 : num;
-    const next = Math.max(1, current - 1);
+    const current = isNaN(num) ? 0 : num;
+    const next = Math.max(0, current - 1);
     setLocalQtyText(String(next));
     onUpdateQuantity(item.id, next);
   };
@@ -240,8 +245,9 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
           >
             <button
               type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={handleDecrease}
-              disabled={item.quantity <= 1}
+              disabled={item.quantity <= 0}
               className="w-10 h-full flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-40 transition-colors cursor-pointer"
               title="Giảm 1"
             >
@@ -262,6 +268,7 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
             />
             <button
               type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={handleIncrease}
               disabled={item.quantity >= maxAllowed}
               className="w-10 h-full flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
