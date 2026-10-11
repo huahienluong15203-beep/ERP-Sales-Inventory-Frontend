@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Printer,
   Download,
@@ -161,8 +162,10 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
 
   const lines = order.lines || [];
 
-  return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 print:p-0 print:bg-white">
+  // Render thẳng ra document.body: nếu nằm trong vùng nội dung trang (có hiệu ứng / transform), "fixed" bị tính
+  // theo vùng đó nên thanh tiêu đề và menu trái đè lên cửa sổ. z-[10000] để nằm trên cả topbar và modal chi tiết đơn.
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 print:p-0 print:bg-white">
       <div
         className="bg-white w-full max-w-4xl max-h-[95vh] rounded-2xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:border-none print:shadow-none print:max-h-none print:w-full print:rounded-none"
         onClick={(e) => e.stopPropagation()}
@@ -408,6 +411,7 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
