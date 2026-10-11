@@ -166,7 +166,7 @@ export function recalculateOrderItem(
   newUnitPrice?: number,
   resetToOriginalPrice?: boolean
 ): OrderItem {
-  const quantity = newQuantity !== undefined ? Math.max(1, newQuantity) : item.quantity;
+  const quantity = newQuantity !== undefined ? Math.max(0, newQuantity) : item.quantity;
   let selectedUnit = item.selectedUnit;
   let conversionFactor = item.conversionFactor || 1;
   let originalUnitPrice = item.originalUnitPrice ?? item.unitPrice;

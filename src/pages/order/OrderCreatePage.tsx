@@ -565,6 +565,15 @@ export const OrderCreatePage: React.FC = () => {
       );
       return;
     }
+    const zeroDraftItems = items.filter((i) => !i.quantity || i.quantity <= 0);
+    if (zeroDraftItems.length > 0) {
+      showToast(
+        'Số lượng chưa hợp lệ',
+        `Mặt hàng "${zeroDraftItems[0].name}" có số lượng bằng 0 hoặc để trống. Vui lòng nhập số lượng lớn hơn 0 trước khi lưu.`,
+        'error'
+      );
+      return;
+    }
 
     setIsSavingDraft(true);
     try {
@@ -617,6 +626,15 @@ export const OrderCreatePage: React.FC = () => {
     }
     if (overStockItems.length > 0) {
       showToast('Vượt tồn khả dụng', 'Có sản phẩm vượt tồn kho khả dụng. Vui lòng chỉnh số lượng trước khi chốt đơn.', 'error');
+      return;
+    }
+    const zeroSubmitItems = items.filter((i) => !i.quantity || i.quantity <= 0);
+    if (zeroSubmitItems.length > 0) {
+      showToast(
+        'Số lượng chưa hợp lệ',
+        `Mặt hàng "${zeroSubmitItems[0].name}" có số lượng bằng 0 hoặc để trống. Vui lòng nhập số lượng lớn hơn 0 trước khi chốt đơn.`,
+        'error'
+      );
       return;
     }
 
