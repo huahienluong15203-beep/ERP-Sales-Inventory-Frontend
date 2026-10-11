@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { OrderItem } from '../../types/order';
 import { formatCurrencyVND } from '../../services/orderService';
 import { Trash2, Plus, Minus, Tag, Edit, Check, X, RotateCw, AlertTriangle, Package } from '../common/Icons';
@@ -22,6 +22,60 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
 }) => {
   const [isEditingPrice, setIsEditingPrice] = useState<boolean>(false);
   const [priceInput, setPriceInput] = useState<string>(() => String(item.unitPrice));
+  const [localQtyText, setLocalQtyText] = useState<string>(() => String(item.quantity));
+
+  // Đồng bộ số lượng khi item.quantity thay đổi từ bên ngoài (nút +/-, tự chỉnh tồn tối đa...)
+  useEffect(() => {
+    const parsed = parseInt(localQtyText, 10);
+    if (parsed !== item.quantity) {
+      setLocalQtyText(String(item.quantity));
+    }
+  }, [item.quantity]);
+
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    // Cho phép nhập tự do các ký tự số (bao gồm cả '0', '05', chuỗi rỗng khi bấm xóa)
+    if (!/^\d*$/.test(raw)) return;
+
+    setLocalQtyText(raw);
+
+    if (raw === '') {
+      onUpdateQuantity(item.id, 0);
+    } else {
+      // Khi gõ "05", "012", parseInt sẽ lấy số có nghĩa là 5, 12 để tính toán thành tiền & tồn kho ngay
+      const num = parseInt(raw, 10);
+      onUpdateQuantity(item.id, isNaN(num) ? 0 : num);
+    }
+  };
+
+  const handleQuantityBlur = () => {
+    // Khi rời khỏi ô: chỉ loại bỏ các số 0 thừa ở đầu khi có số khác sau (vd: "05" -> "5", "012" -> "12")
+    // Nếu là "0" hoặc chuỗi rỗng thì giữ "0" (không tự ép thành 1 để tránh lỗi khi người dùng bấm +)
+    if (localQtyText === '' || parseInt(localQtyText, 10) === 0) {
+      setLocalQtyText('0');
+      onUpdateQuantity(item.id, 0);
+    } else {
+      const num = parseInt(localQtyText, 10);
+      setLocalQtyText(String(num));
+      onUpdateQuantity(item.id, num);
+    }
+  };
+
+  const handleDecrease = () => {
+    const num = parseInt(localQtyText, 10);
+    const current = isNaN(num) ? 0 : num;
+    const next = Math.max(0, current - 1);
+    setLocalQtyText(String(next));
+    onUpdateQuantity(item.id, next);
+  };
+
+  const handleIncrease = () => {
+    const num = parseInt(localQtyText, 10);
+    const current = isNaN(num) ? 0 : num;
+    const next = current + 1;
+    setLocalQtyText(String(next));
+    onUpdateQuantity(item.id, next);
+  };
 
   const originalPrice = item.originalUnitPrice ?? item.unitPrice;
   const floorPrice = item.floorPrice ?? 0;
@@ -191,21 +245,21 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
           >
             <button
               type="button"
-              onClick={() => onUpdateQuantity(item.id, Math.max(1, item.quantity - 1))}
-              disabled={item.quantity <= 1}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleDecrease}
+              disabled={item.quantity <= 0}
               className="w-10 h-full flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-40 transition-colors cursor-pointer"
               title="Giảm 1"
             >
               <Minus size={14} />
             </button>
             <input
-              type="number"
-              min={1}
-              value={item.quantity}
-              onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
-                onUpdateQuantity(item.id, isNaN(val) ? 1 : Math.max(1, val));
-              }}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={localQtyText}
+              onChange={handleQuantityChange}
+              onBlur={handleQuantityBlur}
               className={`flex-1 h-full text-center text-xs font-bold border-x focus:outline-none ${
                 isOverStock
                   ? 'bg-rose-50 text-rose-900 border-rose-300 focus:ring-1 focus:ring-rose-500'
@@ -214,7 +268,8 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
             />
             <button
               type="button"
-              onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleIncrease}
               disabled={item.quantity >= maxAllowed}
               className="w-10 h-full flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
               title={

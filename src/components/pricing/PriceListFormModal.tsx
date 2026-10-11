@@ -165,14 +165,15 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
     }
 
     setItems((prev) => [
-      ...prev,
       {
         productSku: prod.sku,
         productName: prod.name,
         price: defaultPrice.toString(),
         floorPrice: defaultFloor.toString()
-      }
+      },
+      ...prev
     ]);
+    setItemPage(0);
     setProductSearchInput('');
     setIsProductDropdownOpen(false);
   };
@@ -683,7 +684,14 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
           </div>
 
           {/* Footer Submit */}
-          <div className="pt-3 border-t border-gray-200 flex items-center justify-end gap-2">
+          <div className="pt-3 border-t border-gray-200 space-y-2.5">
+            {formError && (
+              <div className="p-2.5 bg-rose-50 border border-rose-300 text-rose-800 rounded-xl text-xs flex items-center gap-2 animate-in fade-in">
+                <Icons.ShieldAlert size={16} className="shrink-0 text-rose-600" />
+                <span className="font-medium">{formError}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
@@ -709,7 +717,8 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
               )}
             </button>
           </div>
-        </form>
+        </div>
+      </form>
       </div>
     </div>
   );
