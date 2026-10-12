@@ -448,36 +448,86 @@ export async function fetchBackendProductOptions(
   const res = await callBackend(url);
   if (!res.ok) throw new Error(await readBackendError(res, 'Không tải được danh sách sản phẩm'));
   const data: ProductOptionBackendResponse[] = await res.json();
-  return (Array.isArray(data) ? data : []).map((item) => {
-    const stock = getStockInfoForProduct(
-      item.sku,
-      item.availableStock,
-      item.physicalStock,
-      item.reservedStock
-    );
-    return {
-      id: String(item.productId),
-      sku: item.sku,
-      name: item.name,
-      category: '',
-      baseUnit: item.baseUnit,
-      basePrice: Number(item.unitPrice || 0),
-      floorPrice: item.floorPrice != null ? Number(item.floorPrice) : undefined,
-      priceAvailable: item.priceAvailable,
-      priceMessage: item.message,
-      priceListCode: item.priceListCode,
-      warehouseCode: item.warehouseCode || servingWarehouse?.code || 'WH-MB01',
-      warehouseName: item.warehouseName || servingWarehouse?.name || 'Kho Tổng Miền Bắc',
-      physicalStock: stock.physicalStock,
-      reservedStock: stock.reservedStock,
-      availableStock: stock.availableStock,
-      availableUnits: (item.units || []).map((u) => ({
-        unitName: u.unitName,
-        conversionFactor: Number(u.conversionFactor),
-        isBaseUnit: u.unitName.trim().toLowerCase() === item.baseUnit.trim().toLowerCase()
-      }))
-    };
-  });
+  return (Array.isArray(data) ? data : []).map((item) => mapProductOption(item, servingWarehouse));
+}
+
+/** Đổi 1 sản phẩm gợi ý từ Backend sang dạng dùng ở màn lên đơn. */
+function mapProductOption(
+  item: ProductOptionBackendResponse,
+  servingWarehouse?: { code: string; name: string }
+): OrderProductCatalogItem {
+  const stock = getStockInfoForProduct(
+    item.sku,
+    item.availableStock,
+    item.physicalStock,
+    item.reservedStock
+  );
+  return {
+    id: String(item.productId),
+    sku: item.sku,
+    name: item.name,
+    category: '',
+    baseUnit: item.baseUnit,
+    basePrice: Number(item.unitPrice || 0),
+    floorPrice: item.floorPrice != null ? Number(item.floorPrice) : undefined,
+    priceAvailable: item.priceAvailable,
+    priceMessage: item.message,
+    priceListCode: item.priceListCode,
+    warehouseCode: item.warehouseCode || servingWarehouse?.code || 'WH-MB01',
+    warehouseName: item.warehouseName || servingWarehouse?.name || 'Kho Tổng Miền Bắc',
+    physicalStock: stock.physicalStock,
+    reservedStock: stock.reservedStock,
+    availableStock: stock.availableStock,
+    availableUnits: (item.units || []).map((u) => ({
+      unitName: u.unitName,
+      conversionFactor: Number(u.conversionFactor),
+      isBaseUnit: u.unitName.trim().toLowerCase() === item.baseUnit.trim().toLowerCase()
+    }))
+  };
+}
+
+/** Một trang sản phẩm gợi ý (màn lên đơn tải dần, cuộn xuống mới lấy thêm). */
+export interface ProductOptionPage {
+  items: OrderProductCatalogItem[];
+  page: number;
+  totalElements: number;
+  hasMore: boolean;
+}
+
+/**
+ * Góp ý của thầy: không lấy hết sản phẩm một lần mà chia nhỏ để tải nhanh.
+ * Gọi /api/orders/product-options/paged, mỗi lần `size` sản phẩm (mặc định 10).
+ */
+export async function fetchBackendProductOptionsPage(
+  customerId: string | number,
+  keyword: string = '',
+  page: number = 0,
+  size: number = 10,
+  servingWarehouse?: { code: string; name: string }
+): Promise<ProductOptionPage> {
+  const kw = keyword.trim();
+  if (!customerId || !/^\d+$/.test(String(customerId))) {
+    return { items: [], page: 0, totalElements: 0, hasMore: false };
+  }
+  const params = new URLSearchParams({ customerId: String(customerId), page: String(page), size: String(size) });
+  if (kw) params.set('keyword', kw);
+  const res = await callBackend(`${API_BASE_URL}/api/orders/product-options/paged?${params.toString()}`);
+  if (!res.ok) throw new Error(await readBackendError(res, 'Không tải được danh sách sản phẩm'));
+  const data: {
+    content?: ProductOptionBackendResponse[];
+    page?: number;
+    totalElements?: number;
+    totalPages?: number;
+  } = await res.json();
+  const content = Array.isArray(data.content) ? data.content : [];
+  const currentPage = data.page ?? page;
+  const totalPages = data.totalPages ?? 0;
+  return {
+    items: content.map((item) => mapProductOption(item, servingWarehouse)),
+    page: currentPage,
+    totalElements: data.totalElements ?? content.length,
+    hasMore: currentPage + 1 < totalPages,
+  };
 }
 
 /**
