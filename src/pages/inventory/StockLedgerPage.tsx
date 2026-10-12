@@ -31,7 +31,11 @@ import { NumberInput } from '../../components/common/NumberInput';
  */
 export const StockLedgerPage: React.FC = () => {
   const navigate = useNavigate();
-  const { showToast } = useAuth();
+  const { showToast, currentRole } = useAuth();
+
+  // Mục 12 (góp ý GV): chặn ở cả FE và BE - chỉ NV kho, QL kho, Admin được lập / xác nhận / sửa;
+  // Kế toán, QL kinh doanh chỉ xem.
+  const canEditInventory = ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'].includes(currentRole ?? '');
 
   const [configs, setConfigs] = useState<MinStockThresholdConfig[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -140,6 +144,8 @@ export const StockLedgerPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {canEditInventory && (
+          <>
           <button
             type="button"
             onClick={() => navigate('/inventory/receipts')}
@@ -156,6 +162,8 @@ export const StockLedgerPage: React.FC = () => {
             <ArrowRightLeft size={14} />
             <span>Lập Phiếu Chuyển Kho</span>
           </button>
+          </>
+          )}
         </div>
       </div>
 
@@ -366,6 +374,7 @@ export const StockLedgerPage: React.FC = () => {
                             <span className="font-bold text-gray-800">
                               {item.minThreshold.toLocaleString('vi-VN')} {item.unit}
                             </span>
+                            {canEditInventory && (
                             <button
                               type="button"
                               onClick={() => handleStartEdit(item)}
@@ -374,6 +383,7 @@ export const StockLedgerPage: React.FC = () => {
                             >
                               <Edit2 size={12} />
                             </button>
+                            )}
                           </div>
                         )}
                       </td>
@@ -412,7 +422,7 @@ export const StockLedgerPage: React.FC = () => {
                       {/* Thao tác */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {isBelow && (
+                          {isBelow && canEditInventory && (
                             <button
                               type="button"
                               onClick={() =>
@@ -432,6 +442,7 @@ export const StockLedgerPage: React.FC = () => {
                             </button>
                           )}
 
+                          {canEditInventory && (
                           <button
                             type="button"
                             onClick={() => handleStartEdit(item)}
@@ -439,6 +450,7 @@ export const StockLedgerPage: React.FC = () => {
                           >
                             Định mức
                           </button>
+                          )}
                         </div>
                       </td>
                     </tr>

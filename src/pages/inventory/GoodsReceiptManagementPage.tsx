@@ -24,7 +24,11 @@ import { useLocation } from '../../routes/Router';
 import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const GoodsReceiptManagementPage: React.FC = () => {
-  const { user, showToast } = useAuth();
+  const { user, showToast, currentRole } = useAuth();
+
+  // Mục 12 (góp ý GV): chặn ở cả FE và BE - chỉ NV kho, QL kho, Admin được lập / xác nhận / sửa;
+  // Kế toán, QL kinh doanh chỉ xem.
+  const canEditInventory = ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'].includes(currentRole ?? '');
   const { pathname } = useLocation();
 
   const searchParams = new URLSearchParams(
@@ -44,7 +48,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('');
 
   // Modals
-  const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(() => shouldOpenModal);
+  const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(() => shouldOpenModal && canEditInventory);
   const [initialWarehouseCode, setInitialWarehouseCode] = useState<string>(() => paramWarehouseCode);
   const [initialSku, setInitialSku] = useState<string>(() => paramSku);
   const [initialQty, setInitialQty] = useState<number | undefined>(() => paramQty);
@@ -123,6 +127,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
             <span className="hidden sm:inline">Làm mới</span>
           </button>
 
+          {canEditInventory && (
           <button
             type="button"
             onClick={() => setIsFormModalOpen(true)}
@@ -132,6 +137,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
             <Plus size={16} />
             <span>Lập Phiếu Nhập Kho</span>
           </button>
+          )}
         </div>
       </div>
 
@@ -294,7 +300,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
                         </button>
 
                         {/* AC4: Nút xác nhận cộng tồn đối với phiếu nháp */}
-                        {r.status === 'DRAFT' && (
+                        {r.status === 'DRAFT' && canEditInventory && (
                           <button
                             type="button"
                             onClick={() => handleConfirmDirect(r.id)}
