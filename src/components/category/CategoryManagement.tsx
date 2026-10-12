@@ -331,7 +331,7 @@ export const CategoryManagement: React.FC = () => {
     setAssignFilter('ALL');
     setLoadingSystemProducts(true);
     try {
-      const res = await productService.getProducts({ page: 0, size: 200 });
+      const res = await productService.getProducts({ page: 0, size: 50 });
       setSystemProducts(res.products || []);
     } catch (err) {
       showToast(errMsg(err, 'Không tải được danh sách sản phẩm hệ thống.'), 'error');
@@ -747,7 +747,7 @@ export const CategoryManagement: React.FC = () => {
       {/* Toast thông báo nhanh */}
       {toastMessage && (
         <div
-          className={`fixed top-4 right-4 z-[10000] px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 border text-xs font-medium animate-bounce transition-all ${toastMessage.type === 'error'
+          className={`fixed bottom-6 right-6 z-[10000] px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 border text-xs font-medium transition-all ${toastMessage.type === 'error'
             ? 'bg-red-50 border-red-200 text-red-700'
             : toastMessage.type === 'info'
               ? 'bg-blue-50 border-blue-200 text-blue-700'

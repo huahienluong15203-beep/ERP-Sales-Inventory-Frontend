@@ -80,7 +80,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
 
     setLoadingProducts(true);
     productService
-      .getProducts({ size: 100, status: 'ACTIVE' })
+      .getProducts({ size: 50, status: 'ACTIVE' })
       .then((res) => {
         setProducts(res.products);
         setLoadingProducts(false);

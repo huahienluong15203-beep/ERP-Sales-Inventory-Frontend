@@ -299,8 +299,8 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
 
     setLoadingData(true);
     Promise.all([
-      fetchSuppliers({ size: 100 }).catch(() => ({ content: [] })),
-      productService.getProducts({ size: 200, status: 'ACTIVE' }).catch(() => ({ products: [] }))
+      fetchSuppliers({ size: 50 }).catch(() => ({ content: [] })),
+      productService.getProducts({ size: 50, status: 'ACTIVE' }).catch(() => ({ products: [] }))
     ])
       .then(([supRes, prodRes]) => {
         const sups = supRes.content && supRes.content.length > 0 ? supRes.content : INITIAL_SUPPLIERS;

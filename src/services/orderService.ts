@@ -430,9 +430,30 @@ export function buildBackendRequest(params: {
   };
 }
 
+interface CachedProductOptions {
+  items: OrderProductCatalogItem[];
+  timestamp: number;
+}
+
+const productOptionsCache = new Map<string, CachedProductOptions>();
+const PRODUCT_OPTIONS_CACHE_TTL_MS = 3 * 60 * 1000; // Lưu cache trong 3 phút
+
+export function clearProductOptionsCache(customerId?: string | number) {
+  if (customerId) {
+    for (const key of productOptionsCache.keys()) {
+      if (key.startsWith(`${customerId}-`)) {
+        productOptionsCache.delete(key);
+      }
+    }
+  } else {
+    productOptionsCache.clear();
+  }
+}
+
 /**
  * 1. Lấy danh sách sản phẩm theo bảng giá của đại lý (kèm tìm kiếm nếu có) (S3-09)
  * Tự động tải sản phẩm của bảng giá đại lý ngay khi mở modal.
+ * Áp dụng cache trong bộ nhớ + lọc nhanh phía client để triệt tiêu độ trễ khi tìm kiếm.
  */
 export async function fetchBackendProductOptions(
   customerId: string | number,
@@ -442,13 +463,47 @@ export async function fetchBackendProductOptions(
   const kw = keyword.trim();
   if (!customerId || !/^\d+$/.test(String(customerId))) return [];
 
+  const baseKey = `${customerId}-${servingWarehouse?.code || 'default'}`;
+  const cached = productOptionsCache.get(baseKey);
+  const isCacheFresh = cached && Date.now() - cached.timestamp < PRODUCT_OPTIONS_CACHE_TTL_MS;
+
+  // Nếu người dùng không gõ từ khóa và đã có cache -> trả về tức thì trong 0ms
+  if (!kw && isCacheFresh) {
+    return cached.items;
+  }
+
+  // Nếu người dùng gõ từ khóa và đã có toàn bộ danh mục trong cache -> lọc tức thì trong 0ms
+  if (kw && isCacheFresh) {
+    const q = kw.toLowerCase();
+    const localMatches = cached.items.filter(
+      (item) =>
+        item.sku.toLowerCase().includes(q) ||
+        item.name.toLowerCase().includes(q)
+    );
+    if (localMatches.length > 0) {
+      return localMatches;
+    }
+  }
+
   const url = kw
     ? `${API_BASE_URL}/api/orders/product-options?customerId=${customerId}&keyword=${encodeURIComponent(kw)}`
     : `${API_BASE_URL}/api/orders/product-options?customerId=${customerId}`;
   const res = await callBackend(url);
   if (!res.ok) throw new Error(await readBackendError(res, 'Không tải được danh sách sản phẩm'));
   const data: ProductOptionBackendResponse[] = await res.json();
-  return (Array.isArray(data) ? data : []).map((item) => mapProductOption(item, servingWarehouse));
+  const mappedItems: OrderProductCatalogItem[] = (Array.isArray(data) ? data : []).map((item) =>
+    mapProductOption(item, servingWarehouse)
+  );
+
+  // Nếu là tải toàn bộ bảng giá (không có keyword), lưu vào cache
+  if (!kw) {
+    productOptionsCache.set(baseKey, {
+      items: mappedItems,
+      timestamp: Date.now()
+    });
+  }
+
+  return mappedItems;
 }
 
 /** Đổi 1 sản phẩm gợi ý từ Backend sang dạng dùng ở màn lên đơn. */
@@ -528,6 +583,29 @@ export async function fetchBackendProductOptionsPage(
     totalElements: data.totalElements ?? content.length,
     hasMore: currentPage + 1 < totalPages,
   };
+}ervingWarehouse?.code || 'WH-MB01',
+      warehouseName: item.warehouseName || servingWarehouse?.name || 'Kho Tổng Miền Bắc',
+      physicalStock: stock.physicalStock,
+      reservedStock: stock.reservedStock,
+      availableStock: stock.availableStock,
+      availableUnits: (item.units || []).map((u) => ({
+        unitName: u.unitName,
+        conversionFactor: Number(u.conversionFactor),
+        isBaseUnit: u.unitName.trim().toLowerCase() === item.baseUnit.trim().toLowerCase()
+      }))
+    };
+  });
+
+  // Nếu là tải toàn bộ bảng giá (không có keyword), lưu vào cache
+  if (!kw) {
+    productOptionsCache.set(baseKey, {
+      items: mappedItems,
+      timestamp: Date.now()
+    });
+  }
+
+  return mappedItems;
+>>>>>>> Stashed changes
 }
 
 /**

@@ -4,8 +4,8 @@ import type { OrderItem } from '../../types/order';
 import type { OrderProductCatalogItem } from '../../services/orderService';
 import { fetchBackendProductOptionsPage, formatCurrencyVND, getServingWarehouseInfo } from '../../services/orderService';
 
-/** Mỗi lần chỉ tải 10 sản phẩm, cuộn xuống cuối danh sách mới tải thêm (góp ý của thầy). */
-const PAGE_SIZE = 10;
+/** Cố định tải 50 sản phẩm ban đầu, cuộn hoặc bấm Xem thêm để lấy tiếp. */
+const PAGE_SIZE = 50;
 import {
   Search,
   X,
@@ -75,8 +75,8 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
     setLoadingBackend(true);
     setLoadingMore(false);
 
-    // Nếu kw rỗng thì tải ngay không delay; nếu có gõ từ khóa thì debounce 250ms
-    const delay = kw === '' ? 0 : 250;
+    // Nếu kw rỗng thì tải ngay không delay; nếu có gõ từ khóa thì debounce 120ms
+    const delay = kw === '' ? 0 : 120;
     const timer = setTimeout(() => {
       fetchBackendProductOptionsPage(agency.id, kw, 0, PAGE_SIZE, servingWarehouse)
         .then((res) => {
@@ -140,6 +140,7 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setKeyword('');
+      setDisplayLimit(50);
     }
   }, [isOpen]);
 
@@ -344,7 +345,8 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
               )}
             </div>
           ) : (
-            products.map((p) => {
+            <>
+              {products.slice(0, displayLimit).map((p) => {
               const cartItem = cartItems?.find((i) => i.sku === p.sku);
               const cartBaseQty = cartItem ? cartItem.baseQuantity : 0;
               const availableStock = p.availableStock ?? 0;
@@ -495,7 +497,8 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
                   )}
                 </div>
               );
-            })
+            })}
+          </>
           )}
 
           {/* Tải thêm khi cuộn tới cuối; nút dự phòng khi danh sách chưa đủ dài để cuộn */}
@@ -507,9 +510,13 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
                 <button
                   type="button"
                   onClick={loadMore}
-                  className="px-3 py-1.5 text-xs rounded-xl bg-orange-50 text-[#F85606] font-medium border border-orange-200 hover:bg-orange-100 cursor-pointer"
+                  className="px-4 py-2 text-xs font-bold text-[#F85606] bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
                 >
-                  Xem thêm sản phẩm ({totalElements - products.length} còn lại)
+                  <Plus size={14} />
+                  <span>Xem thêm</span>
+                  <span className="text-[10px] text-orange-600 font-normal">
+                    (còn {totalElements - products.length} mặt hàng)
+                  </span>
                 </button>
               )}
             </div>

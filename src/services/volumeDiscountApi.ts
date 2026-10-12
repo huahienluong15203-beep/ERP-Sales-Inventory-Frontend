@@ -244,7 +244,7 @@ async function patchStatus(id: string | number, status: 'ACTIVE' | 'INACTIVE'): 
 /** Danh sách sản phẩm đang kinh doanh để chọn trong form / mô phỏng */
 export async function fetchDiscountProductOptions(): Promise<CatalogProduct[]> {
   const data = await requestJson<{ content: BeProduct[] }>(
-    `${API_BASE_URL}/api/products?page=0&size=200&status=ACTIVE`,
+    `${API_BASE_URL}/api/products?page=0&size=50&status=ACTIVE`,
     { method: 'GET' },
     'Không tải được danh sách sản phẩm'
   );
