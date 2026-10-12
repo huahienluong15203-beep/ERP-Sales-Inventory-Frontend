@@ -44,6 +44,7 @@ import {
 import { OrderDetailModal } from '../../components/order/OrderDetailModal';
 import { CustomerReorderModal, type ReorderItemDraft } from '../../components/order/CustomerReorderModal';
 import { SearchSelect } from '../../components/common/SearchSelect';
+import { NumberInput } from '../../components/common/NumberInput';
 
 // Giao diện một món trong giỏ hàng đại lý B2B
 interface CartItem {
@@ -1403,10 +1404,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, inCartCount, onAddTo
           >
             <Minus size={13} />
           </button>
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
+          <NumberInput
             value={qtyText}
             onChange={handleQtyChange}
             onBlur={handleQtyBlur}
@@ -1555,10 +1553,7 @@ const PortalCartItemRow: React.FC<PortalCartItemRowProps> = ({
           >
             <Minus size={13} />
           </button>
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
+          <NumberInput
             value={localQtyText}
             onChange={handleQtyChange}
             onBlur={handleQtyBlur}

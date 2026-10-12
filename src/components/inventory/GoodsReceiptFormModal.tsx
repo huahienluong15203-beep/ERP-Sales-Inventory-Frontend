@@ -23,6 +23,7 @@ import { createGoodsReceipt } from '../../services/inventoryReceiptApi';
 import { formatCurrencyVND, formatQuantity } from '../../services/orderService';
 import { useAuth } from '../../contexts/AuthContext';
 import { SearchSelect } from '../common/SearchSelect';
+import { NumberInput } from '../common/NumberInput';
 
 const FALLBACK_PRODUCTS: Product[] = [
   {
@@ -232,10 +233,7 @@ const ReceiptLineQuantityInput: React.FC<ReceiptLineQuantityInputProps> = ({
       >
         <Minus size={13} />
       </button>
-      <input
-        type="text"
-        inputMode="numeric"
-        pattern="[0-9]*"
+      <NumberInput
         value={localText}
         onChange={handleInputChange}
         onBlur={handleBlur}

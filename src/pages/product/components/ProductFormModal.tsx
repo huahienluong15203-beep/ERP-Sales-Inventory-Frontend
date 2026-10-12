@@ -11,6 +11,7 @@ import { fetchCategories, type CategoryWithCount } from '../../../services/categ
 import { useAuth } from '../../../contexts/AuthContext';
 import { Icons } from '../../../components/common/Icons';
 import { SearchSelect } from '../../../components/common/SearchSelect';
+import { NumberInput } from '../../../components/common/NumberInput';
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -531,8 +532,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               {canEditCost ? (
                 <div>
                   <div className="flex rounded-xl border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-500 transition-all overflow-hidden min-h-[44px]">
-                    <input
-                      type="number"
+                    <NumberInput
                       min="0"
                       step="1000"
                       value={costPrice}

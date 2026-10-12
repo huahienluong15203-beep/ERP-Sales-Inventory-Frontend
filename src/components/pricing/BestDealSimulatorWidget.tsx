@@ -9,6 +9,7 @@ import {
   fetchDiscountProductOptions
 } from '../../services/volumeDiscountApi';
 import { SearchSelect } from '../common/SearchSelect';
+import { NumberInput } from '../common/NumberInput';
 
 interface BestDealSimulatorWidgetProps {
   initialSku?: string;
@@ -184,8 +185,7 @@ export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = (
               Số lượng mua ({currentProduct.unit})
             </label>
             <div className="relative">
-              <input
-                type="number"
+              <NumberInput
                 min="1"
                 step="1"
                 value={quantity}
@@ -238,8 +238,7 @@ export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = (
               Giá niêm yết gốc (VND/{currentProduct.unit})
             </label>
             <div className="relative">
-              <input
-                type="number"
+              <NumberInput
                 min="0"
                 step="1000"
                 placeholder="Tự tra theo bảng giá"

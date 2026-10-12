@@ -3,6 +3,7 @@ import type { OrderItem } from '../../types/order';
 import { formatCurrencyVND } from '../../services/orderService';
 import { Trash2, Plus, Minus, Tag, Edit, Check, X, RotateCw, AlertTriangle, Package } from '../common/Icons';
 import { SearchSelect } from '../common/SearchSelect';
+import { NumberInput } from '../common/NumberInput';
 
 interface OrderItemRowProps {
   item: OrderItem;
@@ -254,10 +255,7 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
             >
               <Minus size={14} />
             </button>
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
+            <NumberInput
               value={localQtyText}
               onChange={handleQuantityChange}
               onBlur={handleQuantityBlur}
@@ -338,8 +336,7 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
             {isEditingPrice ? (
               <div className="flex items-center gap-1.5 flex-wrap">
                 <div className="relative">
-                  <input
-                    type="number"
+                  <NumberInput
                     min={0}
                     step={1000}
                     value={priceInput}

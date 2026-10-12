@@ -21,6 +21,7 @@ import {
 import { useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
 import { SearchSelect } from '../../components/common/SearchSelect';
+import { NumberInput } from '../../components/common/NumberInput';
 
 /**
  * S5-09 (Nguyễn Văn Minh): Sổ Tồn Kho & Khai Báo Ngưỡng Tồn Tối Thiểu
@@ -335,8 +336,7 @@ export const StockLedgerPage: React.FC = () => {
                       <td className="py-3.5 px-4 text-center">
                         {isEditing ? (
                           <div className="flex items-center justify-center gap-1">
-                            <input
-                              type="number"
+                            <NumberInput
                               min="0"
                               value={editMinValue}
                               onChange={(e) => setEditMinValue(Math.max(0, Number(e.target.value)))}

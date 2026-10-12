@@ -17,6 +17,7 @@ import type { Product } from '../../types/product';
 import { createStockTransfer } from '../../services/stockTransferApi';
 import { useAuth } from '../../contexts/AuthContext';
 import { SearchSelect } from '../common/SearchSelect';
+import { NumberInput } from '../common/NumberInput';
 
 interface StockTransferFormModalProps {
   isOpen: boolean;
@@ -509,8 +510,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
 
                             {/* Số lượng chuyển */}
                             <td className="py-2.5 px-3 text-center">
-                              <input
-                                type="number"
+                              <NumberInput
                                 min="1"
                                 value={line.transferQuantity}
                                 onChange={(e) =>

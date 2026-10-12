@@ -14,6 +14,7 @@ import {
 } from '../../services/volumeDiscountApi';
 import type { DiscountCategoryOption } from '../../services/volumeDiscountApi';
 import { SearchSelect } from '../common/SearchSelect';
+import { NumberInput } from '../common/NumberInput';
 
 interface VolumeDiscountFormModalProps {
   isOpen: boolean;
@@ -650,8 +651,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                         <label className="mb-1 block text-[11px] font-semibold text-gray-700">
                           Từ số lượng (≥)
                         </label>
-                        <input
-                          type="number"
+                        <NumberInput
                           min="1"
                           step="1"
                           required
@@ -683,8 +683,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                           </div>
                         ) : (
                           <div className="relative">
-                            <input
-                              type="number"
+                            <NumberInput
                               min={tier.minQuantity}
                               step="1"
                               value={tier.maxQuantity ?? ''}
@@ -732,8 +731,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                           Mức giảm ({tier.discountType === 'PERCENT' ? '%' : 'VND/đv'})
                         </label>
                         <div className="relative">
-                          <input
-                            type="number"
+                          <NumberInput
                             min="0"
                             step="any"
                             max={tier.discountType === 'PERCENT' ? 99 : undefined}

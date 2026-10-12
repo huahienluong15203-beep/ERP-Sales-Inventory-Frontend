@@ -6,6 +6,7 @@ import { productService } from '../../services/productService';
 import type { ProductOptionItem } from '../../services/productService';
 import { Icons } from '../common/Icons';
 import { SearchSelect } from '../common/SearchSelect';
+import { NumberInput } from '../common/NumberInput';
 
 interface PriceListFormModalProps {
   initialData?: PriceList | null;
@@ -594,8 +595,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                             </span>
                           </td>
                           <td className="py-2 px-3">
-                            <input
-                              type="number"
+                            <NumberInput
                               value={item.price}
                               onChange={(e) => handleUpdateItem(originalIndex, 'price', e.target.value)}
                               placeholder="250000"
@@ -604,8 +604,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                             />
                           </td>
                           <td className="py-2 px-3">
-                            <input
-                              type="number"
+                            <NumberInput
                               value={item.floorPrice}
                               onChange={(e) => handleUpdateItem(originalIndex, 'floorPrice', e.target.value)}
                               placeholder="220000"

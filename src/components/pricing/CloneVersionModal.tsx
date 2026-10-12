@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { PriceList, PriceListRequest, PriceListItemRequest } from '../../types/pricing';
 import { clonePriceListVersion } from '../../services/pricingApi';
 import { Icons } from '../common/Icons';
+import { NumberInput } from '../common/NumberInput';
 
 interface CloneVersionModalProps {
   originalList: PriceList;
@@ -255,8 +256,7 @@ export const CloneVersionModal: React.FC<CloneVersionModalProps> = ({
                           {it.productName}
                         </td>
                         <td className="py-2 px-3 text-right">
-                          <input
-                            type="number"
+                          <NumberInput
                             value={it.price}
                             onChange={(e) => handleUpdateItem(idx, 'price', e.target.value)}
                             className="w-28 px-2 py-1 text-xs border border-gray-300 rounded-lg text-right font-semibold text-emerald-600"
@@ -264,8 +264,7 @@ export const CloneVersionModal: React.FC<CloneVersionModalProps> = ({
                           />
                         </td>
                         <td className="py-2 px-3 text-right">
-                          <input
-                            type="number"
+                          <NumberInput
                             value={it.floorPrice}
                             onChange={(e) => handleUpdateItem(idx, 'floorPrice', e.target.value)}
                             className={`w-28 px-2 py-1 text-xs border rounded-lg text-right font-semibold ${

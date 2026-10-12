@@ -6,6 +6,7 @@ import { productService } from '../../services/productService';
 import type { ProductOptionItem } from '../../services/productService';
 import { Icons } from '../common/Icons';
 import { SearchSelect } from '../common/SearchSelect';
+import { NumberInput } from '../common/NumberInput';
 
 export const PriceLookupWidget: React.FC = () => {
   const [customerGroup, setCustomerGroup] = useState<CustomerGroupType>('DEALER_LEVEL_1');
@@ -231,8 +232,7 @@ export const PriceLookupWidget: React.FC = () => {
               <label className="text-[11px] uppercase tracking-wider font-semibold text-gray-500 block mb-1">
                 Thử giá báo khách (Simulate)
               </label>
-              <input
-                type="number"
+              <NumberInput
                 value={testSimulatedPrice}
                 onChange={(e) => setTestSimulatedPrice(e.target.value)}
                 placeholder="Nhập giá dự kiến báo..."
