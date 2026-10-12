@@ -685,7 +685,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
       {/* DRAWER GIỎ HÀNG & TÍNH TOÁN CÔNG NỢ (CART DRAWER - AC2) */}
       {/* ============================================================== */}
       {isCartDrawerOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
+        <div className="fixed inset-0 z-[9999] overflow-hidden">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
@@ -935,7 +935,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
       {/* 5. MODAL CHÚC MỪNG GỬI ĐƠN HÀNG THÀNH CÔNG (AC3) */}
       {/* ============================================================== */}
       {successOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-md">
               <CheckCircle2 size={36} />

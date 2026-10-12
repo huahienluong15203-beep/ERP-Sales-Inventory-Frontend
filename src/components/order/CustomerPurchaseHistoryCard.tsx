@@ -231,7 +231,7 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
             </div>
           )}
 
-          {!loading && activeHistoryData && (
+          {!loading && activeHistoryData && activeHistoryData.frequentProducts.length > 0 && (
             <>
 
               {/* S4-04 AC1: DANH SÁCH MẶT HÀNG ĐẠI LÝ ĐÃ MUA TRONG 3 THÁNG GẦN NHẤT KÈM SỐ LƯỢNG BÌNH QUÂN */}
@@ -267,8 +267,9 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                     <p className="text-xs font-medium">Không tìm thấy mặt hàng nào trong lịch sử phù hợp với từ khóa.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {filteredProducts.map((prod) => {
+                  <div className="max-h-[500px] overflow-y-auto pr-1.5 pb-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {filteredProducts.map((prod) => {
                       const inCartQty = cartSkuMap.get(prod.sku);
                       const isAlreadyInCart = inCartQty !== undefined && inCartQty > 0;
                       const hasStock = (prod.availableInPreferredUnit ?? 10) > 0;
@@ -371,13 +372,14 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                             <Plus size={14} />
                             <span>
                               {isAlreadyInCart
-                                ? `Thêm tiếp (+${Math.max(1, Math.round(prod.avgQuantityPerOrder))})`
+                                ? `Thêm tiếp (+${Math.max(1, Math.round(prod.avgQuantityPerOrder))} ${prod.preferredUnit})`
                                 : `+ Gợi ý thêm (${Math.max(1, Math.round(prod.avgQuantityPerOrder))} ${prod.preferredUnit})`}
                             </span>
                           </button>
                         </div>
                       );
                     })}
+                    </div>
                   </div>
                 )}
               </div>
