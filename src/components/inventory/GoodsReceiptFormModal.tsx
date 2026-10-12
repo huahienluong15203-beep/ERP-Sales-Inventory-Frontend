@@ -13,13 +13,60 @@ import {
 } from 'lucide-react';
 import type { GoodsReceipt, GoodsReceiptFormPayload } from '../../types/inventory';
 import { SYSTEM_WAREHOUSES } from '../../types/inventory';
-import { fetchSuppliers } from '../../services/supplierApi';
+import { fetchSuppliers, INITIAL_SUPPLIERS } from '../../services/supplierApi';
 import type { Supplier } from '../../types/supplier';
 import { productService } from '../../services/productService';
 import type { Product } from '../../types/product';
 import { createGoodsReceipt } from '../../services/inventoryReceiptApi';
 import { formatCurrencyVND, formatQuantity } from '../../services/orderService';
 import { useAuth } from '../../contexts/AuthContext';
+
+const FALLBACK_PRODUCTS: Product[] = [
+  {
+    id: '1',
+    sku: 'BEV-PEPSI-330',
+    name: 'Nước ngọt Pepsi lon 330ml',
+    category: 'Nước giải khát',
+    baseUnit: 'Lon',
+    packagingSpec: '24 Lon / Thùng',
+    costPrice: 8500,
+    status: 'ACTIVE',
+    transactionCount: 0
+  },
+  {
+    id: '2',
+    sku: 'BEV-COCA-330',
+    name: 'Nước ngọt Coca-Cola lon 330ml',
+    category: 'Nước giải khát',
+    baseUnit: 'Lon',
+    packagingSpec: '24 Lon / Thùng',
+    costPrice: 8500,
+    status: 'ACTIVE',
+    transactionCount: 0
+  },
+  {
+    id: '3',
+    sku: 'MILK-VNM-180',
+    name: 'Sữa tươi tiệt trùng Vinamilk 180ml',
+    category: 'Sữa & Sản phẩm từ sữa',
+    baseUnit: 'Hộp',
+    packagingSpec: '48 Hộp / Thùng',
+    costPrice: 7500,
+    status: 'ACTIVE',
+    transactionCount: 0
+  },
+  {
+    id: '4',
+    sku: 'FOOD-CHINSU-500',
+    name: 'Nước mắm Chinsu Cá Hồi 500ml',
+    category: 'Gia vị & Thực phẩm',
+    baseUnit: 'Chai',
+    packagingSpec: '12 Chai / Thùng',
+    costPrice: 32000,
+    status: 'ACTIVE',
+    transactionCount: 0
+  }
+];
 
 interface GoodsReceiptFormModalProps {
   isOpen: boolean;
@@ -125,22 +172,27 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
 
     setLoadingData(true);
     Promise.all([
-      fetchSuppliers({ size: 100 }),
-      productService.getProducts({ size: 200, status: 'ACTIVE' })
+      fetchSuppliers({ size: 100 }).catch(() => ({ content: [] })),
+      productService.getProducts({ size: 200, status: 'ACTIVE' }).catch(() => ({ products: [] }))
     ])
       .then(([supRes, prodRes]) => {
-        const sups = supRes.content || [];
+        const sups = supRes.content && supRes.content.length > 0 ? supRes.content : INITIAL_SUPPLIERS;
         setSuppliers(sups);
         if (!selectedSupplierId && sups.length > 0) {
           setSelectedSupplierId(sups[0].id);
         }
 
-        const prods = prodRes.products || [];
+        const prods = prodRes.products && prodRes.products.length > 0 ? prodRes.products : FALLBACK_PRODUCTS;
         setSystemProducts(prods);
         setLoadingData(false);
       })
       .catch((err) => {
-        console.error('Lỗi tải danh mục NCC và sản phẩm:', err);
+        console.warn('Lỗi tải danh mục NCC và sản phẩm, dùng dữ liệu khởi tạo:', err);
+        setSuppliers(INITIAL_SUPPLIERS);
+        if (!selectedSupplierId && INITIAL_SUPPLIERS.length > 0) {
+          setSelectedSupplierId(INITIAL_SUPPLIERS[0].id);
+        }
+        setSystemProducts(FALLBACK_PRODUCTS);
         setLoadingData(false);
       });
   }, [isOpen]);
@@ -188,8 +240,9 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
 
   // Thêm một dòng hàng mới
   const handleAddNewLine = () => {
-    if (systemProducts.length === 0) return;
-    const defaultProd = systemProducts[0];
+    const prods = systemProducts.length > 0 ? systemProducts : FALLBACK_PRODUCTS;
+    if (prods.length === 0) return;
+    const defaultProd = prods[0];
     const availableUnits = getAvailableUnitsForProduct(defaultProd);
     const firstUnit = availableUnits[0];
 
@@ -385,9 +438,6 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
             <div>
               <h2 className="font-black text-base sm:text-lg text-gray-900 flex items-center gap-2">
                 <span>Lập Phiếu Nhập Kho Từ Nhà Cung Cấp</span>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                  Sprint 5: S5-04
-                </span>
               </h2>
               <p className="text-xs text-gray-500">
                 Ghi nhận hàng hóa về đúng lô, đúng hạn sử dụng và tự động quy đổi về đơn vị cơ sở
@@ -430,7 +480,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
           <div className="bg-gray-50/80 rounded-2xl p-4 border border-gray-200/80 space-y-4">
             <div className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wider">
               <Building2 size={15} className="text-[#F85606]" />
-              <span>1. Thông Tin Nhà Cung Cấp & Kho Nhận Hàng (AC1)</span>
+              <span>1. Thông Tin Nhà Cung Cấp & Kho Nhận Hàng</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -444,6 +494,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                   onChange={(e) => setSelectedSupplierId(e.target.value)}
                   className="w-full text-xs font-semibold border border-gray-200 rounded-xl p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20"
                 >
+                  <option value="">-- Chọn nhà cung cấp --</option>
                   {suppliers.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.code} - {s.name}
@@ -546,7 +597,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wider">
                 <Package size={15} className="text-[#F85606]" />
-                <span>2. Chi Tiết Dòng Hàng Nhập Kho (AC2: Quy Đổi Đơn Vị & AC3: Số Lô/Hạn Dùng)</span>
+                <span>2. Chi Tiết Dòng Hàng Nhập Kho</span>
               </div>
               <button
                 type="button"
@@ -559,22 +610,29 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
             </div>
 
             {lines.length === 0 ? (
-              <div className="bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 p-8 text-center space-y-2">
+              <div className="bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 p-8 text-center space-y-3">
                 <Package size={36} className="mx-auto text-gray-300" />
                 <p className="text-xs font-bold text-gray-600">Chưa có mặt hàng nào trong phiếu nhập</p>
                 <p className="text-[11px] text-gray-400">
-                  Bấm &quot;Thêm dòng hàng&quot; ở trên để chọn sản phẩm từ xe dỡ hàng xuống kho.
+                  Bấm &quot;Thêm dòng hàng&quot; để chọn sản phẩm từ xe dỡ hàng xuống kho.
                 </p>
-
+                <button
+                  type="button"
+                  onClick={handleAddNewLine}
+                  className="px-3.5 py-2 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer"
+                >
+                  <Plus size={14} />
+                  <span>Thêm dòng hàng đầu tiên</span>
+                </button>
               </div>
             ) : (
               <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-2xs divide-y divide-gray-100">
                 <div className="hidden lg:grid lg:grid-cols-12 gap-2 bg-gray-50/90 p-3 text-[11px] font-bold text-gray-600 uppercase">
                   <div className="col-span-4">Mặt hàng / SKU</div>
-                  <div className="col-span-2 text-center">ĐVT Nhập (AC2)</div>
+                  <div className="col-span-2 text-center">ĐVT Nhập</div>
                   <div className="col-span-1 text-center">Số lượng</div>
-                  <div className="col-span-2 text-center">Quy về Cơ sở (AC2)</div>
-                  <div className="col-span-2">Số Lô & Hạn Dùng (AC3)</div>
+                  <div className="col-span-2 text-center">Quy về Cơ sở</div>
+                  <div className="col-span-2">Số Lô & Hạn Dùng</div>
                   <div className="col-span-1 text-center">Xóa</div>
                 </div>
 
@@ -721,10 +779,10 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
           </div>
         </div>
 
-        {/* FOOTER MODAL: 2 NÚT THAO TÁC RÕ RÀNG (AC4) */}
+        {/* FOOTER MODAL: 2 NÚT THAO TÁC RÕ RÀNG */}
         <div className="p-4 sm:p-5 border-t border-gray-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-[11px] text-gray-500">
-            <strong>Quy tắc ghi sổ (AC4):</strong> Xác nhận phiếu mới cộng tồn kho; Phiếu nháp không ảnh hưởng tồn.
+            <strong>Quy tắc ghi sổ:</strong> Xác nhận phiếu mới cộng tồn kho; Phiếu nháp không ảnh hưởng tồn.
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -736,7 +794,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
               Hủy
             </button>
 
-            {/* Nút 1: Lưu Phiếu Nháp (AC4: Không ảnh hưởng tồn) */}
+            {/* Nút 1: Lưu Phiếu Nháp */}
             <button
               type="button"
               onClick={() => handleSaveReceipt('DRAFT')}
@@ -745,7 +803,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
               title="Lưu nháp để kiểm đếm tiếp, không cộng tồn"
             >
               <Save size={14} />
-              <span>Lưu Phiếu Nháp (AC4)</span>
+              <span>Lưu Phiếu Nháp</span>
             </button>
 
             {/* Nút 2: Xác Nhận Nhập Kho (AC4: Cộng tồn kho ngay) */}

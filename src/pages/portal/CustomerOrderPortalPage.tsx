@@ -390,9 +390,13 @@ export const CustomerOrderPortalPage: React.FC = () => {
       {agencyError && (
         <div className="mb-4 bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3 text-rose-700 text-sm">
           <ShieldAlert size={18} className="shrink-0 mt-0.5" />
-          <div>
-            <div className="font-bold">Chưa đặt hàng được</div>
-            <div className="text-xs mt-0.5">{agencyError}</div>
+          <div className="flex-1">
+            <div className="font-bold">Chưa kết nối dữ liệu đại lý</div>
+            <div className="text-xs mt-0.5 text-rose-600">
+              {user?.role !== 'ROLE_CUSTOMER'
+                ? `Bạn đang đăng nhập với tài khoản ${user?.fullName || user?.username} (${user?.role || 'Admin'}). Cổng B2B Portal được thiết kế dành riêng cho tài khoản Đại lý (ROLE_CUSTOMER). Để trải nghiệm đặt hàng trực tuyến, vui lòng đăng nhập bằng tài khoản đại lý mẫu (ví dụ: daily_hn / Daily@123) và bật Backend Spring Boot.`
+                : `${agencyError}. Vui lòng kiểm tra kết nối máy chủ Backend và Database.`}
+            </div>
           </div>
         </div>
       )}

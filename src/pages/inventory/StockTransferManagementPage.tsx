@@ -112,21 +112,21 @@ export const StockTransferManagementPage: React.FC = () => {
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black bg-blue-100 text-blue-800 animate-pulse">
             <Truck size={13} className="text-blue-600" />
-            <span>Đang đi đường (AC2)</span>
+            <span>Đang đi đường</span>
           </span>
         );
       case 'COMPLETED':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
             <CheckCircle2 size={13} className="text-emerald-600" />
-            <span>Đã nhận đủ (AC3)</span>
+            <span>Đã nhận đủ</span>
           </span>
         );
       case 'DISCREPANCY_RESOLVED':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
             <AlertTriangle size={13} className="text-amber-600" />
-            <span>Nhận chênh lệch (AC4)</span>
+            <span>Nhận chênh lệch</span>
           </span>
         );
       case 'CANCELLED':
@@ -152,9 +152,6 @@ export const StockTransferManagementPage: React.FC = () => {
             <div>
               <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
                 <span>Điều Chuyển Kho Nội Bộ</span>
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                  Sprint 5: S5-07
-                </span>
               </h1>
               <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
                 Quản lý luân chuyển hàng giữa các kho chi nhánh và theo dõi chặt chẽ trạng thái hàng đi đường
@@ -190,7 +187,7 @@ export const StockTransferManagementPage: React.FC = () => {
             <Truck size={20} />
           </div>
           <div>
-            <div className="text-xs text-blue-600 font-bold">Đang đi đường (AC2)</div>
+            <div className="text-xs text-blue-600 font-bold">Đang đi đường</div>
             <div className="text-xl font-black text-blue-700">{stats.inTransit}</div>
           </div>
         </div>
@@ -200,7 +197,7 @@ export const StockTransferManagementPage: React.FC = () => {
             <CheckCircle2 size={20} />
           </div>
           <div>
-            <div className="text-xs text-emerald-600 font-bold">Đã nhận đủ (AC3)</div>
+            <div className="text-xs text-emerald-600 font-bold">Đã nhận đủ</div>
             <div className="text-xl font-black text-emerald-700">{stats.completed}</div>
           </div>
         </div>
@@ -210,7 +207,7 @@ export const StockTransferManagementPage: React.FC = () => {
             <AlertTriangle size={20} />
           </div>
           <div>
-            <div className="text-xs text-amber-600 font-bold">Chênh lệch (AC4)</div>
+            <div className="text-xs text-amber-600 font-bold">Chênh lệch</div>
             <div className="text-xl font-black text-amber-700">{stats.discrepancy}</div>
           </div>
         </div>
@@ -301,7 +298,7 @@ export const StockTransferManagementPage: React.FC = () => {
               <thead className="bg-gray-50/80 text-gray-700 font-bold uppercase text-[11px] border-b border-gray-200">
                 <tr>
                   <th className="py-3 px-4">Mã phiếu</th>
-                  <th className="py-3 px-4">Lộ trình chuyển (AC1)</th>
+                  <th className="py-3 px-4">Lộ trình chuyển</th>
                   <th className="py-3 px-4">Ngày chuyển</th>
                   <th className="py-3 px-4">Phương tiện / Tài xế</th>
                   <th className="py-3 px-4 text-center">Số lượng hàng</th>
@@ -321,7 +318,7 @@ export const StockTransferManagementPage: React.FC = () => {
                         <div className="text-[10px] text-gray-400">Người tạo: {item.createdBy}</div>
                       </td>
 
-                      {/* Lộ trình kho đi -> kho đến (AC1) */}
+                      {/* Lộ trình kho đi -> kho đến */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-1.5 font-bold text-gray-800">
                           <span className="text-rose-600">{item.sourceWarehouseName}</span>
@@ -380,11 +377,11 @@ export const StockTransferManagementPage: React.FC = () => {
                               className="px-2.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
                             >
                               <Truck size={13} />
-                              <span>Xuất kho (AC2)</span>
+                              <span>Xuất kho</span>
                             </button>
                           )}
 
-                          {/* Nút Kho đến nhận hàng nếu IN_TRANSIT (AC3, AC4) */}
+                          {/* Nút Kho đến nhận hàng nếu IN_TRANSIT */}
                           {item.status === 'IN_TRANSIT' && (
                             <button
                               type="button"
@@ -392,7 +389,7 @@ export const StockTransferManagementPage: React.FC = () => {
                               className="px-2.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
                             >
                               <CheckCircle2 size={13} />
-                              <span>Nhận hàng (AC3)</span>
+                              <span>Nhận hàng</span>
                             </button>
                           )}
                         </div>

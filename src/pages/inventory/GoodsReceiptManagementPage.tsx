@@ -91,9 +91,6 @@ export const GoodsReceiptManagementPage: React.FC = () => {
             <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
               Quản Lý Phiếu Nhập Kho Từ Nhà Cung Cấp
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800">
-              Sprint 5: S5-04
-            </span>
           </div>
           <p className="text-xs text-gray-500 mt-1">
             Ghi nhận hàng về đúng lô/hạn, quy đổi đơn vị cơ sở và quản lý cộng tồn kho khi xác nhận
@@ -118,7 +115,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
             id="create-receipt-btn"
           >
             <Plus size={16} />
-            <span>Lập Phiếu Nhập Kho (S5-04)</span>
+            <span>Lập Phiếu Nhập Kho</span>
           </button>
         </div>
       </div>

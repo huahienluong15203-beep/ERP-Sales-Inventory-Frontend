@@ -230,7 +230,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
       const created = await createStockTransfer(payload, user?.username || 'thukho');
       if (targetStatus === 'IN_TRANSIT') {
         showToast(
-          'Xuất kho & Vận chuyển thành công (AC2)',
+          'Xuất kho & Vận chuyển thành công',
           `Phiếu [${created.code}] đã trừ kho đi và ghi nhận trạng thái Đang trên đường. Kho đến chưa được cộng tồn.`,
           'success',
           5000
@@ -267,9 +267,6 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
             <div>
               <h2 className="font-black text-base sm:text-lg text-gray-900 flex items-center gap-2">
                 <span>Lập Phiếu Chuyển Kho Nội Bộ</span>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
-                  Sprint 5: S5-07
-                </span>
               </h2>
               <p className="text-xs text-gray-500">
                 Điều chuyển hàng giữa các kho chi nhánh, ghi nhận hàng đi đường chính xác
@@ -307,7 +304,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wider">
                 <Warehouse size={15} className="text-blue-600" />
-                <span>1. Chọn Kho Đi & Kho Đến (AC1)</span>
+                <span>1. Chọn Kho Đi & Kho Đến</span>
               </div>
               {sourceWarehouseCode === destWarehouseCode && (
                 <span className="text-[11px] font-bold text-rose-600 flex items-center gap-1 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
@@ -359,7 +356,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                   ))}
                 </select>
                 <p className="text-[11px] text-gray-400 italic">
-                  Tồn kho chỉ được CỘNG THỰC TẾ sau khi kho đến xác nhận nhận đủ (AC2, AC3)
+                  Tồn kho chỉ được CỘNG THỰC TẾ sau khi kho đến xác nhận nhận đủ
                 </p>
               </div>
             </div>
@@ -436,7 +433,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wider">
                 <Package size={15} className="text-blue-600" />
-                <span>2. Danh Sách Hàng Hóa & Số Lượng Điều Chuyển (AC1)</span>
+                <span>2. Danh Sách Hàng Hóa & Số Lượng Điều Chuyển</span>
               </div>
               <button
                 type="button"
@@ -592,21 +589,21 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
             )}
           </div>
 
-          {/* Banner giải thích trạng thái theo AC2 & AC3 */}
+          {/* Banner giải thích trạng thái */}
           <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-3.5 text-xs text-blue-900 space-y-1.5">
             <div className="font-bold flex items-center gap-1.5 text-blue-800">
               <Truck size={14} className="text-blue-600" />
-              <span>Quy trình ghi nhận điều chuyển hàng kho (S5-07):</span>
+              <span>Quy trình ghi nhận điều chuyển hàng kho:</span>
             </div>
             <ul className="list-disc list-inside text-[11px] text-blue-800/90 space-y-1 pl-1">
               <li>
                 <b>Lưu nháp:</b> Phiếu được lưu ở trạng thái nháp, chưa trừ kho xuất và chưa vận chuyển.
               </li>
               <li>
-                <b>Xuất kho & Vận chuyển (AC2):</b> Hệ thống trừ tồn kho đi và đánh dấu là <b>"Đang đi đường (IN_TRANSIT)"</b>. Kho đến <b>chưa được cộng tồn</b>.
+                <b>Xuất kho & Vận chuyển:</b> Hệ thống trừ tồn kho đi và đánh dấu là <b>"Đang đi đường (IN_TRANSIT)"</b>. Kho đến <b>chưa được cộng tồn</b>.
               </li>
               <li>
-                <b>Nhận hàng tại kho đến (AC3, AC4):</b> Khi xe đến nơi, thủ kho đến mở phiếu để xác nhận nhận đủ hoặc nhập lý do giải trình nếu phát hiện chênh lệch.
+                <b>Nhận hàng tại kho đến:</b> Khi xe đến nơi, thủ kho đến mở phiếu để xác nhận nhận đủ hoặc nhập lý do giải trình nếu phát hiện chênh lệch.
               </li>
             </ul>
           </div>
