@@ -113,7 +113,7 @@ export const StockLedgerPage: React.FC = () => {
   // Thống kê nhanh
   const stats = useMemo(() => {
     const total = configs.length;
-    const below = configs.filter((c) => c.isBelowThreshold).length;
+    const below = configs.filter((c) => c.isBelowThreshold || (c as any).belowThreshold || c.currentStock < c.minThreshold).length;
     const critical = configs.filter((c) => c.severity === 'CRITICAL').length;
     const safe = configs.filter((c) => c.severity === 'SAFE').length;
     return { total, below, critical, safe };
@@ -288,12 +288,13 @@ export const StockLedgerPage: React.FC = () => {
                 {configs.map((item) => {
                   const isEditing = editingId === item.id;
                   const isSaving = savingId === item.id;
+                  const isBelow = Boolean(item.isBelowThreshold || (item as any).belowThreshold || item.currentStock < item.minThreshold);
 
                   // AC2: Highlight nổi bật màu đỏ khi hàng dưới định mức
                   return (
                     <tr
                       key={item.id}
-                      className={`transition ${item.isBelowThreshold
+                      className={`transition ${isBelow
                           ? 'bg-rose-50/70 hover:bg-rose-50 border-l-4 border-rose-500'
                           : 'hover:bg-gray-50/70 border-l-4 border-transparent'
                         }`}
@@ -314,7 +315,7 @@ export const StockLedgerPage: React.FC = () => {
                       {/* Tồn hiện tại (AC2: đỏ rực in đậm nếu dưới ngưỡng) */}
                       <td className="py-3.5 px-4 text-center">
                         <span
-                          className={`inline-block font-black text-sm px-2.5 py-1 rounded-xl ${item.isBelowThreshold
+                          className={`inline-block font-black text-sm px-2.5 py-1 rounded-xl ${isBelow
                               ? 'bg-rose-600 text-white shadow-xs'
                               : 'bg-emerald-50 text-emerald-800'
                             }`}
@@ -411,10 +412,18 @@ export const StockLedgerPage: React.FC = () => {
                       {/* Thao tác */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {item.isBelowThreshold && (
+                          {isBelow && (
                             <button
                               type="button"
-                              onClick={() => navigate('/inventory/receipts')}
+                              onClick={() =>
+                                navigate(
+                                  `/inventory/receipts?warehouseCode=${encodeURIComponent(
+                                    item.warehouseCode
+                                  )}&sku=${encodeURIComponent(
+                                    item.productSku
+                                  )}&qty=${item.suggestedReorderQuantity}&create=1`
+                                )
+                              }
                               className="px-2.5 py-1 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
                               title="Lập phiếu nhập kho từ nhà cung cấp"
                             >

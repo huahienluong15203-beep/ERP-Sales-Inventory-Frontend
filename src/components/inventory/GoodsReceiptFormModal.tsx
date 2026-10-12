@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Plus,
+  Minus,
   Trash2,
   Building2,
   Warehouse,
@@ -71,6 +73,11 @@ const FALLBACK_PRODUCTS: Product[] = [
 interface GoodsReceiptFormModalProps {
   isOpen: boolean;
   receiptToEdit?: GoodsReceipt | null;
+  initialWarehouseCode?: string;
+  initialProductSku?: string;
+  initialProductName?: string;
+  initialQuantity?: number;
+  initialNote?: string;
   onClose: () => void;
   onSuccess: (receipt: GoodsReceipt) => void;
 }
@@ -133,6 +140,122 @@ function getAvailableUnitsForProduct(prod: Product): Array<{ unitName: string; c
 }
 
 /**
+ * Component xử lý nhập số lượng tự do cho dòng hàng:
+ * - Cho phép nhập tự do chuỗi số (kể cả số 0, 05, xóa trắng)
+ * - Khi ở số 0, bấm nút [+] hoặc bấm phím Mũi tên lên sẽ nhảy lên 1
+ * - Tự động định dạng và chuẩn hóa khi blur
+ */
+interface ReceiptLineQuantityInputProps {
+  quantity: number;
+  onChange: (qty: number) => void;
+}
+
+const ReceiptLineQuantityInput: React.FC<ReceiptLineQuantityInputProps> = ({
+  quantity,
+  onChange
+}) => {
+  const [localText, setLocalText] = useState<string>(() => String(quantity));
+
+  // Đồng bộ khi quantity thay đổi từ bên ngoài (khi mở modal hoặc gán giá trị mặc định)
+  useEffect(() => {
+    const num = parseInt(localText, 10);
+    const parsed = isNaN(num) ? 0 : num;
+    if (parsed !== quantity) {
+      setLocalText(String(quantity));
+    }
+  }, [quantity]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    // Cho phép nhập tự do các ký tự số (bao gồm cả '0', '05', chuỗi rỗng khi bấm xóa)
+    if (!/^\d*$/.test(raw)) return;
+
+    setLocalText(raw);
+
+    if (raw === '') {
+      onChange(0);
+    } else {
+      const num = parseInt(raw, 10);
+      onChange(isNaN(num) ? 0 : num);
+    }
+  };
+
+  const handleBlur = () => {
+    // Khi rời khỏi ô: chỉ loại bỏ các số 0 thừa ở đầu khi có số khác sau (vd: "05" -> "5")
+    // Nếu là "0" hoặc chuỗi rỗng thì giữ "0" (để khi người dùng bấm + sẽ nhảy lên 1)
+    if (localText === '' || parseInt(localText, 10) === 0) {
+      setLocalText('0');
+      onChange(0);
+    } else {
+      const num = parseInt(localText, 10);
+      setLocalText(String(num));
+      onChange(num);
+    }
+  };
+
+  const handleIncrease = () => {
+    const num = parseInt(localText, 10);
+    const current = isNaN(num) ? 0 : num;
+    const next = current + 1;
+    setLocalText(String(next));
+    onChange(next);
+  };
+
+  const handleDecrease = () => {
+    const num = parseInt(localText, 10);
+    const current = isNaN(num) ? 0 : num;
+    const next = Math.max(0, current - 1);
+    setLocalText(String(next));
+    onChange(next);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      handleIncrease();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      handleDecrease();
+    }
+  };
+
+  return (
+    <div className="flex items-center h-8 sm:h-8.5 rounded-xl border border-gray-200 bg-white overflow-hidden shadow-2xs focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-500">
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleDecrease}
+        disabled={quantity <= 0}
+        className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-100 active:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+        title="Giảm 1"
+      >
+        <Minus size={13} />
+      </button>
+      <input
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        value={localText}
+        onChange={handleInputChange}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        className="flex-1 min-w-0 w-full h-full text-center text-xs font-mono font-bold text-gray-900 bg-transparent focus:outline-none px-1"
+        title="Nhập số lượng tự do, bấm nút + hoặc phím Mũi tên lên để tăng"
+      />
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleIncrease}
+        className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition cursor-pointer"
+        title="Tăng 1"
+      >
+        <Plus size={13} />
+      </button>
+    </div>
+  );
+};
+
+/**
  * S5-04: Form lập phiếu nhập kho chi tiết từ nhà cung cấp
  * - AC1: Khai báo nhà cung cấp, số chứng từ, ngày nhập, kho nhập
  * - AC2: Nhập theo đơn vị tính bất kỳ, tự động quy về đơn vị cơ sở
@@ -142,6 +265,11 @@ function getAvailableUnitsForProduct(prod: Product): Array<{ unitName: string; c
 export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   isOpen,
   receiptToEdit,
+  initialWarehouseCode,
+  initialProductSku,
+  initialProductName,
+  initialQuantity,
+  initialNote,
   onClose,
   onSuccess
 }) => {
@@ -156,7 +284,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | string>('');
   const [documentNumber, setDocumentNumber] = useState<string>('');
   const [receiptDate, setReceiptDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
-  const [selectedWarehouseCode, setSelectedWarehouseCode] = useState<string>('WH-MB01');
+  const [selectedWarehouseCode, setSelectedWarehouseCode] = useState<string>(() => initialWarehouseCode || 'WH-MB01');
   const [vehiclePlate, setVehiclePlate] = useState<string>('');
   const [driverName, setDriverName] = useState<string>('');
   const [generalNote, setGeneralNote] = useState<string>('');
@@ -197,7 +325,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
       });
   }, [isOpen]);
 
-  // Khởi tạo dòng hàng mẫu ban đầu nếu form mới
+  // Khởi tạo dòng hàng mẫu ban đầu nếu form mới hoặc từ cảnh báo tồn kho
   useEffect(() => {
     if (!isOpen) return;
 
@@ -228,13 +356,77 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
         }))
       );
     } else {
-      setDocumentNumber('');
-      setGeneralNote('');
+      setDocumentNumber(`PNK-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(Math.floor(1000 + Math.random() * 9000))}`);
       setVehiclePlate('');
       setDriverName('');
-      setLines([]);
+      if (initialWarehouseCode) {
+        setSelectedWarehouseCode(initialWarehouseCode);
+      } else {
+        setSelectedWarehouseCode('WH-MB01');
+      }
+      if (initialNote) {
+        setGeneralNote(initialNote);
+      } else if (initialProductSku) {
+        setGeneralNote(`Nhập bù hàng dưới định mức tồn tối thiểu cho ${initialWarehouseCode || 'kho'}`);
+      } else {
+        setGeneralNote('');
+      }
+
+      // Nếu có truyền sản phẩm ban đầu để lập phiếu nhập bù tồn kho (S5-09 -> S5-04)
+      if (initialProductSku) {
+        const allProds = systemProducts.length > 0 ? systemProducts : FALLBACK_PRODUCTS;
+        const matched = allProds.find(
+          (p) =>
+            p.sku?.toLowerCase() === initialProductSku.toLowerCase() ||
+            p.sku?.replace(/-/g, '').toLowerCase() === initialProductSku.replace(/-/g, '').toLowerCase()
+        );
+        const targetProd: Product = matched || {
+          id: '5001',
+          sku: initialProductSku,
+          name: initialProductName || 'Nước ngọt Pepsi lon 330ml',
+          category: 'Nước giải khát',
+          baseUnit: 'Lon',
+          packagingSpec: '24 Lon / Thùng',
+          costPrice: 8500,
+          status: 'ACTIVE',
+          transactionCount: 0
+        };
+
+        const availableUnits = getAvailableUnitsForProduct(targetProd);
+        const firstUnit = availableUnits[0];
+
+        setLines([
+          {
+            id: `init-${Date.now()}`,
+            productId: Number(targetProd.id),
+            productSku: targetProd.sku,
+            productName: targetProd.name,
+            category: targetProd.category,
+            baseUnit: targetProd.baseUnit,
+            selectedUnit: firstUnit.unitName,
+            conversionFactor: firstUnit.conversionFactor,
+            quantity: initialQuantity && initialQuantity > 0 ? initialQuantity : 100,
+            unitPrice: Number(targetProd.costPrice || 0),
+            batchNumber: `LOT-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
+            expiredDate: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+            hasBatchManagement: true,
+            availableUnits
+          }
+        ]);
+      } else {
+        setLines([]);
+      }
     }
-  }, [isOpen, receiptToEdit]);
+  }, [
+    isOpen,
+    receiptToEdit,
+    initialWarehouseCode,
+    initialProductSku,
+    initialQuantity,
+    initialProductName,
+    initialNote,
+    systemProducts.length
+  ]);
 
   if (!isOpen) return null;
 
@@ -337,6 +529,8 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
     if (!documentNumber.trim()) errors.push('Vui lòng nhập Số chứng từ / hóa đơn giao hàng của NCC (AC1).');
     if (!receiptDate) errors.push('Vui lòng chọn Ngày nhập kho (AC1).');
     if (!selectedWarehouseCode) errors.push('Vui lòng chọn Kho nhận hàng (AC1).');
+    if (!vehiclePlate.trim()) errors.push('Vui lòng nhập Biển số xe giao hàng.');
+    if (!driverName.trim()) errors.push('Vui lòng nhập Tên tài xế / Người giao hàng.');
 
     if (lines.length === 0) {
       errors.push('Phiếu nhập kho phải có ít nhất 1 dòng hàng hóa.');
@@ -361,7 +555,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   // Xử lý Lưu Phiếu (DRAFT hoặc CONFIRMED - AC4)
   const handleSaveReceipt = async (targetStatus: 'DRAFT' | 'CONFIRMED') => {
     if (!validateForm()) {
-      showToast('Dữ liệu chưa hợp lệ', 'Vui lòng kiểm tra lại các trường thông tin bắt buộc', 'error');
+      showToast('Dữ liệu chưa hợp lệ', 'Vui lòng bổ sung đẩy đủ các trường thông tin (*)', 'error');
       return;
     }
 
@@ -376,8 +570,8 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
       receiptDate,
       warehouseCode: selectedWarehouseCode,
       warehouseName: wh?.name || 'Kho Tổng',
-      vehiclePlate: vehiclePlate.trim() || undefined,
-      driverName: driverName.trim() || undefined,
+      vehiclePlate: vehiclePlate.trim(),
+      driverName: driverName.trim(),
       note: generalNote.trim() || undefined,
       status: targetStatus,
       lines: lines.map((l) => ({
@@ -426,9 +620,17 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-5xl w-full shadow-2xl flex flex-col max-h-[95vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="bg-white rounded-3xl max-w-5xl w-full shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* HEADER MODAL */}
         <div className="p-4 sm:p-5 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-transparent">
           <div className="flex items-center gap-3">
@@ -552,33 +754,39 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
             {/* Thông tin phương tiện & tài xế */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-200/60">
               <div>
-                <label className="block text-[11px] font-semibold text-gray-500 mb-1">
-                  Biển số xe giao hàng
+                <label className="block text-[11px] font-bold text-gray-600 uppercase mb-1">
+                  Biển số xe giao hàng <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   placeholder="Vd: 29C-998.12"
                   value={vehiclePlate}
                   onChange={(e) => setVehiclePlate(e.target.value)}
-                  className="w-full text-xs border border-gray-200 rounded-xl p-2 bg-white"
+                  className={`w-full text-xs border rounded-xl p-2.5 bg-white font-mono uppercase focus:outline-none focus:ring-2 ${formErrors.some((e) => e.includes('Biển số xe'))
+                      ? 'border-rose-400 ring-2 ring-rose-500/20'
+                      : 'border-gray-200 focus:ring-orange-500/20'
+                    }`}
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-gray-500 mb-1">
-                  Tên tài xế / Người giao
+                <label className="block text-[11px] font-bold text-gray-600 uppercase mb-1">
+                  Tên tài xế / Người giao <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   placeholder="Vd: Nguyễn Văn A"
                   value={driverName}
                   onChange={(e) => setDriverName(e.target.value)}
-                  className="w-full text-xs border border-gray-200 rounded-xl p-2 bg-white"
+                  className={`w-full text-xs border rounded-xl p-2.5 bg-white focus:outline-none focus:ring-2 ${formErrors.some((e) => e.includes('Tên tài xế'))
+                      ? 'border-rose-400 ring-2 ring-rose-500/20'
+                      : 'border-gray-200 focus:ring-orange-500/20'
+                    }`}
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-gray-500 mb-1">
+                <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1">
                   Ghi chú bốc dỡ hàng
                 </label>
                 <input
@@ -586,7 +794,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                   placeholder="Vd: Giao tại cửa số 3, kiểm đếm đủ tem"
                   value={generalNote}
                   onChange={(e) => setGeneralNote(e.target.value)}
-                  className="w-full text-xs border border-gray-200 rounded-xl p-2 bg-white"
+                  className="w-full text-xs border border-gray-200 rounded-xl p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20"
                 />
               </div>
             </div>
@@ -628,9 +836,9 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
             ) : (
               <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-2xs divide-y divide-gray-100">
                 <div className="hidden lg:grid lg:grid-cols-12 gap-2 bg-gray-50/90 p-3 text-[11px] font-bold text-gray-600 uppercase">
-                  <div className="col-span-4">Mặt hàng / SKU</div>
+                  <div className="col-span-3">Mặt hàng / SKU</div>
                   <div className="col-span-2 text-center">ĐVT Nhập</div>
-                  <div className="col-span-1 text-center">Số lượng</div>
+                  <div className="col-span-2 text-center">Số lượng</div>
                   <div className="col-span-2 text-center">Quy về Cơ sở</div>
                   <div className="col-span-2">Số Lô & Hạn Dùng</div>
                   <div className="col-span-1 text-center">Xóa</div>
@@ -645,7 +853,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                       className="p-3 lg:p-2.5 flex flex-col lg:grid lg:grid-cols-12 gap-2.5 items-stretch lg:items-center hover:bg-orange-50/15 transition"
                     >
                       {/* Cột 1: Sản phẩm */}
-                      <div className="lg:col-span-4">
+                      <div className="lg:col-span-3">
                         <span className="lg:hidden text-[10px] font-bold text-gray-400 uppercase block mb-1">
                           Sản phẩm
                         </span>
@@ -680,19 +888,14 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                         </select>
                       </div>
 
-                      {/* Cột 3: Số lượng nhập */}
-                      <div className="lg:col-span-1">
+                      {/* Cột 3: Số lượng nhập (Hỗ trợ nhập tự do & nút +/- khi ở 0 lên 1) */}
+                      <div className="lg:col-span-2">
                         <span className="lg:hidden text-[10px] font-bold text-gray-400 uppercase block mb-1">
                           Số lượng nhập
                         </span>
-                        <input
-                          type="number"
-                          min="1"
-                          value={line.quantity}
-                          onChange={(e) =>
-                            handleUpdateLineField(idx, 'quantity', Math.max(1, Number(e.target.value) || 1))
-                          }
-                          className="w-full text-xs font-mono font-bold text-center border border-gray-200 rounded-xl p-2 bg-white"
+                        <ReceiptLineQuantityInput
+                          quantity={line.quantity}
+                          onChange={(newQty) => handleUpdateLineField(idx, 'quantity', newQty)}
                         />
                       </div>
 
@@ -829,6 +1032,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

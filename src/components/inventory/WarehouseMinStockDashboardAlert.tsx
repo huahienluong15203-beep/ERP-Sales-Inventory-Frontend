@@ -9,6 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getDashboardMinStockSummary } from '../../services/stockAlertApi';
 import type { MinStockThresholdConfig } from '../../types/stockAlert';
 import { useNavigate } from '../../routes/Router';
+import { GoodsReceiptFormModal } from './GoodsReceiptFormModal';
 
 interface WarehouseMinStockDashboardAlertProps {
   warehouseCode?: string;
@@ -31,25 +32,25 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
   const [totalAlerts, setTotalAlerts] = useState<number>(0);
   const [criticalCount, setCriticalCount] = useState<number>(0);
 
+  // Modal lập phiếu nhập NCC trực tiếp theo kho & sản phẩm được click
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
+  const [selectedAlertForReceipt, setSelectedAlertForReceipt] = useState<MinStockThresholdConfig | null>(null);
+
   // Chỉ hiển thị trên Dashboard cho các vai trò quản lý / phụ trách kho và admin
   const isWarehouseOrAdmin =
     currentRole === 'ROLE_ADMIN' ||
     currentRole === 'ROLE_WH_MANAGER' ||
     currentRole === 'ROLE_WAREHOUSE';
 
-  useEffect(() => {
-    // Nếu không phải role quản lý kho / admin thì không cần gọi API kiểm tra
+  const loadAlertData = () => {
     if (!isWarehouseOrAdmin) {
       setLoading(false);
       return;
     }
 
-    let isMounted = true;
     setLoading(true);
-
     getDashboardMinStockSummary(warehouseCode)
       .then((res) => {
-        if (!isMounted) return;
         setTotalAlerts(res.totalAlerts);
         setCriticalCount(res.criticalCount);
         setCriticalItems(res.criticalItems.slice(0, 4));
@@ -57,13 +58,19 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
       })
       .catch((err) => {
         console.warn('Lỗi tải cảnh báo tồn tối thiểu:', err);
-        if (isMounted) setLoading(false);
+        setLoading(false);
       });
+  };
 
-    return () => {
-      isMounted = false;
-    };
+  useEffect(() => {
+    loadAlertData();
   }, [warehouseCode, isWarehouseOrAdmin]);
+
+  // Bấm vào thẻ cảnh báo -> mở phiếu nhập kho NCC theo kho đó
+  const handleCardClick = (item: MinStockThresholdConfig) => {
+    setSelectedAlertForReceipt(item);
+    setIsReceiptModalOpen(true);
+  };
 
   // Nếu không thuộc vai trò kho/admin thì không hiển thị cảnh báo
   if (!isWarehouseOrAdmin) {
@@ -76,7 +83,8 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
   }
 
   return (
-    <div className="mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
+    <>
+      <div className="mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
       <div className="bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 rounded-3xl p-5 sm:p-6 text-white shadow-xl shadow-rose-600/20 border border-rose-500/40 relative overflow-hidden">
         {/* Họa tiết trang trí nền */}
         <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
@@ -96,8 +104,8 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                   </h3>
                 </div>
                 <p className="text-xs text-rose-100 mt-0.5">
-                  Phát hiện <b>{totalAlerts} mặt hàng</b> đang ở dưới ngưỡng tồn tối thiểu, trong đó có{' '}
-                  <b>{criticalCount} mặt hàng báo động đỏ nghiêm trọng</b> cần đặt hàng gấp từ nhà cung ứng!
+                  Phát hiện <b>{totalAlerts} cảnh báo theo kho</b> đang ở dưới ngưỡng tồn tối thiểu, trong đó có{' '}
+                  <b>{criticalCount} điểm kho báo động đỏ nghiêm trọng</b> cần đặt hàng gấp từ nhà cung ứng!
                 </p>
               </div>
             </div>
@@ -105,7 +113,10 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                onClick={() => navigate('/inventory/receipts')}
+                onClick={() => {
+                  setSelectedAlertForReceipt(null);
+                  setIsReceiptModalOpen(true);
+                }}
                 className="px-4 py-2.5 rounded-xl bg-white text-rose-700 font-bold text-xs hover:bg-rose-50 transition shadow-md shadow-black/10 flex items-center gap-1.5 cursor-pointer"
               >
                 <ShoppingCart size={14} />
@@ -134,10 +145,16 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
               {criticalItems.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-white/15 backdrop-blur-md rounded-2xl p-3.5 border border-white/20 hover:bg-white/20 transition space-y-2 text-white"
+                  onClick={() => handleCardClick(item)}
+                  className="group/card bg-white/15 backdrop-blur-md rounded-2xl p-3.5 border border-white/20 hover:bg-white/25 hover:border-white/50 hover:shadow-xl hover:scale-[1.02] active:scale-[0.99] transition-all duration-200 space-y-2 text-white cursor-pointer relative"
+                  title={`Nhấp để mở phiếu nhập NCC cho kho ${item.warehouseName}`}
                 >
                   <div className="flex items-start justify-between gap-1">
-                    <div>
+                    <div className="min-w-0 flex-1">
+                      {/* Badge Tên Kho nổi bật để phân biệt rõ ràng từng kho lưu trữ */}
+                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/25 text-[10px] font-black text-yellow-300 uppercase tracking-wide mb-1 border border-white/20 shadow-xs">
+                        <span>📍 Kho {item.warehouseName.replace(/Kho Tổng |Kho /g, '')}</span>
+                      </div>
                       <div className="font-mono text-[10px] uppercase font-bold text-rose-200">
                         {item.productSku}
                       </div>
@@ -165,9 +182,14 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                     </div>
                   </div>
 
-                  <div className="text-[10px] text-rose-200 flex items-center justify-between">
-                    <span>Kho: {item.warehouseName.replace(/Kho Tổng |Kho /g, '')}</span>
-                    <span className="text-yellow-200 font-semibold">Đề xuất: +{item.suggestedReorderQuantity}</span>
+                  <div className="pt-1.5 border-t border-white/15 flex items-center justify-between text-[10px]">
+                    <span className="text-yellow-200 font-bold">
+                      Đề xuất: +{item.suggestedReorderQuantity} {item.unit}
+                    </span>
+                    <span className="inline-flex items-center gap-1 font-bold text-white bg-white/20 group-hover/card:bg-white group-hover/card:text-rose-700 px-2 py-0.5 rounded-md transition-colors">
+                      <ShoppingCart size={11} />
+                      <span>Nhập kho này &gt;</span>
+                    </span>
                   </div>
                 </div>
               ))}
@@ -176,5 +198,29 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
         </div>
       </div>
     </div>
+
+      {/* MODAL LẬP PHIẾU NHẬP NCC TRỰC TIẾP THEO KHO & MẶT HÀNG ĐƯỢC CHỌN (S5-04 / S5-09) */}
+      <GoodsReceiptFormModal
+        isOpen={isReceiptModalOpen}
+        initialWarehouseCode={selectedAlertForReceipt?.warehouseCode}
+        initialProductSku={selectedAlertForReceipt?.productSku}
+        initialProductName={selectedAlertForReceipt?.productName}
+        initialQuantity={selectedAlertForReceipt?.suggestedReorderQuantity}
+        initialNote={
+          selectedAlertForReceipt
+            ? `Nhập bù hàng dưới định mức tồn tối thiểu cho ${selectedAlertForReceipt.warehouseName || selectedAlertForReceipt.warehouseCode} (Đề xuất: +${selectedAlertForReceipt.suggestedReorderQuantity} ${selectedAlertForReceipt.unit})`
+            : undefined
+        }
+        onClose={() => {
+          setIsReceiptModalOpen(false);
+          setSelectedAlertForReceipt(null);
+        }}
+        onSuccess={() => {
+          setIsReceiptModalOpen(false);
+          setSelectedAlertForReceipt(null);
+          loadAlertData();
+        }}
+      />
+    </>
   );
 };

@@ -161,7 +161,11 @@ export async function fetchMinStockConfigs(params?: {
     }
     const res = await authFetch(`${API_BASE_URL}/api/inventory/min-stock-alerts?${query.toString()}`);
     if (res.ok) {
-      return await res.json();
+      const list = await res.json();
+      return (list || []).map((item: any) => ({
+        ...item,
+        isBelowThreshold: Boolean(item.isBelowThreshold ?? item.belowThreshold ?? (item.currentStock < item.minThreshold))
+      }));
     }
   } catch {
     // fallback
@@ -197,7 +201,11 @@ export async function updateMinStockThreshold(payload: UpdateMinThresholdPayload
       body: JSON.stringify(payload)
     });
     if (res.ok) {
-      return await res.json();
+      const item = await res.json();
+      return {
+        ...item,
+        isBelowThreshold: Boolean(item.isBelowThreshold ?? item.belowThreshold ?? (item.currentStock < item.minThreshold))
+      };
     }
     const errData = await res.json().catch(() => null);
     throw new Error(errData?.message || `Lỗi lưu định mức (HTTP ${res.status})`);
