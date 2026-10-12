@@ -17,12 +17,15 @@ import {
   X,
   ShieldAlert,
   RotateCcw,
+  Layers,
+  Building2,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from '../../routes/Router';
 import { CustomerPortalLayout } from '../../layouts/CustomerPortalLayout';
 import type { Agency, DeliveryPoint, CreditStatusResponse } from '../../types/agency';
 import type { OrderSummaryItem } from '../../types/order';
@@ -54,7 +57,8 @@ interface CartItem {
 }
 
 export const CustomerOrderPortalPage: React.FC = () => {
-  const { user, showToast } = useAuth();
+  const { user, currentRole, showToast } = useAuth();
+  const navigate = useNavigate();
 
   // Tab: 'catalog' (Đặt hàng) hoặc 'history' (Đơn hàng của tôi)
   const [activeTab, setActiveTab] = useState<'catalog' | 'history'>('catalog');
@@ -450,7 +454,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
       );
 
       // Cập nhật lại hạn mức công nợ & lịch sử
-      fetchPortalCreditStatus().then(setCreditStatus).catch(() => {});
+      fetchPortalCreditStatus().then(setCreditStatus).catch(() => { });
       loadOrderHistory();
     } catch (err: unknown) {
       console.error('Lỗi gửi đơn hàng đại lý:', err);
@@ -473,21 +477,77 @@ export const CustomerOrderPortalPage: React.FC = () => {
       {/* ============================================================== */}
       {/* TAB 1: DANH MỤC SẢN PHẨM VÀ ĐẶT HÀNG (CATALOG & ORDERING) */}
       {/* ============================================================== */}
-      {agencyError && (
+      {/* S4-10: TRƯỜNG HỢP TÀI KHOẢN CHƯA ĐƯỢC GẮN VỚI HỒ SƠ ĐẠI LÝ NÀO */}
+      {agencyError && !agency ? (
+        <div className="bg-white rounded-3xl border border-rose-200/90 shadow-sm p-6 sm:p-10 max-w-2xl mx-auto my-6 text-center space-y-6 animate-in fade-in duration-200">
+          <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-sm">
+            <ShieldAlert size={36} />
+          </div>
+          <div className="space-y-2">
+            <span className="inline-block px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold uppercase tracking-wider">
+              Chưa Kết Nối Dữ Liệu Đại Lý
+            </span>
+            <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight">
+              Tài Khoản Chưa Được Gán Cho Đại Lý Nào
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-600 leading-relaxed max-w-lg mx-auto">
+              Tài khoản <strong className="text-gray-900 font-mono">@{user?.username}</strong> ({user?.fullName || 'Người dùng'}) hiện chưa được liên kết với hồ sơ Đại lý nào trong hệ thống ERP.
+            </p>
+            <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-2xl text-left text-xs text-amber-900 space-y-2 mt-2">
+              <p className="font-bold text-amber-950 flex items-center gap-1.5">
+                <span>💡 Hướng dẫn xử lý:</span>
+              </p>
+              <ul className="list-disc pl-4 space-y-1.5 text-amber-900/90">
+                <li>
+                  <strong>Nếu bạn là Quản trị viên / Quản lý kinh doanh:</strong> Truy cập <em>Bán hàng → Hồ sơ đại lý</em>, bấm sửa đại lý cần liên kết và chọn tài khoản này tại mục <em>"Tài Khoản Đăng Nhập Cổng Đại Lý (ROLE_CUSTOMER)"</em>.
+                </li>
+                <li>
+                  <strong>Nếu bạn là Khách hàng / Đại lý mới:</strong> Vui lòng liên hệ Hotline hỗ trợ đại lý <strong>1900 6868</strong> hoặc nhân viên kinh doanh phụ trách để kích hoạt liên kết tài khoản.
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Phím tắt điều hướng dành cho quản trị viên / nhân viên nội bộ (nếu có quyền) */}
+          {(currentRole !== 'ROLE_CUSTOMER' || (user?.roles && user.roles.some((r) => r !== 'ROLE_CUSTOMER'))) && (
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs sm:text-sm inline-flex items-center gap-2 transition cursor-pointer shadow-md shadow-orange-500/20 active:scale-95"
+              >
+                <Layers size={16} />
+                <span>Về Bàn làm việc ERP</span>
+              </button>
+
+              {user?.roles?.some((r) => r === 'ROLE_ADMIN' || r === 'ROLE_SALES_MANAGER') && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/customers')}
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm inline-flex items-center gap-2 transition cursor-pointer shadow-md shadow-blue-600/20 active:scale-95"
+                >
+                  <Building2 size={16} />
+                  <span>Đến Hồ sơ đại lý để gán</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {/* CẢNH BÁO PHỤ NẾU CÓ LỖI NHƯNG VẪN CÓ DỮ LIỆU ĐẠI LÝ */}
+      {agencyError && agency && (
         <div className="mb-4 bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3 text-rose-700 text-sm">
           <ShieldAlert size={18} className="shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <div className="font-bold">Chưa kết nối dữ liệu đại lý</div>
-            <div className="text-xs mt-0.5 text-rose-600">
-              {user?.role !== 'ROLE_CUSTOMER'
-                ? `Bạn đang đăng nhập với tài khoản ${user?.fullName || user?.username} (${user?.role || 'Admin'}). Cổng B2B Portal được thiết kế dành riêng cho tài khoản Đại lý (ROLE_CUSTOMER). Để trải nghiệm đặt hàng trực tuyến, vui lòng đăng nhập bằng tài khoản đại lý mẫu (ví dụ: daily_hn / Daily@123) và bật Backend Spring Boot.`
-                : `${agencyError}. Vui lòng kiểm tra kết nối máy chủ Backend và Database.`}
-            </div>
+          <div>
+            <div className="font-bold">Lưu ý dữ liệu đại lý</div>
+            <div className="text-xs mt-0.5 text-rose-600">{agencyError}</div>
           </div>
         </div>
       )}
 
-      {activeTab === 'catalog' && (
+      {/* CHỈ RENDER NỘI DUNG ĐẶT HÀNG KHI ĐÃ CÓ DỮ LIỆU ĐẠI LÝ */}
+      {agency && activeTab === 'catalog' && (
         <div className="space-y-4">
           {/* BANNER THÔNG TIN ĐẠI LÝ & TÀI CHÍNH TRÊN ĐẦU TRANG */}
           <div className="bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 rounded-2xl p-4 sm:p-6 text-white shadow-lg shadow-orange-500/15">
@@ -573,11 +633,10 @@ export const CustomerOrderPortalPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setSelectedCategory('ALL')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition cursor-pointer ${
-                      selectedCategory === 'ALL'
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition cursor-pointer ${selectedCategory === 'ALL'
                         ? 'bg-[#F85606] text-white shadow-xs'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     Tất cả
                   </button>
@@ -586,11 +645,10 @@ export const CustomerOrderPortalPage: React.FC = () => {
                       key={cat}
                       type="button"
                       onClick={() => setSelectedCategory(cat)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition cursor-pointer ${
-                        selectedCategory === cat
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition cursor-pointer ${selectedCategory === cat
                           ? 'bg-[#F85606] text-white shadow-xs'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
+                        }`}
                     >
                       {cat}
                     </button>
@@ -758,7 +816,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
       {/* ============================================================== */}
       {/* TAB 2: ĐƠN HÀNG CỦA TÔI (MY ORDERS HISTORY) */}
       {/* ============================================================== */}
-      {activeTab === 'history' && (
+      {agency && activeTab === 'history' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base sm:text-lg font-black text-gray-900">
@@ -1043,9 +1101,8 @@ export const CustomerOrderPortalPage: React.FC = () => {
                     <div className="flex justify-between text-gray-900 font-bold">
                       <span>Công nợ còn lại sau đơn này:</span>
                       <span
-                        className={`font-black font-mono text-sm ${
-                          remainingAfterOrder < 0 ? 'text-rose-600' : 'text-emerald-600'
-                        }`}
+                        className={`font-black font-mono text-sm ${remainingAfterOrder < 0 ? 'text-rose-600' : 'text-emerald-600'
+                          }`}
                       >
                         {formatCurrencyVND(remainingAfterOrder)}
                       </span>
@@ -1282,11 +1339,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, inCartCount, onAddTo
             {product.sku}
           </span>
           <span
-            className={`font-semibold px-2 py-0.5 rounded-full text-[10px] ${
-              (product.availableStock ?? 0) > 0
+            className={`font-semibold px-2 py-0.5 rounded-full text-[10px] ${(product.availableStock ?? 0) > 0
                 ? 'bg-emerald-50 text-emerald-700'
                 : 'bg-rose-50 text-rose-700'
-            }`}
+              }`}
           >
             {(product.availableStock ?? 0) > 0 ? `Tồn: ${formatQuantity(product.availableStock ?? 0)} ${product.baseUnit}` : 'Tạm hết'}
           </span>
@@ -1318,11 +1374,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, inCartCount, onAddTo
                   key={u.unitName}
                   type="button"
                   onClick={() => setSelectedUnitName(u.unitName)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    selectedUnitName === u.unitName
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${selectedUnitName === u.unitName
                       ? 'bg-orange-100 text-[#F85606] border border-orange-300'
                       : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
-                  }`}
+                    }`}
                 >
                   {u.unitName} (x{u.conversionFactor})
                 </button>

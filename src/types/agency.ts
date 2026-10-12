@@ -83,6 +83,8 @@ export interface Agency {
   transactionLockedAt?: string;     // S3-07: Thời điểm khóa giao dịch
   hasOverdueDebt?: boolean;         // S4-02: Có khoản nợ quá hạn
   overdueDays?: number;             // S4-02: Số ngày quá hạn
+  portalUserId?: number;            // S4-10: ID tài khoản cổng đại lý (ROLE_CUSTOMER)
+  portalUserName?: string;          // S4-10: Họ tên / username tài khoản cổng đại lý
 }
 
 /**
@@ -133,6 +135,7 @@ export interface CreateAgencyPayload {
   email: string;
   address: string;
   creditLimit?: number;
+  portalUserId?: number | null;
 }
 
 export interface UpdateAgencyPayload {
@@ -147,6 +150,8 @@ export interface UpdateAgencyPayload {
   email: string;
   address: string;
   creditLimit?: number;
+  portalUserId?: number | null;
+  changePortalUser?: boolean;
 }
 
 export interface SuspendAgencyPayload {

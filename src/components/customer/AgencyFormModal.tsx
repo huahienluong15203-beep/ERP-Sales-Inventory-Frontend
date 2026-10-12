@@ -12,7 +12,8 @@ import type {
 import {
   CUSTOMER_GROUP_OPTIONS,
   fetchAgencyFormOptions,
-  getRealPriceListForGroup
+  getRealPriceListForGroup,
+  type PortalUserOption
 } from '../../services/agencyApi';
 import { X, Building2, AlertTriangle, CheckCircle2, Info } from '../common/Icons';
 import { AddressPicker } from '../common/AddressPicker';
@@ -47,6 +48,8 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
   const [customerGroup, setCustomerGroup] = useState<CustomerGroupId>('TIER_1');
   const [regionId, setRegionId] = useState('');
   const [assignedRepId, setAssignedRepId] = useState('');
+  const [portalUsers, setPortalUsers] = useState<PortalUserOption[]>([]);
+  const [portalUserId, setPortalUserId] = useState<string>('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
@@ -62,6 +65,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
           setRegions(options.regions);
           setSalesReps(options.salesReps);
           setPriceLists(options.priceLists || []);
+          setPortalUsers(options.portalUsers || []);
           // Chỉ khi THÊM MỚI mới chọn sẵn khu vực / người phụ trách đầu tiên.
           // Sửa đại lý chưa có người phụ trách thì giữ trống, không tự gán người khác.
           if (!initialData) {
@@ -95,6 +99,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
       setPhone(initialData.phone || '');
       setEmail(initialData.email || '');
       setAddress(initialData.address || '');
+      setPortalUserId(initialData.portalUserId ? String(initialData.portalUserId) : '');
       // Hạn mức 0 là giá trị thật (chưa cấp nợ), không được tự đổi thành 50 triệu
       setCreditLimit(initialData.creditLimit ?? 0);
     } else {
@@ -104,6 +109,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
       setCustomerGroup('TIER_1');
       setRegionId(regions[0]?.id || '');
       setAssignedRepId(salesReps[0]?.id || '');
+      setPortalUserId('');
       setPhone('');
       setEmail('');
       setAddress('');
@@ -170,7 +176,9 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
           assignedRepId,
           phone: cleanPhone,
           email: email.trim(),
-          address: address.trim()
+          address: address.trim(),
+          portalUserId: portalUserId ? Number(portalUserId) : null,
+          changePortalUser: portalUserId !== (initialData?.portalUserId ? String(initialData.portalUserId) : '')
           // Không gửi hạn mức khi sửa: đổi hạn mức phải qua "Hạn mức công nợ" có lý do thật để ghi nhật ký
         });
       } else {
@@ -184,7 +192,8 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
           phone: cleanPhone,
           email: email.trim(),
           address: address.trim(),
-          creditLimit
+          creditLimit,
+          portalUserId: portalUserId ? Number(portalUserId) : null
         });
       }
 
@@ -397,6 +406,36 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* S4-10: Tài khoản Cổng Đại Lý B2B (ROLE_CUSTOMER) */}
+          <div className="p-3.5 rounded-xl border border-orange-100 bg-orange-50/40 space-y-1.5">
+            <label className="block text-xs font-semibold text-gray-800 uppercase tracking-wider flex items-center justify-between">
+              <span>Tài Khoản Đăng Nhập Cổng Đại Lý (B2B Portal)</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-100 text-[#F85606]">
+                ROLE_CUSTOMER
+              </span>
+            </label>
+            <select
+              value={portalUserId}
+              onChange={(e) => setPortalUserId(e.target.value)}
+              className="w-full px-3.5 py-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:border-[#F85606] outline-none font-medium"
+            >
+              <option value="">— Không gắn tài khoản (hoặc gỡ liên kết cổng) —</option>
+              {portalUserId && !portalUsers.some((u) => u.id === portalUserId) && (
+                <option value={portalUserId}>
+                  {initialData?.portalUserName || `Tài khoản #${portalUserId}`} (Đang liên kết)
+                </option>
+              )}
+              {portalUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.fullName} (@{u.username})
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-gray-500">
+              Chọn tài khoản vai trò Đại lý để cấp quyền truy cập Cổng đặt hàng trực tuyến B2B (<code>/portal</code>).
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

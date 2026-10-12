@@ -429,6 +429,7 @@ interface BackendCustomer {
   transactionLockedAt?: string | null;
   priceList?: { id: number; code: string; name: string } | null;
   deliveryPointCount?: number | null;
+  portalUser?: { id: number; code: string; name: string } | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 }
@@ -496,15 +497,24 @@ function mapCustomer(c: BackendCustomer): Agency {
     deliveryPointCount: typeof c.deliveryPointCount === 'number'
       ? c.deliveryPointCount
       : (c.address?.trim() ? 1 : 0),
+    portalUserId: c.portalUser?.id != null ? Number(c.portalUser.id) : undefined,
+    portalUserName: c.portalUser?.name || c.portalUser?.code || undefined,
     createdAt: formatBackendDate(c.createdAt),
     updatedAt: formatBackendDate(c.updatedAt)
   };
+}
+
+export interface PortalUserOption {
+  id: string;
+  username: string;
+  fullName: string;
 }
 
 export interface AgencyFormOptions {
   regions: RegionOption[];
   salesReps: SalesRepOption[];
   priceLists: PriceListOption[];
+  portalUsers: PortalUserOption[];
 }
 
 let formOptionsCache: Promise<AgencyFormOptions> | null = null;
@@ -577,6 +587,11 @@ export function fetchAgencyFormOptions(forceReload: boolean = false): Promise<Ag
             startDate: pl.startDate,
             endDate: pl.endDate,
             status: pl.status
+          })),
+          portalUsers: (data?.portalUsers || []).map((u: { id: number; code: string; name: string }) => ({
+            id: String(u.id),
+            username: u.code || '',
+            fullName: u.name
           }))
         };
       })
@@ -667,7 +682,9 @@ function profileBody(payload: CreateAgencyPayload | UpdateAgencyPayload, current
     regionId: /^\d+$/.test(payload.regionId) ? Number(payload.regionId) : null,
     phone: payload.phone.trim(),
     email: payload.email.trim(),
-    address: payload.address.trim()
+    address: payload.address.trim(),
+    portalUserId: payload.portalUserId !== undefined ? payload.portalUserId : (current?.portalUser?.id ?? null),
+    changePortalUser: 'changePortalUser' in payload ? payload.changePortalUser : (payload.portalUserId !== undefined)
   };
 }
 

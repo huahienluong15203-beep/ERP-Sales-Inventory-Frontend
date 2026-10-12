@@ -39,7 +39,7 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
     productService
       .searchProductOptions('', 40)
       .then(setRealProducts)
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   if (!priceList) return null;
@@ -161,11 +161,10 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
                 </span>
               )}
               <span
-                className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  priceList.status === 'ACTIVE'
+                className={`text-xs px-2 py-0.5 rounded-full font-medium ${priceList.status === 'ACTIVE'
                     ? 'bg-emerald-100 text-emerald-700'
                     : 'bg-gray-200 text-gray-600'
-                }`}
+                  }`}
               >
                 {priceList.status === 'ACTIVE' ? 'Đang áp dụng' : 'Ngừng áp dụng'}
               </span>
@@ -257,7 +256,7 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
                   className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#F85606] text-xs font-medium border border-orange-200 transition-colors cursor-pointer"
                 >
                   <Icons.Plus size={14} />
-                  <span>{addingItem ? 'Đóng form thêm' : '+ Thêm dòng giá'}</span>
+                  <span>{addingItem ? 'Đóng form thêm' : ' Thêm dòng giá'}</span>
                 </button>
               )}
             </div>

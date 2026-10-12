@@ -51,10 +51,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
   const [isCancelModalOpen, setIsCancelModalOpen] = useState<boolean>(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
 
-  const isManagerOrAdmin =
+  const isSalesManager =
     currentRole === 'ROLE_SALES_MANAGER' ||
-    currentRole === 'ROLE_ADMIN' ||
-    Boolean(user?.roles?.includes('ROLE_SALES_MANAGER') || user?.roles?.includes('ROLE_ADMIN'));
+    Boolean(user?.roles?.includes('ROLE_SALES_MANAGER'));
 
   const loadOrderDetailAndHistory = (id: number) => {
     setLoading(true);
@@ -112,11 +111,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
   const activeOrder = (!isOpen || !orderId) ? null : order;
 
   // S4-10: Đơn đại lý tự đặt qua cổng (Backend ghi tiền tố này vào ghi chú) – NV kinh doanh phụ trách được xác nhận.
-  // Đơn có vi phạm (giá sàn, hạn mức, nợ quá hạn...) Backend vẫn bắt Quản lý KD duyệt và trả thông báo rõ.
+  // Đơn có vi phạm (giá sàn, hạn mức, nợ quá hạn...) Backend vẫn bắt Quản lý KD duyệt (S4-02 & S4-05).
   const isPortalOrder = Boolean(activeOrder?.note?.startsWith('[Đại lý tự đặt qua cổng]'));
   const isSalesRep =
     currentRole === 'ROLE_SALES_REP' || Boolean(user?.roles?.includes('ROLE_SALES_REP'));
-  const canDecideApproval = isManagerOrAdmin || (isSalesRep && isPortalOrder);
+  const canDecideApproval = isSalesManager || (isSalesRep && isPortalOrder);
 
   if (!isOpen) return null;
 

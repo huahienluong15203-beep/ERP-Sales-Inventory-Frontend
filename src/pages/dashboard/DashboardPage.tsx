@@ -16,7 +16,6 @@ import {
 import { productService } from '../../services/productService';
 import { fetchAgencyStats } from '../../services/agencyApi';
 import { authFetch, API_BASE_URL } from '../../services/api';
-import { WarehouseMinStockDashboardAlert } from '../../components/inventory/WarehouseMinStockDashboardAlert';
 
 interface RecentOrderItem {
   id: string | number;
@@ -38,11 +37,6 @@ export const DashboardPage: React.FC = () => {
     currentRole === 'ROLE_ADMIN' ||
     Boolean(user?.roles?.some((r) => r === 'ROLE_SALES_MANAGER' || r === 'ROLE_ADMIN'));
 
-  // S5-09 (Nguyễn Văn Minh): Cảnh báo tồn tối thiểu chỉ hiển thị cho Quản lý kho, Thủ kho và Quản trị viên (AC2)
-  const isWarehouseOrAdmin =
-    currentRole === 'ROLE_ADMIN' ||
-    currentRole === 'ROLE_WH_MANAGER' ||
-    currentRole === 'ROLE_WAREHOUSE';
 
   // State lưu trữ dữ liệu thật từ Backend
   const [productCount, setProductCount] = useState<number>(0);
@@ -204,8 +198,6 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="erp-fade-in">
-      {/* S5-09 (Nguyễn Văn Minh): Cảnh báo tồn tối thiểu nổi bật trên Dashboard kho (AC2) - Chỉ hiển thị cho Kho và Admin */}
-      {isWarehouseOrAdmin && <WarehouseMinStockDashboardAlert />}
 
       {/* 1. HÀNG 4 STAT CARDS HOẠT ĐỘNG CHUNG (DỮ LIỆU THẬT) */}
       <div className="erp-stat-grid">
