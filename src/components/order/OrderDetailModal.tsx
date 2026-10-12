@@ -647,7 +647,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
               </button>
             )}
 
-            {activeOrder?.status === 'DELIVERED' && (isWarehouseOrAdmin || isSalesManager || currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_ACCOUNTANT') && (
+            {activeOrder?.status === 'DELIVERED' && (isWarehouseOrAdmin || isSalesManager || currentRole === 'ROLE_ACCOUNTANT') && (
               <button
                 type="button"
                 disabled={updatingStatus}
