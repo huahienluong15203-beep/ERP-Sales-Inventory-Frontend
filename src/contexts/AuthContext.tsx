@@ -433,8 +433,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             className="erp-login-toast"
             style={{
               position: 'fixed',
-              top: '16px',
-              right: '20px',
+              bottom: '24px',
+              right: '24px',
               zIndex: 999999,
               display: 'flex',
               flexDirection: 'column',

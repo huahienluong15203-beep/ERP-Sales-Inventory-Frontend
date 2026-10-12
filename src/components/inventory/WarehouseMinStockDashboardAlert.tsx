@@ -13,6 +13,7 @@ import { GoodsReceiptFormModal } from './GoodsReceiptFormModal';
 
 interface WarehouseMinStockDashboardAlertProps {
   warehouseCode?: string;
+  hideLedgerButton?: boolean;
 }
 
 /**
@@ -23,7 +24,8 @@ interface WarehouseMinStockDashboardAlertProps {
  * - Phân quyền hiển thị: Chỉ hiển thị cho Quản lý kho (ROLE_WH_MANAGER), Thủ kho (ROLE_WAREHOUSE) và Quản trị viên (ROLE_ADMIN)
  */
 export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboardAlertProps> = ({
-  warehouseCode
+  warehouseCode,
+  hideLedgerButton = false
 }) => {
   const navigate = useNavigate();
   const { currentRole } = useAuth();
@@ -122,14 +124,16 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                 <span>Lập Phiếu Nhập NCC</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => navigate('/inventory/ledger')}
-                className="px-3.5 py-1.5 rounded-lg bg-rose-800/80 hover:bg-rose-800 text-white font-bold text-xs transition border border-rose-400/50 flex items-center gap-1 cursor-pointer h-9"
-              >
-                <span>Xem Sổ Tồn</span>
-                <ChevronRight size={14} />
-              </button>
+              {!hideLedgerButton && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/inventory/ledger')}
+                  className="px-3.5 py-1.5 rounded-lg bg-rose-800/80 hover:bg-rose-800 text-white font-bold text-xs transition border border-rose-400/50 flex items-center gap-1 cursor-pointer h-9"
+                >
+                  <span>Xem Sổ Tồn</span>
+                  <ChevronRight size={14} />
+                </button>
+              )}
             </div>
           </div>
 

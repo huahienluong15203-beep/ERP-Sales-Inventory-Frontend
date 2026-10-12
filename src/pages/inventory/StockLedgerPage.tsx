@@ -15,13 +15,16 @@ import {
 import type { MinStockThresholdConfig } from '../../types/stockAlert';
 import { SYSTEM_WAREHOUSES } from '../../types/inventory';
 import {
-  fetchMinStockConfigs,
+  fetchMinStockConfigsPaged,
+  getDashboardMinStockSummary,
   updateMinStockThreshold
 } from '../../services/stockAlertApi';
-import { useNavigate } from '../../routes/Router';
+import { useNavigate, useLocation } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { NumberInput } from '../../components/common/NumberInput';
+import { Pagination } from '../../components/common/Pagination';
+import { WarehouseMinStockDashboardAlert } from '../../components/inventory/WarehouseMinStockDashboardAlert';
 
 /**
  * S5-09 (Nguyễn Văn Minh): Sổ Tồn Kho & Khai Báo Ngưỡng Tồn Tối Thiểu
@@ -31,6 +34,7 @@ import { NumberInput } from '../../components/common/NumberInput';
  */
 export const StockLedgerPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast, currentRole } = useAuth();
 
   // Mục 12 (góp ý GV): chặn ở cả FE và BE - chỉ NV kho, QL kho, Admin được lập / xác nhận / sửa;
@@ -40,25 +44,68 @@ export const StockLedgerPage: React.FC = () => {
   const [configs, setConfigs] = useState<MinStockThresholdConfig[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Phân trang: Cố định 50 sản phẩm ban đầu để load cực nhanh
+  const [page, setPage] = useState<number>(0);
+  const [size, setSize] = useState<number>(50);
+  const [totalElements, setTotalElements] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+
   // Bộ lọc
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('ALL');
   const [onlyBelowThreshold, setOnlyBelowThreshold] = useState<boolean>(false);
   const [keyword, setKeyword] = useState<string>('');
+
+  // Thống kê nhanh toàn bộ hệ thống
+  const [stats, setStats] = useState({
+    total: 0,
+    below: 0,
+    critical: 0,
+    safe: 0
+  });
 
   // Chỉnh sửa định mức trực tiếp trên dòng (inline edit AC1)
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editMinValue, setEditMinValue] = useState<number>(0);
   const [savingId, setSavingId] = useState<string | null>(null);
 
-  const loadData = async () => {
+  const loadData = async (
+    targetPage = page,
+    targetSize = size,
+    kw = keyword,
+    belowOnly = onlyBelowThreshold,
+    wh = selectedWarehouse
+  ) => {
     setLoading(true);
     try {
-      const data = await fetchMinStockConfigs({
-        warehouseCode: selectedWarehouse,
-        onlyBelowThreshold,
-        keyword
-      });
-      setConfigs(data);
+      const [pagedRes, summary] = await Promise.all([
+        fetchMinStockConfigsPaged({
+          warehouseCode: wh,
+          onlyBelowThreshold: belowOnly,
+          keyword: kw,
+          page: targetPage,
+          size: targetSize
+        }),
+        getDashboardMinStockSummary(wh).catch(() => null)
+      ]);
+
+      setConfigs(pagedRes.content);
+      setTotalElements(pagedRes.totalElements);
+      setTotalPages(pagedRes.totalPages);
+
+      if (summary) {
+        const total = summary.totalSkuCount || pagedRes.totalElements;
+        const below = summary.totalAlerts;
+        const critical = summary.criticalCount;
+        const safe = summary.totalSafeCount ?? Math.max(0, total - below);
+        setStats({ total, below, critical, safe });
+      } else {
+        setStats({
+          total: pagedRes.totalElements,
+          below: pagedRes.content.filter((c) => c.isBelowThreshold).length,
+          critical: pagedRes.content.filter((c) => c.severity === 'CRITICAL').length,
+          safe: Math.max(0, pagedRes.totalElements - pagedRes.content.filter((c) => c.isBelowThreshold).length)
+        });
+      }
     } catch (err) {
       console.error('Lỗi tải sổ tồn kho:', err);
       showToast('Lỗi tải dữ liệu', 'Không thể kết nối đến máy chủ', 'error');
@@ -68,12 +115,25 @@ export const StockLedgerPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
-  }, [selectedWarehouse, onlyBelowThreshold]);
+    loadData(page, size, keyword, onlyBelowThreshold, selectedWarehouse);
+  }, [page, size, selectedWarehouse, onlyBelowThreshold]);
+
+  // Tự động nhận diện SKU từ thông báo chuông header nếu có
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const skuParam = params.get('sku');
+    if (skuParam) {
+      setKeyword(skuParam);
+      setOnlyBelowThreshold(true);
+      setPage(0);
+      loadData(0, size, skuParam, true, selectedWarehouse);
+    }
+  }, [location.search]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loadData();
+    setPage(0);
+    loadData(0, size, keyword, onlyBelowThreshold, selectedWarehouse);
   };
 
   const handleStartEdit = (cfg: MinStockThresholdConfig) => {
@@ -109,21 +169,15 @@ export const StockLedgerPage: React.FC = () => {
 
       setConfigs((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setEditingId(null);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('min_stock_updated'));
+      }
     } catch (err: unknown) {
       showToast('Lỗi lưu định mức', err instanceof Error ? err.message : 'Không thể lưu định mức', 'error');
     } finally {
       setSavingId(null);
     }
   };
-
-  // Thống kê nhanh
-  const stats = useMemo(() => {
-    const total = configs.length;
-    const below = configs.filter((c) => c.isBelowThreshold || (c as any).belowThreshold || c.currentStock < c.minThreshold).length;
-    const critical = configs.filter((c) => c.severity === 'CRITICAL').length;
-    const safe = configs.filter((c) => c.severity === 'SAFE').length;
-    return { total, below, critical, safe };
-  }, [configs]);
 
   return (
     <div className="space-y-3.5 pb-8">
@@ -166,6 +220,12 @@ export const StockLedgerPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* CẢNH BÁO TỒN KHO DƯỚI ĐỊNH MỨC TỐI THIỂU NỔI BẬT (S5-09 / AC2) */}
+      <WarehouseMinStockDashboardAlert
+        warehouseCode={selectedWarehouse === 'ALL' ? undefined : selectedWarehouse}
+        hideLedgerButton={true}
+      />
 
       {/* KPI CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -231,7 +291,10 @@ export const StockLedgerPage: React.FC = () => {
             {/* Lọc Kho */}
             <SearchSelect
               value={selectedWarehouse}
-              onChange={(e) => setSelectedWarehouse(e.target.value)}
+              onChange={(e) => {
+                setSelectedWarehouse(e.target.value);
+                setPage(0);
+              }}
               className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20"
             >
               <option value="ALL">Tất cả kho hàng</option>
@@ -245,7 +308,10 @@ export const StockLedgerPage: React.FC = () => {
             {/* Toggle Chỉ hiển thị SKU dưới định mức */}
             <button
               type="button"
-              onClick={() => setOnlyBelowThreshold(!onlyBelowThreshold)}
+              onClick={() => {
+                setOnlyBelowThreshold(!onlyBelowThreshold);
+                setPage(0);
+              }}
               className={`px-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${onlyBelowThreshold
                   ? 'bg-rose-600 text-white shadow-xs'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -459,6 +525,23 @@ export const StockLedgerPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+        )}
+
+        {/* THANH PHÂN TRANG: Cố định 50 sản phẩm/trang, bấm sang trang để xem tiếp */}
+        {totalElements > 0 && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalElements={totalElements}
+            size={size}
+            onPageChange={(newPage) => setPage(newPage)}
+            onSizeChange={(newSize) => {
+              setSize(newSize);
+              setPage(0);
+            }}
+            itemLabel="sản phẩm"
+            disabled={loading}
+          />
         )}
       </div>
     </div>

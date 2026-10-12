@@ -140,6 +140,110 @@ function saveLocalConfigs(data: MinStockThresholdConfig[]): void {
   }
 }
 
+let memoryCachedConfigs: MinStockThresholdConfig[] | null = null;
+let lastCacheFetchTime = 0;
+const CACHE_TTL_MS = 60 * 1000; // Cache 1 phút
+
+export function invalidateMinStockCache() {
+  memoryCachedConfigs = null;
+  lastCacheFetchTime = 0;
+}
+
+export interface PagedMinStockResult {
+  content: MinStockThresholdConfig[];
+  totalElements: number;
+  totalPages: number;
+  page: number;
+  size: number;
+}
+
+/**
+ * Lấy danh sách cấu hình định mức phân trang (cố định 50 sản phẩm/trang để tải nhanh tức thì)
+ * Tự động cắt lát (slice) 50 bản ghi và cache bộ nhớ để triệt tiêu tình trạng lag giật DOM.
+ */
+export async function fetchMinStockConfigsPaged(params?: {
+  warehouseCode?: string;
+  onlyBelowThreshold?: boolean;
+  keyword?: string;
+  page?: number;
+  size?: number;
+}): Promise<PagedMinStockResult> {
+  const page = Math.max(0, params?.page ?? 0);
+  const size = Math.max(1, params?.size ?? 50);
+
+  // Nếu chỉ tìm SKU dưới ngưỡng (Báo đỏ), gọi thẳng endpoint /check siêu nhẹ (~150ms)
+  if (params?.onlyBelowThreshold && !params?.keyword?.trim()) {
+    try {
+      const q = new URLSearchParams();
+      if (params?.warehouseCode && params.warehouseCode !== 'ALL') {
+        q.set('warehouseCode', params.warehouseCode);
+      }
+      const checkRes = await authFetch(`${API_BASE_URL}/api/inventory/min-stock-alerts/check?${q.toString()}`);
+      if (checkRes.ok) {
+        const rawList = await checkRes.json();
+        const list: MinStockThresholdConfig[] = (Array.isArray(rawList) ? rawList : (rawList.content || [])).map((item: any) => ({
+          ...item,
+          isBelowThreshold: true
+        }));
+        const totalElements = list.length;
+        const totalPages = Math.ceil(totalElements / size) || 1;
+        const start = page * size;
+        const content = list.slice(start, start + size);
+        return { content, totalElements, totalPages, page, size };
+      }
+    } catch {
+      // fallback to full flow
+    }
+  }
+
+  // Kiểm tra cache trong bộ nhớ
+  const isCacheFresh = memoryCachedConfigs && (Date.now() - lastCacheFetchTime < CACHE_TTL_MS);
+
+  if (!isCacheFresh) {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/inventory/min-stock-alerts`);
+      if (res.ok) {
+        const data = await res.json();
+        const rawList = Array.isArray(data) ? data : (data.content || []);
+        memoryCachedConfigs = rawList.map((item: any) => ({
+          ...item,
+          isBelowThreshold: Boolean(item.isBelowThreshold ?? item.belowThreshold ?? (item.currentStock < item.minThreshold))
+        }));
+        lastCacheFetchTime = Date.now();
+      }
+    } catch (err) {
+      console.warn('Lỗi gọi API danh sách sổ tồn:', err);
+    }
+  }
+
+  // Dùng dữ liệu từ cache hoặc fallback
+  let list = memoryCachedConfigs || getLocalConfigs();
+
+  if (params?.warehouseCode && params.warehouseCode !== 'ALL') {
+    list = list.filter((c) => c.warehouseCode === params.warehouseCode);
+  }
+  if (params?.onlyBelowThreshold) {
+    list = list.filter((c) => c.isBelowThreshold);
+  }
+  if (params?.keyword?.trim()) {
+    const q = params.keyword.trim().toLowerCase();
+    list = list.filter(
+      (c) =>
+        (c.productSku && c.productSku.toLowerCase().includes(q)) ||
+        (c.productName && c.productName.toLowerCase().includes(q)) ||
+        (c.category && c.category.toLowerCase().includes(q))
+    );
+  }
+
+  const totalElements = list.length;
+  const totalPages = Math.ceil(totalElements / size) || 1;
+  const start = page * size;
+  // Cắt đúng 50 sản phẩm để đưa vào React state, không bao giờ render hàng nghìn dòng
+  const content = list.slice(start, start + size);
+
+  return { content, totalElements, totalPages, page, size };
+}
+
 /**
  * Lấy danh sách cấu hình tồn tối thiểu và trạng thái theo kho
  */
@@ -147,6 +251,7 @@ export async function fetchMinStockConfigs(params?: {
   warehouseCode?: string;
   onlyBelowThreshold?: boolean;
   keyword?: string;
+  limit?: number;
 }): Promise<MinStockThresholdConfig[]> {
   try {
     const query = new URLSearchParams();
@@ -159,10 +264,14 @@ export async function fetchMinStockConfigs(params?: {
     if (params?.keyword) {
       query.set('keyword', params.keyword);
     }
+    if (params?.limit) {
+      query.set('limit', String(params.limit));
+    }
     const res = await authFetch(`${API_BASE_URL}/api/inventory/min-stock-alerts?${query.toString()}`);
     if (res.ok) {
-      const list = await res.json();
-      return (list || []).map((item: any) => ({
+      const data = await res.json();
+      const rawList = Array.isArray(data) ? data : (data.content || []);
+      return (rawList || []).map((item: any) => ({
         ...item,
         isBelowThreshold: Boolean(item.isBelowThreshold ?? item.belowThreshold ?? (item.currentStock < item.minThreshold))
       }));
@@ -202,6 +311,10 @@ export async function updateMinStockThreshold(payload: UpdateMinThresholdPayload
     });
     if (res.ok) {
       const item = await res.json();
+      invalidateMinStockCache();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('min_stock_updated'));
+      }
       return {
         ...item,
         isBelowThreshold: Boolean(item.isBelowThreshold ?? item.belowThreshold ?? (item.currentStock < item.minThreshold))
@@ -244,6 +357,10 @@ export async function updateMinStockThreshold(payload: UpdateMinThresholdPayload
     };
     list[idx] = updated;
     saveLocalConfigs(list);
+    invalidateMinStockCache();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('min_stock_updated'));
+    }
     return updated;
   }
 
@@ -251,14 +368,44 @@ export async function updateMinStockThreshold(payload: UpdateMinThresholdPayload
 }
 
 /**
- * Lấy nhanh số lượng cảnh báo đỏ cho Dashboard (AC2)
+ * Lấy nhanh số lượng cảnh báo đỏ cho Dashboard & Header chuông (AC2)
+ * Gọi endpoint /check (~150ms) để tải siêu tốc, không bị block
  */
 export async function getDashboardMinStockSummary(warehouseCode?: string): Promise<{
   totalAlerts: number;
   criticalCount: number;
   warningCount: number;
+  totalSkuCount?: number;
+  totalSafeCount?: number;
   criticalItems: MinStockThresholdConfig[];
 }> {
+  try {
+    const query = new URLSearchParams();
+    if (warehouseCode && warehouseCode !== 'ALL') {
+      query.set('warehouseCode', warehouseCode);
+    }
+
+    // Gọi endpoint /check đã được kiểm thử siêu tốc (~150ms)
+    const checkRes = await authFetch(`${API_BASE_URL}/api/inventory/min-stock-alerts/check?${query.toString()}`);
+    if (checkRes.ok) {
+      const data = await checkRes.json();
+      const rawList: any[] = Array.isArray(data) ? data : (data.content || []);
+      const criticalItems = rawList.filter((c) => c.severity === 'CRITICAL');
+      const warningItems = rawList.filter((c) => c.severity === 'WARNING');
+      return {
+        totalAlerts: rawList.length,
+        criticalCount: criticalItems.length,
+        warningCount: warningItems.length,
+        criticalItems: rawList.map((item) => ({
+          ...item,
+          isBelowThreshold: true
+        }))
+      };
+    }
+  } catch (err) {
+    // fallback
+  }
+
   const configs = await fetchMinStockConfigs({
     warehouseCode,
     onlyBelowThreshold: true

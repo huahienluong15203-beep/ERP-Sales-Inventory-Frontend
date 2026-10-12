@@ -185,7 +185,7 @@ export const VolumeDiscountPage: React.FC = () => {
       {/* Toast thông báo */}
       {toastMsg && (
         <div
-          className={`fixed right-6 top-20 z-[10000] flex max-w-sm items-center space-x-2 rounded-xl border bg-white px-4 py-3 text-xs font-semibold shadow-lg ${toastMsg.type === 'success' ? 'border-emerald-200 text-emerald-800' : 'border-red-200 text-red-700'
+          className={`fixed right-6 bottom-6 z-[10000] flex max-w-sm items-center space-x-2 rounded-xl border bg-white px-4 py-3 text-xs font-semibold shadow-lg ${toastMsg.type === 'success' ? 'border-emerald-200 text-emerald-800' : 'border-red-200 text-red-700'
             }`}
         >
           {toastMsg.type === 'success' ? (
