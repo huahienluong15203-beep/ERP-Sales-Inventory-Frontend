@@ -1157,14 +1157,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, inCartCount, onAddTo
   const factor = currentUnit?.conversionFactor || 1;
   const currentPrice = product.basePrice * factor;
 
+  const { showToast } = useAuth();
+
   const handleQtyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/[^0-9]/g, '');
     setQtyText(raw);
   };
 
   const handleQtyBlur = () => {
+    // Nếu là "0" hoặc chuỗi rỗng thì giữ "0" (không tự ép thành 1 để tránh lỗi khi bấm +)
     if (qtyText === '' || parseInt(qtyText, 10) === 0) {
-      setQtyText('1');
+      setQtyText('0');
     } else {
       const num = parseInt(qtyText, 10);
       setQtyText(String(num));
@@ -1173,22 +1176,25 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, inCartCount, onAddTo
 
   const handleDecrease = () => {
     const num = parseInt(qtyText, 10);
-    const current = isNaN(num) ? 1 : num;
-    const next = Math.max(1, current - 1);
+    const current = isNaN(num) ? 0 : num;
+    const next = Math.max(0, current - 1);
     setQtyText(String(next));
   };
 
   const handleIncrease = () => {
     const num = parseInt(qtyText, 10);
-    const current = isNaN(num) ? 1 : num;
+    const current = isNaN(num) ? 0 : num;
     const next = current + 1;
     setQtyText(String(next));
   };
 
   const handleAdd = () => {
     const num = parseInt(qtyText, 10);
-    const qtyToAdd = isNaN(num) || num < 1 ? 1 : num;
-    onAddToCart(product, selectedUnitName, qtyToAdd);
+    if (isNaN(num) || num <= 0) {
+      showToast('Số lượng chưa hợp lệ', 'Vui lòng chọn số lượng từ 1 trở lên để thêm vào giỏ', 'info', 2500);
+      return;
+    }
+    onAddToCart(product, selectedUnitName, num);
     setQtyText('1');
   };
 
@@ -1257,6 +1263,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, inCartCount, onAddTo
         <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-white focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
           <button
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={handleDecrease}
             className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition cursor-pointer"
             title="Giảm 1"
@@ -1278,6 +1285,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, inCartCount, onAddTo
           />
           <button
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={handleIncrease}
             className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition cursor-pointer"
             title="Tăng 1"
@@ -1340,8 +1348,8 @@ const PortalCartItemRow: React.FC<PortalCartItemRowProps> = ({
 
   const handleQtyBlur = () => {
     if (localQtyText === '' || parseInt(localQtyText, 10) === 0) {
-      setLocalQtyText('1');
-      onUpdateQuantity(index, 1);
+      setLocalQtyText('0');
+      onUpdateQuantity(index, 0);
     } else {
       const num = parseInt(localQtyText, 10);
       setLocalQtyText(String(num));
@@ -1351,7 +1359,7 @@ const PortalCartItemRow: React.FC<PortalCartItemRowProps> = ({
 
   const handleDecrease = () => {
     const num = parseInt(localQtyText, 10);
-    const current = isNaN(num) ? 1 : num;
+    const current = isNaN(num) ? 0 : num;
     if (current <= 1) {
       onRemoveItem(index);
     } else {
@@ -1363,7 +1371,7 @@ const PortalCartItemRow: React.FC<PortalCartItemRowProps> = ({
 
   const handleIncrease = () => {
     const num = parseInt(localQtyText, 10);
-    const current = isNaN(num) ? 1 : num;
+    const current = isNaN(num) ? 0 : num;
     const next = current + 1;
     setLocalQtyText(String(next));
     onUpdateQuantity(index, next);
@@ -1403,6 +1411,7 @@ const PortalCartItemRow: React.FC<PortalCartItemRowProps> = ({
         <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
           <button
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={handleDecrease}
             className="px-2.5 py-1 text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition cursor-pointer"
             title={item.quantity <= 1 ? 'Xóa khỏi giỏ' : 'Giảm 1'}
@@ -1421,6 +1430,7 @@ const PortalCartItemRow: React.FC<PortalCartItemRowProps> = ({
           />
           <button
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={handleIncrease}
             className="px-2.5 py-1 text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition cursor-pointer"
             title="Tăng 1"
