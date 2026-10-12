@@ -16,6 +16,7 @@ import { Pagination } from '../../components/common/Pagination';
 import { fetchCategories } from '../../services/categoryApi';
 import { ProductUnitConversionModal } from './components/ProductUnitConversionModal';
 import { SearchSelect } from '../../components/common/SearchSelect';
+import { RowActionMenu } from '../../components/common/RowActionMenu';
 
 export const ProductManagementPage: React.FC = () => {
   const { currentRole } = useAuth();
@@ -426,47 +427,43 @@ export const ProductManagementPage: React.FC = () => {
                       {/* 9. Thao tác */}
                       <td className="py-3 px-4 text-center whitespace-nowrap">
                         <div className="inline-flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            title="Quản lý đơn vị tính quy đổi"
-                            onClick={() => setUnitConversionProduct(p)}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
-                          >
-                            <Icons.Scale size={16} />
-                          </button>
-
                           {canManageProducts && (
-                            <>
-                              <button
-                                type="button"
-                                title="Sửa thông tin sản phẩm"
-                                onClick={() => handleOpenEdit(p)}
-                                className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
-                              >
-                                <Icons.Edit size={16} />
-                              </button>
-
-                              {p.status === 'ACTIVE' ? (
-                                <button
-                                  type="button"
-                                  title="Ngừng kinh doanh (sản phẩm không xoá khỏi hệ thống)"
-                                  onClick={() => setDeactivateTarget(p)}
-                                  className="p-1.5 rounded-lg transition-colors cursor-pointer text-red-500 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Icons.Trash2 size={16} />
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  title="Mở lại kinh doanh"
-                                  onClick={() => handleActivate(p)}
-                                  className="p-1.5 rounded-lg transition-colors cursor-pointer text-emerald-600 hover:bg-emerald-50"
-                                >
-                                  <Icons.RotateCcw size={16} />
-                                </button>
-                              )}
-                            </>
+                            <button
+                              type="button"
+                              title="Sửa thông tin sản phẩm"
+                              onClick={() => handleOpenEdit(p)}
+                              className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
+                            >
+                              <Icons.Edit size={16} />
+                            </button>
                           )}
+
+                          {/* Thao tác phụ (đơn vị quy đổi, ngừng / mở kinh doanh) gom vào menu "⋯" */}
+                          <RowActionMenu
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors cursor-pointer"
+                            items={[
+                              {
+                                label: 'Đơn vị tính quy đổi',
+                                icon: <Icons.Scale size={14} />,
+                                title: 'Quản lý đơn vị tính quy đổi',
+                                onClick: () => setUnitConversionProduct(p),
+                              },
+                              {
+                                label: 'Ngừng kinh doanh',
+                                icon: <Icons.Trash2 size={14} />,
+                                title: 'Ngừng kinh doanh (sản phẩm không xoá khỏi hệ thống)',
+                                onClick: () => setDeactivateTarget(p),
+                                hidden: !canManageProducts || p.status !== 'ACTIVE',
+                                danger: true,
+                              },
+                              {
+                                label: 'Mở lại kinh doanh',
+                                icon: <Icons.RotateCcw size={14} />,
+                                onClick: () => handleActivate(p),
+                                hidden: !canManageProducts || p.status === 'ACTIVE',
+                              },
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>

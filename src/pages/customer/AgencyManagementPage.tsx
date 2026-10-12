@@ -217,7 +217,7 @@ export const AgencyManagementPage: React.FC = () => {
       return;
     }
     const rect = e.currentTarget.getBoundingClientRect();
-    const dropdownHeight = 240;
+    const dropdownHeight = 290;
     const spaceBelow = window.innerHeight - rect.bottom;
     const shouldOpenUp = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
 
@@ -963,17 +963,6 @@ export const AgencyManagementPage: React.FC = () => {
                               </button>
                             )}
 
-                            {/* 2. Nút Phân công người phụ trách (S3-06) */}
-                            {canManageAssignments && (
-                              <button
-                                onClick={() => handleOpenAssignRep(agency)}
-                                title="Phân công / Đổi nhân viên kinh doanh phụ trách"
-                                className="p-1.5 rounded-lg border border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300 transition-colors cursor-pointer"
-                              >
-                                <Users size={15} />
-                              </button>
-                            )}
-
                             {/* 3. Nút Menu Thao Tác Khác (...) */}
                             <div className="relative">
                               <button
@@ -1132,6 +1121,23 @@ export const AgencyManagementPage: React.FC = () => {
               <Truck size={14} className="text-[#F85606]" />
               <span>Điểm giao hàng ({openMenuAgency.deliveryPointCount ?? 0})</span>
             </button>
+
+            {/* Phân công / đổi người phụ trách (S3-06) - chuyển từ nút ngoài bảng vào menu cho gọn */}
+            {canManageAssignments && (
+              <button
+                type="button"
+                onClick={() => {
+                  const target = openMenuAgency;
+                  setOpenMenuAgency(null);
+                  setMenuCoords(null);
+                  handleOpenAssignRep(target);
+                }}
+                className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-purple-50/60 hover:text-purple-600 transition-colors cursor-pointer"
+              >
+                <Users size={14} className="text-purple-500" />
+                <span>Phân công NV phụ trách</span>
+              </button>
+            )}
 
             {/* Lịch sử phân công */}
             <button

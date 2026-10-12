@@ -46,6 +46,7 @@ import { OrderDetailModal } from '../../components/order/OrderDetailModal';
 import { OrderApprovalActionModal, type ApprovalActionType } from '../../components/order/OrderApprovalActionModal';
 import { OrderPdfPreviewModal } from '../../components/order/OrderPdfPreviewModal';
 import { SearchSelect } from '../../components/common/SearchSelect';
+import { RowActionMenu } from '../../components/common/RowActionMenu';
 
 // Danh sách tabs trạng thái nhanh
 const STATUS_TABS = [
@@ -115,6 +116,24 @@ export const OrderListPage: React.FC = () => {
   const [approvalModalOrder, setApprovalModalOrder] = useState<PendingOrderResponse | null>(null);
   const [approvalModalAction, setApprovalModalAction] = useState<ApprovalActionType>('APPROVE');
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState<boolean>(false);
+
+  // S4-05: Mở modal Duyệt / Trả lại / Từ chối từ menu thao tác của dòng đơn
+  const openApprovalModal = (o: OrderSummaryItem, action: ApprovalActionType) => {
+    setApprovalModalOrder({
+      id: Number(o.id),
+      code: o.code,
+      customerId: Number(o.customerId || 0),
+      customerCode: o.customerCode || '',
+      customerName: o.customerName || '',
+      lineCount: o.lineCount || 0,
+      totalAmount: Number(o.totalAmount || 0),
+      submittedByUsername: o.salesRepName || '',
+      submittedAt: o.createdAt || '',
+      reasons: []
+    });
+    setApprovalModalAction(action);
+    setIsApprovalModalOpen(true);
+  };
 
   // S4-08: Modal xem trước và in PDF đơn hàng
   const [pdfPreviewOrder, setPdfPreviewOrder] = useState<OrderBackendResponse | null>(null);
@@ -740,28 +759,6 @@ export const OrderListPage: React.FC = () => {
                           <Eye size={16} />
                         </button>
 
-                        {/* S4-09: Sao chép đơn cũ thành đơn mới */}
-                        <button
-                          type="button"
-                          onClick={() => handleCloneOrder(o.id)}
-                          disabled={cloningOrderId === o.id}
-                          className="p-1.5 rounded-lg text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition cursor-pointer"
-                          title="Sao chép"
-                        >
-                          <Copy size={16} className={cloningOrderId === o.id ? 'animate-spin' : ''} />
-                        </button>
-
-                        {/* S4-08: Nút in / tải PDF đơn hàng */}
-                        <button
-                          type="button"
-                          onClick={() => handleOpenPdfPreview(o.id)}
-                          disabled={loadingPdfId === o.id}
-                          className="p-1.5 rounded-lg text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 transition cursor-pointer"
-                          title="In / Xuất PDF (S4-08)"
-                        >
-                          <Printer size={16} className={loadingPdfId === o.id ? 'animate-spin' : ''} />
-                        </button>
-
                         {o.status === 'DRAFT' && (
                           <button
                             type="button"
@@ -773,82 +770,42 @@ export const OrderListPage: React.FC = () => {
                           </button>
                         )}
 
-                        {/* S4-05: Nút thao tác nhanh Duyệt / Trả lại / Từ chối (Dành riêng cho Quản lý KD) */}
-                        {o.status === 'PENDING_APPROVAL' && isSalesManager && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setApprovalModalOrder({
-                                  id: Number(o.id),
-                                  code: o.code,
-                                  customerId: Number(o.customerId || 0),
-                                  customerCode: o.customerCode || '',
-                                  customerName: o.customerName || '',
-                                  lineCount: o.lineCount || 0,
-                                  totalAmount: Number(o.totalAmount || 0),
-                                  submittedByUsername: o.salesRepName || '',
-                                  submittedAt: o.createdAt || '',
-                                  reasons: []
-                                });
-                                setApprovalModalAction('APPROVE');
-                                setIsApprovalModalOpen(true);
-                              }}
-                              className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition cursor-pointer"
-                              title="Phê duyệt đơn hàng "
-                            >
-                              <CheckCircle2 size={16} />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setApprovalModalOrder({
-                                  id: Number(o.id),
-                                  code: o.code,
-                                  customerId: Number(o.customerId || 0),
-                                  customerCode: o.customerCode || '',
-                                  customerName: o.customerName || '',
-                                  lineCount: o.lineCount || 0,
-                                  totalAmount: Number(o.totalAmount || 0),
-                                  submittedByUsername: o.salesRepName || '',
-                                  submittedAt: o.createdAt || '',
-                                  reasons: []
-                                });
-                                setApprovalModalAction('RETURN');
-                                setIsApprovalModalOpen(true);
-                              }}
-                              className="p-1.5 rounded-lg text-amber-600 hover:text-amber-800 hover:bg-amber-50 transition cursor-pointer"
-                              title="Trả lại yêu cầu NVKD sửa "
-                            >
-                              <RotateCcw size={16} />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setApprovalModalOrder({
-                                  id: Number(o.id),
-                                  code: o.code,
-                                  customerId: Number(o.customerId || 0),
-                                  customerCode: o.customerCode || '',
-                                  customerName: o.customerName || '',
-                                  lineCount: o.lineCount || 0,
-                                  totalAmount: Number(o.totalAmount || 0),
-                                  submittedByUsername: o.salesRepName || '',
-                                  submittedAt: o.createdAt || '',
-                                  reasons: []
-                                });
-                                setApprovalModalAction('REJECT');
-                                setIsApprovalModalOpen(true);
-                              }}
-                              className="p-1.5 rounded-lg text-rose-600 hover:text-rose-800 hover:bg-rose-50 transition cursor-pointer"
-                              title="Từ chối đơn hàng "
-                            >
-                              <XCircle size={16} />
-                            </button>
-                          </>
-                        )}
+                        {/* Thao tác phụ gom vào menu "⋯" cho gọn: Sao chép (S4-09), In/PDF (S4-08), Duyệt/Trả lại/Từ chối (S4-05) */}
+                        <RowActionMenu
+                          items={[
+                            {
+                              label: 'Sao chép thành đơn mới',
+                              icon: <Copy size={14} />,
+                              onClick: () => handleCloneOrder(o.id),
+                              disabled: cloningOrderId === o.id,
+                            },
+                            {
+                              label: 'In / Xuất PDF',
+                              icon: <Printer size={14} />,
+                              onClick: () => handleOpenPdfPreview(o.id),
+                              disabled: loadingPdfId === o.id,
+                            },
+                            {
+                              label: 'Phê duyệt đơn hàng',
+                              icon: <CheckCircle2 size={14} />,
+                              onClick: () => openApprovalModal(o, 'APPROVE'),
+                              hidden: !(o.status === 'PENDING_APPROVAL' && isSalesManager),
+                            },
+                            {
+                              label: 'Trả lại NVKD sửa',
+                              icon: <RotateCcw size={14} />,
+                              onClick: () => openApprovalModal(o, 'RETURN'),
+                              hidden: !(o.status === 'PENDING_APPROVAL' && isSalesManager),
+                            },
+                            {
+                              label: 'Từ chối đơn hàng',
+                              icon: <XCircle size={14} />,
+                              onClick: () => openApprovalModal(o, 'REJECT'),
+                              hidden: !(o.status === 'PENDING_APPROVAL' && isSalesManager),
+                              danger: true,
+                            },
+                          ]}
+                        />
                       </div>
                     </td>
                   </tr>

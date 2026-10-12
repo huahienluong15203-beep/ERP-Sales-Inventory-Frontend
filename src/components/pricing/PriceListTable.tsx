@@ -4,6 +4,7 @@ import { CUSTOMER_GROUPS } from '../../types/pricing';
 import { Icons } from '../common/Icons';
 import { Pagination } from '../common/Pagination';
 import { SearchSelect } from '../common/SearchSelect';
+import { RowActionMenu } from '../common/RowActionMenu';
 
 interface PriceListTableProps {
   /** Các bảng giá của TRANG hiện tại (Backend đã lọc + phân trang). */
@@ -297,44 +298,28 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
                           <Icons.Edit size={16} />
                         </button>
 
-                        {/* Xoá bảng giá */}
-                        {canManage && (
-                          <button
-                            type="button"
-                            onClick={() => onDelete(item)}
-                            title={
-                              item.hasOrders
+                        {/* Thao tác phụ (tạo phiên bản mới, xoá) gom vào menu "⋯" */}
+                        <RowActionMenu
+                          className="p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors cursor-pointer"
+                          items={[
+                            {
+                              label: 'Tạo phiên bản mới',
+                              icon: <Icons.Copy size={14} />,
+                              title: 'Tạo phiên bản mới từ bảng giá này (v2, v3...)',
+                              onClick: () => onCloneVersion(item),
+                            },
+                            {
+                              label: 'Xoá bảng giá',
+                              icon: <Icons.Trash2 size={14} />,
+                              title: item.hasOrders
                                 ? 'Bảng giá đã có đơn hàng (xem thông tin ràng buộc)'
-                                : 'Xoá bảng giá'
-                            }
-                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                              item.hasOrders
-                                ? 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
-                                : 'text-gray-600 hover:text-rose-600 hover:bg-rose-50'
-                            }`}
-                          >
-                            <Icons.Trash2 size={16} />
-                          </button>
-                        )}
-
-                        {/* Nút Tạo phiên bản mới luôn khả dụng */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onCloneVersion(item);
-                          }}
-                          title="Tạo phiên bản mới từ bảng giá này (v2, v3...)"
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-xs ${
-                            item.hasOrders
-                              ? 'bg-[#F85606] hover:bg-[#E04D05] text-white shadow-sm hover:shadow-md'
-                              : 'bg-orange-50 hover:bg-orange-100 text-[#F85606] border border-orange-200'
-                          }`}
-                        >
-                          <Icons.Copy size={13} />
-                          <span>Tạo bản mới</span>
-                        </button>
+                                : 'Xoá bảng giá',
+                              onClick: () => onDelete(item),
+                              hidden: !canManage,
+                              danger: true,
+                            },
+                          ]}
+                        />
                       </div>
                     </td>
                   </tr>

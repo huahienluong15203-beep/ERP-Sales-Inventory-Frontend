@@ -3,6 +3,7 @@ import type { Supplier } from '../../types/supplier';
 import { Icons } from '../common/Icons';
 import { Pagination } from '../common/Pagination';
 import { SearchSelect } from '../common/SearchSelect';
+import { RowActionMenu } from '../common/RowActionMenu';
 
 interface SupplierTableProps {
   suppliers: Supplier[];
@@ -286,29 +287,27 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                               <Icons.Edit size={16} />
                             </button>
 
-                            <button
-                              onClick={() => onToggleStatus(supplier)}
-                              title={
-                                isActive
-                                  ? 'Ngừng giao dịch (Bắt buộc nhập lý do)'
-                                  : 'Mở lại giao dịch cho nhà cung cấp'
-                              }
-                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                                isActive
-                                  ? 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'
-                                  : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'
-                              }`}
-                            >
-                              {isActive ? <Icons.AlertTriangle size={16} /> : <Icons.CheckCircle2 size={16} />}
-                            </button>
-
-                            <button
-                              onClick={() => onDelete(supplier)}
-                              title="Xóa nhà cung cấp (chỉ khi chưa phát sinh phiếu nhập)"
-                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                            >
-                              <Icons.Trash2 size={16} />
-                            </button>
+                            {/* Thao tác phụ (đổi trạng thái, xoá) gom vào menu "⋯" */}
+                            <RowActionMenu
+                              className="p-1.5 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                              items={[
+                                {
+                                  label: isActive ? 'Ngừng giao dịch' : 'Mở lại giao dịch',
+                                  icon: isActive ? <Icons.AlertTriangle size={14} /> : <Icons.CheckCircle2 size={14} />,
+                                  title: isActive
+                                    ? 'Ngừng giao dịch (Bắt buộc nhập lý do)'
+                                    : 'Mở lại giao dịch cho nhà cung cấp',
+                                  onClick: () => onToggleStatus(supplier),
+                                },
+                                {
+                                  label: 'Xóa nhà cung cấp',
+                                  icon: <Icons.Trash2 size={14} />,
+                                  title: 'Xóa nhà cung cấp (chỉ khi chưa phát sinh phiếu nhập)',
+                                  onClick: () => onDelete(supplier),
+                                  danger: true,
+                                },
+                              ]}
+                            />
                           </>
                         )}
                       </div>
