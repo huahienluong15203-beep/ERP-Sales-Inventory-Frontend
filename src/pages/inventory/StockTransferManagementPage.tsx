@@ -30,7 +30,11 @@ import { SearchSelect } from '../../components/common/SearchSelect';
  * - AC4: Chênh lệch khi nhận phải nhập lý do
  */
 export const StockTransferManagementPage: React.FC = () => {
-  const { showToast } = useAuth();
+  const { showToast, currentRole } = useAuth();
+
+  // Mục 12 (góp ý GV): chặn ở cả FE và BE - chỉ NV kho, QL kho, Admin được lập / xuất / nhận phiếu chuyển;
+  // Kế toán chỉ xem.
+  const canEditInventory = ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'].includes(currentRole ?? '');
 
   const [transfers, setTransfers] = useState<StockTransfer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -161,6 +165,7 @@ export const StockTransferManagementPage: React.FC = () => {
           </div>
         </div>
 
+        {canEditInventory && (
         <button
           type="button"
           onClick={() => setIsCreateModalOpen(true)}
@@ -169,6 +174,7 @@ export const StockTransferManagementPage: React.FC = () => {
           <Plus size={16} />
           <span>Lập Phiếu Chuyển Kho</span>
         </button>
+        )}
       </div>
 
       {/* KPI STATS CARDS */}
@@ -371,7 +377,7 @@ export const StockTransferManagementPage: React.FC = () => {
                           </button>
 
                           {/* Nút Xuất kho nếu đang DRAFT */}
-                          {item.status === 'DRAFT' && (
+                          {item.status === 'DRAFT' && canEditInventory && (
                             <button
                               type="button"
                               onClick={() => handleDispatch(item)}
@@ -383,7 +389,7 @@ export const StockTransferManagementPage: React.FC = () => {
                           )}
 
                           {/* Nút Kho đến nhận hàng nếu IN_TRANSIT */}
-                          {item.status === 'IN_TRANSIT' && (
+                          {item.status === 'IN_TRANSIT' && canEditInventory && (
                             <button
                               type="button"
                               onClick={() => setSelectedTransferForReceive(item)}

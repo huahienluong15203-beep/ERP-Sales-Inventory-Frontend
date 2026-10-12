@@ -144,6 +144,8 @@ export const StockLedgerPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {canEditInventory && (
+          <>
           <button
             type="button"
             onClick={() => navigate('/inventory/receipts')}
@@ -160,6 +162,8 @@ export const StockLedgerPage: React.FC = () => {
             <ArrowRightLeft size={14} />
             <span>Lập Phiếu Chuyển Kho</span>
           </button>
+          </>
+          )}
         </div>
       </div>
 
