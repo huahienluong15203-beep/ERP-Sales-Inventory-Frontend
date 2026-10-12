@@ -178,27 +178,27 @@ export const SupplierManagementPage: React.FC = () => {
   useClampPage(currentPage, totalPages, setCurrentPage, loading);
 
   return (
-    <div className="w-full min-w-0 space-y-6 animate-in fade-in duration-200">
+    <div className="w-full min-w-0 space-y-3.5 animate-in fade-in duration-200">
       {/* Tiêu đề trang & Nút thao tác chính */}
-      <div className="flex items-center justify-end gap-2.5">
+      <div className="flex items-center justify-end gap-2">
         {/* Thanh tác vụ */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             onClick={loadData}
             disabled={loading}
             title="Làm mới danh sách nhà cung cấp"
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:text-[#F85606] hover:border-orange-300 rounded-xl hover:bg-orange-50/40 text-sm font-semibold transition-all cursor-pointer shadow-xs min-h-[44px]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:text-[#F85606] hover:border-orange-300 rounded-lg hover:bg-orange-50/40 text-xs font-semibold transition-all cursor-pointer shadow-2xs h-9"
           >
-            <Icons.RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <Icons.RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             <span>Làm mới</span>
           </button>
 
           {canManage && (
             <button
               onClick={handleOpenCreate}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs hover:shadow transition-all cursor-pointer min-h-[44px]"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow transition-all cursor-pointer h-9"
             >
-              <Icons.Plus size={18} />
+              <Icons.Plus size={16} />
               <span>Thêm đối tác mới</span>
             </button>
           )}

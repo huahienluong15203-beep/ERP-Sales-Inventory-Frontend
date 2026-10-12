@@ -18,10 +18,13 @@ import {
   RotateCcw,
   History,
   Ban,
-  Printer
+  Printer,
+  Truck,
+  CheckCheck,
+  Archive
 } from 'lucide-react';
 import type { OrderBackendResponse, OrderApprovalHistoryResponse } from '../../types/order';
-import { fetchOrderDetail, fetchOrderApprovalHistory, formatCurrencyVND, formatQuantity } from '../../services/orderService';
+import { fetchOrderDetail, fetchOrderApprovalHistory, formatCurrencyVND, formatQuantity, updateOrderStatus } from '../../services/orderService';
 import { useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
 import { OrderApprovalActionModal, type ApprovalActionType } from './OrderApprovalActionModal';
@@ -39,7 +42,7 @@ interface OrderDetailModalProps {
 
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isOpen, onClose, onCloneOrder, onOrderUpdated }) => {
   const navigate = useNavigate();
-  const { user, currentRole } = useAuth();
+  const { user, currentRole, showToast } = useAuth();
   const [loading, setLoading] = useState<boolean>(false);
   const [order, setOrder] = useState<OrderBackendResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,10 +53,33 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
   }>({ isOpen: false, actionType: 'APPROVE' });
   const [isCancelModalOpen, setIsCancelModalOpen] = useState<boolean>(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
+  const [updatingStatus, setUpdatingStatus] = useState<boolean>(false);
 
   const isSalesManager =
     currentRole === 'ROLE_SALES_MANAGER' ||
     Boolean(user?.roles?.includes('ROLE_SALES_MANAGER'));
+
+  const isWarehouseOrAdmin =
+    currentRole === 'ROLE_ADMIN' ||
+    currentRole === 'ROLE_WH_MANAGER' ||
+    currentRole === 'ROLE_WAREHOUSE' ||
+    Boolean(user?.roles?.some((r) => ['ROLE_ADMIN', 'ROLE_WH_MANAGER', 'ROLE_WAREHOUSE'].includes(r)));
+
+  const handleUpdateStatus = async (targetStatus: string, actionLabel: string) => {
+    if (!order?.id) return;
+    try {
+      setUpdatingStatus(true);
+      await updateOrderStatus(order.id, targetStatus);
+      showToast('Thành công', `Đơn hàng đã chuyển sang trạng thái "${actionLabel}"`, 'success');
+      loadOrderDetailAndHistory(Number(order.id));
+      if (onOrderUpdated) onOrderUpdated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Không thể chuyển trạng thái đơn hàng';
+      showToast('Lỗi thao tác', msg, 'error');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   const loadOrderDetailAndHistory = (id: number) => {
     setLoading(true);
@@ -580,11 +606,64 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
                 </button>
               </div>
             )}
+
+            {/* S4-06 & S5-06: Các hành động xử lý kho theo vòng đời */}
+            {activeOrder?.status === 'APPROVED' && isWarehouseOrAdmin && (
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={() => handleUpdateStatus('PICKING', 'Đang soạn hàng')}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
+                title="Bắt đầu lấy hàng và soạn hàng theo FEFO (S4-06)"
+              >
+                <Package size={14} className={updatingStatus ? 'animate-spin' : ''} />
+                <span>Bắt đầu soạn hàng</span>
+              </button>
+            )}
+
+            {activeOrder?.status === 'PICKING' && isWarehouseOrAdmin && (
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={() => handleUpdateStatus('DISPATCHED', 'Đã xuất kho')}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
+                title="Xác nhận hàng đã rời kho và trừ tồn thực tế (S4-06 / S5-06)"
+              >
+                <Truck size={14} className={updatingStatus ? 'animate-spin' : ''} />
+                <span>Xác nhận xuất kho</span>
+              </button>
+            )}
+
+            {activeOrder?.status === 'DISPATCHED' && (
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={() => handleUpdateStatus('DELIVERED', 'Đã giao hàng')}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
+                title="Xác nhận đại lý đã nhận hàng (S4-06 / S5-01)"
+              >
+                <CheckCheck size={14} className={updatingStatus ? 'animate-spin' : ''} />
+                <span>Xác nhận đã giao hàng</span>
+              </button>
+            )}
+
+            {activeOrder?.status === 'DELIVERED' && (isWarehouseOrAdmin || isSalesManager || currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_ACCOUNTANT') && (
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={() => handleUpdateStatus('CLOSED', 'Hoàn tất')}
+                className="px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
+                title="Hoàn tất và đóng đơn hàng (S4-06)"
+              >
+                <Archive size={14} className={updatingStatus ? 'animate-spin' : ''} />
+                <span>Hoàn tất đơn</span>
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
-            {/* S4-06: Nút hủy đơn hàng khi chưa xuất kho */}
-            {activeOrder && !['CANCELLED', 'REJECTED', 'CLOSED'].includes(activeOrder.status) && (
+            {/* S4-06 AC3: Đơn hàng đã xuất kho (DISPATCHED trở đi) thì nghiêm cấm hủy đơn */}
+            {activeOrder && !['CANCELLED', 'REJECTED', 'CLOSED', 'DISPATCHED', 'DELIVERED'].includes(activeOrder.status) && (
               <button
                 type="button"
                 onClick={() => setIsCancelModalOpen(true)}

@@ -84,23 +84,22 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
 
   return (
     <>
-      <div className="mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
-      <div className="bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 rounded-3xl p-5 sm:p-6 text-white shadow-xl shadow-rose-600/20 border border-rose-500/40 relative overflow-hidden">
+      <div className="mb-3.5 animate-in fade-in slide-in-from-top-2 duration-300">
+      <div className="bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 rounded-2xl p-4 sm:p-5 text-white shadow-xl shadow-rose-600/20 border border-rose-500/40 relative overflow-hidden">
         {/* Họa tiết trang trí nền */}
         <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="relative z-10 space-y-4">
+        <div className="relative z-10 space-y-3">
           {/* HEADER THÔNG BÁO ĐỎ (AC2) */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 text-white animate-bounce">
-                <BellRing size={24} />
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 text-white animate-bounce">
+                <BellRing size={20} />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-black text-base sm:text-lg tracking-tight uppercase flex items-center gap-2">
+                  <h3 className="font-black text-sm sm:text-base tracking-tight uppercase flex items-center gap-2">
                     <span>Cảnh Báo Tồn Kho Dưới Định Mức Tối Thiểu</span>
-
                   </h3>
                 </div>
                 <p className="text-xs text-rose-100 mt-0.5">
@@ -117,7 +116,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                   setSelectedAlertForReceipt(null);
                   setIsReceiptModalOpen(true);
                 }}
-                className="px-4 py-2.5 rounded-xl bg-white text-rose-700 font-bold text-xs hover:bg-rose-50 transition shadow-md shadow-black/10 flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-1.5 rounded-lg bg-white text-rose-700 font-bold text-xs hover:bg-rose-50 transition shadow-2xs flex items-center gap-1.5 cursor-pointer h-9"
               >
                 <ShoppingCart size={14} />
                 <span>Lập Phiếu Nhập NCC</span>
@@ -126,7 +125,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
               <button
                 type="button"
                 onClick={() => navigate('/inventory/ledger')}
-                className="px-4 py-2.5 rounded-xl bg-rose-800/80 hover:bg-rose-800 text-white font-bold text-xs transition border border-rose-400/50 flex items-center gap-1 cursor-pointer"
+                className="px-3.5 py-1.5 rounded-lg bg-rose-800/80 hover:bg-rose-800 text-white font-bold text-xs transition border border-rose-400/50 flex items-center gap-1 cursor-pointer h-9"
               >
                 <span>Xem Sổ Tồn</span>
                 <ChevronRight size={14} />

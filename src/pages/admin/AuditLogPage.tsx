@@ -164,31 +164,31 @@ export const AuditLogPage: React.FC = () => {
   useClampPage(page, totalPages, setPage, loading);
 
   return (
-    <div className="w-full min-w-0 space-y-6">
+    <div className="w-full min-w-0 space-y-3.5">
       {/* 1. Nút tác vụ chính */}
-      <div className="flex items-center justify-end gap-2.5">
-          <button
-            type="button"
-            onClick={loadData}
-            disabled={loading || isDateRangeInvalid}
-            title={isDateRangeInvalid ? 'Khoảng ngày không hợp lệ (Ngày kết thúc < Ngày bắt đầu)' : 'Làm mới nhật ký thao tác'}
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white border border-slate-200 text-slate-700 hover:text-orange-600 rounded-xl hover:bg-slate-50 text-xs sm:text-sm font-semibold transition shadow-xs cursor-pointer min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            <span>Làm mới</span>
-          </button>
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={loadData}
+          disabled={loading || isDateRangeInvalid}
+          title={isDateRangeInvalid ? 'Khoảng ngày không hợp lệ (Ngày kết thúc < Ngày bắt đầu)' : 'Làm mới nhật ký thao tác'}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:text-orange-600 rounded-lg hover:bg-slate-50 text-xs font-semibold transition shadow-2xs cursor-pointer h-9 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          <span>Làm mới</span>
+        </button>
 
-          <button
-            type="button"
-            onClick={handleExportExcel}
-            disabled={isDateRangeInvalid}
-            title={isDateRangeInvalid ? 'Khoảng ngày không hợp lệ (Ngày kết thúc < Ngày bắt đầu)' : 'Xuất Excel'}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs hover:shadow transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <FileSpreadsheet size={16} />
-            <span>Xuất Excel Kiểm Toán</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleExportExcel}
+          disabled={isDateRangeInvalid}
+          title={isDateRangeInvalid ? 'Khoảng ngày không hợp lệ (Ngày kết thúc < Ngày bắt đầu)' : 'Xuất Excel'}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition cursor-pointer h-9 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <FileSpreadsheet size={15} />
+          <span>Xuất Excel Kiểm Toán</span>
+        </button>
+      </div>
 
       {/* 2. Thẻ KPI thống kê biến động */}
       <AuditLogStats

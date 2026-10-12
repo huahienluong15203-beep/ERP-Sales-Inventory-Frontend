@@ -731,19 +731,19 @@ export const OrderCreatePage: React.FC = () => {
   }, [creditStatus?.overdue, creditStatus?.blocked, creditStatus?.message, creditStatus?.overdueDays, overStockItems.length, servingWarehouse.name, isAgencyLocked]);
 
   return (
-    <div className="w-full min-w-0 space-y-5 animate-in fade-in duration-300 pb-10">
+    <div className="w-full min-w-0 space-y-3.5 animate-in fade-in duration-300 pb-8">
       {/* 1. Header Trang & Các Phím Thao Tác Nhanh */}
-      <div className="flex items-center justify-end gap-2 pb-1">
+      <div className="flex items-center justify-end gap-2 pb-0.5">
         {/* Nút thao tác góc phải */}
         <div className="flex items-center gap-2">
           {/* Nút Xem danh sách đơn nháp */}
           <button
             type="button"
             onClick={handleOpenDraftsModal}
-            className="px-3 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:border-orange-200 hover:text-[#F85606] hover:bg-orange-50/50 flex items-center gap-1.5 transition-all relative"
+            className="px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:border-orange-200 hover:text-[#F85606] hover:bg-orange-50/50 flex items-center gap-1.5 transition-all relative h-9 shadow-2xs"
             title="Xem các đơn nháp đã lưu trên máy hoặc máy chủ"
           >
-            <FileText size={15} />
+            <FileText size={14} />
             <span>Đơn Nháp</span>
             {savedDrafts.length > 0 && (
               <span className="w-5 h-5 rounded-full bg-[#F85606] text-white text-[10px] font-bold flex items-center justify-center">
@@ -756,16 +756,16 @@ export const OrderCreatePage: React.FC = () => {
           <button
             type="button"
             onClick={handleResetOrder}
-            className="p-2 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition"
+            className="w-9 h-9 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition flex items-center justify-center shadow-2xs"
             title="Xóa form và tạo đơn mới"
           >
-            <RefreshCw size={16} />
+            <RefreshCw size={14} />
           </button>
         </div>
       </div>
 
       {/* Nội dung tạo đơn */}
-      <div className="space-y-5">
+      <div className="space-y-3.5">
 
         {/* S4-09: BANNER THÔNG BÁO SAO CHÉP ĐƠN CŨ */}
 

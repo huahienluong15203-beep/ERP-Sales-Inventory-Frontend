@@ -61,9 +61,9 @@ export const SystemLogPage: React.FC = () => {
   }
 
   return (
-    <div className="w-full min-w-0 space-y-5">
+    <div className="w-full min-w-0 space-y-3.5">
       {tabs.length > 1 && (
-        <div className="flex flex-col sm:flex-row gap-2 sm:items-center rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xs">
+        <div className="flex flex-col sm:flex-row gap-1.5 sm:items-center rounded-xl border border-slate-200 bg-white p-1 shadow-2xs">
           {tabs.map((t) => {
             const isActive = t.key === active;
             const Icon = t.key === 'audit' ? ShieldCheck : t.key === 'territory' ? Users : History;
@@ -73,11 +73,11 @@ export const SystemLogPage: React.FC = () => {
                 type="button"
                 onClick={() => changeTab(t.key)}
                 aria-pressed={isActive}
-                className={`flex flex-1 items-center gap-2.5 rounded-xl px-4 py-2.5 text-left transition-colors min-h-[44px] cursor-pointer ${
-                  isActive ? 'bg-[#F85606] text-white shadow-sm' : 'text-slate-600 hover:bg-orange-50 hover:text-[#F85606]'
+                className={`flex flex-1 items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors min-h-[38px] cursor-pointer ${
+                  isActive ? 'bg-[#F85606] text-white shadow-2xs' : 'text-slate-600 hover:bg-orange-50 hover:text-[#F85606]'
                 }`}
               >
-                <Icon size={18} />
+                <Icon size={16} />
                 <span className="min-w-0">
                   <span className="block text-sm font-bold">{t.label}</span>
                   <span className={`block text-[11px] truncate ${isActive ? 'text-orange-100' : 'text-slate-400'}`}>{t.hint}</span>

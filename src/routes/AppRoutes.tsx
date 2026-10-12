@@ -286,7 +286,9 @@ export const AppRoutes: React.FC = () => {
                 'ROLE_SALES_REP',
                 'ROLE_SALES_MANAGER',
                 'ROLE_ADMIN',
-                'ROLE_ACCOUNTANT'
+                'ROLE_ACCOUNTANT',
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER'
               ]}
             >
               <OrderListPage />
