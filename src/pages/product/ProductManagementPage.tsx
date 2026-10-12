@@ -246,7 +246,7 @@ export const ProductManagementPage: React.FC = () => {
 
       {/* Thanh tìm kiếm và bộ lọc */}
       <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-2xs flex flex-wrap items-center gap-2.5">
-        <div className="flex-1 min-w-[240px] relative">
+        <div className="w-full sm:max-w-sm relative">
           <Icons.Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
@@ -276,7 +276,7 @@ export const ProductManagementPage: React.FC = () => {
           <SearchSelect
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value as ProductStatus | 'ALL')}
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
+            className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[38px]"
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang kinh doanh</option>

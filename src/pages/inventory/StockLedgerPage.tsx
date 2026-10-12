@@ -207,8 +207,8 @@ export const StockLedgerPage: React.FC = () => {
 
       {/* THANH TÌM KIẾM & BỘ LỌC */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-xs">
-        <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row items-center gap-3">
-          <div className="relative flex-1 w-full">
+        <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="relative w-full sm:max-w-sm">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
@@ -219,7 +219,7 @@ export const StockLedgerPage: React.FC = () => {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center sm:justify-end gap-2 w-full sm:w-auto">
             {/* Lọc Kho */}
             <SearchSelect
               value={selectedWarehouse}

@@ -1592,7 +1592,7 @@ export const CategoryManagement: React.FC = () => {
             {/* Filter & Search Bar */}
             <div className="p-4 border-b border-slate-100 bg-slate-50/50 space-y-3 shrink-0">
               <div className="flex flex-wrap items-center gap-2.5">
-                <div className="relative flex-1 min-w-[200px]">
+                <div className="relative w-full sm:w-72">
                   <input
                     type="text"
                     value={assignSearch}

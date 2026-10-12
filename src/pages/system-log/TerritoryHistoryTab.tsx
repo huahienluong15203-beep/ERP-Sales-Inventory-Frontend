@@ -190,7 +190,7 @@ export const TerritoryHistoryTab: React.FC = () => {
       <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
           {/* Ô tìm kiếm */}
-          <div className="relative flex-1 min-w-[220px]">
+          <div className="relative w-full sm:max-w-sm">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"

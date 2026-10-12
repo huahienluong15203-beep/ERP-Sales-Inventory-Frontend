@@ -171,8 +171,8 @@ export const GoodsReceiptManagementPage: React.FC = () => {
       </div>
 
       {/* 3. BỘ LỌC TÌM KIẾM */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        <div className="relative flex-1">
+      <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="relative w-full sm:max-w-sm">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
@@ -183,6 +183,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
           />
         </div>
 
+        <div className="flex flex-wrap items-center sm:justify-end gap-2">
         <SearchSelect
           value={selectedWarehouse}
           onChange={(e) => setSelectedWarehouse(e.target.value)}
@@ -205,6 +206,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
           <option value="CONFIRMED">Đã xác nhận (Đã cộng tồn)</option>
           <option value="DRAFT">Phiếu nháp (Chưa cộng tồn)</option>
         </SearchSelect>
+        </div>
       </div>
 
       {/* 4. BẢNG DANH SÁCH PHIẾU NHẬP KHO */}
