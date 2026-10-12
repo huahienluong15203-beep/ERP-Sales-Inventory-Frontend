@@ -50,12 +50,12 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [isAddingAll, setIsAddingAll] = useState<boolean>(false);
-  const [showAllProducts, setShowAllProducts] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
-  // Tự động thu gọn về 3 sản phẩm khi đổi đại lý
+  // Tự động reset về trang 1 khi đổi đại lý hoặc tìm kiếm từ khóa
   useEffect(() => {
-    setShowAllProducts(false);
-  }, [selectedAgency?.id]);
+    setCurrentPage(1);
+  }, [selectedAgency?.id, searchKeyword]);
 
   // S4-04 AC3: Kiểm tra quyền xem lịch sử mua hàng của nhân viên phụ trách
   const accessCheck = useMemo(() => {
@@ -118,11 +118,15 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
     );
   }, [activeHistoryData, searchKeyword]);
 
-  // Danh sách sản phẩm hiển thị: Mặc định tối đa 3 sản phẩm gần nhất, bấm "Xem thêm" để xem toàn bộ
-  const displayedProducts = useMemo(() => {
-    if (showAllProducts) return filteredProducts;
-    return filteredProducts.slice(0, 3);
-  }, [filteredProducts, showAllProducts]);
+  // S4-04: Phân trang tối đa 3 hàng (9 sản phẩm/trang)
+  const PAGE_SIZE = 9;
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
+
+  const pagedProducts = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredProducts.slice(start, start + PAGE_SIZE);
+  }, [filteredProducts, safePage]);
 
   // Danh sách SKU đã có trong giỏ hàng hiện tại kèm số lượng
   const cartSkuMap = useMemo(() => {
@@ -255,9 +259,7 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                       <span>Các Mặt Hàng Thường Mua (3 Tháng Gần Nhất)</span>
                     </h3>
                     <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[10px] font-bold">
-                      {showAllProducts || filteredProducts.length <= 3
-                        ? `${filteredProducts.length} sản phẩm`
-                        : `Hiển thị 3 / ${filteredProducts.length} sản phẩm`}
+                      {filteredProducts.length} sản phẩm{totalPages > 1 ? ` (Trang ${safePage}/${totalPages})` : ''}
                     </span>
                   </div>
 
@@ -282,7 +284,7 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {displayedProducts.map((prod) => {
+                    {pagedProducts.map((prod) => {
                       const inCartQty = cartSkuMap.get(prod.sku);
                       const isAlreadyInCart = inCartQty !== undefined && inCartQty > 0;
                       const hasStock = (prod.availableInPreferredUnit ?? 10) > 0;
@@ -398,26 +400,52 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                   </div>
                 )}
 
-                {/* Nút Xem thêm / Thu gọn khi có nhiều hơn 3 sản phẩm */}
-                {filteredProducts.length > 3 && (
-                  <div className="pt-2 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() => setShowAllProducts(!showAllProducts)}
-                      className="px-4 py-2 rounded-xl bg-orange-50/80 hover:bg-orange-100 text-[#F85606] text-xs font-bold flex items-center gap-1.5 transition cursor-pointer border border-orange-200/80 active:scale-98 shadow-2xs"
-                    >
-                      {showAllProducts ? (
-                        <>
-                          <span>Thu gọn (chỉ hiện 3 sản phẩm gần nhất)</span>
-                          <ChevronUp size={15} />
-                        </>
-                      ) : (
-                        <>
-                          <span>Xem thêm ({filteredProducts.length - 3} sản phẩm khác)</span>
-                          <ChevronDown size={15} />
-                        </>
-                      )}
-                    </button>
+                {/* Thanh phân trang khi có nhiều hơn 9 sản phẩm (nhiều hơn 3 hàng) */}
+                {totalPages > 1 && (
+                  <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-100">
+                    <div className="text-xs text-gray-500 font-medium">
+                      Hiển thị <strong>{(safePage - 1) * PAGE_SIZE + 1}</strong>–
+                      <strong>{Math.min(safePage * PAGE_SIZE, filteredProducts.length)}</strong> trên tổng số{' '}
+                      <strong>{filteredProducts.length}</strong> sản phẩm thường mua (tối đa 3 hàng / trang)
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={safePage <= 1}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>‹ Trước</span>
+                      </button>
+
+                      {/* Danh sách nút số trang */}
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`w-7 h-7 text-xs font-bold rounded-lg transition cursor-pointer ${
+                              pageNum === safePage
+                                ? 'bg-[#F85606] text-white shadow-2xs'
+                                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={safePage >= totalPages}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Sau ›</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
