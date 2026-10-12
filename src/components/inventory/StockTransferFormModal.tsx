@@ -456,13 +456,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                 <p className="text-[11px] text-gray-400 mt-1 mb-4">
                   Nhấn "Thêm mặt hàng" để chọn sản phẩm và khai báo số lượng cần điều chuyển
                 </p>
-                <button
-                  type="button"
-                  onClick={handleAddLine}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-xs cursor-pointer"
-                >
-                  <Plus size={14} /> Thêm dòng hàng
-                </button>
+
               </div>
             ) : (
               <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
@@ -524,11 +518,10 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                                 onChange={(e) =>
                                   handleUpdateLine(idx, 'transferQuantity', Math.max(0, Number(e.target.value)))
                                 }
-                                className={`w-full text-center font-black text-xs border rounded-lg p-1.5 bg-white focus:outline-none focus:ring-1 ${
-                                  isOverStock
-                                    ? 'border-rose-400 text-rose-600 focus:ring-rose-500 bg-rose-50'
-                                    : 'border-gray-200 text-gray-900 focus:ring-blue-500'
-                                }`}
+                                className={`w-full text-center font-black text-xs border rounded-lg p-1.5 bg-white focus:outline-none focus:ring-1 ${isOverStock
+                                  ? 'border-rose-400 text-rose-600 focus:ring-rose-500 bg-rose-50'
+                                  : 'border-gray-200 text-gray-900 focus:ring-blue-500'
+                                  }`}
                               />
                               {isOverStock && (
                                 <div className="text-[10px] text-rose-600 font-bold mt-0.5">

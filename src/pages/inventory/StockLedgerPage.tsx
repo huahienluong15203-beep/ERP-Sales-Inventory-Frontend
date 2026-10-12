@@ -130,9 +130,7 @@ export const StockLedgerPage: React.FC = () => {
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
               <span>Sổ Tồn Kho & Cảnh Báo Tồn Tối Thiểu</span>
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-                Sprint 5: S5-09
-              </span>
+
             </h1>
             <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
               Khai báo định mức tối thiểu theo SKU và kho, cảnh báo nguy cơ đứt hàng trước khi hết tồn
@@ -170,11 +168,10 @@ export const StockLedgerPage: React.FC = () => {
         {/* THẺ BÁO ĐỎ QUAN TRỌNG NHẤT (AC2) */}
         <div
           onClick={() => setOnlyBelowThreshold(!onlyBelowThreshold)}
-          className={`p-4 rounded-2xl border shadow-xs cursor-pointer transition ${
-            onlyBelowThreshold || stats.below > 0
+          className={`p-4 rounded-2xl border shadow-xs cursor-pointer transition ${onlyBelowThreshold || stats.below > 0
               ? 'bg-rose-50/70 border-rose-300 ring-2 ring-rose-500/20'
               : 'bg-white border-gray-200/80'
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-rose-700 uppercase flex items-center gap-1">
@@ -240,11 +237,10 @@ export const StockLedgerPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setOnlyBelowThreshold(!onlyBelowThreshold)}
-              className={`px-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                onlyBelowThreshold
+              className={`px-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${onlyBelowThreshold
                   ? 'bg-rose-600 text-white shadow-xs'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               <AlertTriangle size={14} />
               <span>Chỉ hiện SKU Báo Đỏ</span>
@@ -297,11 +293,10 @@ export const StockLedgerPage: React.FC = () => {
                   return (
                     <tr
                       key={item.id}
-                      className={`transition ${
-                        item.isBelowThreshold
+                      className={`transition ${item.isBelowThreshold
                           ? 'bg-rose-50/70 hover:bg-rose-50 border-l-4 border-rose-500'
                           : 'hover:bg-gray-50/70 border-l-4 border-transparent'
-                      }`}
+                        }`}
                     >
                       {/* SKU & Tên hàng */}
                       <td className="py-3.5 px-4">
@@ -319,11 +314,10 @@ export const StockLedgerPage: React.FC = () => {
                       {/* Tồn hiện tại (AC2: đỏ rực in đậm nếu dưới ngưỡng) */}
                       <td className="py-3.5 px-4 text-center">
                         <span
-                          className={`inline-block font-black text-sm px-2.5 py-1 rounded-xl ${
-                            item.isBelowThreshold
+                          className={`inline-block font-black text-sm px-2.5 py-1 rounded-xl ${item.isBelowThreshold
                               ? 'bg-rose-600 text-white shadow-xs'
                               : 'bg-emerald-50 text-emerald-800'
-                          }`}
+                            }`}
                         >
                           {item.currentStock.toLocaleString('vi-VN')} {item.unit}
                         </span>
