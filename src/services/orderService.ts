@@ -127,7 +127,10 @@ async function readBackendError(res: Response, fallback: string): Promise<string
 async function callBackend(url: string, init?: RequestInit): Promise<Response> {
   try {
     return await authFetch(url, init);
-  } catch {
+  } catch (err) {
+    if (err instanceof Error) {
+      throw err;
+    }
     throw new Error('Không kết nối được máy chủ. Vui lòng kiểm tra mạng và thử lại!');
   }
 }

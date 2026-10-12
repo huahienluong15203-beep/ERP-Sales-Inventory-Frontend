@@ -13,10 +13,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from '../routes/Router';
-import { ROLE_METADATA_MAP, type RoleName } from '../types/user';
+import { ROLE_METADATA_MAP, getUserAvatarInitials, type RoleName } from '../types/user';
 import { LogoutConfirmModal } from '../components/common/LogoutConfirmModal';
 import type { Agency, CreditStatusResponse } from '../types/agency';
 import { formatCurrencyVND } from '../services/orderService';
+import { getAvatarFullUrl } from '../services/api';
 
 interface CustomerPortalLayoutProps {
   children: ReactNode;
@@ -51,6 +52,7 @@ export const CustomerPortalLayout: React.FC<CustomerPortalLayoutProps> = ({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
   const [loggingOut, setLoggingOut] = useState<boolean>(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState<boolean>(false);
+  const [avatarError, setAvatarError] = useState<boolean>(false);
 
   const handleConfirmLogout = async () => {
     setLoggingOut(true);
@@ -161,23 +163,46 @@ export const CustomerPortalLayout: React.FC<CustomerPortalLayoutProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAccountMenuOpen((prev) => !prev)}
-                  className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 flex items-center gap-1.5 transition cursor-pointer text-gray-700 text-xs font-semibold"
-                  title="Tài khoản"
+                  className="p-1 sm:px-2.5 sm:py-1.5 rounded-2xl border border-gray-200 hover:bg-gray-50 flex items-center gap-2 transition cursor-pointer text-gray-700 text-xs font-semibold shadow-xs"
+                  title="Tài khoản & Thiết lập"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-gray-200 text-gray-700 font-bold flex items-center justify-center text-xs">
-                    {(user?.fullName || 'ĐL').substring(0, 2).toUpperCase()}
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-tr from-[#FF6A00] to-[#EE4D2D] text-white flex items-center justify-center font-bold text-xs shadow-xs border border-white">
+                    {(user?.avatarThumbnailUrl || user?.avatarUrl) && !avatarError ? (
+                      <img
+                        src={getAvatarFullUrl(user.avatarThumbnailUrl || user.avatarUrl)}
+                        alt={user?.fullName || user?.username || 'Avatar'}
+                        onError={() => setAvatarError(true)}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      getUserAvatarInitials(user?.fullName || user?.username, currentRole)
+                    )}
                   </div>
                   <ChevronDown size={14} className="text-gray-400 hidden sm:block" />
                 </button>
 
                 {isAccountMenuOpen && (
                   <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 text-xs divide-y divide-gray-100">
-                    <div className="px-4 py-2.5">
-                      <p className="font-bold text-gray-900 truncate">{user?.fullName || 'Đại lý B2B'}</p>
-                      <p className="text-gray-500 text-[11px] font-mono mt-0.5 truncate">{user?.username}</p>
-                      <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">
-                        {agency?.customerGroupName || 'Đại lý phân phối'}
-                      </span>
+                    <div className="px-4 py-3 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-tr from-[#FF6A00] to-[#EE4D2D] text-white flex items-center justify-center font-bold text-sm shadow-xs border border-gray-100">
+                        {(user?.avatarThumbnailUrl || user?.avatarUrl) && !avatarError ? (
+                          <img
+                            src={getAvatarFullUrl(user.avatarThumbnailUrl || user.avatarUrl)}
+                            alt={user?.fullName || user?.username || 'Avatar'}
+                            onError={() => setAvatarError(true)}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          getUserAvatarInitials(user?.fullName || user?.username, currentRole)
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-gray-900 truncate">{user?.fullName || 'Đại lý B2B'}</p>
+                        <p className="text-gray-500 text-[11px] font-mono truncate">@{user?.username}</p>
+                        <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">
+                          {agency?.customerGroupName || 'Đại lý phân phối'}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Chuyển vai trò nếu có nhiều quyền (phục vụ test) */}

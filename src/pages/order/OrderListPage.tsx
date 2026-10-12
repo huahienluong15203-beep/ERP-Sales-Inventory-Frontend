@@ -71,7 +71,13 @@ export const OrderListPage: React.FC = () => {
     );
   }, [user, currentRole]);
 
-  const isSalesRep = currentRole === 'ROLE_SALES_REP';
+  // S4-05: Chỉ Quản lý kinh doanh được duyệt đơn (bám sát S4-02 & S4-05, không cho Admin duyệt đè)
+  const isSalesManager = useMemo(() => {
+    const roles = user?.roles || [];
+    return currentRole === 'ROLE_SALES_MANAGER' || roles.includes('ROLE_SALES_MANAGER');
+  }, [user, currentRole]);
+
+  const isSalesRep = currentRole === 'ROLE_SALES_REP' || Boolean(user?.roles?.includes('ROLE_SALES_REP'));
 
   // State danh mục hỗ trợ lọc
   const [agencies, setAgencies] = useState<Agency[]>([]);
@@ -783,8 +789,8 @@ export const OrderListPage: React.FC = () => {
                           </button>
                         )}
 
-                        {/* S4-05: Nút thao tác nhanh Duyệt / Trả lại / Từ chối (Dành cho Quản lý KD & Admin) */}
-                        {o.status === 'PENDING_APPROVAL' && isManagerOrAdmin && (
+                        {/* S4-05: Nút thao tác nhanh Duyệt / Trả lại / Từ chối (Dành riêng cho Quản lý KD) */}
+                        {o.status === 'PENDING_APPROVAL' && isSalesManager && (
                           <>
                             <button
                               type="button"
