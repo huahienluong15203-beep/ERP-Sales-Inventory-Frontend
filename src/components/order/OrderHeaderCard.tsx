@@ -49,14 +49,21 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
-  // Tải danh sách đại lý khi mount
+  // Tải danh sách đại lý khi mount và khi tìm kiếm theo từ khóa (kèm debounce)
   useEffect(() => {
-    fetchAgencies({ size: 100 })
-      .then((res) => {
-        setAgenciesList(res.content);
+    const timer = setTimeout(() => {
+      fetchAgencies({
+        keyword: agencySearchText.trim() || undefined,
+        size: 100
       })
-      .catch((err) => console.error('Lỗi tải đại lý:', err));
-  }, []);
+        .then((res) => {
+          setAgenciesList(res.content);
+        })
+        .catch((err) => console.error('Lỗi tải đại lý:', err));
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [agencySearchText]);
 
   // Tải danh sách điểm giao hàng của đại lý được chọn (S3-04)
   useEffect(() => {
@@ -245,11 +252,10 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                     const avail = creditStatus ? creditStatus.availableCredit : (selectedAgency.creditLimit - selectedAgency.totalDebt);
                     const isExceeded = avail < 0;
                     return (
-                      <div className={`p-2 rounded-xl border shadow-2xs ${
-                        isExceeded
+                      <div className={`p-2 rounded-xl border shadow-2xs ${isExceeded
                           ? 'bg-rose-50/80 border-rose-200 text-rose-800'
                           : 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
-                      }`}>
+                        }`}>
                         <span className="text-[10px] block opacity-80">Phần còn lại</span>
                         <span className="text-xs font-bold font-mono">
                           {formatCurrencyVND(avail)}
@@ -290,7 +296,7 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                     <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
                     <div>
                       <strong className="font-bold block text-amber-950 text-[11px]">
-                        Đơn hàng làm vượt hạn mức công nợ (S4-02)
+                        Đơn hàng làm vượt hạn mức công nợ
                       </strong>
                       <span className="text-[11px] leading-relaxed block mt-0.5 text-amber-800">
                         Tổng đơn + công nợ hiện tại = <strong>{formatCurrencyVND(creditStatus.debtAfterOrder)}</strong> (Vượt hạn mức <strong>{formatCurrencyVND(creditStatus.exceededAmount)}</strong>).
@@ -377,9 +383,8 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                       setIsDropdownOpen(false);
                       setAgencySearchText('');
                     }}
-                    className={`p-2.5 hover:bg-orange-50/70 cursor-pointer transition flex items-center justify-between gap-2 ${
-                      agency.transactionLocked ? 'bg-rose-50/30' : ''
-                    }`}
+                    className={`p-2.5 hover:bg-orange-50/70 cursor-pointer transition flex items-center justify-between gap-2 ${agency.transactionLocked ? 'bg-rose-50/30' : ''
+                      }`}
                   >
                     <div>
                       <div className="flex items-center gap-1.5">
@@ -409,7 +414,10 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                     </div>
 
                     <div className="text-right text-[11px] shrink-0">
-                      <span className="font-mono text-gray-600 block">
+                      <span
+                        className={`font-mono block ${agency.totalDebt > 0 ? 'text-rose-600 font-semibold' : 'text-gray-600'
+                          }`}
+                      >
                         Nợ: {formatCurrencyVND(agency.totalDebt)}
                       </span>
                     </div>

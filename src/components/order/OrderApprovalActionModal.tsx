@@ -111,23 +111,21 @@ export const OrderApprovalActionModal: React.FC<OrderApprovalActionModalProps> =
       >
         {/* Header Modal */}
         <div
-          className={`px-5 py-4 flex items-center justify-between border-b ${
-            isApprove
+          className={`px-5 py-4 flex items-center justify-between border-b ${isApprove
               ? 'bg-emerald-50/80 border-emerald-100 text-emerald-950'
               : isReject
-              ? 'bg-rose-50/80 border-rose-100 text-rose-950'
-              : 'bg-amber-50/80 border-amber-100 text-amber-950'
-          }`}
+                ? 'bg-rose-50/80 border-rose-100 text-rose-950'
+                : 'bg-amber-50/80 border-amber-100 text-amber-950'
+            }`}
         >
           <div className="flex items-center gap-3">
             <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-xs ${
-                isApprove
+              className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-xs ${isApprove
                   ? 'bg-emerald-600 shadow-emerald-500/20'
                   : isReject
-                  ? 'bg-rose-600 shadow-rose-500/20'
-                  : 'bg-amber-600 shadow-amber-500/20'
-              }`}
+                    ? 'bg-rose-600 shadow-rose-500/20'
+                    : 'bg-amber-600 shadow-amber-500/20'
+                }`}
             >
               {isApprove && <CheckCircle2 size={20} />}
               {isReject && <XCircle size={20} />}
@@ -135,9 +133,9 @@ export const OrderApprovalActionModal: React.FC<OrderApprovalActionModalProps> =
             </div>
             <div>
               <h3 className="text-base font-bold leading-tight">
-                {isApprove && 'Phê Duyệt Đơn Hàng (S4-05)'}
-                {isReject && 'Từ Chối Đơn Hàng (S4-05)'}
-                {isReturn && 'Trả Lại Đơn Yêu Cầu Sửa (S4-05)'}
+                {isApprove && 'Phê Duyệt Đơn Hàng '}
+                {isReject && 'Từ Chối Đơn Hàng '}
+                {isReturn && 'Trả Lại Đơn Yêu Cầu Sửa '}
               </h3>
               <p className="text-xs text-gray-500 mt-0.5">
                 Mã đơn: <strong className="font-mono text-gray-800">{order.code || `#${order.id}`}</strong>
@@ -245,14 +243,13 @@ export const OrderApprovalActionModal: React.FC<OrderApprovalActionModalProps> =
                 isApprove
                   ? 'Ví dụ: Đã kiểm tra và đồng ý phê duyệt đơn ngoại lệ...'
                   : isReject
-                  ? 'Ví dụ: Vượt hạn mức quá lớn và có nợ cũ chưa thanh toán, không đồng ý cấp thêm...'
-                  : 'Ví dụ: Yêu cầu nhân viên kinh doanh chỉnh giá sản phẩm về tối thiểu giá sàn...'
+                    ? 'Ví dụ: Vượt hạn mức quá lớn và có nợ cũ chưa thanh toán, không đồng ý cấp thêm...'
+                    : 'Ví dụ: Yêu cầu nhân viên kinh doanh chỉnh giá sản phẩm về tối thiểu giá sàn...'
               }
-              className={`w-full p-2.5 text-xs rounded-xl border bg-white focus:outline-none transition resize-none ${
-                validationError
+              className={`w-full p-2.5 text-xs rounded-xl border bg-white focus:outline-none transition resize-none ${validationError
                   ? 'border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
                   : 'border-gray-200 focus:border-[#F85606] focus:ring-2 focus:ring-orange-100'
-              }`}
+                }`}
             />
 
             {validationError && (
@@ -282,13 +279,12 @@ export const OrderApprovalActionModal: React.FC<OrderApprovalActionModalProps> =
             <button
               type="submit"
               disabled={submitting || (isCommentRequired && !comment.trim())}
-              className={`px-4 py-2 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                isApprove
+              className={`px-4 py-2 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${isApprove
                   ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/25'
                   : isReject
-                  ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/25'
-                  : 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/25'
-              }`}
+                    ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/25'
+                    : 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/25'
+                }`}
             >
               {submitting ? (
                 <span>Đang xử lý...</span>

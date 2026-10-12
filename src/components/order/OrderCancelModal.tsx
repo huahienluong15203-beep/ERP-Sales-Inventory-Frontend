@@ -68,7 +68,7 @@ export const OrderCancelModal: React.FC<OrderCancelModalProps> = ({
       }
 
       showToast(
-        'Đã hủy đơn hàng (S4-06)',
+        'Đã hủy đơn hàng',
         `Đã hủy đơn hàng [${order.code || order.id}]. Tồn kho giữ chỗ đã được tự động hoàn trả (nhả tồn).`,
         'success'
       );
@@ -136,7 +136,7 @@ export const OrderCancelModal: React.FC<OrderCancelModalProps> = ({
             <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
               <div className="flex items-center gap-1.5 font-bold text-amber-950">
                 <AlertTriangle size={15} className="text-amber-600 shrink-0" />
-                <span>Quy chuẩn S4-06 AC2:</span>
+                <span>Quy chuẩn:</span>
               </div>
               <p className="text-[11px] leading-relaxed text-amber-800">
                 Hủy đơn bắt buộc phải nhập lý do giải trình. Hệ thống sẽ <strong>tự động nhả tồn đang giữ chỗ</strong> cho đơn này về kho khả dụng ngay lập tức.
@@ -179,11 +179,10 @@ export const OrderCancelModal: React.FC<OrderCancelModalProps> = ({
                   if (validationError) setValidationError(null);
                 }}
                 placeholder="Ví dụ: Đại lý báo tạm hoãn nhập hàng do kho đầy, đặt trùng đơn..."
-                className={`w-full p-2.5 text-xs rounded-xl border bg-white focus:outline-none transition resize-none ${
-                  validationError
-                    ? 'border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
-                    : 'border-gray-200 focus:border-[#F85606] focus:ring-2 focus:ring-orange-100'
-                }`}
+                className={`w-full p-2.5 text-xs rounded-xl border bg-white focus:outline-none transition resize-none ${validationError
+                  ? 'border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
+                  : 'border-gray-200 focus:border-[#F85606] focus:ring-2 focus:ring-orange-100'
+                  }`}
               />
 
               {validationError && (

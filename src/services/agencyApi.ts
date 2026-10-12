@@ -430,6 +430,7 @@ interface BackendCustomer {
   priceList?: { id: number; code: string; name: string } | null;
   deliveryPointCount?: number | null;
   portalUser?: { id: number; code: string; name: string } | null;
+  currentDebt?: number | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 }
@@ -488,7 +489,7 @@ function mapCustomer(c: BackendCustomer): Agency {
     suspendReason: suspended ? c.statusReason || undefined : undefined,
     hasTransactions: false,
     transactionCount: 0,
-    totalDebt: 0,
+    totalDebt: Number(c.currentDebt ?? 0),
     creditLimit: Number(c.creditLimit ?? 0),
     maxDebtDays: c.maxDebtDays ?? undefined,
     transactionLocked: Boolean(c.transactionLocked),

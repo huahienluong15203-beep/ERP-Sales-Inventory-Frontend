@@ -196,8 +196,8 @@ export const OrderLifecycleTimeline: React.FC<OrderLifecycleTimelineProps> = ({
         <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-200 text-xs text-blue-900 flex items-start gap-2">
           <AlertTriangle size={15} className="text-blue-600 shrink-0 mt-0.5" />
           <div className="text-[11px] leading-relaxed">
-            <strong>Quy chuẩn S4-06 AC3:</strong> Đơn hàng đã xuất kho (khâu <em>Đã xuất</em> trở đi) thì <strong>nghiêm cấm hủy đơn</strong>.
-            Nếu khách không nhận hàng, bắt buộc phải làm thủ tục <strong>Trả hàng & Điều chỉnh kho (Phân hệ EP-08)</strong>.
+            Đơn hàng đã xuất kho (khâu <em>Đã xuất</em> trở đi) thì <strong>nghiêm cấm hủy đơn</strong>.
+            Nếu khách không nhận hàng, bắt buộc phải làm thủ tục <strong>Trả hàng & Điều chỉnh kho </strong>.
           </div>
         </div>
       )}
@@ -219,10 +219,10 @@ export const OrderLifecycleTimeline: React.FC<OrderLifecycleTimelineProps> = ({
                   {/* Circle Icon */}
                   <div
                     className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${isCompleted
-                        ? 'bg-emerald-500 text-white shadow-xs shadow-emerald-500/30'
-                        : isCurrent
-                          ? 'bg-[#F85606] text-white ring-4 ring-orange-200 shadow-md shadow-orange-500/30 scale-110'
-                          : 'bg-gray-100 text-gray-400 border border-gray-200'
+                      ? 'bg-emerald-500 text-white shadow-xs shadow-emerald-500/30'
+                      : isCurrent
+                        ? 'bg-[#F85606] text-white ring-4 ring-orange-200 shadow-md shadow-orange-500/30 scale-110'
+                        : 'bg-gray-100 text-gray-400 border border-gray-200'
                       }`}
                   >
                     <Icon size={16} />
@@ -231,10 +231,10 @@ export const OrderLifecycleTimeline: React.FC<OrderLifecycleTimelineProps> = ({
                   {/* Nhãn nấc */}
                   <span
                     className={`mt-2 text-xs font-bold leading-tight ${isCurrent
-                        ? 'text-[#F85606]'
-                        : isCompleted
-                          ? 'text-gray-900'
-                          : 'text-gray-400'
+                      ? 'text-[#F85606]'
+                      : isCompleted
+                        ? 'text-gray-900'
+                        : 'text-gray-400'
                       }`}
                   >
                     {step.label}
@@ -264,10 +264,10 @@ export const OrderLifecycleTimeline: React.FC<OrderLifecycleTimelineProps> = ({
                 {idx < LIFECYCLE_STEPS.length - 1 && (
                   <div
                     className={`flex-1 h-1 mx-1 rounded-full transition-all ${!isTerminated && idx < currentStepIdx
-                        ? 'bg-emerald-500'
-                        : !isTerminated && idx === currentStepIdx
-                          ? 'bg-gradient-to-r from-[#F85606] to-gray-200'
-                          : 'bg-gray-200'
+                      ? 'bg-emerald-500'
+                      : !isTerminated && idx === currentStepIdx
+                        ? 'bg-gradient-to-r from-[#F85606] to-gray-200'
+                        : 'bg-gray-200'
                       }`}
                   />
                 )}
