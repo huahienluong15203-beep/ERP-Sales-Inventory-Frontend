@@ -97,16 +97,16 @@ export const GoodsReceiptManagementPage: React.FC = () => {
     .reduce((s, r) => s + r.totalBaseQuantity, 0);
 
   return (
-    <div className="space-y-5 antialiased">
+    <div className="space-y-3.5 antialiased">
       {/* 1. HEADER TRANG PHIẾU NHẬP KHO */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+            <h1 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight">
               Quản Lý Phiếu Nhập Kho Từ Nhà Cung Cấp
             </h1>
           </div>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-gray-500 mt-0.5">
             Ghi nhận hàng về đúng lô/hạn, quy đổi đơn vị cơ sở và quản lý cộng tồn kho khi xác nhận
           </p>
         </div>
@@ -116,7 +116,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
             type="button"
             onClick={loadData}
             disabled={loading}
-            className="p-2 sm:px-3 sm:py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+            className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs h-9"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             <span className="hidden sm:inline">Làm mới</span>
@@ -125,7 +125,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsFormModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#F85606] to-orange-500 hover:from-orange-600 hover:to-orange-600 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer"
+            className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#F85606] to-orange-500 hover:from-orange-600 hover:to-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-orange-500/20 transition cursor-pointer h-9"
             id="create-receipt-btn"
           >
             <Plus size={16} />
@@ -136,9 +136,9 @@ export const GoodsReceiptManagementPage: React.FC = () => {
 
       {/* 2. THẺ THỐNG KÊ NHANH */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs flex items-center gap-3">
+        <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-2xs flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-orange-50 text-[#F85606] flex items-center justify-center font-bold">
-            <FileText size={20} />
+            <FileText size={18} />
           </div>
           <div>
             <div className="text-[11px] font-bold text-gray-400 uppercase">Tổng số phiếu</div>

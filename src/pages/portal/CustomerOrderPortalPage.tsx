@@ -911,19 +911,21 @@ export const CustomerOrderPortalPage: React.FC = () => {
                       </span>
                     </div>
                     <div className="text-right flex items-center justify-end gap-1.5">
-                      {/* S5-02: Nút Mua lại đơn cũ */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReorderModalOrderId(o.id);
-                          setIsReorderModalOpen(true);
-                        }}
-                        className="px-3 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#F85606] border border-orange-200 font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer"
-                        title="Đặt lại các mặt hàng trong đơn này (S5-02)"
-                      >
-                        <RotateCcw size={13} />
-                        <span>Mua lại</span>
-                      </button>
+                      {/* S5-02: Nút Mua lại đơn cũ - chỉ áp dụng khi đơn đã giao xong hoặc hoàn tất */}
+                      {['DELIVERED', 'CLOSED', 'COMPLETED'].includes(o.status) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReorderModalOrderId(o.id);
+                            setIsReorderModalOpen(true);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#F85606] border border-orange-200 font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer"
+                          title="Đặt lại các mặt hàng trong đơn này (S5-02)"
+                        >
+                          <RotateCcw size={13} />
+                          <span>Mua lại</span>
+                        </button>
+                      )}
 
                       <button
                         type="button"

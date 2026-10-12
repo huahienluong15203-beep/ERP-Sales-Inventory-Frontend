@@ -180,7 +180,7 @@ export const VolumeDiscountPage: React.FC = () => {
   useClampPage(page, totalPages, setPage, isLoading);
 
   return (
-    <div className="w-full min-w-0 space-y-6 pb-12">
+    <div className="w-full min-w-0 space-y-3.5 pb-8">
       {/* Toast thông báo */}
       {toastMsg && (
         <div
@@ -197,25 +197,25 @@ export const VolumeDiscountPage: React.FC = () => {
       )}
 
       {/* Nút hành động chính */}
-      <div className="flex items-center justify-end gap-2.5">
-        <div className="flex flex-wrap items-center gap-2.5">
+      <div className="flex items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={loadPolicies}
             disabled={isLoading}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-gray-700 shadow-xs transition-colors hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 min-h-[44px] cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-2xs transition-colors hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 h-9 cursor-pointer"
             title="Làm mới danh sách chính sách chiết khấu"
           >
-            <Icons.RefreshCw size={16} className={isLoading ? 'animate-spin text-orange-600' : ''} />
+            <Icons.RefreshCw size={14} className={isLoading ? 'animate-spin text-orange-600' : ''} />
             <span>Làm mới</span>
           </button>
 
           <button
             type="button"
             onClick={handleExportCsv}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-gray-700 shadow-xs transition-colors hover:bg-gray-50 min-h-[44px] cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-2xs transition-colors hover:bg-gray-50 h-9 cursor-pointer"
           >
-            <Icons.ClipboardList size={16} className="text-gray-500" />
+            <Icons.ClipboardList size={14} className="text-gray-500" />
             <span>Xuất CSV / Excel</span>
           </button>
 
@@ -223,7 +223,7 @@ export const VolumeDiscountPage: React.FC = () => {
             <button
               type="button"
               onClick={handleOpenCreateModal}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#F85606] px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-orange-500/20 transition-all hover:bg-[#E04D05] min-h-[44px] cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#F85606] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm shadow-orange-500/20 transition-all hover:bg-[#E04D05] h-9 cursor-pointer"
             >
               <span className="text-sm font-bold">+</span>
               <span>Khai báo chính sách mới</span>

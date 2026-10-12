@@ -414,17 +414,17 @@ export const AgencyManagementPage: React.FC = () => {
   useClampPage(page, totalPages, setPage, loading);
 
   return (
-    <div className="w-full min-w-0 space-y-6 animate-in fade-in duration-300">
+    <div className="w-full min-w-0 space-y-3 animate-in fade-in duration-300">
       {/* 1. Header Trang - Nút tác vụ */}
-      <div className="flex items-center justify-end gap-2.5">
-        <div className="flex items-center gap-2.5">
+      <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => loadData()}
             disabled={loading}
             title="Làm mới danh sách đại lý"
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 text-sm font-semibold transition-colors cursor-pointer shadow-xs min-h-[44px]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 text-xs font-semibold transition-colors cursor-pointer shadow-2xs h-9"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin text-orange-600' : ''} />
+            <RefreshCw size={14} className={loading ? 'animate-spin text-orange-600' : ''} />
             <span>Làm mới</span>
           </button>
 
@@ -432,10 +432,10 @@ export const AgencyManagementPage: React.FC = () => {
           {canManageAssignments && (
             <button
               onClick={() => setIsTransferModalOpen(true)}
-              className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:opacity-95 text-white text-sm font-bold rounded-xl shadow-md shadow-amber-500/20 flex items-center gap-2 transition-all cursor-pointer"
+              className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:opacity-95 text-white text-xs font-bold rounded-lg shadow-sm shadow-amber-500/20 flex items-center gap-1.5 transition-all cursor-pointer h-9"
               title="Chuyển giao địa bàn hàng loạt khi nhân viên nghỉ việc hoặc điều chuyển"
             >
-              <Users size={18} />
+              <Users size={16} />
               <span>Chuyển Giao Địa Bàn</span>
             </button>
           )}
@@ -443,9 +443,9 @@ export const AgencyManagementPage: React.FC = () => {
           {canManageAgency && (
             <button
               onClick={handleOpenCreate}
-              className="px-4 py-2.5 bg-gradient-to-r from-[#FF6A00] to-[#EE4D2D] hover:opacity-95 text-white text-sm font-bold rounded-xl shadow-md shadow-orange-500/20 flex items-center gap-2 transition-all cursor-pointer"
+              className="px-3.5 py-1.5 bg-gradient-to-r from-[#FF6A00] to-[#EE4D2D] hover:opacity-95 text-white text-xs font-bold rounded-lg shadow-sm shadow-orange-500/20 flex items-center gap-1.5 transition-all cursor-pointer h-9"
             >
-              <Plus size={18} />
+              <Plus size={16} />
               <span>Khai Báo Đại Lý Mới</span>
             </button>
           )}
@@ -455,28 +455,28 @@ export const AgencyManagementPage: React.FC = () => {
 
       {/* Cảnh báo S3-07 / SCRUM-19: Có đại lý bị khóa giao dịch do rủi ro công nợ */}
       {lockedCount > 0 && (
-        <div className="p-4 bg-rose-50/90 border border-rose-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-rose-900 shadow-xs animate-in fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 shadow-2xs">
-              <Lock size={20} />
+        <div className="p-3 sm:px-4 bg-rose-50/90 border border-rose-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-rose-900 shadow-2xs animate-in fade-in">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 shadow-2xs">
+              <Lock size={16} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-rose-900 text-sm">
+                <span className="font-bold text-rose-900 text-xs sm:text-sm">
                   CẢNH BÁO RỦI RO CÔNG NỢ
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-rose-200/80 text-rose-800 text-[11px] font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-rose-200/80 text-rose-800 text-[10px] font-bold">
                   {lockedCount} đại lý bị khóa
                 </span>
               </div>
-              <p className="text-rose-700 text-xs mt-0.5">
+              <p className="text-rose-700 text-[11px] sm:text-xs mt-0.5 leading-snug">
                 Các đại lý bị khóa giao dịch đang <strong>bị chặn tạo đơn mới trên toàn bộ hệ thống</strong> (kể cả cổng đặt hàng B2B). Đơn dở dang vẫn xử lý được nhưng có cảnh báo rủi ro.
               </p>
             </div>
           </div>
           <button
             onClick={() => setSelectedLockFilter(selectedLockFilter === 'LOCKED' ? '' : 'LOCKED')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer ${selectedLockFilter === 'LOCKED'
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs shrink-0 cursor-pointer h-8 ${selectedLockFilter === 'LOCKED'
               ? 'bg-rose-600 text-white hover:bg-rose-700 shadow-rose-200'
               : 'bg-white text-rose-700 border border-rose-300 hover:bg-rose-100/50'
               }`}
@@ -487,84 +487,84 @@ export const AgencyManagementPage: React.FC = () => {
       )}
 
       {/* 2. Thẻ Thống Kê Nhanh (Stat Cards) chuẩn Lazada Orange & Crisp White */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Thẻ 1: Tổng đại lý */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs flex items-center justify-between">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-gray-100 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">
+            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
               Tổng số đại lý
             </span>
-            <span className="text-2xl font-black text-gray-900 mt-1 block font-mono">
+            <span className="text-xl font-black text-gray-900 mt-0.5 block font-mono">
               {agencyStats.total}
             </span>
             <span className="text-[11px] text-gray-500 mt-0.5 block">Hồ sơ đã chuẩn hóa</span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-orange-50 text-[#F85606] flex items-center justify-center">
-            <Building2 size={24} />
+          <div className="w-10 h-10 rounded-xl bg-orange-50 text-[#F85606] flex items-center justify-center">
+            <Building2 size={20} />
           </div>
         </div>
 
         {/* Thẻ 2: Đang hoạt động */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs flex items-center justify-between">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-gray-100 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">
+            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
               Đang giao dịch
             </span>
-            <span className="text-2xl font-black text-emerald-600 mt-1 block font-mono">
+            <span className="text-xl font-black text-emerald-600 mt-0.5 block font-mono">
               {activeCount}
             </span>
             <span className="text-[11px] text-emerald-600 mt-0.5 block">Đủ điều kiện xuất đơn</span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-            <ShieldCheck size={24} />
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <ShieldCheck size={20} />
           </div>
         </div>
 
         {/* Thẻ 3: Tạm dừng giao dịch */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs flex items-center justify-between">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-gray-100 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">
+            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
               Dừng giao dịch
             </span>
-            <span className="text-2xl font-black text-amber-600 mt-1 block font-mono">
+            <span className="text-xl font-black text-amber-600 mt-0.5 block font-mono">
               {suspendedCount}
             </span>
             <span className="text-[11px] text-amber-600 mt-0.5 block">Chặn đơn để đối soát</span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-            <ShieldAlert size={24} />
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <ShieldAlert size={20} />
           </div>
         </div>
 
         {/* Thẻ 4: Tổng công nợ */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs flex items-center justify-between">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-gray-100 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">
+            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
               Tổng công nợ
             </span>
-            <span className="text-xl font-black text-red-600 mt-1 block font-mono">
+            <span className="text-lg font-black text-red-600 mt-0.5 block font-mono">
               {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(totalDebtSum)}
             </span>
             <span className="text-[11px] text-gray-500 mt-0.5 block">Kế toán đang theo dõi</span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
-            <CreditCard size={24} />
+          <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
+            <CreditCard size={20} />
           </div>
         </div>
       </div>
 
       {/* 3. Thanh Tìm Kiếm & Bộ Lọc */}
-      <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs">
-        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+      <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-gray-100 shadow-2xs">
+        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5">
           {/* Ô tìm kiếm */}
           <div className="lg:col-span-2 relative">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               placeholder="Tìm theo Mã, Tên đại lý, MST, SĐT, Người phụ trách..."
-              className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl border border-gray-200 focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 outline-none transition-all"
+              className="w-full pl-8.5 pr-3 py-2 text-xs rounded-lg border border-gray-200 focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 outline-none transition-all"
             />
           </div>
 
@@ -573,7 +573,7 @@ export const AgencyManagementPage: React.FC = () => {
             <select
               value={selectedGroup}
               onChange={(e) => setSelectedGroup(e.target.value)}
-              className="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-200 bg-white focus:border-[#F85606] outline-none"
+              className="w-full px-2.5 py-2 text-xs rounded-lg border border-gray-200 bg-white focus:border-[#F85606] outline-none"
             >
               <option value="">Tất cả Nhóm Khách Hàng</option>
               {CUSTOMER_GROUP_OPTIONS.map((g) => (
@@ -589,7 +589,7 @@ export const AgencyManagementPage: React.FC = () => {
             <select
               value={selectedRegion}
               onChange={(e) => setSelectedRegion(e.target.value)}
-              className="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-200 bg-white focus:border-[#F85606] outline-none"
+              className="w-full px-2.5 py-2 text-xs rounded-lg border border-gray-200 bg-white focus:border-[#F85606] outline-none"
             >
               <option value="">Tất cả Khu vực</option>
               {regionOptions.map((r) => (
@@ -605,7 +605,7 @@ export const AgencyManagementPage: React.FC = () => {
             <select
               value={selectedLockFilter}
               onChange={(e) => setSelectedLockFilter(e.target.value)}
-              className="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-200 bg-white focus:border-[#F85606] outline-none"
+              className="w-full px-2.5 py-2 text-xs rounded-lg border border-gray-200 bg-white focus:border-[#F85606] outline-none"
             >
               <option value="">Tất cả giao dịch</option>
               <option value="LOCKED">🔒 Bị khóa giao dịch</option>
@@ -618,7 +618,7 @@ export const AgencyManagementPage: React.FC = () => {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-200 bg-white focus:border-[#F85606] outline-none"
+              className="w-full px-2.5 py-2 text-xs rounded-lg border border-gray-200 bg-white focus:border-[#F85606] outline-none"
             >
               <option value="">Tất cả trạng thái</option>
               <option value="ACTIVE">Đang hoạt động</option>
@@ -630,9 +630,9 @@ export const AgencyManagementPage: React.FC = () => {
                 type="button"
                 onClick={handleResetFilter}
                 title="Xóa bộ lọc"
-                className="p-2.5 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors shrink-0 cursor-pointer"
+                className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors shrink-0 cursor-pointer"
               >
-                <X size={15} />
+                <X size={14} />
               </button>
             )}
           </div>

@@ -326,87 +326,87 @@ export const OrderListPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-200">
+    <div className="space-y-3.5 pb-8 animate-in fade-in duration-200">
       {/* 1. Header Trang - Nút tác vụ (đồng bộ giao diện hệ thống) */}
-      <div className="flex items-center justify-end gap-2.5">
+      <div className="flex items-center justify-end gap-2">
         <button
           type="button"
           onClick={() => setRefreshKey((k) => k + 1)}
           disabled={loading}
           title="Làm mới danh sách đơn hàng"
-          className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 text-xs sm:text-sm font-semibold transition-colors cursor-pointer shadow-2xs min-h-[42px]"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 text-xs font-semibold transition-colors cursor-pointer shadow-2xs h-9"
         >
-          <RefreshCw size={16} className={loading ? 'animate-spin text-[#F85606]' : ''} />
+          <RefreshCw size={14} className={loading ? 'animate-spin text-[#F85606]' : ''} />
           <span>Làm mới</span>
         </button>
 
         <button
           type="button"
           onClick={() => navigate('/orders/create')}
-          className="px-4 py-2.5 bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-98 text-white text-xs sm:text-sm font-bold rounded-xl shadow-md shadow-orange-500/25 flex items-center gap-2 transition-all cursor-pointer min-h-[42px]"
+          className="px-3.5 py-1.5 bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-98 text-white text-xs font-bold rounded-lg shadow-sm shadow-orange-500/25 flex items-center gap-1.5 transition-all cursor-pointer h-9"
         >
-          <Plus size={18} />
+          <Plus size={16} />
           <span>Tạo đơn hàng mới</span>
         </button>
       </div>
 
       {/* 2. S4-07 AC2: KHỐI THẺ THỐNG KÊ KẾT QUẢ ĐANG LỌC (LIVE AGGREGATED TOTALS) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Card 1: Tổng số đơn hàng */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-gray-200/90 shadow-2xs flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-gray-200/90 shadow-2xs flex items-center justify-between">
+          <div className="space-y-0.5">
+            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
               Tổng số đơn đang lọc
             </span>
-            <div className="text-2xl font-black text-gray-900">
+            <div className="text-xl font-black text-gray-900">
               {loading ? '...' : `${formatQuantity(totals.orderCount)} đơn`}
             </div>
-            <p className="text-[11px] text-gray-400">Khớp với tất cả tiêu chí đang lọc</p>
+            <p className="text-[10px] text-gray-400">Khớp với tất cả tiêu chí đang lọc</p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-orange-50 text-[#F85606] flex items-center justify-center shrink-0 border border-orange-100">
-            <ShoppingCart size={22} />
+          <div className="w-10 h-10 rounded-xl bg-orange-50 text-[#F85606] flex items-center justify-center shrink-0 border border-orange-100">
+            <ShoppingCart size={18} />
           </div>
         </div>
 
         {/* Card 2: Tổng tiền toàn bộ kết quả lọc (Điểm nhấn S4-07) */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-orange-50/80 via-white to-amber-50/50 border border-orange-200 shadow-xs flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-xs font-bold text-[#F85606] uppercase tracking-wider flex items-center gap-1">
-              <TrendingUp size={13} />
+        <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-br from-orange-50/80 via-white to-amber-50/50 border border-orange-200 shadow-2xs flex items-center justify-between">
+          <div className="space-y-0.5">
+            <span className="text-[11px] font-bold text-[#F85606] uppercase tracking-wider flex items-center gap-1">
+              <TrendingUp size={12} />
               <span>Tổng tiền đang lọc</span>
             </span>
-            <div className="text-2xl font-black text-[#F85606] leading-tight">
+            <div className="text-xl font-black text-[#F85606] leading-tight">
               {loading ? '...' : formatCurrencyVND(totals.totalAmount)}
             </div>
-            <p className="text-[11px] text-orange-700/80">Tổng phải thu từ toàn bộ kết quả lọc trong DB</p>
+            <p className="text-[10px] text-orange-700/80">Tổng phải thu từ toàn bộ kết quả lọc trong DB</p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#F85606] to-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/20">
-            <span className="font-extrabold text-base">₫</span>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F85606] to-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-orange-500/20">
+            <span className="font-extrabold text-sm">₫</span>
           </div>
         </div>
 
         {/* Card 3: Phân quyền & Phạm vi xem */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-gray-200/90 shadow-2xs flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-gray-200/90 shadow-2xs flex items-center justify-between">
+          <div className="space-y-0.5">
+            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
               Phạm vi hiển thị
             </span>
-            <div className="text-sm font-bold text-gray-800 flex items-center gap-1.5 pt-1">
-              <ShieldCheck size={16} className="text-emerald-600" />
+            <div className="text-xs font-bold text-gray-800 flex items-center gap-1.5 pt-0.5">
+              <ShieldCheck size={14} className="text-emerald-600" />
               <span>{isManagerOrAdmin ? 'Toàn bộ công ty' : 'Đại lý phụ trách'}</span>
             </div>
-            <p className="text-[11px] text-gray-500">
+            <p className="text-[10px] text-gray-500">
               {isSalesRep ? `Chỉ hiển thị đại lý của ${user?.fullName || 'bạn'}` : 'Toàn quyền theo dõi doanh số'}
             </p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-            <Building2 size={22} />
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+            <Building2 size={18} />
           </div>
         </div>
       </div>
 
       {/* 3. S4-07 AC1: BỘ LỌC ĐA CHIỀU (MULTI-CRITERIA FILTERS) */}
-      <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs p-4 sm:p-5 space-y-4">
+      <div className="bg-white rounded-xl border border-gray-200/90 shadow-2xs p-3.5 sm:p-4 space-y-3">
         {/* Hàng 1: Tabs Trạng thái nhanh */}
         <div className="flex items-center justify-between border-b border-gray-100 pb-3 flex-wrap gap-2">
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">

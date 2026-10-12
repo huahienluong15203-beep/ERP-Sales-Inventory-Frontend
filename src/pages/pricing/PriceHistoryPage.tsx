@@ -159,23 +159,23 @@ export const PriceHistoryPage: React.FC = () => {
   useClampPage(page, totalPages, setPage, loading);
 
   return (
-    <div className="w-full min-w-0 space-y-6 animate-fadeIn pb-12">
+    <div className="w-full min-w-0 space-y-3.5 animate-fadeIn pb-8">
       {/* 1. Nút hành động */}
-      <div className="flex items-center justify-end gap-2.5">
-        <div className="flex items-center gap-2.5">
+      <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center gap-2">
           <button
             onClick={loadData}
             disabled={loading}
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 transition shadow-xs cursor-pointer min-h-[44px]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 transition shadow-2xs cursor-pointer h-9"
             title="Làm mới lịch sử thay đổi giá"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin text-orange-600' : ''} />
+            <RefreshCw size={14} className={loading ? 'animate-spin text-orange-600' : ''} />
             <span>Làm mới</span>
           </button>
 
           <a
             href="/pricing/discounts"
-            className="min-h-[44px] inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:text-indigo-600 hover:border-indigo-200 hover:bg-gray-50 transition shadow-xs"
+            className="h-9 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-gray-700 border border-gray-200 hover:text-indigo-600 hover:border-indigo-200 hover:bg-gray-50 transition shadow-2xs"
             title="Khai báo chính sách chiết khấu theo sản lượng"
           >
             <span className="text-indigo-600 font-bold">%</span>
@@ -184,9 +184,9 @@ export const PriceHistoryPage: React.FC = () => {
 
           <button
             onClick={handleExportExcel}
-            className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition cursor-pointer"
+            className="h-9 inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition cursor-pointer"
           >
-            <FileSpreadsheet size={16} />
+            <FileSpreadsheet size={15} />
             <span>Xuất Excel (.xlsx)</span>
           </button>
         </div>

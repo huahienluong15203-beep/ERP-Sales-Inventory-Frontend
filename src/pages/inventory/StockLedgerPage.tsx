@@ -120,19 +120,18 @@ export const StockLedgerPage: React.FC = () => {
   }, [configs]);
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-3.5 pb-8">
       {/* HEADER TRANG */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-gray-200/80 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center shadow-lg shadow-rose-600/20">
-            <Boxes size={24} />
+          <div className="w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center shadow-md shadow-rose-600/20">
+            <Boxes size={20} />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
               <span>Sổ Tồn Kho & Cảnh Báo Tồn Tối Thiểu</span>
-
             </h1>
-            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               Khai báo định mức tối thiểu theo SKU và kho, cảnh báo nguy cơ đứt hàng trước khi hết tồn
             </p>
           </div>
@@ -142,27 +141,27 @@ export const StockLedgerPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/inventory/receipts')}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 transition shadow-sm cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 transition shadow-2xs cursor-pointer h-9"
           >
-            <ShoppingCart size={15} />
+            <ShoppingCart size={14} />
             <span>Lập Phiếu Nhập NCC</span>
           </button>
           <button
             type="button"
             onClick={() => navigate('/inventory/transfers')}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-2xs cursor-pointer h-9"
           >
-            <ArrowRightLeft size={15} />
+            <ArrowRightLeft size={14} />
             <span>Lập Phiếu Chuyển Kho</span>
           </button>
         </div>
       </div>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-xs">
-          <div className="text-xs text-gray-500 font-semibold">Tổng SKU theo kho</div>
-          <div className="text-2xl font-black text-gray-900 mt-1">{stats.total}</div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-2xs">
+          <div className="text-[11px] text-gray-500 font-semibold">Tổng SKU theo kho</div>
+          <div className="text-xl font-black text-gray-900 mt-0.5">{stats.total}</div>
         </div>
 
         {/* THẺ BÁO ĐỎ QUAN TRỌNG NHẤT (AC2) */}

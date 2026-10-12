@@ -103,12 +103,12 @@ export const TerritoryHistoryTab: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-w-0 space-y-6">
+    <div className="w-full min-w-0 space-y-3.5">
       {/* 1. Header tác vụ & Thao tác chuyển giao */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <History size={20} className="text-[#F85606]" />
+            <History size={18} className="text-[#F85606]" />
             Lịch Sử Phân Công & Chuyển Giao Địa Bàn
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -116,15 +116,15 @@ export const TerritoryHistoryTab: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={loadData}
             disabled={loading}
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white border border-slate-200 text-slate-700 hover:text-[#F85606] rounded-xl hover:bg-slate-50 text-xs sm:text-sm font-semibold transition shadow-xs cursor-pointer min-h-[44px]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:text-[#F85606] rounded-lg hover:bg-slate-50 text-xs font-semibold transition shadow-2xs cursor-pointer h-9"
             title="Làm mới lịch sử chuyển địa bàn"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             <span>Làm mới</span>
           </button>
 
@@ -132,10 +132,10 @@ export const TerritoryHistoryTab: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsTransferModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#F85606] hover:bg-[#e04d05] text-white rounded-xl text-xs sm:text-sm font-bold shadow-xs transition hover:shadow-md cursor-pointer min-h-[44px]"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#F85606] hover:bg-[#e04d05] text-white rounded-lg text-xs font-bold shadow-sm transition hover:shadow-md cursor-pointer h-9"
               title="Thực hiện chuyển giao đại lý giữa các nhân viên"
             >
-              <Users size={16} />
+              <Users size={15} />
               <span>Chuyển Giao Địa Bàn</span>
             </button>
           )}

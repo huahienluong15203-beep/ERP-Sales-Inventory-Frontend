@@ -143,7 +143,7 @@ export const ProductManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-w-0 space-y-6">
+    <div className="w-full min-w-0 space-y-3.5">
       {/* Toast thông báo */}
       {toastMessage && (
         <div
@@ -160,16 +160,16 @@ export const ProductManagementPage: React.FC = () => {
       )}
 
       {/* Header Phân hệ - Nút tác vụ */}
-      <div className="flex items-center justify-end gap-2.5">
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+      <div className="flex items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={reloadAll}
             disabled={isLoading}
-            className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 transition shadow-xs cursor-pointer min-h-[44px]"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 transition shadow-2xs cursor-pointer h-9"
             title="Làm mới danh sách sản phẩm"
           >
-            <Icons.RefreshCw size={16} className={isLoading ? 'animate-spin text-orange-600' : ''} />
+            <Icons.RefreshCw size={14} className={isLoading ? 'animate-spin text-orange-600' : ''} />
             <span>Làm mới</span>
           </button>
 
@@ -178,19 +178,19 @@ export const ProductManagementPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/products/import')}
-                className="inline-flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-sm font-semibold px-4 py-2.5 rounded-xl shadow-2xs hover:shadow-xs transition-all duration-200 min-h-[44px]"
+                className="inline-flex items-center justify-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-semibold px-3.5 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all duration-200 h-9"
                 title="Nhập danh mục sản phẩm từ file Excel"
               >
-                <Icons.ClipboardList size={18} className="text-emerald-700" />
+                <Icons.ClipboardList size={16} className="text-emerald-700" />
                 <span>Nhập từ Excel</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleOpenCreate}
-                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow transition-all duration-200 min-h-[44px]"
+                className="inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg shadow-sm hover:shadow transition-all duration-200 h-9"
               >
-                <Icons.Plus size={18} />
+                <Icons.Plus size={16} />
                 <span>Thêm sản phẩm mới</span>
               </button>
             </>
@@ -200,58 +200,58 @@ export const ProductManagementPage: React.FC = () => {
 
 
       {/* Hàng Stat Cards chuẩn App ETC */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex items-center justify-between">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-2xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Tổng sản phẩm</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
+            <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Tổng sản phẩm</p>
+            <p className="text-xl font-bold text-gray-900 mt-0.5">{stats.total}</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center border border-orange-100">
-            <Icons.Package size={20} />
+            <Icons.Package size={18} />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex items-center justify-between">
+        <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-2xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Đang kinh doanh</p>
-            <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.active}</p>
+            <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Đang kinh doanh</p>
+            <p className="text-xl font-bold text-emerald-600 mt-0.5">{stats.active}</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
-            <Icons.CheckCircle2 size={20} />
+            <Icons.CheckCircle2 size={18} />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex items-center justify-between">
+        <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-2xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Ngừng kinh doanh</p>
-            <p className="text-2xl font-bold text-gray-500 mt-1">{stats.inactive}</p>
+            <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Ngừng kinh doanh</p>
+            <p className="text-xl font-bold text-gray-500 mt-0.5">{stats.inactive}</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center border border-gray-200">
-            <Icons.AlertCircle size={20} />
+            <Icons.AlertCircle size={18} />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex items-center justify-between">
+        <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-2xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Nhóm hàng</p>
-            <p className="text-2xl font-bold text-blue-600 mt-1">{stats.categoryCount}</p>
+            <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Nhóm hàng</p>
+            <p className="text-xl font-bold text-blue-600 mt-0.5">{stats.categoryCount}</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-            <Icons.Building2 size={20} />
+            <Icons.Building2 size={18} />
           </div>
         </div>
       </div>
 
       {/* Thanh tìm kiếm và bộ lọc */}
-      <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-wrap items-center gap-3">
+      <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-2xs flex flex-wrap items-center gap-2.5">
         <div className="flex-1 min-w-[240px] relative">
-          <Icons.Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Icons.Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="Tìm theo Mã SKU, tên hàng, quy cách đóng gói..."
-            className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
+            className="w-full pl-8.5 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[38px]"
           />
         </div>
 
@@ -259,7 +259,7 @@ export const ProductManagementPage: React.FC = () => {
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
+            className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[38px]"
           >
             <option value="ALL">Tất cả nhóm hàng</option>
             {categoryOptions.map((c) => (
