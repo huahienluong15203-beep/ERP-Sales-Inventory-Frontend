@@ -476,7 +476,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
                     <History size={14} className="text-[#F85606]" />
-                    <span>Lịch Sử Phê Duyệt Đơn Hàng (S4-05)</span>
+                    <span>Lịch Sử Phê Duyệt Đơn Hàng </span>
                   </h4>
                   <span className="text-[10px] text-gray-400 font-medium italic">
                     * Bất biến — Không thể chỉnh sửa hoặc xóa
@@ -497,15 +497,14 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">
                             <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                item.action === 'APPROVE'
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.action === 'APPROVE'
                                   ? 'bg-emerald-100 text-emerald-800'
                                   : item.action === 'REJECT'
-                                  ? 'bg-rose-100 text-rose-800'
-                                  : item.action === 'RETURN'
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : 'bg-blue-100 text-blue-800'
-                              }`}
+                                    ? 'bg-rose-100 text-rose-800'
+                                    : item.action === 'RETURN'
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-blue-100 text-blue-800'
+                                }`}
                             >
                               {item.actionLabel || item.action}
                             </span>

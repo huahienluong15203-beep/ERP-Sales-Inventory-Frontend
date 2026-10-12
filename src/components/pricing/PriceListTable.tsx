@@ -147,7 +147,6 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
               <th className="py-3 px-4">Nhóm khách hàng</th>
               <th className="py-3 px-4">Thời gian hiệu lực</th>
               <th className="py-3 px-4 text-center">Số SKU</th>
-              <th className="py-3 px-4 text-center">Đơn hàng</th>
               <th className="py-3 px-4 text-center">Trạng thái</th>
               <th className="py-3 px-4 text-right">Thao tác</th>
             </tr>
@@ -155,7 +154,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
           <tbody className="divide-y divide-gray-200 text-xs text-gray-700">
             {filteredLists.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-12 text-center text-gray-400">
+                <td colSpan={7} className="py-12 text-center text-gray-400">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <Icons.Tags size={36} className="text-gray-300" />
                     <p className="text-sm font-medium text-gray-600">
@@ -228,33 +227,6 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
                       <span className="inline-flex items-center justify-center font-bold px-2 py-0.5 rounded-lg bg-gray-100 text-gray-700 text-xs">
                         {item.itemsCount || (item.items ? item.items.length : 0)} SKU
                       </span>
-                    </td>
-
-                    {/* Ràng buộc đơn hàng (Quy tắc S2-10) */}
-                    <td className="py-3.5 px-4 text-center">
-                      {item.hasOrders ? (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onCloneVersion(item);
-                          }}
-                          title="Bảng giá đã phát sinh đơn thì không sửa. Bấm vào đây để tạo phiên bản mới (v2, v3...)!"
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-300 hover:bg-rose-200 hover:border-rose-400 active:scale-95 transition-all cursor-pointer shadow-xs"
-                        >
-                          <Icons.ShieldAlert size={14} className="text-rose-600 shrink-0" />
-                          <span>Đã có đơn (Bấm tạo bản mới)</span>
-                        </button>
-                      ) : (
-                        <span
-                          title="Chưa phát sinh đơn hàng, cho phép chỉnh sửa trực tiếp"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        >
-                          <Icons.CheckSquare size={12} />
-                          <span>Chưa có đơn</span>
-                        </span>
-                      )}
                     </td>
 
                     {/* Trạng thái Kích hoạt */}

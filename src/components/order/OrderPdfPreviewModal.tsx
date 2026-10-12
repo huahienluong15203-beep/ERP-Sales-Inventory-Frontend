@@ -178,7 +178,7 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-gray-900 leading-tight">
-                Xem Trước & Xuất Mẫu In PDF Đơn Hàng (S4-08)
+                Xem Trước & Xuất Mẫu In PDF Đơn Hàng
               </h3>
               <p className="text-[11px] text-gray-500">
                 Mẫu in chuẩn khổ A4 dùng đưa đại lý xác nhận hoặc gửi kho chuẩn bị hàng

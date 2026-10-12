@@ -126,7 +126,7 @@ export const OrderCreatePage: React.FC = () => {
   useEffect(() => {
     if (cloneNotice) {
       showToast(
-        'Đã sao chép đơn cũ (S4-09)',
+        'Đã sao chép đơn cũ ',
         `Đã sao chép ${cloneNotice.itemCount} dòng hàng từ đơn ${cloneNotice.sourceCode}. Đơn giá và chiết khấu đã được tự động tính lại theo bảng giá hiện hành!`,
         'success',
         5000
@@ -669,7 +669,7 @@ export const OrderCreatePage: React.FC = () => {
         );
       } else {
         showToast(
-          'Đơn chuyển sang Chờ duyệt (S4-05)',
+          'Đơn chuyển sang Chờ duyệt',
           `Đơn hàng [${submitted.code || targetId}] đã chuyển sang trạng thái CHỜ DUYỆT do vượt hạn mức công nợ hoặc bán dưới giá sàn.`,
           'info',
           7000
@@ -768,36 +768,7 @@ export const OrderCreatePage: React.FC = () => {
       <div className="space-y-5">
 
         {/* S4-09: BANNER THÔNG BÁO SAO CHÉP ĐƠN CŨ */}
-        {cloneNotice && (
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/70 to-blue-50 border-2 border-blue-200 text-blue-950 shadow-xs flex items-start justify-between gap-3 animate-in fade-in">
-            <div className="flex items-start gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/25 mt-0.5">
-                <Copy size={20} />
-              </div>
-              <div className="space-y-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-xs sm:text-sm font-bold text-blue-900">
-                    Đã sao chép từ đơn cũ {cloneNotice.sourceCode} (Story S4-09)
-                  </h4>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-200/80 text-blue-900 text-[10px] font-bold">
-                    BẢN SAO NHÁP MỚI
-                  </span>
-                </div>
-                <p className="text-[11px] sm:text-xs text-blue-800 leading-relaxed">
-                  Toàn bộ <strong>{cloneNotice.itemCount} dòng hàng</strong> đã được sao chép thành công. Theo quy chuẩn tài chính Story S4-09, <strong>đơn giá và chiết khấu đã được tự động áp lại theo bảng giá hiện hành</strong> (không kế thừa giá cũ). Đơn đang ở trạng thái Nháp để bạn thoải mái chỉnh sửa số lượng trước khi chốt đơn!
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setCloneNotice(null)}
-              className="p-1 rounded-lg text-blue-400 hover:text-blue-700 hover:bg-blue-100/60 transition cursor-pointer shrink-0"
-              title="Đóng thông báo"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        )}
+
 
         {/* CẢNH BÁO TỪ BACKEND NẾU CÓ (S3-07 / S3-09) */}
         {backendWarnings.length > 0 && (
@@ -908,11 +879,10 @@ export const OrderCreatePage: React.FC = () => {
             <button
               type="button"
               onClick={openProductPicker}
-              className={`px-4 py-2 rounded-xl text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition cursor-pointer self-start sm:self-auto shrink-0 ${
-                selectedAgency && !selectedAgency.priceList
-                  ? 'bg-gray-400 hover:bg-gray-500 shadow-none'
-                  : 'bg-[#F85606] hover:bg-orange-600 shadow-orange-500/20 active:scale-98'
-              }`}
+              className={`px-4 py-2 rounded-xl text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition cursor-pointer self-start sm:self-auto shrink-0 ${selectedAgency && !selectedAgency.priceList
+                ? 'bg-gray-400 hover:bg-gray-500 shadow-none'
+                : 'bg-[#F85606] hover:bg-orange-600 shadow-orange-500/20 active:scale-98'
+                }`}
             >
               <Plus size={16} />
               <span>Thêm Sản Phẩm</span>
@@ -923,19 +893,17 @@ export const OrderCreatePage: React.FC = () => {
           {items.length === 0 ? (
             <div
               onClick={openProductPicker}
-              className={`py-12 px-4 rounded-xl border border-dashed text-center space-y-3 cursor-pointer transition-colors group ${
-                selectedAgency && !selectedAgency.priceList
-                  ? 'border-amber-200 bg-amber-50/40 hover:bg-amber-50/60'
-                  : 'border-gray-200 hover:border-orange-300 bg-gray-50/50 hover:bg-orange-50/20'
-              }`}
+              className={`py-12 px-4 rounded-xl border border-dashed text-center space-y-3 cursor-pointer transition-colors group ${selectedAgency && !selectedAgency.priceList
+                ? 'border-amber-200 bg-amber-50/40 hover:bg-amber-50/60'
+                : 'border-gray-200 hover:border-orange-300 bg-gray-50/50 hover:bg-orange-50/20'
+                }`}
               title="Nhấn để tìm và thêm sản phẩm vào đơn hàng"
             >
               <div
-                className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto transition-colors ${
-                  selectedAgency && !selectedAgency.priceList
-                    ? 'bg-amber-100 text-amber-600'
-                    : 'bg-orange-50 group-hover:bg-orange-100 text-[#F85606]'
-                }`}
+                className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto transition-colors ${selectedAgency && !selectedAgency.priceList
+                  ? 'bg-amber-100 text-amber-600'
+                  : 'bg-orange-50 group-hover:bg-orange-100 text-[#F85606]'
+                  }`}
               >
                 {selectedAgency && !selectedAgency.priceList ? (
                   <AlertTriangle size={28} />
@@ -945,11 +913,10 @@ export const OrderCreatePage: React.FC = () => {
               </div>
               <div>
                 <strong
-                  className={`text-sm font-bold block transition-colors ${
-                    selectedAgency && !selectedAgency.priceList
-                      ? 'text-amber-900'
-                      : 'text-gray-800 group-hover:text-[#F85606]'
-                  }`}
+                  className={`text-sm font-bold block transition-colors ${selectedAgency && !selectedAgency.priceList
+                    ? 'text-amber-900'
+                    : 'text-gray-800 group-hover:text-[#F85606]'
+                    }`}
                 >
                   {selectedAgency && !selectedAgency.priceList
                     ? 'Đại lý chưa có bảng giá hiệu lực'
@@ -1132,23 +1099,22 @@ export const OrderCreatePage: React.FC = () => {
               type="button"
               onClick={handleSaveDraft}
               disabled={isSavingDraft || overStockItems.length > 0 || Boolean(creditStatus?.blocked || creditStatus?.overdue)}
-              className={`h-10 px-4 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer ${
-                creditStatus?.blocked || creditStatus?.overdue
-                  ? 'border-rose-300 bg-rose-50 text-rose-800 cursor-not-allowed opacity-60'
-                  : overStockItems.length > 0
+              className={`h-10 px-4 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer ${creditStatus?.blocked || creditStatus?.overdue
+                ? 'border-rose-300 bg-rose-50 text-rose-800 cursor-not-allowed opacity-60'
+                : overStockItems.length > 0
                   ? 'border-rose-300 bg-rose-50 text-rose-800 cursor-not-allowed opacity-60'
                   : belowFloorItems.length > 0
-                  ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'
-                  : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700'
-              }`}
+                    ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'
+                    : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700'
+                }`}
               title={
                 creditStatus?.blocked || creditStatus?.overdue
                   ? 'Không thể lưu nháp do đại lý bị chặn nợ quá hạn (S4-02)'
                   : overStockItems.length > 0
-                  ? 'Không thể lưu nháp khi có mặt hàng vượt tồn khả dụng'
-                  : belowFloorItems.length > 0
-                  ? 'Lưu đơn nháp (đơn có dòng dưới giá sàn sẽ ở trạng thái cần duyệt)'
-                  : 'Lưu nháp đơn hàng để tiếp tục sau'
+                    ? 'Không thể lưu nháp khi có mặt hàng vượt tồn khả dụng'
+                    : belowFloorItems.length > 0
+                      ? 'Lưu đơn nháp (đơn có dòng dưới giá sàn sẽ ở trạng thái cần duyệt)'
+                      : 'Lưu nháp đơn hàng để tiếp tục sau'
               }
             >
               {creditStatus?.blocked || creditStatus?.overdue ? (
@@ -1164,12 +1130,12 @@ export const OrderCreatePage: React.FC = () => {
                 {isSavingDraft
                   ? 'Đang lưu...'
                   : creditStatus?.blocked || creditStatus?.overdue
-                  ? 'Bị Chặn (Nợ Quá Hạn)'
-                  : overStockItems.length > 0
-                  ? 'Bị Chặn (Vượt Tồn Kho)'
-                  : belowFloorItems.length > 0
-                  ? 'Lưu Đơn (Cần Duyệt Giá)'
-                  : 'Lưu Nháp'}
+                    ? 'Bị Chặn (Nợ Quá Hạn)'
+                    : overStockItems.length > 0
+                      ? 'Bị Chặn (Vượt Tồn Kho)'
+                      : belowFloorItems.length > 0
+                        ? 'Lưu Đơn (Cần Duyệt Giá)'
+                        : 'Lưu Nháp'}
               </span>
             </button>
 
@@ -1185,21 +1151,20 @@ export const OrderCreatePage: React.FC = () => {
                 isAgencyLocked
               }
               title={submitBlockedReason}
-              className={`h-10 px-5 rounded-xl font-bold text-xs sm:text-sm text-white flex items-center gap-1.5 transition shadow-xs cursor-pointer ${
-                submitBlockedReason || items.length === 0
-                  ? 'bg-gray-400 cursor-not-allowed opacity-70'
-                  : creditStatus?.exceedsLimit || belowFloorItems.length > 0
+              className={`h-10 px-5 rounded-xl font-bold text-xs sm:text-sm text-white flex items-center gap-1.5 transition shadow-xs cursor-pointer ${submitBlockedReason || items.length === 0
+                ? 'bg-gray-400 cursor-not-allowed opacity-70'
+                : creditStatus?.exceedsLimit || belowFloorItems.length > 0
                   ? 'bg-amber-600 hover:bg-amber-700 active:scale-98 shadow-amber-600/25'
                   : 'bg-[#F85606] hover:bg-[#d94800] active:scale-98 shadow-orange-500/25'
-              }`}
+                }`}
             >
               <CheckCircle2 size={16} />
               <span>
                 {isSubmittingOrder
                   ? 'Đang chốt đơn...'
                   : creditStatus?.exceedsLimit || belowFloorItems.length > 0
-                  ? 'Chốt Đơn (Gửi Phê Duyệt)'
-                  : 'Chốt Đơn Đặt Hàng'}
+                    ? 'Chốt Đơn (Gửi Phê Duyệt)'
+                    : 'Chốt Đơn Đặt Hàng'}
               </span>
             </button>
           </div>

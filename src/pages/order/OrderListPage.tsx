@@ -420,11 +420,10 @@ export const OrderListPage: React.FC = () => {
                     setSelectedStatusTab(tab.value);
                     setPage(0);
                   }}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-[#F85606] to-orange-600 text-white shadow-xs'
-                      : 'bg-gray-100/80 hover:bg-gray-200 text-gray-600'
-                  }`}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${isActive
+                    ? 'bg-gradient-to-r from-[#F85606] to-orange-600 text-white shadow-xs'
+                    : 'bg-gray-100/80 hover:bg-gray-200 text-gray-600'
+                    }`}
                 >
                   <span>{tab.label}</span>
                 </button>
@@ -795,7 +794,7 @@ export const OrderListPage: React.FC = () => {
                                 setIsApprovalModalOpen(true);
                               }}
                               className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition cursor-pointer"
-                              title="Phê duyệt đơn hàng (S4-05)"
+                              title="Phê duyệt đơn hàng "
                             >
                               <CheckCircle2 size={16} />
                             </button>
@@ -819,7 +818,7 @@ export const OrderListPage: React.FC = () => {
                                 setIsApprovalModalOpen(true);
                               }}
                               className="p-1.5 rounded-lg text-amber-600 hover:text-amber-800 hover:bg-amber-50 transition cursor-pointer"
-                              title="Trả lại yêu cầu NVKD sửa (S4-05)"
+                              title="Trả lại yêu cầu NVKD sửa "
                             >
                               <RotateCcw size={16} />
                             </button>
@@ -843,7 +842,7 @@ export const OrderListPage: React.FC = () => {
                                 setIsApprovalModalOpen(true);
                               }}
                               className="p-1.5 rounded-lg text-rose-600 hover:text-rose-800 hover:bg-rose-50 transition cursor-pointer"
-                              title="Từ chối đơn hàng (S4-05)"
+                              title="Từ chối đơn hàng "
                             >
                               <XCircle size={16} />
                             </button>
