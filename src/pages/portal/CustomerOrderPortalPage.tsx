@@ -33,8 +33,10 @@ import {
   fetchPortalProducts,
   fetchPortalCreditStatus,
   fetchPortalDeliveryPoints,
+  previewPortalOrder,
   placePortalOrder,
-  type PortalOrderResult
+  type PortalOrderResult,
+  type PortalOrderLine
 } from '../../services/portalApi';
 import { OrderDetailModal } from '../../components/order/OrderDetailModal';
 import { CustomerReorderModal, type ReorderItemDraft } from '../../components/order/CustomerReorderModal';
@@ -81,6 +83,8 @@ export const CustomerOrderPortalPage: React.FC = () => {
 
   // Giỏ hàng
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartPreview, setCartPreview] = useState<PortalOrderResult | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState<boolean>(false);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -340,20 +344,60 @@ export const CustomerOrderPortalPage: React.FC = () => {
     setCart((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-  // TÍNH TOÁN CÔNG NỢ & TỔNG TIỀN (AC2)
-  const cartTotalAmount = useMemo(() => {
+  // TÍNH TOÁN CÔNG NỢ, CHIẾT KHẤU SẢN LƯỢNG & TỔNG TIỀN (AC2 & S4-10)
+  // Tự động gọi API POST /api/portal/orders/preview từ Backend để lấy chiết khấu theo bậc sản lượng thời gian thực
+  useEffect(() => {
+    const validLines = cart.filter((c) => c.quantity > 0);
+    if (validLines.length === 0) {
+      setCartPreview(null);
+      setLoadingPreview(false);
+      return;
+    }
+    let alive = true;
+    setLoadingPreview(true);
+    const timer = setTimeout(() => {
+      previewPortalOrder({
+        deliveryAddressId: selectedDeliveryPointId ? Number(selectedDeliveryPointId) : null,
+        note: orderNote.trim() || null,
+        lines: validLines.map((c) => ({
+          productSku: c.sku,
+          unitName: c.selectedUnit,
+          quantity: c.quantity
+        }))
+      })
+        .then((res) => {
+          if (alive) setCartPreview(res);
+        })
+        .catch((err) => {
+          console.warn('Lỗi tính xem trước giỏ hàng:', err);
+        })
+        .finally(() => {
+          if (alive) setLoadingPreview(false);
+        });
+    }, 250);
+
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [cart, selectedDeliveryPointId, orderNote]);
+
+  const cartGrossAmount = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
   }, [cart]);
+
+  const discountTotal = cartPreview ? cartPreview.discountTotal : 0;
+  const cartPayableAmount = cartPreview ? cartPreview.totalAmount : cartGrossAmount;
 
   const cartTotalCount = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.quantity, 0);
   }, [cart]);
 
-  // Hạn mức, nợ hiện tại và công nợ còn lại sau đơn này
+  // Hạn mức, nợ hiện tại và công nợ còn lại sau đơn này (tính theo số tiền thanh toán thực tế sau chiết khấu)
   const creditLimit = Number(creditStatus?.creditLimit ?? agency?.creditLimit ?? 0);
   const currentDebt = Number(creditStatus?.currentDebt ?? agency?.totalDebt ?? 0);
   const remainingBeforeOrder = Number(creditStatus?.availableCredit ?? Math.max(0, creditLimit - currentDebt));
-  const remainingAfterOrder = remainingBeforeOrder - cartTotalAmount;
+  const remainingAfterOrder = remainingBeforeOrder - cartPayableAmount;
   const isOverCreditLimit = remainingAfterOrder < 0;
   const hasOverdueDebt = Boolean(creditStatus?.overdue);
 
@@ -421,7 +465,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
       agency={agency}
       creditStatus={creditStatus}
       cartItemCount={cartTotalCount}
-      cartTotalAmount={cartTotalAmount}
+      cartTotalAmount={cartPayableAmount}
       onOpenCart={() => setIsCartDrawerOpen(true)}
       activeTab={activeTab}
       onChangeTab={setActiveTab}
@@ -891,15 +935,21 @@ export const CustomerOrderPortalPage: React.FC = () => {
                     </p>
                   </div>
                 ) : (
-                  cart.map((item, idx) => (
-                    <PortalCartItemRow
-                      key={`${item.productId}-${item.selectedUnit}`}
-                      item={item}
-                      index={idx}
-                      onUpdateQuantity={handleUpdateCartQuantity}
-                      onRemoveItem={handleRemoveCartItem}
-                    />
-                  ))
+                  cart.map((item, idx) => {
+                    const previewLine = cartPreview?.lines?.find(
+                      (l) => l.productSku === item.sku && l.unitName === item.selectedUnit
+                    );
+                    return (
+                      <PortalCartItemRow
+                        key={`${item.productId}-${item.selectedUnit}`}
+                        item={item}
+                        index={idx}
+                        previewLine={previewLine}
+                        onUpdateQuantity={handleUpdateCartQuantity}
+                        onRemoveItem={handleRemoveCartItem}
+                      />
+                    );
+                  })
                 )}
               </div>
 
@@ -944,14 +994,38 @@ export const CustomerOrderPortalPage: React.FC = () => {
                     />
                   </div>
 
-                  {/* BẢNG TỔNG KẾT TÀI CHÍNH & CÔNG NỢ TRƯỚC KHI GỬI (AC2) */}
+                  {/* BẢNG TỔNG KẾT TÀI CHÍNH & CÔNG NỢ TRƯỚC KHI GỬI (AC2 & CHIẾT KHẤU) */}
                   <div className="bg-white rounded-xl border border-gray-200 p-3 space-y-1.5 text-xs">
                     <div className="flex justify-between text-gray-600">
                       <span>Tổng tiền hàng tạm tính:</span>
-                      <span className="font-bold font-mono text-gray-900">
-                        {formatCurrencyVND(cartTotalAmount)}
+                      <span className={`font-bold font-mono ${discountTotal > 0 ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                        {formatCurrencyVND(cartGrossAmount)}
                       </span>
                     </div>
+
+                    {discountTotal > 0 && (
+                      <div className="flex justify-between text-emerald-700 font-bold bg-emerald-50 px-2 py-1.5 rounded-lg border border-emerald-200">
+                        <span className="flex items-center gap-1">
+                          <span>🎯 Chiết khấu sản lượng:</span>
+                        </span>
+                        <span className="font-mono font-bold">
+                          -{formatCurrencyVND(discountTotal)}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between text-gray-900 font-bold pt-0.5">
+                      <span className="flex items-center gap-1.5">
+                        <span>Tổng thanh toán thực tế:</span>
+                        {loadingPreview && <RefreshCw size={11} className="animate-spin text-orange-500" />}
+                      </span>
+                      <span className="font-black font-mono text-[#F85606] text-sm sm:text-base">
+                        {formatCurrencyVND(cartPayableAmount)}
+                      </span>
+                    </div>
+
+                    <div className="h-px bg-gray-100 my-1" />
+
                     <div className="flex justify-between text-gray-600">
                       <span>Hạn mức tín dụng:</span>
                       <span className="font-bold font-mono text-gray-700">
@@ -964,6 +1038,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                         {formatCurrencyVND(currentDebt)}
                       </span>
                     </div>
+
                     <div className="h-px bg-gray-100 my-1" />
                     <div className="flex justify-between text-gray-900 font-bold">
                       <span>Công nợ còn lại sau đơn này:</span>
@@ -1029,7 +1104,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                 {cartTotalCount} món trong giỏ
               </div>
               <div className="font-black text-[#F85606] font-mono text-sm">
-                {formatCurrencyVND(cartTotalAmount)}
+                {formatCurrencyVND(cartPayableAmount)}
               </div>
             </div>
 
@@ -1320,6 +1395,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, inCartCount, onAddTo
 interface PortalCartItemRowProps {
   item: CartItem;
   index: number;
+  previewLine?: PortalOrderLine;
   onUpdateQuantity: (index: number, newQty: number) => void;
   onRemoveItem: (index: number) => void;
 }
@@ -1327,6 +1403,7 @@ interface PortalCartItemRowProps {
 const PortalCartItemRow: React.FC<PortalCartItemRowProps> = ({
   item,
   index,
+  previewLine,
   onUpdateQuantity,
   onRemoveItem
 }) => {
@@ -1376,6 +1453,8 @@ const PortalCartItemRow: React.FC<PortalCartItemRowProps> = ({
     setLocalQtyText(String(next));
     onUpdateQuantity(index, next);
   };
+
+  const hasDiscount = Boolean(previewLine && previewLine.discountAmount && previewLine.discountAmount > 0);
 
   return (
     <div className="pt-3 first:pt-0">
@@ -1439,8 +1518,24 @@ const PortalCartItemRow: React.FC<PortalCartItemRowProps> = ({
           </button>
         </div>
 
-        <div className="font-black text-xs sm:text-sm font-mono text-[#F85606]">
-          {formatCurrencyVND(item.quantity * item.unitPrice)}
+        <div className="text-right">
+          {hasDiscount && previewLine ? (
+            <div>
+              <div className="text-[10px] text-gray-400 line-through font-mono">
+                {formatCurrencyVND(previewLine.grossAmount || item.quantity * item.unitPrice)}
+              </div>
+              <div className="font-black text-xs sm:text-sm font-mono text-[#F85606]">
+                {formatCurrencyVND(previewLine.netAmount)}
+              </div>
+              <div className="text-[10px] text-emerald-600 font-bold">
+                🎯 -{formatCurrencyVND(previewLine.discountAmount || 0)}
+              </div>
+            </div>
+          ) : (
+            <div className="font-black text-xs sm:text-sm font-mono text-[#F85606]">
+              {formatCurrencyVND(item.quantity * item.unitPrice)}
+            </div>
+          )}
         </div>
       </div>
     </div>

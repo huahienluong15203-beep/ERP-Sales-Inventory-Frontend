@@ -284,6 +284,15 @@ export async function fetchPortalDeliveryPoints(): Promise<DeliveryPoint[]> {
     .sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
 }
 
+/** Xem trước giỏ hàng: Backend tính giá, chiết khấu sản lượng (Volume Discount) và công nợ (không lưu đơn). */
+export async function previewPortalOrder(input: PortalOrderInput): Promise<PortalOrderResult> {
+  const data = await portalJson<unknown>('/orders/preview', 'Không tính toán được giỏ hàng', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  });
+  return mapOrder(data);
+}
+
 /** Gửi đơn: Backend tính giá và luôn đưa đơn về trạng thái Chờ duyệt để nhân viên phụ trách xác nhận. */
 export async function placePortalOrder(input: PortalOrderInput): Promise<PortalOrderResult> {
   const data = await portalJson<unknown>('/orders', 'Không gửi được đơn hàng', {
