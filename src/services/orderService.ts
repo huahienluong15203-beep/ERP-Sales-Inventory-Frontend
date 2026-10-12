@@ -609,6 +609,43 @@ export async function approveOrder(id: number | string, comment?: string): Promi
   return await res.json();
 }
 
+/** Kết quả xử lý hàng loạt (góp ý GV mục 8). */
+export interface BulkApprovalResult {
+  total: number;
+  succeeded: number;
+  failed: number;
+  results: Array<{
+    orderId: number;
+    orderCode: string | null;
+    success: boolean;
+    status: string | null;
+    message: string | null;
+  }>;
+}
+
+/**
+ * Góp ý GV mục 8: Duyệt / Từ chối / Trả lại nhiều đơn cùng lúc (POST /api/orders/bulk-approval).
+ * Đơn nào lỗi chỉ đơn đó không đổi; kết quả ghi rõ từng đơn.
+ */
+export async function bulkApproveOrders(
+  action: 'APPROVE' | 'REJECT' | 'RETURN',
+  orderIds: Array<number | string>,
+  comment?: string
+): Promise<BulkApprovalResult> {
+  const res = await callBackend(`${API_BASE_URL}/api/orders/bulk-approval`, {
+    method: 'POST',
+    body: JSON.stringify({
+      action,
+      orderIds: orderIds.map((id) => Number(id)),
+      comment: comment?.trim() || null
+    })
+  });
+  if (!res.ok) {
+    throw new Error(await readBackendError(res, 'Không xử lý được các đơn đã chọn'));
+  }
+  return await res.json();
+}
+
 /**
  * S4-05: Từ chối đơn hàng (POST /api/orders/{id}/reject) - bắt buộc nhập lý do
  */
