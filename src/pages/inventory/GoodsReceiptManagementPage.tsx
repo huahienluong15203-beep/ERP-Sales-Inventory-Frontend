@@ -310,7 +310,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
 
       {/* 6. MODAL XEM CHI TIẾT PHIẾU NHẬP KHO */}
       {selectedDetailReceipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <div>

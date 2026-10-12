@@ -427,7 +427,7 @@ export const StockTransferManagementPage: React.FC = () => {
 
       {/* MODAL 3: XEM CHI TIẾT PHIẾU CHUYỂN KHO */}
       {selectedTransferDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-3xl w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <div>

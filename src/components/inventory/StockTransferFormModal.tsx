@@ -256,7 +256,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
   const totalTransferQty = lines.reduce((s, l) => s + Number(l.transferQuantity || 0), 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
       <div className="bg-white rounded-3xl max-w-5xl w-full shadow-2xl flex flex-col max-h-[95vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* HEADER MODAL */}
         <div className="p-4 sm:p-5 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-blue-600/10 via-cyan-500/10 to-transparent">

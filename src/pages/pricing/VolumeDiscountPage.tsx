@@ -536,7 +536,7 @@ export const VolumeDiscountPage: React.FC = () => {
 
       {/* Modal Xem chi tiết chính sách */}
       {detailPolicy && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-gray-900/60 p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-gray-900/60 p-4 backdrop-blur-xs">
           <div className="relative my-8 w-full max-w-2xl rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-200 pb-3">
               <div className="flex items-center space-x-2">
@@ -629,7 +629,7 @@ export const VolumeDiscountPage: React.FC = () => {
 
       {/* Modal Xác nhận xóa */}
       {deleteTargetPolicy && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-gray-900/60 p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-gray-900/60 p-4 backdrop-blur-xs">
           <div className="relative w-full max-w-md rounded-2xl border border-rose-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center space-x-3 text-rose-600">
               <Icons.Trash2 size={26} />
