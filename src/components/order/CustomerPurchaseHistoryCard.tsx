@@ -205,7 +205,7 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
               <span>
                 {isAddingAll
                   ? 'Đang thêm...'
-                  : '⚡ Thêm nhanh cả nhóm hàng đã mua lần trước vào đơn mới'}
+                  : 'Thêm nhanh cả nhóm hàng đã mua lần trước vào đơn mới'}
               </span>
             </button>
           )}

@@ -25,7 +25,8 @@
   color: var(--erp-text-main);
   display: flex;
   flex-direction: column;
-  z-index: 100;
+  /* Thấp hơn các cửa sổ (modal) z-50 để nền tối của modal phủ được cả menu trái */
+  z-index: 46;
   transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.04);
   border-right: 1px solid var(--erp-border-sidebar);
@@ -378,7 +379,8 @@ html.dark .erp-menu-group-divider {
   padding: 0 28px;
   position: sticky;
   top: 0;
-  z-index: 90;
+  /* Thấp hơn modal z-50 để thanh tiêu đề không đè lên cửa sổ; vẫn cao hơn thanh tổng tiền đơn (40) */
+  z-index: 42;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
@@ -756,7 +758,8 @@ html.dark .erp-menu-group-divider {
     height: 100vh;
     background: rgba(0, 0, 0, 0.45);
     backdrop-filter: blur(4px);
-    z-index: 95;
+    /* Trên thanh tiêu đề, dưới menu trái khi mở menu trên điện thoại */
+    z-index: 45;
     animation: erpFadeIn 0.2s ease-out;
   }
 }
