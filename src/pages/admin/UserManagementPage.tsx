@@ -757,7 +757,7 @@ export const UserManagementPage: React.FC = () => {
             title="Làm mới danh sách tài khoản"
             className="user-mgmt-btn-refresh"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={16} />
             <span>Làm mới</span>
           </button>
 

@@ -776,7 +776,7 @@ export const CategoryManagement: React.FC = () => {
             className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:text-[#F85606] text-slate-700 font-semibold text-xs sm:text-sm transition-all cursor-pointer shadow-xs min-h-[44px] disabled:opacity-50"
             title="Làm mới dữ liệu từ máy chủ"
           >
-            <RefreshCw size={16} className={loadingTree ? 'animate-spin text-orange-600' : ''} />
+            <RefreshCw size={16} />
             <span>Làm mới</span>
           </button>
           {canManage && (

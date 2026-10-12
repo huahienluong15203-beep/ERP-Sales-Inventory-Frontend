@@ -170,7 +170,7 @@ export const PriceHistoryPage: React.FC = () => {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 transition shadow-2xs cursor-pointer h-9"
             title="Làm mới lịch sử thay đổi giá"
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin text-orange-600' : ''} />
+            <RefreshCw size={14} />
             <span>Làm mới</span>
           </button>
 

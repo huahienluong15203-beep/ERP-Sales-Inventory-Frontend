@@ -337,7 +337,7 @@ export const OrderListPage: React.FC = () => {
           title="Làm mới danh sách đơn hàng"
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 text-xs font-semibold transition-colors cursor-pointer shadow-2xs h-9"
         >
-          <RefreshCw size={14} className={loading ? 'animate-spin text-[#F85606]' : ''} />
+          <RefreshCw size={14} />
           <span>Làm mới</span>
         </button>
 

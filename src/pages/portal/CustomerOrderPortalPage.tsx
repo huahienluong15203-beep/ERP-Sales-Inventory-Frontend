@@ -830,7 +830,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
               disabled={loadingHistory}
               className="px-3 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
             >
-              <RefreshCw size={14} className={loadingHistory ? 'animate-spin' : ''} />
+              <RefreshCw size={14} />
               <span>Làm mới</span>
             </button>
           </div>

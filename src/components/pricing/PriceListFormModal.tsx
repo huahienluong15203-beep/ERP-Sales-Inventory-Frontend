@@ -441,11 +441,6 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                       <Icons.Search size={13} />
                     </span>
-                    {isSearchingProduct && (
-                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-orange-500">
-                        <div className="w-3.5 h-3.5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-                      </span>
-                    )}
                   </div>
 
                   {/* Dropdown danh sách sản phẩm thật */}

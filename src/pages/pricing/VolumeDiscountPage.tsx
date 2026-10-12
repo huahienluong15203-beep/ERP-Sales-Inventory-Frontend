@@ -207,7 +207,7 @@ export const VolumeDiscountPage: React.FC = () => {
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-2xs transition-colors hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 h-9 cursor-pointer"
             title="Làm mới danh sách chính sách chiết khấu"
           >
-            <Icons.RefreshCw size={14} className={isLoading ? 'animate-spin text-orange-600' : ''} />
+            <Icons.RefreshCw size={14} />
             <span>Làm mới</span>
           </button>
 

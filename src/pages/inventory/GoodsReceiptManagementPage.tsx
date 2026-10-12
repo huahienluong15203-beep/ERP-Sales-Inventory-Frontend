@@ -119,7 +119,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
             disabled={loading}
             className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs h-9"
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} />
             <span className="hidden sm:inline">Làm mới</span>
           </button>
 
