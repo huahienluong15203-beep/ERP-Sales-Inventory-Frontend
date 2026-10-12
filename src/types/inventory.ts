@@ -36,6 +36,20 @@ export const SYSTEM_WAREHOUSES: WarehouseOption[] = [
     name: 'Kho Tổng Miền Nam',
     address: 'KCN Sóng Thần 1, Dĩ An, Bình Dương',
     status: 'ACTIVE'
+  },
+  {
+    id: 4,
+    code: 'KHO-HCM',
+    name: 'Kho Tổng TP.HCM',
+    address: 'KCN Cao, Quận 9, TP. Thủ Đức, TP.HCM',
+    status: 'ACTIVE'
+  },
+  {
+    id: 5,
+    code: 'KHO-HN',
+    name: 'Kho Tổng Hà Nội',
+    address: 'KCN Đài Tư, Long Biên, Hà Nội',
+    status: 'ACTIVE'
   }
 ];
 

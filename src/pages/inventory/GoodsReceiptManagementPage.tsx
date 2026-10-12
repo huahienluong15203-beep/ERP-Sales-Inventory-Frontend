@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Plus,
   Search,
@@ -19,9 +20,19 @@ import {
 import { GoodsReceiptFormModal } from '../../components/inventory/GoodsReceiptFormModal';
 import { formatQuantity } from '../../services/orderService';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLocation } from '../../routes/Router';
 
 export const GoodsReceiptManagementPage: React.FC = () => {
   const { user, showToast } = useAuth();
+  const { pathname } = useLocation();
+
+  const searchParams = new URLSearchParams(
+    pathname.includes('?') ? pathname.split('?')[1] : window.location.search
+  );
+  const paramWarehouseCode = searchParams.get('warehouseCode') || '';
+  const paramSku = searchParams.get('sku') || '';
+  const paramQty = searchParams.get('qty') ? Number(searchParams.get('qty')) : undefined;
+  const shouldOpenModal = searchParams.get('create') === '1' || searchParams.get('openModal') === '1';
 
   const [receipts, setReceipts] = useState<GoodsReceipt[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -32,7 +43,10 @@ export const GoodsReceiptManagementPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('');
 
   // Modals
-  const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(false);
+  const [isFormModalOpen, setIsFormModalOpen] = useState<boolean>(() => shouldOpenModal);
+  const [initialWarehouseCode, setInitialWarehouseCode] = useState<string>(() => paramWarehouseCode);
+  const [initialSku, setInitialSku] = useState<string>(() => paramSku);
+  const [initialQty, setInitialQty] = useState<number | undefined>(() => paramQty);
   const [selectedDetailReceipt, setSelectedDetailReceipt] = useState<GoodsReceipt | null>(null);
   const [confirmingId, setConfirmingId] = useState<number | string | null>(null);
 
@@ -301,108 +315,132 @@ export const GoodsReceiptManagementPage: React.FC = () => {
       {/* 5. MODAL FORM LẬP PHIẾU NHẬP KHO CHI TIẾT (S5-04) */}
       <GoodsReceiptFormModal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
-        onSuccess={() => loadData()}
+        initialWarehouseCode={initialWarehouseCode}
+        initialProductSku={initialSku}
+        initialQuantity={initialQty}
+        onClose={() => {
+          setIsFormModalOpen(false);
+          setInitialWarehouseCode('');
+          setInitialSku('');
+          setInitialQty(undefined);
+        }}
+        onSuccess={() => {
+          setIsFormModalOpen(false);
+          setInitialWarehouseCode('');
+          setInitialSku('');
+          setInitialQty(undefined);
+          loadData();
+        }}
       />
 
       {/* 6. MODAL XEM CHI TIẾT PHIẾU NHẬP KHO */}
-      {selectedDetailReceipt && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <div>
-                <h3 className="font-black text-lg text-gray-900 flex items-center gap-2">
-                  <span>Phiếu Nhập Kho:</span>
-                  <span className="font-mono text-[#F85606]">{selectedDetailReceipt.code}</span>
-                </h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Ngày nhập: {selectedDetailReceipt.receiptDate} • Kho: {selectedDetailReceipt.warehouseName}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedDetailReceipt(null)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-              >
-                X
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-gray-50 p-3 rounded-xl border border-gray-200">
-              <div>
-                <span className="text-gray-400 block text-[11px]">Nhà cung cấp</span>
-                <span className="font-bold text-gray-800">{selectedDetailReceipt.supplierName}</span>
-              </div>
-              <div>
-                <span className="text-gray-400 block text-[11px]">Số chứng từ / HĐ</span>
-                <span className="font-bold font-mono text-gray-900">{selectedDetailReceipt.documentNumber}</span>
-              </div>
-              <div>
-                <span className="text-gray-400 block text-[11px]">Người lập phiếu</span>
-                <span className="font-bold text-gray-800">{selectedDetailReceipt.createdByUsername}</span>
-              </div>
-              <div>
-                <span className="text-gray-400 block text-[11px]">Trạng thái tồn kho (AC4)</span>
-                <span
-                  className={`font-bold ${
-                    selectedDetailReceipt.status === 'CONFIRMED' ? 'text-emerald-600' : 'text-gray-600'
-                  }`}
+      {selectedDetailReceipt &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs">
+            <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div>
+                  <h3 className="font-black text-lg text-gray-900 flex items-center gap-2">
+                    <span>Phiếu Nhập Kho:</span>
+                    <span className="font-mono text-[#F85606]">{selectedDetailReceipt.code}</span>
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Ngày nhập: {selectedDetailReceipt.receiptDate} • Kho: {selectedDetailReceipt.warehouseName}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDetailReceipt(null)}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer"
                 >
-                  {selectedDetailReceipt.status === 'CONFIRMED' ? 'ĐÃ CỘNG TỒN' : 'CHƯA CỘNG TỒN (NHÁP)'}
-                </span>
+                  ✕
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs bg-gray-50 p-3 rounded-xl border border-gray-200">
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Nhà cung cấp</span>
+                  <span className="font-bold text-gray-800">{selectedDetailReceipt.supplierName}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Số chứng từ / HĐ</span>
+                  <span className="font-bold font-mono text-gray-900">{selectedDetailReceipt.documentNumber}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Người lập phiếu</span>
+                  <span className="font-bold text-gray-800">{selectedDetailReceipt.createdByUsername}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Biển số xe</span>
+                  <span className="font-bold font-mono text-gray-900">{selectedDetailReceipt.vehiclePlate || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Tài xế / Người giao</span>
+                  <span className="font-bold text-gray-800">{selectedDetailReceipt.driverName || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Trạng thái tồn kho (AC4)</span>
+                  <span
+                    className={`font-bold ${
+                      selectedDetailReceipt.status === 'CONFIRMED' ? 'text-emerald-600' : 'text-gray-600'
+                    }`}
+                  >
+                    {selectedDetailReceipt.status === 'CONFIRMED' ? 'ĐÃ CỘNG TỒN' : 'CHƯA CỘNG TỒN (NHÁP)'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Chi tiết từng dòng hàng kèm số lô & hạn dùng (AC2, AC3) */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-gray-50 font-bold text-gray-600 border-b border-gray-200">
+                    <tr>
+                      <th className="py-2.5 px-3">Mặt hàng</th>
+                      <th className="py-2.5 px-3 text-center">ĐVT Nhập (AC2)</th>
+                      <th className="py-2.5 px-3 text-center">Số lượng</th>
+                      <th className="py-2.5 px-3 text-center">Quy về cơ sở (AC2)</th>
+                      <th className="py-2.5 px-3">Số lô & Hạn dùng (AC3)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {selectedDetailReceipt.lines.map((l) => (
+                      <tr key={l.id}>
+                        <td className="py-2.5 px-3">
+                          <div className="font-bold text-gray-900">{l.productName}</div>
+                          <div className="font-mono text-gray-400 text-[10px]">{l.productSku}</div>
+                        </td>
+                        <td className="py-2.5 px-3 text-center font-medium text-gray-700">
+                          {l.selectedUnit} (x{l.conversionFactor})
+                        </td>
+                        <td className="py-2.5 px-3 text-center font-bold font-mono">
+                          {formatQuantity(l.quantity)}
+                        </td>
+                        <td className="py-2.5 px-3 text-center font-black font-mono text-emerald-700">
+                          {formatQuantity(l.baseQuantity)} {l.baseUnit}
+                        </td>
+                        <td className="py-2.5 px-3 font-mono text-[11px]">
+                          <div>Lô: <strong className="text-gray-800">{l.batchNumber || '—'}</strong></div>
+                          <div className="text-gray-500">Hạn: {l.expiredDate || '—'}</div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDetailReceipt(null)}
+                  className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs cursor-pointer"
+                >
+                  Đóng
+                </button>
               </div>
             </div>
-
-            {/* Chi tiết từng dòng hàng kèm số lô & hạn dùng (AC2, AC3) */}
-            <div className="border border-gray-200 rounded-xl overflow-hidden">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-gray-50 font-bold text-gray-600 border-b border-gray-200">
-                  <tr>
-                    <th className="py-2.5 px-3">Mặt hàng</th>
-                    <th className="py-2.5 px-3 text-center">ĐVT Nhập (AC2)</th>
-                    <th className="py-2.5 px-3 text-center">Số lượng</th>
-                    <th className="py-2.5 px-3 text-center">Quy về cơ sở (AC2)</th>
-                    <th className="py-2.5 px-3">Số lô & Hạn dùng (AC3)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {selectedDetailReceipt.lines.map((l) => (
-                    <tr key={l.id}>
-                      <td className="py-2.5 px-3">
-                        <div className="font-bold text-gray-900">{l.productName}</div>
-                        <div className="font-mono text-gray-400 text-[10px]">{l.productSku}</div>
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-medium text-gray-700">
-                        {l.selectedUnit} (x{l.conversionFactor})
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-bold font-mono">
-                        {formatQuantity(l.quantity)}
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-black font-mono text-emerald-700">
-                        {formatQuantity(l.baseQuantity)} {l.baseUnit}
-                      </td>
-                      <td className="py-2.5 px-3 font-mono text-[11px]">
-                        <div>Lô: <strong className="text-gray-800">{l.batchNumber || '—'}</strong></div>
-                        <div className="text-gray-500">Hạn: {l.expiredDate || '—'}</div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <button
-                type="button"
-                onClick={() => setSelectedDetailReceipt(null)}
-                className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
