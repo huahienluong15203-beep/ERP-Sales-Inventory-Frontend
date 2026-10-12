@@ -48,6 +48,7 @@ import { useServerSearch, matchesKeyword } from '../../hooks/useServerSearch';
 import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 import { Pagination } from '../../components/common/Pagination';
 import { fetchAuditLogs } from '../../services/auditLogApi';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 /**
  * Kiểm tra số điện thoại Việt Nam: để trống HOẶC đủ 10 số, bắt đầu bằng 03/05/07/08/09.
@@ -756,7 +757,7 @@ export const UserManagementPage: React.FC = () => {
             title="Làm mới danh sách tài khoản"
             className="user-mgmt-btn-refresh"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={16} />
             <span>Làm mới</span>
           </button>
 
@@ -812,7 +813,7 @@ export const UserManagementPage: React.FC = () => {
 
           {/* Lọc theo Vai Trò */}
           <div>
-            <select
+            <SearchSelect
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
               className="user-mgmt-select"
@@ -823,12 +824,12 @@ export const UserManagementPage: React.FC = () => {
                   {ROLE_METADATA_MAP[r]?.label || r}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
 
           {/* Lọc theo Trạng Thái */}
           <div>
-            <select
+            <SearchSelect
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
               className="user-mgmt-select"
@@ -836,7 +837,7 @@ export const UserManagementPage: React.FC = () => {
               <option value="">Tất cả trạng thái</option>
               <option value="ACTIVE">Đang hoạt động</option>
               <option value="LOCKED">Đã khóa</option>
-            </select>
+            </SearchSelect>
           </div>
 
           {/* Nút Lọc & Reset */}
@@ -2016,12 +2017,11 @@ export const UserManagementPage: React.FC = () => {
                               <label className="user-mgmt-form-label" style={{ color: '#92400E' }}>
                                 Nhân viên nhận bàn giao <span style={{ color: '#DC2626' }}>* (Bắt buộc)</span>:
                               </label>
-                              <select
+                              <SearchSelect
                                 value={selectedHandoverUserId}
                                 onChange={(e) => setSelectedHandoverUserId(e.target.value)}
                                 disabled={lockLoading}
                                 className="user-mgmt-form-input"
-                                style={{ background: '#FFFFFF' }}
                               >
                                 <option value="">-- Chọn nhân viên kinh doanh tiếp nhận --</option>
                                 {handoverCandidates.map((cand) => {
@@ -2034,7 +2034,7 @@ export const UserManagementPage: React.FC = () => {
                                     </option>
                                   );
                                 })}
-                              </select>
+                              </SearchSelect>
                               <span style={{ fontSize: 11, color: '#B45309', marginTop: 2 }}>
                                 Toàn bộ {assignedAgencies.length} đại lý sẽ được chuyển giao sang nhân viên này khi xác nhận.
                               </span>

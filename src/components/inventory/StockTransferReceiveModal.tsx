@@ -9,6 +9,7 @@ import {
 import type { StockTransfer } from '../../types/stockTransfer';
 import { receiveStockTransfer } from '../../services/stockTransferApi';
 import { useAuth } from '../../contexts/AuthContext';
+import { NumberInput } from '../common/NumberInput';
 
 interface StockTransferReceiveModalProps {
   isOpen: boolean;
@@ -232,8 +233,7 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
                       </td>
 
                       <td className="py-3 px-3 text-center">
-                        <input
-                          type="number"
+                        <NumberInput
                           min="0"
                           value={line.receivedQuantity}
                           onChange={(e) => handleUpdateQuantity(line.lineId, Number(e.target.value))}

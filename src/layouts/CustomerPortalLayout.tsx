@@ -18,6 +18,7 @@ import { LogoutConfirmModal } from '../components/common/LogoutConfirmModal';
 import type { Agency, CreditStatusResponse } from '../types/agency';
 import { formatCurrencyVND } from '../services/orderService';
 import { getAvatarFullUrl } from '../services/api';
+import { SearchSelect } from '../components/common/SearchSelect';
 
 interface CustomerPortalLayoutProps {
   children: ReactNode;
@@ -211,7 +212,7 @@ export const CustomerPortalLayout: React.FC<CustomerPortalLayoutProps> = ({
                         <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">
                           Đổi vai trò làm việc
                         </label>
-                        <select
+                        <SearchSelect
                           value={currentRole}
                           onChange={(e) => {
                             switchRole(e.target.value as RoleName);
@@ -224,7 +225,7 @@ export const CustomerPortalLayout: React.FC<CustomerPortalLayoutProps> = ({
                               {ROLE_METADATA_MAP[r]?.label || r}
                             </option>
                           ))}
-                        </select>
+                        </SearchSelect>
                       </div>
                     )}
 

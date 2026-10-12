@@ -19,6 +19,7 @@ import {
 import { StockTransferFormModal } from '../../components/inventory/StockTransferFormModal';
 import { StockTransferReceiveModal } from '../../components/inventory/StockTransferReceiveModal';
 import { useAuth } from '../../contexts/AuthContext';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 /**
  * S5-07 (Nguyễn Văn Minh): Phân hệ Quản lý Phiếu Chuyển Kho Nội Bộ
@@ -215,8 +216,8 @@ export const StockTransferManagementPage: React.FC = () => {
 
       {/* THANH TÌM KIẾM & BỘ LỌC */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-xs space-y-3">
-        <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row items-center gap-3">
-          <div className="relative flex-1 w-full">
+        <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="relative w-full md:max-w-sm">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
@@ -227,9 +228,9 @@ export const StockTransferManagementPage: React.FC = () => {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <div className="flex flex-wrap items-center md:justify-end gap-2 w-full md:w-auto">
             {/* Lọc Trạng thái */}
-            <select
+            <SearchSelect
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -239,10 +240,10 @@ export const StockTransferManagementPage: React.FC = () => {
               <option value="IN_TRANSIT">Đang đi đường (AC2)</option>
               <option value="COMPLETED">Đã nhận đủ (AC3)</option>
               <option value="DISCREPANCY_RESOLVED">Nhận chênh lệch (AC4)</option>
-            </select>
+            </SearchSelect>
 
             {/* Lọc Kho đi */}
-            <select
+            <SearchSelect
               value={sourceWhFilter}
               onChange={(e) => setSourceWhFilter(e.target.value)}
               className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -253,10 +254,10 @@ export const StockTransferManagementPage: React.FC = () => {
                   Từ: {w.name}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
 
             {/* Lọc Kho đến */}
-            <select
+            <SearchSelect
               value={destWhFilter}
               onChange={(e) => setDestWhFilter(e.target.value)}
               className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -267,7 +268,7 @@ export const StockTransferManagementPage: React.FC = () => {
                   Đến: {w.name}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
 
             <button
               type="submit"

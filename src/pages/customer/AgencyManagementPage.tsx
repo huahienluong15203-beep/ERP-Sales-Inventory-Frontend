@@ -54,6 +54,7 @@ import {
   Navigation,
   Trash2
 } from '../../components/common/Icons';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const AgencyManagementPage: React.FC = () => {
 
@@ -216,7 +217,7 @@ export const AgencyManagementPage: React.FC = () => {
       return;
     }
     const rect = e.currentTarget.getBoundingClientRect();
-    const dropdownHeight = 240;
+    const dropdownHeight = 290;
     const spaceBelow = window.innerHeight - rect.bottom;
     const shouldOpenUp = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
 
@@ -424,7 +425,7 @@ export const AgencyManagementPage: React.FC = () => {
             title="Làm mới danh sách đại lý"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 text-xs font-semibold transition-colors cursor-pointer shadow-2xs h-9"
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin text-orange-600' : ''} />
+            <RefreshCw size={14} />
             <span>Làm mới</span>
           </button>
 
@@ -570,7 +571,7 @@ export const AgencyManagementPage: React.FC = () => {
 
           {/* Lọc Nhóm khách hàng */}
           <div>
-            <select
+            <SearchSelect
               value={selectedGroup}
               onChange={(e) => setSelectedGroup(e.target.value)}
               className="w-full px-2.5 py-2 text-xs rounded-lg border border-gray-200 bg-white focus:border-[#F85606] outline-none"
@@ -581,12 +582,12 @@ export const AgencyManagementPage: React.FC = () => {
                   {g.name}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
 
           {/* Lọc Khu vực */}
           <div>
-            <select
+            <SearchSelect
               value={selectedRegion}
               onChange={(e) => setSelectedRegion(e.target.value)}
               className="w-full px-2.5 py-2 text-xs rounded-lg border border-gray-200 bg-white focus:border-[#F85606] outline-none"
@@ -597,12 +598,12 @@ export const AgencyManagementPage: React.FC = () => {
                   {r.name}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
 
           {/* S3-07: Lọc Khóa giao dịch rủi ro nợ */}
           <div>
-            <select
+            <SearchSelect
               value={selectedLockFilter}
               onChange={(e) => setSelectedLockFilter(e.target.value)}
               className="w-full px-2.5 py-2 text-xs rounded-lg border border-gray-200 bg-white focus:border-[#F85606] outline-none"
@@ -610,12 +611,12 @@ export const AgencyManagementPage: React.FC = () => {
               <option value="">Tất cả giao dịch</option>
               <option value="LOCKED">🔒 Bị khóa giao dịch</option>
               <option value="UNLOCKED">✅ Đang mở giao dịch</option>
-            </select>
+            </SearchSelect>
           </div>
 
           {/* Lọc Trạng thái & Nút thao tác */}
           <div className="flex items-center gap-2">
-            <select
+            <SearchSelect
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
               className="w-full px-2.5 py-2 text-xs rounded-lg border border-gray-200 bg-white focus:border-[#F85606] outline-none"
@@ -623,7 +624,7 @@ export const AgencyManagementPage: React.FC = () => {
               <option value="">Tất cả trạng thái</option>
               <option value="ACTIVE">Đang hoạt động</option>
               <option value="SUSPENDED">Dừng giao dịch</option>
-            </select>
+            </SearchSelect>
 
             {(keyword || selectedGroup || selectedRegion || selectedStatus || selectedLockFilter) && (
               <button
@@ -962,17 +963,6 @@ export const AgencyManagementPage: React.FC = () => {
                               </button>
                             )}
 
-                            {/* 2. Nút Phân công người phụ trách (S3-06) */}
-                            {canManageAssignments && (
-                              <button
-                                onClick={() => handleOpenAssignRep(agency)}
-                                title="Phân công / Đổi nhân viên kinh doanh phụ trách"
-                                className="p-1.5 rounded-lg border border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300 transition-colors cursor-pointer"
-                              >
-                                <Users size={15} />
-                              </button>
-                            )}
-
                             {/* 3. Nút Menu Thao Tác Khác (...) */}
                             <div className="relative">
                               <button
@@ -1131,6 +1121,23 @@ export const AgencyManagementPage: React.FC = () => {
               <Truck size={14} className="text-[#F85606]" />
               <span>Điểm giao hàng ({openMenuAgency.deliveryPointCount ?? 0})</span>
             </button>
+
+            {/* Phân công / đổi người phụ trách (S3-06) - chuyển từ nút ngoài bảng vào menu cho gọn */}
+            {canManageAssignments && (
+              <button
+                type="button"
+                onClick={() => {
+                  const target = openMenuAgency;
+                  setOpenMenuAgency(null);
+                  setMenuCoords(null);
+                  handleOpenAssignRep(target);
+                }}
+                className="w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 hover:bg-purple-50/60 hover:text-purple-600 transition-colors cursor-pointer"
+              >
+                <Users size={14} className="text-purple-500" />
+                <span>Phân công NV phụ trách</span>
+              </button>
+            )}
 
             {/* Lịch sử phân công */}
             <button

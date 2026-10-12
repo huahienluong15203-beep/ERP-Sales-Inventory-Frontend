@@ -206,9 +206,6 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
               className="w-full h-10 pl-9 pr-14 text-xs rounded-xl border border-gray-200 focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 outline-none transition"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-              {loadingBackend && (
-                <span className="w-4 h-4 border-2 border-[#F85606] border-t-transparent rounded-full animate-spin inline-block" />
-              )}
               {keyword && (
                 <button
                   type="button"

@@ -47,7 +47,6 @@ import {
   Save,
   Check
 } from '../../components/common/Icons';
-import { Copy, X } from 'lucide-react';
 
 /** Kết quả Backend tính tiền cho đơn đang gõ (S3-09: tiền hàng, chiết khấu, tổng phải thu) */
 type PreviewState =
@@ -85,7 +84,7 @@ export const OrderCreatePage: React.FC = () => {
   const [savedDrafts, setSavedDrafts] = useState<OrderDraft[]>([]);
   const [isSavingDraft, setIsSavingDraft] = useState<boolean>(false);
   const [preview, setPreview] = useState<PreviewState>({ status: 'idle' });
-  const [cloneNotice, setCloneNotice] = useState<{ sourceCode: string; itemCount: number } | null>(() => {
+  const [cloneNotice] = useState<{ sourceCode: string; itemCount: number } | null>(() => {
     try {
       const rawNotice = sessionStorage.getItem('erp_order_clone_notice');
       if (rawNotice) {

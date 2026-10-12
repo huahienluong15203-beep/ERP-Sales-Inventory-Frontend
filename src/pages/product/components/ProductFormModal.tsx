@@ -10,6 +10,8 @@ import {
 import { fetchCategories, type CategoryWithCount } from '../../../services/categoryApi';
 import { useAuth } from '../../../contexts/AuthContext';
 import { Icons } from '../../../components/common/Icons';
+import { SearchSelect } from '../../../components/common/SearchSelect';
+import { NumberInput } from '../../../components/common/NumberInput';
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -375,7 +377,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
                     Trạng thái kinh doanh <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <SearchSelect
                     value={status}
                     onChange={(e) => setStatus(e.target.value as ProductStatus)}
                     disabled={isSubmitting}
@@ -383,7 +385,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   >
                     <option value="ACTIVE">Đang kinh doanh (ACTIVE)</option>
                     <option value="INACTIVE">Ngừng kinh doanh (INACTIVE)</option>
-                  </select>
+                  </SearchSelect>
                   <p className="text-xs text-gray-400 mt-1">Chuyển sang "Ngừng kinh doanh" khi sản phẩm ngừng lưu hành</p>
                 </div>
               </div>
@@ -444,7 +446,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     <span className="text-[11px] text-gray-400">Đang tải cây...</span>
                   )}
                 </div>
-                <select
+                <SearchSelect
                   value={categoryId || category}
                   onChange={(e) => handleCategoryChange(e.target.value)}
                   disabled={isSubmitting}
@@ -464,7 +466,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       </option>
                     ))
                   )}
-                </select>
+                </SearchSelect>
                 {selectedCategoryPath && (
                   <div className="mt-1.5 flex items-center gap-1.5 text-xs text-orange-700 bg-orange-50/80 px-2.5 py-1 rounded-lg border border-orange-200/50">
                     <Icons.Building2 size={13} className="shrink-0 text-orange-600" />
@@ -478,7 +480,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
                   4. Đơn vị tính cơ sở <span className="text-red-500">*</span>
                 </label>
-                <select
+                <SearchSelect
                   value={baseUnit}
                   onChange={(e) => setBaseUnit(e.target.value)}
                   disabled={isSubmitting}
@@ -489,7 +491,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       {u}
                     </option>
                   ))}
-                </select>
+                </SearchSelect>
                 <p className="text-xs text-gray-400 mt-1">Đơn vị nhỏ nhất dùng để ghi sổ thẻ kho và tính tồn</p>
               </div>
             </div>
@@ -530,8 +532,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               {canEditCost ? (
                 <div>
                   <div className="flex rounded-xl border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-500 transition-all overflow-hidden min-h-[44px]">
-                    <input
-                      type="number"
+                    <NumberInput
                       min="0"
                       step="1000"
                       value={costPrice}

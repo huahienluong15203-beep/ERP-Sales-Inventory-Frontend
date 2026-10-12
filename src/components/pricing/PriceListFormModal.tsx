@@ -5,6 +5,8 @@ import { createPriceList, updatePriceList } from '../../services/pricingApi';
 import { productService } from '../../services/productService';
 import type { ProductOptionItem } from '../../services/productService';
 import { Icons } from '../common/Icons';
+import { SearchSelect } from '../common/SearchSelect';
+import { NumberInput } from '../common/NumberInput';
 
 interface PriceListFormModalProps {
   initialData?: PriceList | null;
@@ -338,7 +340,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Nhóm khách hàng áp dụng *
               </label>
-              <select
+              <SearchSelect
                 value={customerGroup}
                 onChange={(e) => setCustomerGroup(e.target.value as CustomerGroupType)}
                 className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs text-gray-800 focus:ring-2 focus:ring-orange-500 focus:outline-none cursor-pointer"
@@ -348,7 +350,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                     {group.label}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
             </div>
 
             {/* Tên bảng giá */}
@@ -439,11 +441,6 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                       <Icons.Search size={13} />
                     </span>
-                    {isSearchingProduct && (
-                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-orange-500">
-                        <div className="w-3.5 h-3.5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-                      </span>
-                    )}
                   </div>
 
                   {/* Dropdown danh sách sản phẩm thật */}
@@ -593,8 +590,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                             </span>
                           </td>
                           <td className="py-2 px-3">
-                            <input
-                              type="number"
+                            <NumberInput
                               value={item.price}
                               onChange={(e) => handleUpdateItem(originalIndex, 'price', e.target.value)}
                               placeholder="250000"
@@ -603,8 +599,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                             />
                           </td>
                           <td className="py-2 px-3">
-                            <input
-                              type="number"
+                            <NumberInput
                               value={item.floorPrice}
                               onChange={(e) => handleUpdateItem(originalIndex, 'floorPrice', e.target.value)}
                               placeholder="220000"

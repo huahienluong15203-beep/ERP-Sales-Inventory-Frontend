@@ -15,6 +15,8 @@ import { useServerSearch } from '../../hooks/useServerSearch';
 import { Pagination } from '../../components/common/Pagination';
 import { fetchCategories } from '../../services/categoryApi';
 import { ProductUnitConversionModal } from './components/ProductUnitConversionModal';
+import { SearchSelect } from '../../components/common/SearchSelect';
+import { RowActionMenu } from '../../components/common/RowActionMenu';
 
 export const ProductManagementPage: React.FC = () => {
   const { currentRole } = useAuth();
@@ -169,7 +171,7 @@ export const ProductManagementPage: React.FC = () => {
             className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 transition shadow-2xs cursor-pointer h-9"
             title="Làm mới danh sách sản phẩm"
           >
-            <Icons.RefreshCw size={14} className={isLoading ? 'animate-spin text-orange-600' : ''} />
+            <Icons.RefreshCw size={14} />
             <span>Làm mới</span>
           </button>
 
@@ -244,7 +246,7 @@ export const ProductManagementPage: React.FC = () => {
 
       {/* Thanh tìm kiếm và bộ lọc */}
       <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-2xs flex flex-wrap items-center gap-2.5">
-        <div className="flex-1 min-w-[240px] relative">
+        <div className="w-full sm:max-w-sm relative">
           <Icons.Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
@@ -256,7 +258,7 @@ export const ProductManagementPage: React.FC = () => {
         </div>
 
         <div className="w-full sm:w-52">
-          <select
+          <SearchSelect
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[38px]"
@@ -267,19 +269,19 @@ export const ProductManagementPage: React.FC = () => {
                 {c}
               </option>
             ))}
-          </select>
+          </SearchSelect>
         </div>
 
         <div className="w-full sm:w-48">
-          <select
+          <SearchSelect
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value as ProductStatus | 'ALL')}
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
+            className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[38px]"
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang kinh doanh</option>
             <option value="INACTIVE">Ngừng kinh doanh</option>
-          </select>
+          </SearchSelect>
         </div>
 
         <div className="w-full sm:w-auto sm:ml-auto text-xs sm:text-sm text-gray-500 font-medium">
@@ -425,47 +427,43 @@ export const ProductManagementPage: React.FC = () => {
                       {/* 9. Thao tác */}
                       <td className="py-3 px-4 text-center whitespace-nowrap">
                         <div className="inline-flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            title="Quản lý đơn vị tính quy đổi"
-                            onClick={() => setUnitConversionProduct(p)}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
-                          >
-                            <Icons.Scale size={16} />
-                          </button>
-
                           {canManageProducts && (
-                            <>
-                              <button
-                                type="button"
-                                title="Sửa thông tin sản phẩm"
-                                onClick={() => handleOpenEdit(p)}
-                                className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
-                              >
-                                <Icons.Edit size={16} />
-                              </button>
-
-                              {p.status === 'ACTIVE' ? (
-                                <button
-                                  type="button"
-                                  title="Ngừng kinh doanh (sản phẩm không xoá khỏi hệ thống)"
-                                  onClick={() => setDeactivateTarget(p)}
-                                  className="p-1.5 rounded-lg transition-colors cursor-pointer text-red-500 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Icons.Trash2 size={16} />
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  title="Mở lại kinh doanh"
-                                  onClick={() => handleActivate(p)}
-                                  className="p-1.5 rounded-lg transition-colors cursor-pointer text-emerald-600 hover:bg-emerald-50"
-                                >
-                                  <Icons.RotateCcw size={16} />
-                                </button>
-                              )}
-                            </>
+                            <button
+                              type="button"
+                              title="Sửa thông tin sản phẩm"
+                              onClick={() => handleOpenEdit(p)}
+                              className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
+                            >
+                              <Icons.Edit size={16} />
+                            </button>
                           )}
+
+                          {/* Thao tác phụ (đơn vị quy đổi, ngừng / mở kinh doanh) gom vào menu "⋯" */}
+                          <RowActionMenu
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors cursor-pointer"
+                            items={[
+                              {
+                                label: 'Đơn vị tính quy đổi',
+                                icon: <Icons.Scale size={14} />,
+                                title: 'Quản lý đơn vị tính quy đổi',
+                                onClick: () => setUnitConversionProduct(p),
+                              },
+                              {
+                                label: 'Ngừng kinh doanh',
+                                icon: <Icons.Trash2 size={14} />,
+                                title: 'Ngừng kinh doanh (sản phẩm không xoá khỏi hệ thống)',
+                                onClick: () => setDeactivateTarget(p),
+                                hidden: !canManageProducts || p.status !== 'ACTIVE',
+                                danger: true,
+                              },
+                              {
+                                label: 'Mở lại kinh doanh',
+                                icon: <Icons.RotateCcw size={14} />,
+                                onClick: () => handleActivate(p),
+                                hidden: !canManageProducts || p.status === 'ACTIVE',
+                              },
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import type { OrderItem } from '../../types/order';
 import { formatCurrencyVND } from '../../services/orderService';
 import { Trash2, Plus, Minus, Tag, Edit, Check, X, RotateCw, AlertTriangle, Package } from '../common/Icons';
+import { SearchSelect } from '../common/SearchSelect';
+import { NumberInput } from '../common/NumberInput';
 
 interface OrderItemRowProps {
   item: OrderItem;
@@ -209,7 +211,7 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
           <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
             Đơn Vị Đặt Hàng
           </label>
-          <select
+          <SearchSelect
             value={item.selectedUnit}
             onChange={(e) => onUpdateUnit(item.id, e.target.value)}
             className="w-full h-9 px-2.5 text-xs font-semibold rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#F85606] outline-none text-gray-800"
@@ -225,7 +227,7 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
                 </option>
               );
             })}
-          </select>
+          </SearchSelect>
         </div>
 
         {/* Bộ tăng giảm số lượng (+ / - to bản dễ bấm ngón tay, vô hiệu hoá + khi đạt tồn khả dụng) */}
@@ -253,10 +255,7 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
             >
               <Minus size={14} />
             </button>
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
+            <NumberInput
               value={localQtyText}
               onChange={handleQuantityChange}
               onBlur={handleQuantityBlur}
@@ -337,8 +336,7 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
             {isEditingPrice ? (
               <div className="flex items-center gap-1.5 flex-wrap">
                 <div className="relative">
-                  <input
-                    type="number"
+                  <NumberInput
                     min={0}
                     step={1000}
                     value={priceInput}

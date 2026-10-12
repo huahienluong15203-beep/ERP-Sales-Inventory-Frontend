@@ -43,6 +43,8 @@ import {
 } from '../../services/portalApi';
 import { OrderDetailModal } from '../../components/order/OrderDetailModal';
 import { CustomerReorderModal, type ReorderItemDraft } from '../../components/order/CustomerReorderModal';
+import { SearchSelect } from '../../components/common/SearchSelect';
+import { NumberInput } from '../../components/common/NumberInput';
 
 // Giao diện một món trong giỏ hàng đại lý B2B
 interface CartItem {
@@ -606,8 +608,8 @@ export const CustomerOrderPortalPage: React.FC = () => {
 
           {/* BỘ LỌC TÌM KIẾM SẢN PHẨM */}
           <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-3">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <div className="relative flex-1">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-2">
+              <div className="relative w-full sm:max-w-sm shrink-0">
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
@@ -629,7 +631,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
 
               {/* Lọc theo nhóm hàng */}
               {categoryList.length > 0 && (
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none min-w-0">
                   <button
                     type="button"
                     onClick={() => setSelectedCategory('ALL')}
@@ -712,7 +714,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
 
                   <div className="flex items-center gap-1.5">
                     <span className="text-gray-500 text-[11px]">Hiển thị:</span>
-                    <select
+                    <SearchSelect
                       value={pageSize}
                       onChange={(e) => {
                         setPageSize(Number(e.target.value));
@@ -723,7 +725,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                       <option value={30}>30 / trang</option>
                       <option value={40}>40 / trang</option>
                       <option value={50}>50 / trang</option>
-                    </select>
+                    </SearchSelect>
                   </div>
                 </div>
 
@@ -828,7 +830,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
               disabled={loadingHistory}
               className="px-3 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
             >
-              <RefreshCw size={14} className={loadingHistory ? 'animate-spin' : ''} />
+              <RefreshCw size={14} />
               <span>Làm mới</span>
             </button>
           </div>
@@ -1022,7 +1024,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                       Điểm nhận hàng của đại lý
                     </label>
                     {deliveryPoints.length > 0 ? (
-                      <select
+                      <SearchSelect
                         value={selectedDeliveryPointId}
                         onChange={(e) => setSelectedDeliveryPointId(e.target.value)}
                         className="w-full text-xs font-semibold border border-gray-200 rounded-xl p-2 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20"
@@ -1032,7 +1034,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                             {pt.name} — {pt.address}
                           </option>
                         ))}
-                      </select>
+                      </SearchSelect>
                     ) : (
                       <div className="text-xs text-gray-500 bg-white p-2 rounded-xl border border-gray-200">
                         {agency?.address || 'Giao theo địa chỉ mặc định trong hồ sơ đại lý'}
@@ -1402,10 +1404,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, inCartCount, onAddTo
           >
             <Minus size={13} />
           </button>
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
+          <NumberInput
             value={qtyText}
             onChange={handleQtyChange}
             onBlur={handleQtyBlur}
@@ -1554,10 +1553,7 @@ const PortalCartItemRow: React.FC<PortalCartItemRowProps> = ({
           >
             <Minus size={13} />
           </button>
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
+          <NumberInput
             value={localQtyText}
             onChange={handleQtyChange}
             onBlur={handleQtyBlur}

@@ -16,6 +16,7 @@ import {
   CheckCircle2
 } from '../../components/common/Icons';
 import { Pagination } from '../../components/common/Pagination';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const TerritoryHistoryTab: React.FC = () => {
   const { currentRole } = useAuth();
@@ -124,7 +125,7 @@ export const TerritoryHistoryTab: React.FC = () => {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:text-[#F85606] rounded-lg hover:bg-slate-50 text-xs font-semibold transition shadow-2xs cursor-pointer h-9"
             title="Làm mới lịch sử chuyển địa bàn"
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} />
             <span>Làm mới</span>
           </button>
 
@@ -189,7 +190,7 @@ export const TerritoryHistoryTab: React.FC = () => {
       <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
           {/* Ô tìm kiếm */}
-          <div className="relative flex-1 min-w-[220px]">
+          <div className="relative w-full sm:max-w-sm">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -204,7 +205,7 @@ export const TerritoryHistoryTab: React.FC = () => {
           </div>
 
           {/* Lọc loại thao tác */}
-          <select
+          <SearchSelect
             value={changeType}
             onChange={(e) => {
               setChangeType(e.target.value);
@@ -216,7 +217,7 @@ export const TerritoryHistoryTab: React.FC = () => {
             <option value="TRANSFER">Bàn giao hàng loạt (TRANSFER)</option>
             <option value="ASSIGN">Điều chuyển phụ trách (ASSIGN)</option>
             <option value="CREATE">Khởi tạo ban đầu (CREATE)</option>
-          </select>
+          </SearchSelect>
         </div>
 
         {(keyword || changeType !== 'ALL') && (

@@ -189,7 +189,7 @@ export const SupplierManagementPage: React.FC = () => {
             title="Làm mới danh sách nhà cung cấp"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:text-[#F85606] hover:border-orange-300 rounded-lg hover:bg-orange-50/40 text-xs font-semibold transition-all cursor-pointer shadow-2xs h-9"
           >
-            <Icons.RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <Icons.RefreshCw size={14} />
             <span>Làm mới</span>
           </button>
 

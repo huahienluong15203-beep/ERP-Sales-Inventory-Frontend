@@ -181,7 +181,7 @@ export const PriceListPage: React.FC = () => {
             title="Làm mới danh sách bảng giá"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:text-[#F85606] hover:border-orange-200 rounded-lg hover:bg-gray-50 text-xs font-semibold transition-colors cursor-pointer shadow-2xs h-9"
           >
-            <Icons.RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <Icons.RefreshCw size={14} />
             <span>Làm mới</span>
           </button>
 

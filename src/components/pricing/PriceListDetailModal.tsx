@@ -5,6 +5,8 @@ import { addOrUpdatePriceListItem, deletePriceListItem } from '../../services/pr
 import { productService } from '../../services/productService';
 import type { ProductOptionItem } from '../../services/productService';
 import { Icons } from '../common/Icons';
+import { SearchSelect } from '../common/SearchSelect';
+import { NumberInput } from '../common/NumberInput';
 
 interface PriceListDetailModalProps {
   priceList: PriceList | null;
@@ -269,7 +271,7 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
                 <span className="text-xs font-semibold text-orange-900">
                   Thêm hoặc cập nhật giá sản phẩm:
                 </span>
-                <select
+                <SearchSelect
                   onChange={handleSelectRealProduct}
                   className="text-xs px-2 py-1 bg-white border border-orange-300 rounded-lg text-gray-700 cursor-pointer max-w-[280px]"
                 >
@@ -279,7 +281,7 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
                       {p.sku} - {p.name}
                     </option>
                   ))}
-                </select>
+                </SearchSelect>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-2">
@@ -312,8 +314,7 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
                   <label className="block text-[11px] font-medium text-gray-600 mb-0.5">
                     Giá niêm yết (VNĐ) *
                   </label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
                     placeholder="VD: 250000"
@@ -325,8 +326,7 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
                   <label className="block text-[11px] font-medium text-gray-600 mb-0.5">
                     Mức giá sàn (VNĐ) *
                   </label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={floorPrice}
                     onChange={(e) => setFloorPrice(e.target.value)}
                     placeholder="Dưới mức này phải duyệt"

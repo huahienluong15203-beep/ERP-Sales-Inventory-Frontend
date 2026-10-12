@@ -15,6 +15,7 @@ import { productService } from '../../services/productService';
 import type { Product } from '../../types/product';
 import { RefreshCw } from '../common/Icons';
 import { Pagination } from '../common/Pagination';
+import { SearchSelect } from '../common/SearchSelect';
 
 // Chỉ ADMIN và SALES_MANAGER được ghi (backend @PreAuthorize). Các vai trò khác chỉ xem.
 const WRITE_ROLES = new Set(['ADMIN', 'SALES_MANAGER']);
@@ -775,7 +776,7 @@ export const CategoryManagement: React.FC = () => {
             className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:text-[#F85606] text-slate-700 font-semibold text-xs sm:text-sm transition-all cursor-pointer shadow-xs min-h-[44px] disabled:opacity-50"
             title="Làm mới dữ liệu từ máy chủ"
           >
-            <RefreshCw size={16} className={loadingTree ? 'animate-spin text-orange-600' : ''} />
+            <RefreshCw size={16} />
             <span>Làm mới</span>
           </button>
           {canManage && (
@@ -1325,7 +1326,7 @@ export const CategoryManagement: React.FC = () => {
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                   Chọn Nhóm Hàng Đích Đến <span className="text-red-500">*</span>
                 </label>
-                <select
+                <SearchSelect
                   value={targetCategoryId}
                   onChange={(e) => setTargetCategoryId(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200 bg-white"
@@ -1344,7 +1345,7 @@ export const CategoryManagement: React.FC = () => {
                       </option>
                     );
                   })}
-                </select>
+                </SearchSelect>
                 <p className="text-[11px] text-slate-400 mt-1">
                   Sau khi chuyển, số mã hàng của nhóm cũ và nhóm mới sẽ được cập nhật từ máy chủ.
                 </p>
@@ -1591,7 +1592,7 @@ export const CategoryManagement: React.FC = () => {
             {/* Filter & Search Bar */}
             <div className="p-4 border-b border-slate-100 bg-slate-50/50 space-y-3 shrink-0">
               <div className="flex flex-wrap items-center gap-2.5">
-                <div className="relative flex-1 min-w-[200px]">
+                <div className="relative w-full sm:w-72">
                   <input
                     type="text"
                     value={assignSearch}

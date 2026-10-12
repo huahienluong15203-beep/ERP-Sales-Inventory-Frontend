@@ -174,7 +174,7 @@ export const AuditLogPage: React.FC = () => {
           title={isDateRangeInvalid ? 'Khoảng ngày không hợp lệ (Ngày kết thúc < Ngày bắt đầu)' : 'Làm mới nhật ký thao tác'}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:text-orange-600 rounded-lg hover:bg-slate-50 text-xs font-semibold transition shadow-2xs cursor-pointer h-9 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          <RefreshCw size={14} />
           <span>Làm mới</span>
         </button>
 
