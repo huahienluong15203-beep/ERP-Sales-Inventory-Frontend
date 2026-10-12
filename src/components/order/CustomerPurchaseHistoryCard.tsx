@@ -267,7 +267,7 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                     <p className="text-xs font-medium">Không tìm thấy mặt hàng nào trong lịch sử phù hợp với từ khóa.</p>
                   </div>
                 ) : (
-                  <div className="max-h-[380px] overflow-y-auto pr-1 pb-1">
+                  <div className="max-h-[500px] overflow-y-auto pr-1.5 pb-1">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {filteredProducts.map((prod) => {
                       const inCartQty = cartSkuMap.get(prod.sku);
