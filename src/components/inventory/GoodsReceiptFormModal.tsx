@@ -403,14 +403,14 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
       const saved = await createGoodsReceipt(payload, user?.username || 'wh_staff');
       if (targetStatus === 'CONFIRMED') {
         showToast(
-          'Đã xác nhận nhập kho (AC4)',
+          'Đã xác nhận nhập kho',
           `Phiếu [${saved.code}] đã được ghi sổ thành công. Tồn kho đã được CỘNG THÊM ${totalBaseQty.toLocaleString('vi-VN')} đơn vị cơ sở!`,
           'success',
           5000
         );
       } else {
         showToast(
-          'Đã lưu phiếu nháp (AC4)',
+          'Đã lưu phiếu nháp',
           `Phiếu nháp [${saved.code}] đã được lưu an toàn. Phiếu chưa ghi sổ và KHÔNG làm thay đổi số lượng tồn kho.`,
           'info',
           5000
