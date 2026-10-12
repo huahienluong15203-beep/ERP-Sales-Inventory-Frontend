@@ -50,6 +50,12 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [isAddingAll, setIsAddingAll] = useState<boolean>(false);
+  const [showAllProducts, setShowAllProducts] = useState<boolean>(false);
+
+  // Tự động thu gọn về 3 sản phẩm khi đổi đại lý
+  useEffect(() => {
+    setShowAllProducts(false);
+  }, [selectedAgency?.id]);
 
   // S4-04 AC3: Kiểm tra quyền xem lịch sử mua hàng của nhân viên phụ trách
   const accessCheck = useMemo(() => {
@@ -111,6 +117,12 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
         (p.category && p.category.toLowerCase().includes(kw))
     );
   }, [activeHistoryData, searchKeyword]);
+
+  // Danh sách sản phẩm hiển thị: Mặc định tối đa 3 sản phẩm gần nhất, bấm "Xem thêm" để xem toàn bộ
+  const displayedProducts = useMemo(() => {
+    if (showAllProducts) return filteredProducts;
+    return filteredProducts.slice(0, 3);
+  }, [filteredProducts, showAllProducts]);
 
   // Danh sách SKU đã có trong giỏ hàng hiện tại kèm số lượng
   const cartSkuMap = useMemo(() => {
@@ -231,7 +243,7 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
             </div>
           )}
 
-          {!loading && activeHistoryData && (
+          {!loading && activeHistoryData && activeHistoryData.frequentProducts.length > 0 && (
             <>
 
               {/* S4-04 AC1: DANH SÁCH MẶT HÀNG ĐẠI LÝ ĐÃ MUA TRONG 3 THÁNG GẦN NHẤT KÈM SỐ LƯỢNG BÌNH QUÂN */}
@@ -243,7 +255,9 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                       <span>Các Mặt Hàng Thường Mua (3 Tháng Gần Nhất)</span>
                     </h3>
                     <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[10px] font-bold">
-                      {filteredProducts.length} sản phẩm
+                      {showAllProducts || filteredProducts.length <= 3
+                        ? `${filteredProducts.length} sản phẩm`
+                        : `Hiển thị 3 / ${filteredProducts.length} sản phẩm`}
                     </span>
                   </div>
 
@@ -268,7 +282,7 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {filteredProducts.map((prod) => {
+                    {displayedProducts.map((prod) => {
                       const inCartQty = cartSkuMap.get(prod.sku);
                       const isAlreadyInCart = inCartQty !== undefined && inCartQty > 0;
                       const hasStock = (prod.availableInPreferredUnit ?? 10) > 0;
@@ -374,13 +388,36 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                             <Plus size={14} />
                             <span>
                               {isAlreadyInCart
-                                ? `Thêm tiếp (+${Math.max(1, Math.round(prod.avgQuantityPerOrder))})`
+                                ? `Thêm tiếp (+${Math.max(1, Math.round(prod.avgQuantityPerOrder))} ${prod.preferredUnit})`
                                 : `+ Gợi ý thêm (${Math.max(1, Math.round(prod.avgQuantityPerOrder))} ${prod.preferredUnit})`}
                             </span>
                           </button>
                         </div>
                       );
                     })}
+                  </div>
+                )}
+
+                {/* Nút Xem thêm / Thu gọn khi có nhiều hơn 3 sản phẩm */}
+                {filteredProducts.length > 3 && (
+                  <div className="pt-2 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowAllProducts(!showAllProducts)}
+                      className="px-4 py-2 rounded-xl bg-orange-50/80 hover:bg-orange-100 text-[#F85606] text-xs font-bold flex items-center gap-1.5 transition cursor-pointer border border-orange-200/80 active:scale-98 shadow-2xs"
+                    >
+                      {showAllProducts ? (
+                        <>
+                          <span>Thu gọn (chỉ hiện 3 sản phẩm gần nhất)</span>
+                          <ChevronUp size={15} />
+                        </>
+                      ) : (
+                        <>
+                          <span>Xem thêm ({filteredProducts.length - 3} sản phẩm khác)</span>
+                          <ChevronDown size={15} />
+                        </>
+                      )}
+                    </button>
                   </div>
                 )}
               </div>
