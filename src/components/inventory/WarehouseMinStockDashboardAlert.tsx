@@ -5,6 +5,7 @@ import {
   RefreshCw,
   BellRing
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import { getDashboardMinStockSummary } from '../../services/stockAlertApi';
 import type { MinStockThresholdConfig } from '../../types/stockAlert';
 import { useNavigate } from '../../routes/Router';
@@ -18,17 +19,31 @@ interface WarehouseMinStockDashboardAlertProps {
  * Acceptance Criteria (AC2):
  * - Hàng dưới ngưỡng hiển thị nổi bật trong sổ tồn và trên dashboard kho
  * - Hiển thị THÔNG BÁO ĐỎ phục vụ kịch bản kiểm thử của QA (Ngô Thị Ánh Ngọc)
+ * - Phân quyền hiển thị: Chỉ hiển thị cho Quản lý kho (ROLE_WH_MANAGER), Thủ kho (ROLE_WAREHOUSE) và Quản trị viên (ROLE_ADMIN)
  */
 export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboardAlertProps> = ({
   warehouseCode
 }) => {
   const navigate = useNavigate();
+  const { currentRole } = useAuth();
   const [loading, setLoading] = useState<boolean>(true);
   const [criticalItems, setCriticalItems] = useState<MinStockThresholdConfig[]>([]);
   const [totalAlerts, setTotalAlerts] = useState<number>(0);
   const [criticalCount, setCriticalCount] = useState<number>(0);
 
+  // Chỉ hiển thị trên Dashboard cho các vai trò quản lý / phụ trách kho và admin
+  const isWarehouseOrAdmin =
+    currentRole === 'ROLE_ADMIN' ||
+    currentRole === 'ROLE_WH_MANAGER' ||
+    currentRole === 'ROLE_WAREHOUSE';
+
   useEffect(() => {
+    // Nếu không phải role quản lý kho / admin thì không cần gọi API kiểm tra
+    if (!isWarehouseOrAdmin) {
+      setLoading(false);
+      return;
+    }
+
     let isMounted = true;
     setLoading(true);
 
@@ -48,7 +63,12 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
     return () => {
       isMounted = false;
     };
-  }, [warehouseCode]);
+  }, [warehouseCode, isWarehouseOrAdmin]);
+
+  // Nếu không thuộc vai trò kho/admin thì không hiển thị cảnh báo
+  if (!isWarehouseOrAdmin) {
+    return null;
+  }
 
   // Nếu không có mặt hàng nào dưới định mức thì không hiện cảnh báo đỏ
   if (!loading && totalAlerts === 0) {

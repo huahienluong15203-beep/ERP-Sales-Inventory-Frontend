@@ -351,7 +351,7 @@ export const OrderListPage: React.FC = () => {
       </div>
 
       {/* 2. S4-07 AC2: KHỐI THẺ THỐNG KÊ KẾT QUẢ ĐANG LỌC (LIVE AGGREGATED TOTALS) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Card 1: Tổng số đơn hàng */}
         <div className="p-4 sm:p-5 rounded-2xl bg-white border border-gray-200/90 shadow-2xs flex items-center justify-between">
           <div className="space-y-1">
@@ -401,22 +401,6 @@ export const OrderListPage: React.FC = () => {
           </div>
           <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
             <Building2 size={22} />
-          </div>
-        </div>
-
-        {/* Card 4: Số trang & Kết quả hiển thị */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-gray-200/90 shadow-2xs flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Trang hiển thị
-            </span>
-            <div className="text-2xl font-black text-gray-900">
-              {loading ? '...' : `Trang ${page + 1}/${Math.max(1, totalPages)}`}
-            </div>
-            <p className="text-[11px] text-gray-400">Hiển thị {orders.length} đơn trên trang này</p>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
-            <FileText size={22} />
           </div>
         </div>
       </div>

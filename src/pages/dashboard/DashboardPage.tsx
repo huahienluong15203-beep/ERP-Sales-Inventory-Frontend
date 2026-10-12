@@ -37,6 +37,7 @@ export const DashboardPage: React.FC = () => {
     currentRole === 'ROLE_ADMIN' ||
     Boolean(user?.roles?.some((r) => r === 'ROLE_SALES_MANAGER' || r === 'ROLE_ADMIN'));
 
+
   // State lưu trữ dữ liệu thật từ Backend
   const [productCount, setProductCount] = useState<number>(0);
   const [agencyCount, setAgencyCount] = useState<number>(0);
@@ -197,6 +198,7 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="erp-fade-in">
+
       {/* 1. HÀNG 4 STAT CARDS HOẠT ĐỘNG CHUNG (DỮ LIỆU THẬT) */}
       <div className="erp-stat-grid">
         {/* Thẻ 1: Tổng Doanh Thu */}
