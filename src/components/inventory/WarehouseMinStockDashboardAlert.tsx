@@ -72,9 +72,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                 <div className="flex items-center gap-2">
                   <h3 className="font-black text-base sm:text-lg tracking-tight uppercase flex items-center gap-2">
                     <span>Cảnh Báo Tồn Kho Dưới Định Mức Tối Thiểu</span>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-white text-rose-700 tracking-wider">
-                      S5-09: BÁO ĐỎ
-                    </span>
+
                   </h3>
                 </div>
                 <p className="text-xs text-rose-100 mt-0.5">
