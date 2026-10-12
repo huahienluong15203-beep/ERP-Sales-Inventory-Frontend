@@ -7,7 +7,6 @@ import { getAllowedRolesForPath } from '../../services/menuConfig';
 import {
   ShieldAlert,
   Home,
-  ArrowLeft,
   User,
   MapPin,
   Lock
@@ -218,26 +217,7 @@ export const ForbiddenPage: FC<ForbiddenPageProps> = ({ attemptedPath, requiredR
             <span>Về Bàn Làm Việc</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 20px',
-              borderRadius: '9999px',
-              background: '#FFFFFF',
-              border: '1px solid #E5E7EB',
-              color: '#374151',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
-          >
-            <ArrowLeft size={16} />
-            <span>Quay Lại Trang Trước</span>
-          </button>
+
         </div>
       </div>
     </div>

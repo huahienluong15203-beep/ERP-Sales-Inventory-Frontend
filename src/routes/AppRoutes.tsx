@@ -53,7 +53,6 @@ export const AppRoutes: React.FC = () => {
   }
 
   // 2b. S4-10: Cổng đại lý đặt hàng (B2B Customer Portal)
-  // Sử dụng Layout portal riêng cho Đại lý (CustomerPortalLayout) thay vì MainLayout
   if (pathname === '/portal' || (pathname === '/' && currentRole === 'ROLE_CUSTOMER')) {
     return <CustomerOrderPortalPage />;
   }
