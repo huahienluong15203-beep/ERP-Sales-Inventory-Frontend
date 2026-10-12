@@ -206,6 +206,14 @@ export const OrderCreatePage: React.FC = () => {
       .finally(() => setLoadingCreditStatus(false));
   }, [selectedAgency?.id, preview.status === 'ok' ? preview.order.totalAmount : totals.totalPayable]);
 
+  // Tải trước (prefetch) danh mục sản phẩm của đại lý vào cache để khi người dùng mở modal, modal mở tức thì 0ms
+  useEffect(() => {
+    if (selectedAgency?.id && selectedAgency.priceList) {
+      const wh = getServingWarehouseInfo(selectedAgency);
+      fetchBackendProductOptions(selectedAgency.id, '', wh).catch(() => {});
+    }
+  }, [selectedAgency?.id, selectedAgency?.priceList]);
+
   // Đổi đại lý: xử lý làm mới đơn hàng và bảng giá
   const handleSelectAgency = (agency: Agency) => {
     if (selectedAgency && agency.id === selectedAgency.id) {
