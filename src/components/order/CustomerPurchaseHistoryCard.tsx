@@ -205,7 +205,7 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
               <span>
                 {isAddingAll
                   ? 'Đang thêm...'
-                  : '⚡ Thêm nhanh cả nhóm hàng đã mua lần trước vào đơn mới'}
+                  : 'Thêm nhanh cả nhóm hàng đã mua lần trước vào đơn mới'}
               </span>
             </button>
           )}
@@ -276,11 +276,10 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                       return (
                         <div
                           key={prod.sku}
-                          className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-3 ${
-                            isAlreadyInCart
+                          className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-3 ${isAlreadyInCart
                               ? 'bg-orange-50/30 border-orange-200 shadow-xs'
                               : 'bg-white border-gray-200/90 hover:border-orange-300 hover:shadow-xs'
-                          }`}
+                            }`}
                         >
                           <div className="space-y-2">
                             {/* Tiêu đề & Mã SKU */}
@@ -345,13 +344,12 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                             <div className="flex items-center justify-between text-[11px] px-1">
                               <span className="text-gray-500">Tồn kho khả dụng:</span>
                               <span
-                                className={`font-bold ${
-                                  !hasStock
+                                className={`font-bold ${!hasStock
                                     ? 'text-rose-600'
                                     : (prod.availableInPreferredUnit ?? 99) < 20
-                                    ? 'text-amber-600'
-                                    : 'text-emerald-700'
-                                }`}
+                                      ? 'text-amber-600'
+                                      : 'text-emerald-700'
+                                  }`}
                               >
                                 {!hasStock
                                   ? 'Hết hàng'
@@ -364,11 +362,10 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                           <button
                             type="button"
                             onClick={() => onQuickAddSingleProduct(prod)}
-                            className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                              isAlreadyInCart
+                            className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${isAlreadyInCart
                                 ? 'bg-orange-100 hover:bg-orange-200 text-[#F85606]'
                                 : 'bg-gray-900 hover:bg-[#F85606] text-white shadow-xs'
-                            }`}
+                              }`}
                             title={`Thêm ${prod.name} (${prod.preferredUnit}) vào đơn`}
                           >
                             <Plus size={14} />
