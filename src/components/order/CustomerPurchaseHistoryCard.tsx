@@ -50,22 +50,6 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [isAddingAll, setIsAddingAll] = useState<boolean>(false);
-  const [isViewMore, setIsViewMore] = useState<boolean>(false);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-
-  // Khi đổi đại lý: reset về trạng thái thu gọn 3 sản phẩm ban đầu và trang 1
-  useEffect(() => {
-    setIsViewMore(false);
-    setCurrentPage(1);
-  }, [selectedAgency?.id]);
-
-  // Khi gõ từ khóa tìm kiếm: tự động mở rộng để hiển thị kết quả tìm kiếm
-  useEffect(() => {
-    if (searchKeyword.trim()) {
-      setIsViewMore(true);
-    }
-    setCurrentPage(1);
-  }, [searchKeyword]);
 
   // S4-04 AC3: Kiểm tra quyền xem lịch sử mua hàng của nhân viên phụ trách
   const accessCheck = useMemo(() => {
@@ -127,19 +111,6 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
         (p.category && p.category.toLowerCase().includes(kw))
     );
   }, [activeHistoryData, searchKeyword]);
-
-  // S4-04: Mặc định hiển thị 3 sản phẩm gần nhất (1 hàng). Khi bấm "Xem thêm": tối đa 3 hàng (9 sản phẩm/trang) kèm phân trang
-  const PAGE_SIZE = 9;
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
-  const safePage = Math.min(Math.max(1, currentPage), totalPages);
-
-  const displayedProducts = useMemo(() => {
-    if (!isViewMore) {
-      return filteredProducts.slice(0, 3);
-    }
-    const start = (safePage - 1) * PAGE_SIZE;
-    return filteredProducts.slice(start, start + PAGE_SIZE);
-  }, [filteredProducts, isViewMore, safePage]);
 
   // Danh sách SKU đã có trong giỏ hàng hiện tại kèm số lượng
   const cartSkuMap = useMemo(() => {
@@ -272,9 +243,7 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                       <span>Các Mặt Hàng Thường Mua (3 Tháng Gần Nhất)</span>
                     </h3>
                     <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[10px] font-bold">
-                      {!isViewMore && filteredProducts.length > 3
-                        ? `Hiển thị 3 / ${filteredProducts.length} sản phẩm`
-                        : `${filteredProducts.length} sản phẩm${isViewMore && totalPages > 1 ? ` (Trang ${safePage}/${totalPages})` : ''}`}
+                      {filteredProducts.length} sản phẩm
                     </span>
                   </div>
 
@@ -298,8 +267,9 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                     <p className="text-xs font-medium">Không tìm thấy mặt hàng nào trong lịch sử phù hợp với từ khóa.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {displayedProducts.map((prod) => {
+                  <div className="max-h-[380px] overflow-y-auto pr-1 pb-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {filteredProducts.map((prod) => {
                       const inCartQty = cartSkuMap.get(prod.sku);
                       const isAlreadyInCart = inCartQty !== undefined && inCartQty > 0;
                       const hasStock = (prod.availableInPreferredUnit ?? 10) > 0;
@@ -307,11 +277,10 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                       return (
                         <div
                           key={prod.sku}
-                          className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-3 ${
-                            isAlreadyInCart
+                          className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-3 ${isAlreadyInCart
                               ? 'bg-orange-50/30 border-orange-200 shadow-xs'
                               : 'bg-white border-gray-200/90 hover:border-orange-300 hover:shadow-xs'
-                          }`}
+                            }`}
                         >
                           <div className="space-y-2">
                             {/* Tiêu đề & Mã SKU */}
@@ -376,13 +345,12 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                             <div className="flex items-center justify-between text-[11px] px-1">
                               <span className="text-gray-500">Tồn kho khả dụng:</span>
                               <span
-                                className={`font-bold ${
-                                  !hasStock
+                                className={`font-bold ${!hasStock
                                     ? 'text-rose-600'
                                     : (prod.availableInPreferredUnit ?? 99) < 20
-                                    ? 'text-amber-600'
-                                    : 'text-emerald-700'
-                                }`}
+                                      ? 'text-amber-600'
+                                      : 'text-emerald-700'
+                                  }`}
                               >
                                 {!hasStock
                                   ? 'Hết hàng'
@@ -395,11 +363,10 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                           <button
                             type="button"
                             onClick={() => onQuickAddSingleProduct(prod)}
-                            className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                              isAlreadyInCart
+                            className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${isAlreadyInCart
                                 ? 'bg-orange-100 hover:bg-orange-200 text-[#F85606]'
                                 : 'bg-gray-900 hover:bg-[#F85606] text-white shadow-xs'
-                            }`}
+                              }`}
                             title={`Thêm ${prod.name} (${prod.preferredUnit}) vào đơn`}
                           >
                             <Plus size={14} />
@@ -412,88 +379,7 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                         </div>
                       );
                     })}
-                  </div>
-                )}
-
-                {/* 1. Nút Xem thêm khi chưa mở rộng (đang hiển thị 3 sản phẩm gần nhất) */}
-                {!isViewMore && filteredProducts.length > 3 && (
-                  <div className="pt-2 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() => setIsViewMore(true)}
-                      className="px-4 py-2 rounded-xl bg-orange-50/80 hover:bg-orange-100 text-[#F85606] text-xs font-bold flex items-center gap-1.5 transition cursor-pointer border border-orange-200/80 active:scale-98 shadow-2xs"
-                    >
-                      <span>Xem thêm ({filteredProducts.length - 3} sản phẩm khác)</span>
-                      <ChevronDown size={15} />
-                    </button>
-                  </div>
-                )}
-
-                {/* 2. Khi đã mở rộng: Hiển thị phân trang (nếu > 9 sản phẩm / 3 hàng) và nút Thu gọn */}
-                {isViewMore && (
-                  <div className="pt-3 space-y-3 border-t border-gray-100">
-                    {totalPages > 1 && (
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                        <div className="text-xs text-gray-500 font-medium">
-                          Hiển thị <strong>{(safePage - 1) * PAGE_SIZE + 1}</strong>–
-                          <strong>{Math.min(safePage * PAGE_SIZE, filteredProducts.length)}</strong> trên tổng số{' '}
-                          <strong>{filteredProducts.length}</strong> sản phẩm (tối đa 3 hàng / trang)
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                            disabled={safePage <= 1}
-                            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
-                          >
-                            <span>‹ Trước</span>
-                          </button>
-
-                          <div className="flex items-center gap-1">
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                              <button
-                                key={pageNum}
-                                type="button"
-                                onClick={() => setCurrentPage(pageNum)}
-                                className={`w-7 h-7 text-xs font-bold rounded-lg transition cursor-pointer ${
-                                  pageNum === safePage
-                                    ? 'bg-[#F85606] text-white shadow-2xs'
-                                    : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
-                                }`}
-                              >
-                                {pageNum}
-                              </button>
-                            ))}
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={safePage >= totalPages}
-                            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
-                          >
-                            <span>Sau ›</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {filteredProducts.length > 3 && (
-                      <div className="flex justify-center pt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsViewMore(false);
-                            setCurrentPage(1);
-                          }}
-                          className="px-4 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer border border-gray-200 active:scale-98 shadow-2xs"
-                        >
-                          <span>Thu gọn (chỉ hiện 3 sản phẩm gần nhất)</span>
-                          <ChevronUp size={15} />
-                        </button>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
