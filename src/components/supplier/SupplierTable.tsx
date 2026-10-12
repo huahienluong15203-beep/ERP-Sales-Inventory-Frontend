@@ -2,6 +2,7 @@ import React from 'react';
 import type { Supplier } from '../../types/supplier';
 import { Icons } from '../common/Icons';
 import { Pagination } from '../common/Pagination';
+import { SearchSelect } from '../common/SearchSelect';
 
 interface SupplierTableProps {
   suppliers: Supplier[];
@@ -76,7 +77,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
         {/* Bộ lọc Trạng thái */}
         <div className="flex items-center gap-2.5">
           <span className="text-xs text-gray-500 hidden sm:inline">Trạng thái:</span>
-          <select
+          <SearchSelect
             value={statusFilter}
             onChange={(e) => onStatusFilterChange(e.target.value)}
             aria-label="Lọc theo trạng thái giao dịch"
@@ -85,9 +86,9 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
             <option value="ALL">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang giao dịch</option>
             <option value="INACTIVE">Ngừng giao dịch</option>
-          </select>
+          </SearchSelect>
 
-          <select
+          <SearchSelect
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
             aria-label="Số dòng trên mỗi trang"
@@ -96,7 +97,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
             <option value={10}>10 dòng / trang</option>
             <option value={20}>20 dòng / trang</option>
             <option value={50}>50 dòng / trang</option>
-          </select>
+          </SearchSelect>
         </div>
       </div>
 

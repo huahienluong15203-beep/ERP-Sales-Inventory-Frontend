@@ -43,6 +43,7 @@ import {
 } from '../../services/portalApi';
 import { OrderDetailModal } from '../../components/order/OrderDetailModal';
 import { CustomerReorderModal, type ReorderItemDraft } from '../../components/order/CustomerReorderModal';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 // Giao diện một món trong giỏ hàng đại lý B2B
 interface CartItem {
@@ -712,7 +713,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
 
                   <div className="flex items-center gap-1.5">
                     <span className="text-gray-500 text-[11px]">Hiển thị:</span>
-                    <select
+                    <SearchSelect
                       value={pageSize}
                       onChange={(e) => {
                         setPageSize(Number(e.target.value));
@@ -723,7 +724,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                       <option value={30}>30 / trang</option>
                       <option value={40}>40 / trang</option>
                       <option value={50}>50 / trang</option>
-                    </select>
+                    </SearchSelect>
                   </div>
                 </div>
 
@@ -1022,7 +1023,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                       Điểm nhận hàng của đại lý
                     </label>
                     {deliveryPoints.length > 0 ? (
-                      <select
+                      <SearchSelect
                         value={selectedDeliveryPointId}
                         onChange={(e) => setSelectedDeliveryPointId(e.target.value)}
                         className="w-full text-xs font-semibold border border-gray-200 rounded-xl p-2 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20"
@@ -1032,7 +1033,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                             {pt.name} — {pt.address}
                           </option>
                         ))}
-                      </select>
+                      </SearchSelect>
                     ) : (
                       <div className="text-xs text-gray-500 bg-white p-2 rounded-xl border border-gray-200">
                         {agency?.address || 'Giao theo địa chỉ mặc định trong hồ sơ đại lý'}

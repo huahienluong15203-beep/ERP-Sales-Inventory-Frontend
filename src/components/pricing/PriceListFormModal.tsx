@@ -5,6 +5,7 @@ import { createPriceList, updatePriceList } from '../../services/pricingApi';
 import { productService } from '../../services/productService';
 import type { ProductOptionItem } from '../../services/productService';
 import { Icons } from '../common/Icons';
+import { SearchSelect } from '../common/SearchSelect';
 
 interface PriceListFormModalProps {
   initialData?: PriceList | null;
@@ -338,7 +339,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Nhóm khách hàng áp dụng *
               </label>
-              <select
+              <SearchSelect
                 value={customerGroup}
                 onChange={(e) => setCustomerGroup(e.target.value as CustomerGroupType)}
                 className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs text-gray-800 focus:ring-2 focus:ring-orange-500 focus:outline-none cursor-pointer"
@@ -348,7 +349,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
                     {group.label}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
             </div>
 
             {/* Tên bảng giá */}

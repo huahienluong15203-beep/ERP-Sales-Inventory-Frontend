@@ -16,6 +16,7 @@ import { productService } from '../../services/productService';
 import type { Product } from '../../types/product';
 import { createStockTransfer } from '../../services/stockTransferApi';
 import { useAuth } from '../../contexts/AuthContext';
+import { SearchSelect } from '../common/SearchSelect';
 
 interface StockTransferFormModalProps {
   isOpen: boolean;
@@ -321,7 +322,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                   <span>Kho Đi (Kho xuất hàng)</span>
                   <span className="text-rose-500">*</span>
                 </label>
-                <select
+                <SearchSelect
                   value={sourceWarehouseCode}
                   onChange={(e) => setSourceWarehouseCode(e.target.value)}
                   className="w-full text-xs font-bold border border-gray-300 rounded-xl p-2.5 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -331,7 +332,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                       [{wh.code}] {wh.name} ({wh.address})
                     </option>
                   ))}
-                </select>
+                </SearchSelect>
                 <p className="text-[11px] text-gray-400 italic">
                   Số lượng xuất chuyển sẽ được trừ khỏi tồn khả dụng của kho này khi xuất kho
                 </p>
@@ -344,7 +345,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                   <span>Kho Đến (Kho nhận hàng)</span>
                   <span className="text-rose-500">*</span>
                 </label>
-                <select
+                <SearchSelect
                   value={destWarehouseCode}
                   onChange={(e) => setDestWarehouseCode(e.target.value)}
                   className="w-full text-xs font-bold border border-gray-300 rounded-xl p-2.5 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
@@ -354,7 +355,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                       [{wh.code}] {wh.name} ({wh.address})
                     </option>
                   ))}
-                </select>
+                </SearchSelect>
                 <p className="text-[11px] text-gray-400 italic">
                   Tồn kho chỉ được CỘNG THỰC TẾ sau khi kho đến xác nhận nhận đủ
                 </p>
@@ -483,7 +484,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
 
                             {/* Chọn sản phẩm */}
                             <td className="py-2.5 px-3">
-                              <select
+                              <SearchSelect
                                 value={line.productId}
                                 onChange={(e) => handleChangeProduct(idx, Number(e.target.value))}
                                 className="w-full text-xs font-bold border border-gray-200 rounded-lg p-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -493,7 +494,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                                     [{p.sku}] {p.name}
                                   </option>
                                 ))}
-                              </select>
+                              </SearchSelect>
                               <div className="text-[10px] text-gray-400 mt-0.5">
                                 Nhóm: {line.category || 'Mặc định'}
                               </div>

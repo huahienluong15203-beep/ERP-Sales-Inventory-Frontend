@@ -13,6 +13,7 @@ import {
   fetchDiscountCategoryOptions
 } from '../../services/volumeDiscountApi';
 import type { DiscountCategoryOption } from '../../services/volumeDiscountApi';
+import { SearchSelect } from '../common/SearchSelect';
 
 interface VolumeDiscountFormModalProps {
   isOpen: boolean;
@@ -489,7 +490,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                     {scopeType === 'SKU' ? 'Chọn sản phẩm (SKU)' : 'Chọn nhóm hàng'} <span className="text-red-500">*</span>
                   </label>
                   {scopeType === 'SKU' ? (
-                    <select
+                    <SearchSelect
                       value={targetId}
                       onChange={(e) => handleProductSelect(e.target.value)}
                       className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs sm:text-sm font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
@@ -511,9 +512,9 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                           {prod.defaultCategory ? ` (${prod.defaultCategory})` : ''}
                         </option>
                       ))}
-                    </select>
+                    </SearchSelect>
                   ) : (
-                    <select
+                    <SearchSelect
                       value={targetId}
                       onChange={(e) => handleCategorySelect(e.target.value)}
                       className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs sm:text-sm font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
@@ -532,7 +533,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                           {cat.level > 1 ? `${'— '.repeat(cat.level - 1)}` : ''}Nhóm: {cat.name}
                         </option>
                       ))}
-                    </select>
+                    </SearchSelect>
                   )}
                 </div>
 
@@ -541,7 +542,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                   <label className="mb-1 block text-xs font-semibold text-gray-700">
                     Đối tượng đại lý / khách hàng
                   </label>
-                  <select
+                  <SearchSelect
                     value={customerGroup}
                     onChange={(e) => setCustomerGroup(e.target.value as DiscountCustomerScope)}
                     className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
@@ -550,7 +551,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                     <option value="DEALER_LEVEL_1">Đại lý cấp 1 (Tổng thầu / NPP lớn)</option>
                     <option value="DEALER_LEVEL_2">Đại lý cấp 2 (Bán buôn khu vực)</option>
                     <option value="RETAIL">Khách lẻ / Showroom</option>
-                  </select>
+                  </SearchSelect>
                   <p className="mt-1 text-[11px] text-gray-500">
                     {customerGroup === 'ALL'
                       ? 'Áp dụng cho mọi nhóm đại lý'
@@ -713,7 +714,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                         <label className="mb-1 block text-[11px] font-semibold text-gray-700">
                           Hình thức CK
                         </label>
-                        <select
+                        <SearchSelect
                           value={tier.discountType}
                           onChange={(e) =>
                             handleTierChange(idx, 'discountType', e.target.value as DiscountCalculationType)
@@ -722,7 +723,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                         >
                           <option value="PERCENT">Phần trăm (%)</option>
                           <option value="FIXED_AMOUNT">Số tiền (đ/đv)</option>
-                        </select>
+                        </SearchSelect>
                       </div>
 
                       {/* Giá trị chiết khấu */}

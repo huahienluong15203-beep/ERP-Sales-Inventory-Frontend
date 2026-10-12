@@ -22,6 +22,7 @@ import type { Product } from '../../types/product';
 import { createGoodsReceipt } from '../../services/inventoryReceiptApi';
 import { formatCurrencyVND, formatQuantity } from '../../services/orderService';
 import { useAuth } from '../../contexts/AuthContext';
+import { SearchSelect } from '../common/SearchSelect';
 
 const FALLBACK_PRODUCTS: Product[] = [
   {
@@ -691,7 +692,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                 <label className="block text-[11px] font-bold text-gray-600 uppercase mb-1">
                   Nhà cung cấp <span className="text-rose-500">*</span>
                 </label>
-                <select
+                <SearchSelect
                   value={selectedSupplierId}
                   onChange={(e) => setSelectedSupplierId(e.target.value)}
                   className="w-full text-xs font-semibold border border-gray-200 rounded-xl p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20"
@@ -702,7 +703,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                       {s.code} - {s.name}
                     </option>
                   ))}
-                </select>
+                </SearchSelect>
               </div>
 
               {/* Số chứng từ / Hóa đơn NCC */}
@@ -737,7 +738,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                 <label className="block text-[11px] font-bold text-gray-600 uppercase mb-1">
                   Kho nhập hàng <span className="text-rose-500">*</span>
                 </label>
-                <select
+                <SearchSelect
                   value={selectedWarehouseCode}
                   onChange={(e) => setSelectedWarehouseCode(e.target.value)}
                   className="w-full text-xs font-semibold border border-gray-200 rounded-xl p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20"
@@ -747,7 +748,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                       {w.code} - {w.name}
                     </option>
                   ))}
-                </select>
+                </SearchSelect>
               </div>
             </div>
 
@@ -857,7 +858,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                         <span className="lg:hidden text-[10px] font-bold text-gray-400 uppercase block mb-1">
                           Sản phẩm
                         </span>
-                        <select
+                        <SearchSelect
                           value={line.productId}
                           onChange={(e) => handleChangeProduct(idx, Number(e.target.value))}
                           className="w-full text-xs font-bold border border-gray-200 rounded-xl p-2 bg-white focus:outline-none focus:ring-1 focus:ring-orange-500"
@@ -867,7 +868,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                               [{p.sku}] {p.name}
                             </option>
                           ))}
-                        </select>
+                        </SearchSelect>
                       </div>
 
                       {/* Cột 2: Đơn vị tính nhập (AC2) */}
@@ -875,7 +876,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                         <span className="lg:hidden text-[10px] font-bold text-gray-400 uppercase block mb-1">
                           Đơn vị tính nhập
                         </span>
-                        <select
+                        <SearchSelect
                           value={line.selectedUnit}
                           onChange={(e) => handleChangeUnit(idx, e.target.value)}
                           className="w-full text-xs font-semibold border border-gray-200 rounded-xl p-2 bg-orange-50/50 text-orange-950 focus:outline-none"
@@ -885,7 +886,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                               {u.unitName} (x{u.conversionFactor} {line.baseUnit})
                             </option>
                           ))}
-                        </select>
+                        </SearchSelect>
                       </div>
 
                       {/* Cột 3: Số lượng nhập (Hỗ trợ nhập tự do & nút +/- khi ở 0 lên 1) */}

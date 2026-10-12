@@ -21,6 +21,7 @@ import { GoodsReceiptFormModal } from '../../components/inventory/GoodsReceiptFo
 import { formatQuantity } from '../../services/orderService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocation } from '../../routes/Router';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const GoodsReceiptManagementPage: React.FC = () => {
   const { user, showToast } = useAuth();
@@ -182,7 +183,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
           />
         </div>
 
-        <select
+        <SearchSelect
           value={selectedWarehouse}
           onChange={(e) => setSelectedWarehouse(e.target.value)}
           className="text-xs font-semibold border border-gray-200 rounded-xl p-2.5 bg-white"
@@ -193,9 +194,9 @@ export const GoodsReceiptManagementPage: React.FC = () => {
               {w.name}
             </option>
           ))}
-        </select>
+        </SearchSelect>
 
-        <select
+        <SearchSelect
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
           className="text-xs font-semibold border border-gray-200 rounded-xl p-2.5 bg-white"
@@ -203,7 +204,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
           <option value="">Tất cả trạng thái</option>
           <option value="CONFIRMED">Đã xác nhận (Đã cộng tồn)</option>
           <option value="DRAFT">Phiếu nháp (Chưa cộng tồn)</option>
-        </select>
+        </SearchSelect>
       </div>
 
       {/* 4. BẢNG DANH SÁCH PHIẾU NHẬP KHO */}

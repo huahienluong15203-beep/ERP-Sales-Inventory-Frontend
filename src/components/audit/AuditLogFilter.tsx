@@ -8,6 +8,7 @@ import {
   Clock,
   AlertCircle
 } from '../common/Icons';
+import { SearchSelect } from '../common/SearchSelect';
 
 interface AuditLogFilterProps {
   filters: AuditLogFilterParams;
@@ -150,7 +151,7 @@ export const AuditLogFilter: React.FC<AuditLogFilterProps> = ({
 
         {/* 2. Lọc theo Phân hệ / Loại đối tượng */}
         <div>
-          <select
+          <SearchSelect
             value={filters.module || 'ALL'}
             onChange={(e) => onChange({ module: e.target.value as AuditModuleKey | 'ALL', page: 0 })}
             className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition"
@@ -161,12 +162,12 @@ export const AuditLogFilter: React.FC<AuditLogFilterProps> = ({
                 {opt.label} ({opt.value})
               </option>
             ))}
-          </select>
+          </SearchSelect>
         </div>
 
         {/* 3. Lọc theo Người thực hiện (Truy ai đã điều chỉnh tồn kho) */}
         <div>
-          <select
+          <SearchSelect
             value={filters.actorUsername || 'ALL'}
             onChange={(e) => onChange({ actorUsername: e.target.value, page: 0 })}
             className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition"
@@ -177,12 +178,12 @@ export const AuditLogFilter: React.FC<AuditLogFilterProps> = ({
             <option value="accountant">Phạm Thị Kế Toán (@accountant - Công nợ)</option>
             <option value="sales_manager">Trần Quản Lý Kinh Doanh (@sales_manager)</option>
             <option value="admin">Quản Trị Viên Hệ Thống (@admin)</option>
-          </select>
+          </SearchSelect>
         </div>
 
         {/* 4. Lọc theo Khoảng thời gian kiểm kê */}
         <div>
-          <select
+          <SearchSelect
             value={filters.quickTimeRange || 'ALL'}
             onChange={(e) => handleTimePresetChange(e.target.value)}
             className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition"
@@ -192,7 +193,7 @@ export const AuditLogFilter: React.FC<AuditLogFilterProps> = ({
             <option value="THIS_MONTH">Kỳ kiểm kê tháng này (Tháng 10/2026)</option>
             <option value="LAST_3_MONTHS">3 tháng gần nhất (Q3/2026)</option>
             <option value="TODAY">Hôm nay</option>
-          </select>
+          </SearchSelect>
         </div>
       </div>
 

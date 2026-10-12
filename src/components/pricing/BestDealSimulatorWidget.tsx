@@ -8,6 +8,7 @@ import {
   BEST_DEAL_RULE_STATEMENT,
   fetchDiscountProductOptions
 } from '../../services/volumeDiscountApi';
+import { SearchSelect } from '../common/SearchSelect';
 
 interface BestDealSimulatorWidgetProps {
   initialSku?: string;
@@ -157,7 +158,7 @@ export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = (
             <label className="mb-1.5 block text-xs font-semibold text-gray-700">
               Sản phẩm kiểm thử
             </label>
-            <select
+            <SearchSelect
               value={selectedSku}
               onChange={(e) => setSelectedSku(e.target.value)}
               className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs sm:text-sm font-medium text-gray-900 shadow-2xs transition-colors focus:border-[#F85606] focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
@@ -174,7 +175,7 @@ export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = (
                   {prod.defaultCategory ? ` (${prod.defaultCategory})` : ''}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
 
           {/* 2. Số lượng mua */}
@@ -218,7 +219,7 @@ export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = (
             <label className="mb-1.5 block text-xs font-semibold text-gray-700">
               Đối tượng đại lý / Khách hàng
             </label>
-            <select
+            <SearchSelect
               value={customerGroup}
               onChange={(e) => setCustomerGroup(e.target.value as CustomerGroupType)}
               className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs sm:text-sm font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
@@ -228,7 +229,7 @@ export const BestDealSimulatorWidget: React.FC<BestDealSimulatorWidgetProps> = (
                   {info.label}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
 
           {/* 4. Giá niêm yết gốc */}

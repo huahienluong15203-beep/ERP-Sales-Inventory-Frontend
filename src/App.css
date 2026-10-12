@@ -2176,3 +2176,25 @@ html.dark .hover\:text-gray-900:hover,
 html.dark .hover\:text-gray-800:hover {
   color: #FFFFFF !important;
 }
+/* Ô chọn có tìm kiếm (SearchSelect) - giao diện tối giống các ô <select> cũ */
+html.dark .erp-search-select {
+  background-color: #202024 !important;
+  color: #FFFFFF !important;
+  border-color: #38383E !important;
+}
+
+html.dark .erp-sidebar-role-name .erp-search-select {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  font-weight: 700 !important;
+}
+
+html.dark .erp-search-select-panel {
+  background-color: #18181b !important;
+  border-color: #38383E !important;
+  color: #FFFFFF;
+}
+
+html.dark .erp-search-select-panel .erp-search-select-active {
+  background-color: rgba(248, 86, 6, 0.18) !important;
+}

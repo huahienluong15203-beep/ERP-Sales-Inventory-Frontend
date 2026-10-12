@@ -9,6 +9,7 @@ import type {
 import { productUnitConversionService } from '../../../services/productUnitConversionService';
 import { API_BASE_URL, getStoredToken } from '../../../services/api';
 import { Icons } from '../../../components/common/Icons';
+import { SearchSelect } from '../../../components/common/SearchSelect';
 
 interface ProductUnitConversionModalProps {
   isOpen: boolean;
@@ -737,14 +738,14 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                     {editingUnit && (
                       <div className="flex items-center gap-2 ml-auto">
                         <span className="font-semibold text-gray-600">Trạng thái:</span>
-                        <select
+                        <SearchSelect
                           value={formStatus}
                           onChange={(e) => setFormStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
                           className="px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-xs font-medium"
                         >
                           <option value="ACTIVE">Đang áp dụng</option>
                           <option value="INACTIVE">Ngừng áp dụng</option>
-                        </select>
+                        </SearchSelect>
                       </div>
                     )}
                   </div>
@@ -983,7 +984,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                     <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
                       1. Chọn đơn vị tính trên phiếu
                     </label>
-                    <select
+                    <SearchSelect
                       value={calcUnitName}
                       onChange={(e) => handleCalculateConversion(e.target.value, calcQuantity)}
                       className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
@@ -996,7 +997,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                           {u.unitName} (Hệ số: {formatConversionFactor(u.conversionFactor)} {product.baseUnit})
                         </option>
                       ))}
-                    </select>
+                    </SearchSelect>
                   </div>
 
                   <div>

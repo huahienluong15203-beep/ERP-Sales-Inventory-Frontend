@@ -16,6 +16,7 @@ import {
   CheckCircle2
 } from '../../components/common/Icons';
 import { Pagination } from '../../components/common/Pagination';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const TerritoryHistoryTab: React.FC = () => {
   const { currentRole } = useAuth();
@@ -204,7 +205,7 @@ export const TerritoryHistoryTab: React.FC = () => {
           </div>
 
           {/* Lọc loại thao tác */}
-          <select
+          <SearchSelect
             value={changeType}
             onChange={(e) => {
               setChangeType(e.target.value);
@@ -216,7 +217,7 @@ export const TerritoryHistoryTab: React.FC = () => {
             <option value="TRANSFER">Bàn giao hàng loạt (TRANSFER)</option>
             <option value="ASSIGN">Điều chuyển phụ trách (ASSIGN)</option>
             <option value="CREATE">Khởi tạo ban đầu (CREATE)</option>
-          </select>
+          </SearchSelect>
         </div>
 
         {(keyword || changeType !== 'ALL') && (

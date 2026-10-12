@@ -18,6 +18,7 @@ import {
 import { X, Building2, AlertTriangle, CheckCircle2, Info } from '../common/Icons';
 import { AddressPicker } from '../common/AddressPicker';
 import { useAuth } from '../../contexts/AuthContext';
+import { SearchSelect } from '../common/SearchSelect';
 
 interface AgencyFormModalProps {
   isOpen: boolean;
@@ -321,7 +322,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
                 <label className="block text-[11px] font-semibold text-gray-600 mb-1">
                   Chọn Nhóm Khách Hàng:
                 </label>
-                <select
+                <SearchSelect
                   value={customerGroup}
                   onChange={(e) => setCustomerGroup(e.target.value as CustomerGroupId)}
                   className="w-full px-3 py-2 text-sm bg-white rounded-lg border border-orange-200 focus:border-[#F85606] outline-none font-medium"
@@ -331,7 +332,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
                       {g.name}
                     </option>
                   ))}
-                </select>
+                </SearchSelect>
               </div>
 
               {/* Bảng giá tự động ánh xạ */}
@@ -370,7 +371,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
                 Khu Vực / Địa Bàn <span className="text-red-500">*</span>
               </label>
-              <select
+              <SearchSelect
                 value={regionId}
                 onChange={(e) => setRegionId(e.target.value)}
                 className="w-full px-3.5 py-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:border-[#F85606] outline-none"
@@ -381,7 +382,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
                     {r.name}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
             </div>
 
             {/* Nhân viên phụ trách (Sales Rep) */}
@@ -389,7 +390,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
                 Người Phụ Trách (Sales Rep) <span className="text-red-500">*</span>
               </label>
-              <select
+              <SearchSelect
                 value={assignedRepId}
                 onChange={(e) => setAssignedRepId(e.target.value)}
                 disabled={isEdit && !canChangeSalesRep}
@@ -404,7 +405,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
                     {rep.fullName} {rep.phone ? `(${rep.phone})` : ''}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
             </div>
           </div>
 
@@ -416,7 +417,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
                 ROLE_CUSTOMER
               </span>
             </label>
-            <select
+            <SearchSelect
               value={portalUserId}
               onChange={(e) => setPortalUserId(e.target.value)}
               className="w-full px-3.5 py-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:border-[#F85606] outline-none font-medium"
@@ -432,7 +433,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
                   {u.fullName} (@{u.username})
                 </option>
               ))}
-            </select>
+            </SearchSelect>
             <p className="text-[11px] text-gray-500">
               Chọn tài khoản vai trò Đại lý để cấp quyền truy cập Cổng đặt hàng trực tuyến B2B (<code>/portal</code>).
             </p>

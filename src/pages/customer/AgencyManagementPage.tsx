@@ -54,6 +54,7 @@ import {
   Navigation,
   Trash2
 } from '../../components/common/Icons';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const AgencyManagementPage: React.FC = () => {
 
@@ -570,7 +571,7 @@ export const AgencyManagementPage: React.FC = () => {
 
           {/* Lọc Nhóm khách hàng */}
           <div>
-            <select
+            <SearchSelect
               value={selectedGroup}
               onChange={(e) => setSelectedGroup(e.target.value)}
               className="w-full px-2.5 py-2 text-xs rounded-lg border border-gray-200 bg-white focus:border-[#F85606] outline-none"
@@ -581,12 +582,12 @@ export const AgencyManagementPage: React.FC = () => {
                   {g.name}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
 
           {/* Lọc Khu vực */}
           <div>
-            <select
+            <SearchSelect
               value={selectedRegion}
               onChange={(e) => setSelectedRegion(e.target.value)}
               className="w-full px-2.5 py-2 text-xs rounded-lg border border-gray-200 bg-white focus:border-[#F85606] outline-none"
@@ -597,12 +598,12 @@ export const AgencyManagementPage: React.FC = () => {
                   {r.name}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
 
           {/* S3-07: Lọc Khóa giao dịch rủi ro nợ */}
           <div>
-            <select
+            <SearchSelect
               value={selectedLockFilter}
               onChange={(e) => setSelectedLockFilter(e.target.value)}
               className="w-full px-2.5 py-2 text-xs rounded-lg border border-gray-200 bg-white focus:border-[#F85606] outline-none"
@@ -610,12 +611,12 @@ export const AgencyManagementPage: React.FC = () => {
               <option value="">Tất cả giao dịch</option>
               <option value="LOCKED">🔒 Bị khóa giao dịch</option>
               <option value="UNLOCKED">✅ Đang mở giao dịch</option>
-            </select>
+            </SearchSelect>
           </div>
 
           {/* Lọc Trạng thái & Nút thao tác */}
           <div className="flex items-center gap-2">
-            <select
+            <SearchSelect
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
               className="w-full px-2.5 py-2 text-xs rounded-lg border border-gray-200 bg-white focus:border-[#F85606] outline-none"
@@ -623,7 +624,7 @@ export const AgencyManagementPage: React.FC = () => {
               <option value="">Tất cả trạng thái</option>
               <option value="ACTIVE">Đang hoạt động</option>
               <option value="SUSPENDED">Dừng giao dịch</option>
-            </select>
+            </SearchSelect>
 
             {(keyword || selectedGroup || selectedRegion || selectedStatus || selectedLockFilter) && (
               <button

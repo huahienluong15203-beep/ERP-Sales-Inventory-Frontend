@@ -8,6 +8,7 @@ import { Icons, DynamicIcon } from '../components/common/Icons';
 import { changePasswordApi } from '../services/api';
 import { LogoutConfirmModal } from '../components/common/LogoutConfirmModal';
 import { UserAvatarMenu } from '../components/common/UserAvatarMenu';
+import { SearchSelect } from '../components/common/SearchSelect';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -204,11 +205,10 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             <div className="erp-sidebar-role-name flex items-center justify-between">
               {user?.roles && user.roles.length > 1 ? (
                 <div className="relative flex items-center w-full">
-                  <select
+                  <SearchSelect
                     value={effectiveRole}
                     onChange={(e) => switchRole(e.target.value as RoleName)}
-                    style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none' }}
-                    className="w-full bg-transparent font-bold text-gray-800 text-xs cursor-pointer border-none outline-none focus:ring-0 p-0 pr-5 truncate"
+                    className="w-full bg-transparent font-bold text-gray-800 text-xs cursor-pointer border-none outline-none focus:ring-0 p-0"
                     title="Chuyển đổi vai trò làm việc"
                   >
                     {user.roles.map((r) => (
@@ -216,8 +216,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
                         {ROLE_METADATA_MAP[r]?.label || r}
                       </option>
                     ))}
-                  </select>
-                  <Icons.ChevronDown size={14} className="absolute right-0 text-gray-400 pointer-events-none" />
+                  </SearchSelect>
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 overflow-hidden">

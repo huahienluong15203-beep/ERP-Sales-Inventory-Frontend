@@ -45,6 +45,7 @@ import type {
 import { OrderDetailModal } from '../../components/order/OrderDetailModal';
 import { OrderApprovalActionModal, type ApprovalActionType } from '../../components/order/OrderApprovalActionModal';
 import { OrderPdfPreviewModal } from '../../components/order/OrderPdfPreviewModal';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 // Danh sách tabs trạng thái nhanh
 const STATUS_TABS = [
@@ -466,7 +467,7 @@ export const OrderListPage: React.FC = () => {
             <label className="text-[11px] font-bold text-gray-600 uppercase">Đại lý</label>
             <div className="relative">
               <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              <select
+              <SearchSelect
                 value={selectedAgencyId}
                 onChange={(e) => {
                   setSelectedAgencyId(e.target.value);
@@ -480,7 +481,7 @@ export const OrderListPage: React.FC = () => {
                     {a.name} ({a.code})
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
             </div>
           </div>
 
@@ -490,7 +491,7 @@ export const OrderListPage: React.FC = () => {
               <label className="text-[11px] font-bold text-gray-600 uppercase">NVKD Phụ trách</label>
               <div className="relative">
                 <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                <select
+                <SearchSelect
                   value={selectedSalesRepId}
                   onChange={(e) => {
                     setSelectedSalesRepId(e.target.value);
@@ -504,7 +505,7 @@ export const OrderListPage: React.FC = () => {
                       {sr.fullName} ({sr.username})
                     </option>
                   ))}
-                </select>
+                </SearchSelect>
               </div>
             </div>
           ) : (
@@ -522,7 +523,7 @@ export const OrderListPage: React.FC = () => {
             <label className="text-[11px] font-bold text-gray-600 uppercase">Khu vực</label>
             <div className="relative">
               <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              <select
+              <SearchSelect
                 value={selectedRegionId}
                 onChange={(e) => {
                   setSelectedRegionId(e.target.value);
@@ -536,7 +537,7 @@ export const OrderListPage: React.FC = () => {
                     {r.name}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
             </div>
           </div>
         </div>
@@ -868,7 +869,7 @@ export const OrderListPage: React.FC = () => {
 
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500">Hiển thị:</span>
-              <select
+              <SearchSelect
                 value={pageSize}
                 onChange={(e) => {
                   setPageSize(Number(e.target.value));
@@ -879,7 +880,7 @@ export const OrderListPage: React.FC = () => {
                 <option value={10}>10 dòng</option>
                 <option value={20}>20 dòng</option>
                 <option value={50}>50 dòng</option>
-              </select>
+              </SearchSelect>
 
               <div className="flex items-center gap-1 pl-2">
                 <button

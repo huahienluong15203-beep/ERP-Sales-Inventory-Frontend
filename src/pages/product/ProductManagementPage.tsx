@@ -15,6 +15,7 @@ import { useServerSearch } from '../../hooks/useServerSearch';
 import { Pagination } from '../../components/common/Pagination';
 import { fetchCategories } from '../../services/categoryApi';
 import { ProductUnitConversionModal } from './components/ProductUnitConversionModal';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const ProductManagementPage: React.FC = () => {
   const { currentRole } = useAuth();
@@ -256,7 +257,7 @@ export const ProductManagementPage: React.FC = () => {
         </div>
 
         <div className="w-full sm:w-52">
-          <select
+          <SearchSelect
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[38px]"
@@ -267,11 +268,11 @@ export const ProductManagementPage: React.FC = () => {
                 {c}
               </option>
             ))}
-          </select>
+          </SearchSelect>
         </div>
 
         <div className="w-full sm:w-48">
-          <select
+          <SearchSelect
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value as ProductStatus | 'ALL')}
             className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
@@ -279,7 +280,7 @@ export const ProductManagementPage: React.FC = () => {
             <option value="ALL">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang kinh doanh</option>
             <option value="INACTIVE">Ngừng kinh doanh</option>
-          </select>
+          </SearchSelect>
         </div>
 
         <div className="w-full sm:w-auto sm:ml-auto text-xs sm:text-sm text-gray-500 font-medium">

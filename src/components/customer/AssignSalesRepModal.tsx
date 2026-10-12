@@ -4,6 +4,7 @@ import type { Agency, SalesRepOption } from '../../types/agency';
 import { SALES_REP_OPTIONS, fetchActiveSalesReps, assignAgencySalesRep } from '../../services/agencyApi';
 import { useAuth } from '../../contexts/AuthContext';
 import { Users, AlertTriangle, CheckCircle2, X, RefreshCw, MapPin, Building2 } from '../common/Icons';
+import { SearchSelect } from '../common/SearchSelect';
 
 interface AssignSalesRepModalProps {
   isOpen: boolean;
@@ -138,7 +139,7 @@ export const AssignSalesRepModal: React.FC<AssignSalesRepModalProps> = ({
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
               Chọn Nhân Viên Kinh Doanh Mới <span className="text-red-500">*</span>
             </label>
-            <select
+            <SearchSelect
               value={selectedRepId}
               onChange={(e) => setSelectedRepId(e.target.value)}
               className="w-full px-3.5 py-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 outline-none transition-all font-medium"
@@ -148,7 +149,7 @@ export const AssignSalesRepModal: React.FC<AssignSalesRepModalProps> = ({
                   {rep.fullName} {rep.phone ? `- SĐT: ${rep.phone}` : ''} {rep.email ? `(${rep.email})` : ''}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
             {isSameRep && (
               <span className="text-[11px] text-amber-600 mt-1 block">
                 Nhân viên này đang là người phụ trách hiện tại của đại lý.

@@ -5,6 +5,7 @@ import { lookupPrice } from '../../services/pricingApi';
 import { productService } from '../../services/productService';
 import type { ProductOptionItem } from '../../services/productService';
 import { Icons } from '../common/Icons';
+import { SearchSelect } from '../common/SearchSelect';
 
 export const PriceLookupWidget: React.FC = () => {
   const [customerGroup, setCustomerGroup] = useState<CustomerGroupType>('DEALER_LEVEL_1');
@@ -81,7 +82,7 @@ export const PriceLookupWidget: React.FC = () => {
           <label className="block text-xs font-medium text-gray-600 mb-1">
             Nhóm khách hàng
           </label>
-          <select
+          <SearchSelect
             value={customerGroup}
             onChange={(e) => setCustomerGroup(e.target.value as CustomerGroupType)}
             className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#F85606] focus:ring-2 focus:ring-orange-100"
@@ -91,7 +92,7 @@ export const PriceLookupWidget: React.FC = () => {
                 {group.label}
               </option>
             ))}
-          </select>
+          </SearchSelect>
         </div>
 
         {/* Mã SKU hoặc chọn nhanh */}

@@ -31,6 +31,7 @@ import {
 } from '../../components/common/Icons';
 import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 import { Pagination } from '../../components/common/Pagination';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const PriceHistoryPage: React.FC = () => {
   // Dữ liệu bảng lịch sử
@@ -236,7 +237,7 @@ export const PriceHistoryPage: React.FC = () => {
 
           {/* Chọn sản phẩm cụ thể */}
           <div>
-            <select
+            <SearchSelect
               value={selectedSku}
               onChange={(e) => {
                 setSelectedSku(e.target.value);
@@ -250,12 +251,12 @@ export const PriceHistoryPage: React.FC = () => {
                   {p.sku} - {p.name}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
 
           {/* Chọn biểu giá */}
           <div>
-            <select
+            <SearchSelect
               value={selectedPriceType}
               onChange={(e) => {
                 setSelectedPriceType(e.target.value);
@@ -269,12 +270,12 @@ export const PriceHistoryPage: React.FC = () => {
                   {pt.name}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
 
           {/* Lọc theo khoảng thời gian */}
           <div>
-            <select
+            <SearchSelect
               value={timeRange}
               onChange={(e) => {
                 setTimeRange(e.target.value as TimeRangeFilter);
@@ -287,7 +288,7 @@ export const PriceHistoryPage: React.FC = () => {
               <option value="LAST_MONTH">Tháng trước (Tháng 09/2026)</option>
               <option value="LAST_3_MONTHS">3 tháng gần nhất</option>
               <option value="CUSTOM">Tùy chọn khoảng ngày...</option>
-            </select>
+            </SearchSelect>
           </div>
         </div>
 

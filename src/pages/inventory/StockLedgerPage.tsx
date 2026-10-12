@@ -20,6 +20,7 @@ import {
 } from '../../services/stockAlertApi';
 import { useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 /**
  * S5-09 (Nguyễn Văn Minh): Sổ Tồn Kho & Khai Báo Ngưỡng Tồn Tối Thiểu
@@ -219,7 +220,7 @@ export const StockLedgerPage: React.FC = () => {
 
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             {/* Lọc Kho */}
-            <select
+            <SearchSelect
               value={selectedWarehouse}
               onChange={(e) => setSelectedWarehouse(e.target.value)}
               className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20"
@@ -230,7 +231,7 @@ export const StockLedgerPage: React.FC = () => {
                   {w.name}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
 
             {/* Toggle Chỉ hiển thị SKU dưới định mức */}
             <button

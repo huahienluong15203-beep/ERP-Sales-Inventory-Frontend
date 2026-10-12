@@ -22,6 +22,7 @@ import type { VolumeDiscountStatsData } from '../../services/volumeDiscountApi';
 import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 import { useServerSearch } from '../../hooks/useServerSearch';
 import { Pagination } from '../../components/common/Pagination';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const VolumeDiscountPage: React.FC = () => {
   // Quyền ghi (tạo/sửa/đổi trạng thái) chỉ dành cho ADMIN, SALES_MANAGER — backend cũng kiểm @PreAuthorize
@@ -269,7 +270,7 @@ export const VolumeDiscountPage: React.FC = () => {
             <label className="mb-1 block text-[11px] font-semibold text-gray-500">
               Phạm vi áp dụng
             </label>
-            <select
+            <SearchSelect
               value={scopeFilter}
               onChange={(e) => setScopeFilter(e.target.value as 'ALL' | DiscountScopeType)}
               className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:outline-none focus:ring-2 focus:ring-orange-500/20"
@@ -277,7 +278,7 @@ export const VolumeDiscountPage: React.FC = () => {
               <option value="ALL">Tất cả phạm vi</option>
               <option value="SKU">Theo SKU cụ thể</option>
               <option value="CATEGORY">Theo Nhóm hàng</option>
-            </select>
+            </SearchSelect>
           </div>
 
           {/* Lọc theo Trạng thái & Reset */}
@@ -286,7 +287,7 @@ export const VolumeDiscountPage: React.FC = () => {
               Trạng thái
             </label>
             <div className="flex gap-2">
-              <select
+              <SearchSelect
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as 'ALL' | DiscountPolicyStatus)}
                 className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:outline-none focus:ring-2 focus:ring-orange-500/20"
@@ -295,7 +296,7 @@ export const VolumeDiscountPage: React.FC = () => {
                 <option value="ACTIVE">Đang hiệu lực</option>
                 <option value="INACTIVE">Tạm dừng</option>
                 <option value="EXPIRED">Đã hết hạn</option>
-              </select>
+              </SearchSelect>
               {(searchKeyword || scopeFilter !== 'ALL' || statusFilter !== 'ALL') && (
                 <button
                   onClick={handleResetFilters}

@@ -3,6 +3,7 @@ import type { PriceList, CustomerGroupType } from '../../types/pricing';
 import { CUSTOMER_GROUPS } from '../../types/pricing';
 import { Icons } from '../common/Icons';
 import { Pagination } from '../common/Pagination';
+import { SearchSelect } from '../common/SearchSelect';
 
 interface PriceListTableProps {
   /** Các bảng giá của TRANG hiện tại (Backend đã lọc + phân trang). */
@@ -108,7 +109,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
         {/* Bộ lọc nhóm khách hàng & trạng thái */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Nhóm khách hàng */}
-          <select
+          <SearchSelect
             value={selectedGroup}
             onChange={(e) => onGroupChange(e.target.value)}
             className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
@@ -117,10 +118,10 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
             <option value="DEALER_LEVEL_1">Đại lý cấp 1 (NPP)</option>
             <option value="DEALER_LEVEL_2">Đại lý cấp 2</option>
             <option value="RETAIL">Khách lẻ / Showroom</option>
-          </select>
+          </SearchSelect>
 
           {/* Trạng thái */}
-          <select
+          <SearchSelect
             value={selectedStatus}
             onChange={(e) => onStatusChange(e.target.value)}
             className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
@@ -128,7 +129,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
             <option value="ALL">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang áp dụng (Active)</option>
             <option value="INACTIVE">Ngừng áp dụng (Inactive)</option>
-          </select>
+          </SearchSelect>
 
           {/* Đếm số lượng */}
           <span className="text-xs text-gray-500 ml-1">

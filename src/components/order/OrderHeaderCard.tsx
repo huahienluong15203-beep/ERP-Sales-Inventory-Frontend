@@ -15,6 +15,7 @@ import {
   Package,
   CreditCard
 } from '../common/Icons';
+import { SearchSelect } from '../common/SearchSelect';
 
 interface OrderHeaderCardProps {
   selectedAgency: Agency | null;
@@ -479,7 +480,7 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
             )
           ) : (
             <div className="space-y-1.5">
-              <select
+              <SearchSelect
                 value={selectedDeliveryPoint?.id || ''}
                 onChange={(e) => {
                   const pt = deliveryPoints.find((p) => p.id === e.target.value);
@@ -492,7 +493,7 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                     {pt.name} {pt.isDefault ? '⭐ [Kho mặc định]' : ''} — {pt.address}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
 
               {selectedDeliveryPoint && (
                 <div className="p-2 bg-gray-50 rounded-lg text-[11px] text-gray-600 space-y-0.5 border border-gray-100">

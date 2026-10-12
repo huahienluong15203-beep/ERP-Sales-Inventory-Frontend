@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from './Icons';
 import { PAGE_SIZE_OPTIONS } from '../../hooks/useUrlParams';
+import { SearchSelect } from './SearchSelect';
 
 interface PaginationProps {
   /** Trang hiện tại, đếm từ 0 (giống API). */
@@ -62,7 +63,7 @@ export function Pagination({
         {onSizeChange && (
           <label className="flex items-center gap-1.5 whitespace-nowrap">
             <span>Số dòng/trang</span>
-            <select
+            <SearchSelect
               value={size}
               disabled={disabled}
               onChange={(e) => onSizeChange(Number(e.target.value))}
@@ -73,7 +74,7 @@ export function Pagination({
                   {opt}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </label>
         )}
       </div>

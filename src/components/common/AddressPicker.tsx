@@ -8,6 +8,7 @@ import {
   shortUnitName
 } from '../../services/addressApi';
 import type { AdminProvince } from '../../services/addressApi';
+import { SearchSelect } from './SearchSelect';
 
 interface AddressPickerProps {
   /** Địa chỉ đầy đủ đang lưu (1 chuỗi), vd: "Số 12 Trần Phú, Phường Ba Đình, Thành phố Hà Nội" */
@@ -114,7 +115,7 @@ export function AddressPicker({ value, onChange, compact = false, streetPlacehol
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {/* 1. Tỉnh / Thành phố */}
-        <select
+        <SearchSelect
           value={provinceCode}
           disabled={!provinces.length}
           onChange={(e) => {
@@ -133,7 +134,7 @@ export function AddressPicker({ value, onChange, compact = false, streetPlacehol
               {p.name}
             </option>
           ))}
-        </select>
+        </SearchSelect>
 
         {/* 2. Xã / Phường: gõ để lọc gợi ý */}
         <div className="relative">
