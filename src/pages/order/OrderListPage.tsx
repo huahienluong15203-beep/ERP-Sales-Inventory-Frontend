@@ -30,6 +30,7 @@ import {
   fetchOrderTotals,
   fetchOrderDetail,
   cloneOrderToDraft,
+  bulkApproveOrders,
   formatCurrencyVND,
   formatQuantity
 } from '../../services/orderService';
@@ -96,6 +97,12 @@ export const OrderListPage: React.FC = () => {
   const [keyword, setKeyword] = useState<string>('');
   const [refreshKey, setRefreshKey] = useState<number>(0);
 
+  // Góp ý GV mục 8: tick chọn nhiều đơn chờ duyệt (hoặc tick tất cả) rồi xử lý một lần
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<'REJECT' | 'RETURN' | null>(null);
+  const [bulkComment, setBulkComment] = useState<string>('');
+  const [bulkSubmitting, setBulkSubmitting] = useState<boolean>(false);
+
   // Phân trang
   const [page, setPage] = useState<number>(0);
   const [pageSize, setPageSize] = useState<number>(20);
@@ -133,6 +140,63 @@ export const OrderListPage: React.FC = () => {
     });
     setApprovalModalAction(action);
     setIsApprovalModalOpen(true);
+  };
+
+  // Mục 8: chỉ đơn Chờ duyệt mới tick được, và chỉ Quản lý kinh doanh (giống nút Duyệt từng đơn)
+  const canBulkApprove = isSalesManager;
+  const isSelectable = (o: OrderSummaryItem) => canBulkApprove && o.status === 'PENDING_APPROVAL';
+  const selectableOnPage = orders.filter(isSelectable);
+  const allOnPageSelected =
+    selectableOnPage.length > 0 && selectableOnPage.every((o) => selectedIds.has(String(o.id)));
+
+  const toggleSelect = (id: number | string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      const key = String(id);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allOnPageSelected) selectableOnPage.forEach((o) => next.delete(String(o.id)));
+      else selectableOnPage.forEach((o) => next.add(String(o.id)));
+      return next;
+    });
+  };
+
+  const runBulk = async (action: 'APPROVE' | 'REJECT' | 'RETURN', comment?: string) => {
+    if (selectedIds.size === 0) return;
+    setBulkSubmitting(true);
+    try {
+      const res = await bulkApproveOrders(action, Array.from(selectedIds), comment);
+      const verb = action === 'APPROVE' ? 'duyệt' : action === 'REJECT' ? 'từ chối' : 'trả lại';
+      if (res.failed === 0) {
+        showToast('Xử lý hàng loạt thành công', `Đã ${verb} ${res.succeeded} đơn hàng`, 'success');
+      } else {
+        const firstErrors = res.results
+          .filter((r) => !r.success)
+          .slice(0, 3)
+          .map((r) => `#${r.orderId}: ${r.message}`)
+          .join('; ');
+        showToast(
+          `Đã ${verb} ${res.succeeded}/${res.total} đơn`,
+          `${res.failed} đơn không xử lý được. ${firstErrors}`,
+          res.succeeded > 0 ? 'info' : 'error'
+        );
+      }
+      setSelectedIds(new Set());
+      setBulkAction(null);
+      setBulkComment('');
+      setRefreshKey((k) => k + 1);
+    } catch (err: unknown) {
+      showToast('Xử lý hàng loạt thất bại', err instanceof Error ? err.message : 'Không xử lý được các đơn đã chọn', 'error');
+    } finally {
+      setBulkSubmitting(false);
+    }
   };
 
   // S4-08: Modal xem trước và in PDF đơn hàng
@@ -234,6 +298,7 @@ export const OrderListPage: React.FC = () => {
       .then(([pageRes, totalsRes]) => {
         if (isSubscribed) {
           setOrders(pageRes.content || []);
+          setSelectedIds(new Set());
           setTotalPages(pageRes.totalPages || 1);
           setTotalElements(pageRes.totalElements || 0);
           setTotals(totalsRes || { orderCount: 0, totalAmount: 0 });
@@ -645,11 +710,76 @@ export const OrderListPage: React.FC = () => {
           </div>
         )}
 
+        {/* Mục 8: thanh thao tác hàng loạt khi đã tick chọn đơn */}
+        {canBulkApprove && selectedIds.size > 0 && (
+          <div className="mx-4 mt-4 p-3 rounded-xl bg-orange-50 border border-orange-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-gray-800">
+              Đã chọn <strong className="text-[#F85606]">{selectedIds.size}</strong> đơn chờ duyệt
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={bulkSubmitting}
+                onClick={() => runBulk('APPROVE')}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                <CheckCircle2 size={14} /> Duyệt tất cả đã chọn
+              </button>
+              <button
+                type="button"
+                disabled={bulkSubmitting}
+                onClick={() => {
+                  setBulkComment('');
+                  setBulkAction('RETURN');
+                }}
+                className="px-3 py-1.5 rounded-lg border border-amber-300 bg-white text-amber-700 hover:bg-amber-50 text-xs font-bold flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                <RotateCcw size={14} /> Trả lại sửa
+              </button>
+              <button
+                type="button"
+                disabled={bulkSubmitting}
+                onClick={() => {
+                  setBulkComment('');
+                  setBulkAction('REJECT');
+                }}
+                className="px-3 py-1.5 rounded-lg border border-rose-300 bg-white text-rose-600 hover:bg-rose-50 text-xs font-bold flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                <XCircle size={14} /> Từ chối
+              </button>
+              <button
+                type="button"
+                disabled={bulkSubmitting}
+                onClick={() => setSelectedIds(new Set())}
+                className="px-3 py-1.5 rounded-lg text-gray-500 hover:bg-gray-100 text-xs font-semibold cursor-pointer"
+              >
+                Bỏ chọn
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Bảng dữ liệu */}
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left">
             <thead className="bg-gray-50/90 text-gray-700 font-bold border-b border-gray-200">
               <tr>
+                {canBulkApprove && (
+                  <th className="py-3 pl-4 pr-0 w-8">
+                    <input
+                      type="checkbox"
+                      checked={allOnPageSelected}
+                      disabled={selectableOnPage.length === 0}
+                      onChange={toggleSelectAll}
+                      title={
+                        selectableOnPage.length === 0
+                          ? 'Trang này không có đơn chờ duyệt'
+                          : 'Chọn tất cả đơn chờ duyệt trên trang'
+                      }
+                      className="w-4 h-4 accent-[#F85606] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                    />
+                  </th>
+                )}
                 <th className="py-3 px-4">Mã đơn hàng</th>
                 <th className="py-3 px-4">Ngày tạo</th>
                 <th className="py-3 px-4">Đại lý</th>
@@ -664,7 +794,7 @@ export const OrderListPage: React.FC = () => {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-16 text-center text-gray-500">
+                  <td colSpan={canBulkApprove ? 10 : 9} className="py-16 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <RefreshCw size={26} className="animate-spin text-[#F85606]" />
                       <span className="text-xs font-semibold">Đang tải danh sách đơn hàng...</span>
@@ -673,7 +803,7 @@ export const OrderListPage: React.FC = () => {
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-16 text-center text-gray-400 space-y-2">
+                  <td colSpan={canBulkApprove ? 10 : 9} className="py-16 text-center text-gray-400 space-y-2">
                     <ShoppingCart size={36} className="mx-auto text-gray-300" />
                     <p className="text-sm font-bold text-gray-700">Không tìm thấy đơn hàng nào</p>
                     <p className="text-xs text-gray-500">
@@ -683,7 +813,25 @@ export const OrderListPage: React.FC = () => {
                 </tr>
               ) : (
                 orders.map((o) => (
-                  <tr key={o.id} className="hover:bg-orange-50/25 transition-colors">
+                  <tr
+                    key={o.id}
+                    className={`transition-colors ${
+                      selectedIds.has(String(o.id)) ? 'bg-orange-50/60' : 'hover:bg-orange-50/25'
+                    }`}
+                  >
+                    {canBulkApprove && (
+                      <td className="py-3 pl-4 pr-0">
+                        {isSelectable(o) && (
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(String(o.id))}
+                            onChange={() => toggleSelect(o.id)}
+                            title="Chọn đơn này để xử lý hàng loạt"
+                            className="w-4 h-4 accent-[#F85606] cursor-pointer"
+                          />
+                        )}
+                      </td>
+                    )}
                     {/* Mã đơn */}
                     <td className="py-3 px-4">
                       <button
@@ -870,6 +1018,49 @@ export const OrderListPage: React.FC = () => {
       </div>
 
       {/* 6. MODAL XEM CHI TIẾT ĐƠN HÀNG */}
+      {/* Mục 8: nhập lý do khi Từ chối / Trả lại hàng loạt */}
+      {bulkAction && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 space-y-3">
+            <h3 className="text-sm font-bold text-gray-900">
+              {bulkAction === 'REJECT' ? 'Từ chối' : 'Trả lại sửa'} {selectedIds.size} đơn đã chọn
+            </h3>
+            <p className="text-xs text-gray-500">
+              Lý do sẽ được ghi vào lịch sử duyệt của từng đơn. NV kinh doanh sẽ thấy lý do này.
+            </p>
+            <textarea
+              value={bulkComment}
+              onChange={(e) => setBulkComment(e.target.value)}
+              maxLength={500}
+              rows={3}
+              autoFocus
+              placeholder="Nhập lý do (bắt buộc)..."
+              className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200 focus:border-[#F85606] outline-none resize-none"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={bulkSubmitting}
+                onClick={() => setBulkAction(null)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-100 cursor-pointer"
+              >
+                Huỷ
+              </button>
+              <button
+                type="button"
+                disabled={bulkSubmitting || !bulkComment.trim()}
+                onClick={() => runBulk(bulkAction, bulkComment)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold text-white disabled:opacity-50 cursor-pointer ${
+                  bulkAction === 'REJECT' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-amber-600 hover:bg-amber-700'
+                }`}
+              >
+                {bulkSubmitting ? 'Đang xử lý...' : 'Xác nhận'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <OrderDetailModal
         orderId={selectedOrderId}
         isOpen={isDetailModalOpen}
