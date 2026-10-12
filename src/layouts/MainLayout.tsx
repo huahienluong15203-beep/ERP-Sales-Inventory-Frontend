@@ -8,6 +8,7 @@ import { Icons, DynamicIcon } from '../components/common/Icons';
 import { changePasswordApi } from '../services/api';
 import { LogoutConfirmModal } from '../components/common/LogoutConfirmModal';
 import { UserAvatarMenu } from '../components/common/UserAvatarMenu';
+import { NotificationBell } from '../components/common/NotificationBell';
 import { SearchSelect } from '../components/common/SearchSelect';
 
 interface MainLayoutProps {
@@ -334,13 +335,19 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
 
 
-          {/* Menu Ảnh đại diện với 3 tùy chọn: 1 là Hồ sơ cá nhân, 2 là Chủ đề, 3 là Đăng xuất (Ảnh 3 / Ảnh 2) */}
-          <UserAvatarMenu
-            user={user}
-            currentRole={effectiveRole}
-            onOpenProfile={() => navigate('/profile')}
-            onLogout={() => setShowLogoutConfirm(true)}
-          />
+          {/* Khu vực bên phải Topbar: Chuông thông báo & Menu tài khoản */}
+          <div className="erp-topbar-right flex items-center gap-2 sm:gap-3">
+            {/* Chuông Thông Báo & Cảnh Báo Hệ Thống */}
+            <NotificationBell />
+
+            {/* Menu Ảnh đại diện với 3 tùy chọn: 1 là Hồ sơ cá nhân, 2 là Chủ đề, 3 là Đăng xuất */}
+            <UserAvatarMenu
+              user={user}
+              currentRole={effectiveRole}
+              onOpenProfile={() => navigate('/profile')}
+              onLogout={() => setShowLogoutConfirm(true)}
+            />
+          </div>
         </header>
 
         {/* Nội dung trang */}
