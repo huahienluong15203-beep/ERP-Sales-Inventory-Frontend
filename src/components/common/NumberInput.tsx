@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FocusEvent, KeyboardEvent } from 'react';
 
 /**
@@ -76,6 +76,13 @@ function parseDigits(text: string, allowDecimal: boolean): string {
   return cleaned.slice(0, comma) + '.' + cleaned.slice(comma + 1).replace(/,/g, '');
 }
 
+/** Hai chuỗi số thô có cùng giá trị không ("12." = "12", "" = "0"). */
+function sameNumber(a: string, b: string): boolean {
+  const na = Number(a === '' || a === '.' ? '0' : a);
+  const nb = Number(b === '' ? '0' : b);
+  return Number.isFinite(na) && na === nb;
+}
+
 /** Số ký tự "có nghĩa" (chữ số, dấu phẩy thập phân) đứng trước vị trí con trỏ. */
 function countSignificant(text: string, caret: number): number {
   let n = 0;
@@ -120,7 +127,12 @@ export function NumberInput({
   const allowDecimal = decimal ?? step === 'any';
   const inputRef = useRef<HTMLInputElement | null>(null);
   const pendingCaret = useRef<number | null>(null);
-  const display = formatNumberText(toRaw(value));
+  // Chữ đang gõ dở (vd "12." hoặc "1.50"): nơi dùng lưu dạng số sẽ làm mất dấu thập phân / số 0 cuối,
+  // nên giữ lại chữ đang gõ chừng nào nó vẫn cùng giá trị số với value; rời ô thì hiển thị lại theo value.
+  const [draft, setDraft] = useState<string | null>(null);
+  const valueRaw = toRaw(value);
+  const shownRaw = draft !== null && sameNumber(draft, valueRaw) ? draft : valueRaw;
+  const display = formatNumberText(shownRaw);
 
   // Sau khi định dạng lại (thêm/bớt dấu chấm) đặt con trỏ về đúng chỗ đang gõ
   useLayoutEffect(() => {
@@ -141,7 +153,7 @@ export function NumberInput({
       text = text.slice(0, caret - 1) + ',' + text.slice(caret);
     }
     // Xoá đúng dấu chấm ngăn cách bằng Backspace -> xoá luôn chữ số đứng trước nó
-    if (native?.inputType === 'deleteContentBackward' && parseTyped(text, allowDecimal) === toRaw(value)) {
+    if (native?.inputType === 'deleteContentBackward' && parseTyped(text, allowDecimal) === shownRaw) {
       const before = text.slice(0, caret);
       const lastDigit = before.search(/\d(?=\D*$)/);
       if (lastDigit >= 0) {
@@ -151,6 +163,7 @@ export function NumberInput({
     }
     const raw = parseTyped(text, allowDecimal);
     pendingCaret.current = countSignificant(text, caret);
+    setDraft(raw);
     if (!onChange) return;
     const target = { value: raw, name: name ?? '' };
     onChange({
@@ -168,7 +181,10 @@ export function NumberInput({
       autoComplete="off"
       value={display}
       onChange={handleChange}
-      onBlur={onBlur}
+      onBlur={(e) => {
+        setDraft(null);
+        onBlur?.(e);
+      }}
       onFocus={onFocus}
       onKeyDown={onKeyDown}
       className={className}
