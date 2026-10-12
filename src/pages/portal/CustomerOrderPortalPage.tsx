@@ -16,7 +16,11 @@ import {
   Eye,
   X,
   ShieldAlert,
-  RotateCcw
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { CustomerPortalLayout } from '../../layouts/CustomerPortalLayout';
@@ -65,6 +69,15 @@ export const CustomerOrderPortalPage: React.FC = () => {
   const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+
+  // Phân trang danh mục sản phẩm (mặc định 30 sản phẩm/trang, hỗ trợ 30-50 theo S4-10)
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(30);
+
+  // Reset trang về 1 khi tìm kiếm hoặc thay đổi nhóm ngành hàng
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchKeyword, selectedCategory]);
 
   // Giỏ hàng
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -245,6 +258,37 @@ export const CustomerOrderPortalPage: React.FC = () => {
     });
   }, [products, searchKeyword, selectedCategory]);
 
+  // TÍNH TOÁN PHÂN TRANG DANH MỤC SẢN PHẨM (30-50 SẢN PHẨM/TRANG)
+  const totalItems = filteredProducts.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedProducts = useMemo(() => {
+    const start = (safeCurrentPage - 1) * pageSize;
+    return filteredProducts.slice(start, start + pageSize);
+  }, [filteredProducts, safeCurrentPage, pageSize]);
+
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pages: (number | string)[] = [];
+    pages.push(1);
+    if (safeCurrentPage > 3) {
+      pages.push('...');
+    }
+    const start = Math.max(2, safeCurrentPage - 1);
+    const end = Math.min(totalPages - 1, safeCurrentPage + 1);
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    if (safeCurrentPage < totalPages - 2) {
+      pages.push('...');
+    }
+    pages.push(totalPages);
+    return pages;
+  }, [safeCurrentPage, totalPages]);
+
   // THAO TÁC GIỎ HÀNG
   const handleAddToCart = (product: OrderProductCatalogItem, unitName?: string, qtyToAdd: number = 1) => {
     // Tìm đơn vị tính được chọn
@@ -283,13 +327,11 @@ export const CustomerOrderPortalPage: React.FC = () => {
   };
 
   const handleUpdateCartQuantity = (index: number, newQty: number) => {
-    if (newQty <= 0) {
-      handleRemoveCartItem(index);
-      return;
-    }
     setCart((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], quantity: newQty };
+      if (next[index]) {
+        next[index] = { ...next[index], quantity: Math.max(0, newQty) };
+      }
       return next;
     });
   };
@@ -529,21 +571,141 @@ export const CustomerOrderPortalPage: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {filteredProducts.map((p) => {
-                // Kiểm tra xem sản phẩm này đã có trong giỏ chưa
-                const inCart = cart.filter((c) => c.productId === p.id);
-                const totalInCartQty = inCart.reduce((s, c) => s + c.quantity, 0);
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {paginatedProducts.map((p) => {
+                  // Kiểm tra xem sản phẩm này đã có trong giỏ chưa
+                  const inCart = cart.filter((c) => c.productId === p.id);
+                  const totalInCartQty = inCart.reduce((s, c) => s + c.quantity, 0);
 
-                return (
-                  <ProductCard
-                    key={p.id}
-                    product={p}
-                    inCartCount={totalInCartQty}
-                    onAddToCart={handleAddToCart}
-                  />
-                );
-              })}
+                  return (
+                    <ProductCard
+                      key={p.id}
+                      product={p}
+                      inCartCount={totalInCartQty}
+                      onAddToCart={handleAddToCart}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* THANH PHÂN TRANG DANH MỤC SẢN PHẨM (30-50 SẢN PHẨM/TRANG) */}
+              <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                {/* Thông tin số lượng & Chọn cỡ trang */}
+                <div className="flex flex-wrap items-center gap-2.5 text-xs text-gray-600">
+                  <span>
+                    Hiển thị{' '}
+                    <strong className="text-gray-900 font-bold font-mono">
+                      {totalItems === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1}
+                    </strong>
+                    {' - '}
+                    <strong className="text-gray-900 font-bold font-mono">
+                      {Math.min(safeCurrentPage * pageSize, totalItems)}
+                    </strong>
+                    {' trên tổng số '}
+                    <strong className="text-[#F85606] font-bold font-mono">{totalItems}</strong> sản phẩm
+                  </span>
+
+                  <span className="text-gray-300 hidden sm:inline">|</span>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-gray-500 text-[11px]">Hiển thị:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="border border-gray-200 rounded-lg px-2 py-1 text-xs font-semibold bg-gray-50 text-gray-700 focus:bg-white focus:border-[#F85606] outline-none cursor-pointer"
+                    >
+                      <option value={30}>30 / trang</option>
+                      <option value={40}>40 / trang</option>
+                      <option value={50}>50 / trang</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Các nút chuyển trang */}
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentPage(1);
+                        window.scrollTo({ top: 380, behavior: 'smooth' });
+                      }}
+                      disabled={safeCurrentPage === 1}
+                      className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                      title="Trang đầu"
+                    >
+                      <ChevronsLeft size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentPage((p) => Math.max(1, p - 1));
+                        window.scrollTo({ top: 380, behavior: 'smooth' });
+                      }}
+                      disabled={safeCurrentPage === 1}
+                      className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                      title="Trang trước"
+                    >
+                      <ChevronLeft size={15} />
+                    </button>
+
+                    <div className="flex items-center gap-1 mx-1">
+                      {pageNumbers.map((p, idx) =>
+                        typeof p === 'number' ? (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => {
+                              setCurrentPage(p);
+                              window.scrollTo({ top: 380, behavior: 'smooth' });
+                            }}
+                            className={`min-w-8 h-8 px-2 rounded-lg text-xs font-bold transition cursor-pointer font-mono ${
+                              safeCurrentPage === p
+                                ? 'bg-[#F85606] text-white shadow-xs'
+                                : 'text-gray-700 hover:bg-gray-100 border border-transparent'
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        ) : (
+                          <span key={`ellipsis-${idx}`} className="px-1 text-gray-400 text-xs font-bold">
+                            ...
+                          </span>
+                        )
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentPage((p) => Math.min(totalPages, p + 1));
+                        window.scrollTo({ top: 380, behavior: 'smooth' });
+                      }}
+                      disabled={safeCurrentPage === totalPages}
+                      className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                      title="Trang sau"
+                    >
+                      <ChevronRight size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentPage(totalPages);
+                        window.scrollTo({ top: 380, behavior: 'smooth' });
+                      }}
+                      disabled={safeCurrentPage === totalPages}
+                      className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                      title="Trang cuối"
+                    >
+                      <ChevronsRight size={15} />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -730,61 +892,13 @@ export const CustomerOrderPortalPage: React.FC = () => {
                   </div>
                 ) : (
                   cart.map((item, idx) => (
-                    <div key={`${item.productId}-${item.selectedUnit}`} className="pt-3 first:pt-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-xs text-gray-900 leading-snug line-clamp-2">
-                            {item.name}
-                          </h4>
-                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500 font-medium">
-                            <span className="font-mono text-gray-400">{item.sku}</span>
-                            <span>•</span>
-                            <span className="font-bold text-orange-600">{item.selectedUnit}</span>
-                            <span>•</span>
-                            <span className="font-mono font-bold text-gray-700">
-                              {formatCurrencyVND(item.unitPrice)}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Nút xóa */}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveCartItem(idx)}
-                          className="text-gray-400 hover:text-rose-600 p-1 transition cursor-pointer shrink-0"
-                          title="Xóa khỏi giỏ"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-
-                      {/* Bộ điều khiển số lượng và thành tiền */}
-                      <div className="flex items-center justify-between mt-2.5">
-                        <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateCartQuantity(idx, item.quantity - 1)}
-                            className="px-2.5 py-1 text-gray-600 hover:bg-gray-200 transition cursor-pointer"
-                          >
-                            <Minus size={13} />
-                          </button>
-                          <span className="w-10 text-center font-bold text-xs text-gray-800 font-mono">
-                            {item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateCartQuantity(idx, item.quantity + 1)}
-                            className="px-2.5 py-1 text-gray-600 hover:bg-gray-200 transition cursor-pointer"
-                          >
-                            <Plus size={13} />
-                          </button>
-                        </div>
-
-                        <div className="font-black text-xs sm:text-sm font-mono text-[#F85606]">
-                          {formatCurrencyVND(item.quantity * item.unitPrice)}
-                        </div>
-                      </div>
-                    </div>
+                    <PortalCartItemRow
+                      key={`${item.productId}-${item.selectedUnit}`}
+                      item={item}
+                      index={idx}
+                      onUpdateQuantity={handleUpdateCartQuantity}
+                      onRemoveItem={handleRemoveCartItem}
+                    />
                   ))
                 )}
               </div>
@@ -1034,13 +1148,49 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, inCartCount, onAddTo
   const [selectedUnitName, setSelectedUnitName] = useState<string>(() => {
     return product.availableUnits[0]?.unitName || product.baseUnit;
   });
-  const [qty, setQty] = useState<number>(1);
+  // Số lượng gõ tự do (giống OrderItemRow bên NVKD)
+  const [qtyText, setQtyText] = useState<string>('1');
 
   const currentUnit =
     product.availableUnits.find((u) => u.unitName === selectedUnitName) ||
     product.availableUnits[0];
   const factor = currentUnit?.conversionFactor || 1;
   const currentPrice = product.basePrice * factor;
+
+  const handleQtyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/[^0-9]/g, '');
+    setQtyText(raw);
+  };
+
+  const handleQtyBlur = () => {
+    if (qtyText === '' || parseInt(qtyText, 10) === 0) {
+      setQtyText('1');
+    } else {
+      const num = parseInt(qtyText, 10);
+      setQtyText(String(num));
+    }
+  };
+
+  const handleDecrease = () => {
+    const num = parseInt(qtyText, 10);
+    const current = isNaN(num) ? 1 : num;
+    const next = Math.max(1, current - 1);
+    setQtyText(String(next));
+  };
+
+  const handleIncrease = () => {
+    const num = parseInt(qtyText, 10);
+    const current = isNaN(num) ? 1 : num;
+    const next = current + 1;
+    setQtyText(String(next));
+  };
+
+  const handleAdd = () => {
+    const num = parseInt(qtyText, 10);
+    const qtyToAdd = isNaN(num) || num < 1 ? 1 : num;
+    onAddToCart(product, selectedUnitName, qtyToAdd);
+    setQtyText('1');
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-2xs hover:shadow-md hover:border-orange-300 transition flex flex-col justify-between space-y-3 group">
@@ -1101,24 +1251,36 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, inCartCount, onAddTo
         )}
       </div>
 
-      {/* Hành động: Số lượng & Nút Thêm vào giỏ */}
+      {/* Hành động: Số lượng cho nhập tự do & Nút Thêm vào giỏ */}
       <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
-        {/* Bộ tăng giảm số lượng */}
-        <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-gray-50">
+        {/* Bộ tăng giảm số lượng với ô input cho nhập tự do */}
+        <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-white focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
           <button
             type="button"
-            onClick={() => setQty((q) => Math.max(1, q - 1))}
-            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition cursor-pointer"
+            onClick={handleDecrease}
+            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition cursor-pointer"
+            title="Giảm 1"
           >
             <Minus size={13} />
           </button>
-          <span className="w-8 text-center font-bold text-xs text-gray-800 font-mono">
-            {qty}
-          </span>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={qtyText}
+            onChange={handleQtyChange}
+            onBlur={handleQtyBlur}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleAdd();
+            }}
+            className="w-11 h-8 text-center font-bold text-xs text-gray-900 bg-transparent outline-none font-mono"
+            title="Nhập số lượng tự do"
+          />
           <button
             type="button"
-            onClick={() => setQty((q) => q + 1)}
-            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition cursor-pointer"
+            onClick={handleIncrease}
+            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition cursor-pointer"
+            title="Tăng 1"
           >
             <Plus size={13} />
           </button>
@@ -1127,11 +1289,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, inCartCount, onAddTo
         {/* Nút thêm giỏ */}
         <button
           type="button"
-          onClick={() => {
-            onAddToCart(product, selectedUnitName, qty);
-            setQty(1);
-          }}
-          className="flex-1 py-2 px-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer active:scale-95"
+          onClick={handleAdd}
+          className="flex-1 py-2 px-3 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer"
           id={`add-btn-${product.sku}`}
         >
           <ShoppingCart size={14} />
@@ -1142,6 +1301,137 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, inCartCount, onAddTo
             </span>
           )}
         </button>
+      </div>
+    </div>
+  );
+};
+
+// ==============================================================
+// SUB-COMPONENT: DÒNG MẶT HÀNG TRONG GIỎ HÀNG (PORTAL CART ITEM ROW)
+// ==============================================================
+interface PortalCartItemRowProps {
+  item: CartItem;
+  index: number;
+  onUpdateQuantity: (index: number, newQty: number) => void;
+  onRemoveItem: (index: number) => void;
+}
+
+const PortalCartItemRow: React.FC<PortalCartItemRowProps> = ({
+  item,
+  index,
+  onUpdateQuantity,
+  onRemoveItem
+}) => {
+  const [localQtyText, setLocalQtyText] = useState<string>(() => String(item.quantity));
+
+  useEffect(() => {
+    setLocalQtyText(String(item.quantity));
+  }, [item.quantity]);
+
+  const handleQtyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/[^0-9]/g, '');
+    setLocalQtyText(raw);
+
+    if (raw !== '') {
+      const num = parseInt(raw, 10);
+      onUpdateQuantity(index, isNaN(num) ? 0 : num);
+    }
+  };
+
+  const handleQtyBlur = () => {
+    if (localQtyText === '' || parseInt(localQtyText, 10) === 0) {
+      setLocalQtyText('1');
+      onUpdateQuantity(index, 1);
+    } else {
+      const num = parseInt(localQtyText, 10);
+      setLocalQtyText(String(num));
+      onUpdateQuantity(index, num);
+    }
+  };
+
+  const handleDecrease = () => {
+    const num = parseInt(localQtyText, 10);
+    const current = isNaN(num) ? 1 : num;
+    if (current <= 1) {
+      onRemoveItem(index);
+    } else {
+      const next = current - 1;
+      setLocalQtyText(String(next));
+      onUpdateQuantity(index, next);
+    }
+  };
+
+  const handleIncrease = () => {
+    const num = parseInt(localQtyText, 10);
+    const current = isNaN(num) ? 1 : num;
+    const next = current + 1;
+    setLocalQtyText(String(next));
+    onUpdateQuantity(index, next);
+  };
+
+  return (
+    <div className="pt-3 first:pt-0">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <h4 className="font-bold text-xs text-gray-900 leading-snug line-clamp-2">
+            {item.name}
+          </h4>
+          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500 font-medium">
+            <span className="font-mono text-gray-400">{item.sku}</span>
+            <span>•</span>
+            <span className="font-bold text-orange-600">{item.selectedUnit}</span>
+            <span>•</span>
+            <span className="font-mono font-bold text-gray-700">
+              {formatCurrencyVND(item.unitPrice)}
+            </span>
+          </div>
+        </div>
+
+        {/* Nút xóa */}
+        <button
+          type="button"
+          onClick={() => onRemoveItem(index)}
+          className="text-gray-400 hover:text-rose-600 p-1 transition cursor-pointer shrink-0"
+          title="Xóa khỏi giỏ"
+        >
+          <Trash2 size={15} />
+        </button>
+      </div>
+
+      {/* Bộ điều khiển số lượng (cho nhập tự do) và thành tiền */}
+      <div className="flex items-center justify-between mt-2.5">
+        <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
+          <button
+            type="button"
+            onClick={handleDecrease}
+            className="px-2.5 py-1 text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition cursor-pointer"
+            title={item.quantity <= 1 ? 'Xóa khỏi giỏ' : 'Giảm 1'}
+          >
+            <Minus size={13} />
+          </button>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={localQtyText}
+            onChange={handleQtyChange}
+            onBlur={handleQtyBlur}
+            className="w-12 py-1 text-center font-bold text-xs text-gray-800 bg-transparent outline-none font-mono"
+            title="Nhập số lượng tự do"
+          />
+          <button
+            type="button"
+            onClick={handleIncrease}
+            className="px-2.5 py-1 text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition cursor-pointer"
+            title="Tăng 1"
+          >
+            <Plus size={13} />
+          </button>
+        </div>
+
+        <div className="font-black text-xs sm:text-sm font-mono text-[#F85606]">
+          {formatCurrencyVND(item.quantity * item.unitPrice)}
+        </div>
       </div>
     </div>
   );
