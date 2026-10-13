@@ -22,7 +22,7 @@ interface WarehouseMinStockDashboardAlertProps {
 
 /**
  * Cảnh báo định mức tồn kho tối thiểu & nguy cơ thiếu hụt hàng hóa
- * Hiển thị trên Dashboard cho: Quản lý kho (ROLE_WH_MANAGER) và Quản trị viên (ROLE_ADMIN)
+ * Hiển thị trên Dashboard cho: Quản lý kho (ROLE_WH_MANAGER)
  */
 export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboardAlertProps> = ({
   warehouseCode,
@@ -35,11 +35,10 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
   const [totalAlerts, setTotalAlerts] = useState<number>(0);
   const [criticalCount, setCriticalCount] = useState<number>(0);
 
-  // Chỉ hiển thị trên Dashboard cho Quản lý kho (ROLE_WH_MANAGER) và Quản trị viên (ROLE_ADMIN)
+  // Chỉ hiển thị trên Dashboard cho Quản lý kho (ROLE_WH_MANAGER) theo đúng phân quyền vai trò
   const isWarehouseManager =
     currentRole === 'ROLE_WH_MANAGER' ||
-    currentRole === 'ROLE_ADMIN' ||
-    Boolean(user?.roles?.some((r) => r === 'ROLE_WH_MANAGER' || r === 'ROLE_ADMIN'));
+    Boolean(user?.roles?.some((r) => r === 'ROLE_WH_MANAGER'));
 
   const loadAlertData = () => {
     if (!isWarehouseManager) {
@@ -80,7 +79,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
     );
   };
 
-  // Nếu không thuộc vai trò quản lý kho/admin thì không hiển thị cảnh báo
+  // Nếu không thuộc vai trò Quản lý kho thì không hiển thị cảnh báo
   if (!isWarehouseManager) {
     return null;
   }
