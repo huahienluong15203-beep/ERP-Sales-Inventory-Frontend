@@ -73,7 +73,7 @@ export const StockLedgerPage: React.FC = () => {
     safe: 0
   });
 
-  // Chỉnh sửa định mức trực tiếp trên dòng (inline edit AC1)
+  // Chỉnh sửa định mức trực tiếp trên dòng (inline edit)
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editMinValue, setEditMinValue] = useState<number>(0);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -240,7 +240,7 @@ export const StockLedgerPage: React.FC = () => {
     setEditingId(null);
   };
 
-  // Lưu cấu hình ngưỡng tối thiểu (AC1)
+  // Lưu cấu hình ngưỡng tối thiểu
   const handleSaveMinThreshold = async (cfg: MinStockThresholdConfig) => {
     if (editMinValue < 0) {
       showToast('Lỗi định mức', 'Định mức tồn tối thiểu không thể nhỏ hơn 0', 'error');
@@ -299,7 +299,7 @@ export const StockLedgerPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 2: Dưới Định Mức (AC2) */}
+        {/* Card 2: Dưới Định Mức */}
         <div
           onClick={() => {
             setHighlightedKey(null);
@@ -450,7 +450,7 @@ export const StockLedgerPage: React.FC = () => {
         </form>
       </div>
 
-      {/* BẢNG SỔ TỒN KHO & CẢNH BÁO NỔI BẬT (AC2) */}
+      {/* BẢNG SỔ TỒN KHO & CẢNH BÁO NỔI BẬT */}
       <div className="bg-white rounded-3xl border border-gray-200/80 shadow-xs overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-xs text-gray-500 flex items-center justify-center gap-2">
@@ -459,9 +459,21 @@ export const StockLedgerPage: React.FC = () => {
           </div>
         ) : configs.length === 0 ? (
           <div className="p-12 text-center space-y-2">
-            <Boxes size={36} className="mx-auto text-gray-300" />
-            <div className="text-sm font-bold text-gray-700">Không tìm thấy bản ghi tồn kho nào</div>
-            <div className="text-xs text-gray-400">Thay đổi bộ lọc hoặc từ khóa tìm kiếm</div>
+            {statusFilter === 'BELOW' ? (
+              <>
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-2 border border-emerald-200 shadow-2xs">
+                  <CheckCircle2 size={24} />
+                </div>
+                <div className="text-sm font-bold text-gray-800">Tất cả sản phẩm đều đạt định mức dự trữ an toàn!</div>
+                <div className="text-xs text-gray-400">Không có mặt hàng nào ở dưới ngưỡng tồn tối thiểu đã thiết lập.</div>
+              </>
+            ) : (
+              <>
+                <Boxes size={36} className="mx-auto text-gray-300" />
+                <div className="text-sm font-bold text-gray-700">Không tìm thấy bản ghi tồn kho nào</div>
+                <div className="text-xs text-gray-400">Thay đổi bộ lọc hoặc từ khóa tìm kiếm</div>
+              </>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">

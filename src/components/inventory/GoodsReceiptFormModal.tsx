@@ -543,7 +543,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
               });
             }
           })
-          .catch(() => {});
+          .catch(() => { });
       } else {
         setLines([]);
       }
@@ -902,8 +902,8 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                   value={vehiclePlate}
                   onChange={(e) => setVehiclePlate(e.target.value)}
                   className={`w-full text-xs border rounded-xl p-2.5 bg-white font-mono uppercase focus:outline-none focus:ring-2 ${formErrors.some((e) => e.includes('Biển số xe'))
-                      ? 'border-rose-400 ring-2 ring-rose-500/20'
-                      : 'border-gray-200 focus:ring-orange-500/20'
+                    ? 'border-rose-400 ring-2 ring-rose-500/20'
+                    : 'border-gray-200 focus:ring-orange-500/20'
                     }`}
                 />
               </div>
@@ -918,8 +918,8 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                   value={driverName}
                   onChange={(e) => setDriverName(e.target.value)}
                   className={`w-full text-xs border rounded-xl p-2.5 bg-white focus:outline-none focus:ring-2 ${formErrors.some((e) => e.includes('Tên tài xế'))
-                      ? 'border-rose-400 ring-2 ring-rose-500/20'
-                      : 'border-gray-200 focus:ring-orange-500/20'
+                    ? 'border-rose-400 ring-2 ring-rose-500/20'
+                    : 'border-gray-200 focus:ring-orange-500/20'
                     }`}
                 />
               </div>
