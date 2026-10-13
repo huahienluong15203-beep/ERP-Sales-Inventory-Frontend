@@ -128,15 +128,15 @@ export const GoodsReceiptManagementPage: React.FC = () => {
           </button>
 
           {canEditInventory && (
-          <button
-            type="button"
-            onClick={() => setIsFormModalOpen(true)}
-            className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#F85606] to-orange-500 hover:from-orange-600 hover:to-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-orange-500/20 transition cursor-pointer h-9"
-            id="create-receipt-btn"
-          >
-            <Plus size={16} />
-            <span>Lập Phiếu Nhập Kho</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setIsFormModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#F85606] to-orange-500 hover:from-orange-600 hover:to-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-orange-500/20 transition cursor-pointer h-9"
+              id="create-receipt-btn"
+            >
+              <Plus size={16} />
+              <span>Lập Phiếu Nhập Kho</span>
+            </button>
           )}
         </div>
       </div>
@@ -190,28 +190,28 @@ export const GoodsReceiptManagementPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center sm:justify-end gap-2">
-        <SearchSelect
-          value={selectedWarehouse}
-          onChange={(e) => setSelectedWarehouse(e.target.value)}
-          className="text-xs font-semibold border border-gray-200 rounded-xl p-2.5 bg-white"
-        >
-          <option value="">Tất cả các kho</option>
-          {SYSTEM_WAREHOUSES.map((w) => (
-            <option key={w.code} value={w.code}>
-              {w.name}
-            </option>
-          ))}
-        </SearchSelect>
+          <SearchSelect
+            value={selectedWarehouse}
+            onChange={(e) => setSelectedWarehouse(e.target.value)}
+            className="text-xs font-semibold border border-gray-200 rounded-xl p-2.5 bg-white"
+          >
+            <option value="">Tất cả các kho</option>
+            {SYSTEM_WAREHOUSES.map((w) => (
+              <option key={w.code} value={w.code}>
+                {w.name}
+              </option>
+            ))}
+          </SearchSelect>
 
-        <SearchSelect
-          value={selectedStatus}
-          onChange={(e) => setSelectedStatus(e.target.value)}
-          className="text-xs font-semibold border border-gray-200 rounded-xl p-2.5 bg-white"
-        >
-          <option value="">Tất cả trạng thái</option>
-          <option value="CONFIRMED">Đã xác nhận (Đã cộng tồn)</option>
-          <option value="DRAFT">Phiếu nháp (Chưa cộng tồn)</option>
-        </SearchSelect>
+          <SearchSelect
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            className="text-xs font-semibold border border-gray-200 rounded-xl p-2.5 bg-white"
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="CONFIRMED">Đã xác nhận (Đã cộng tồn)</option>
+            <option value="DRAFT">Phiếu nháp (Chưa cộng tồn)</option>
+          </SearchSelect>
         </div>
       </div>
 
@@ -222,13 +222,13 @@ export const GoodsReceiptManagementPage: React.FC = () => {
             <thead>
               <tr className="bg-gray-50/90 text-gray-600 font-bold border-b border-gray-200">
                 <th className="py-3 px-4">Mã phiếu</th>
-                <th className="py-3 px-4">Nhà cung cấp (AC1)</th>
-                <th className="py-3 px-4">Số chứng từ (AC1)</th>
-                <th className="py-3 px-4">Kho nhập (AC1)</th>
+                <th className="py-3 px-4">Nhà cung cấp </th>
+                <th className="py-3 px-4">Số chứng từ </th>
+                <th className="py-3 px-4">Kho nhập </th>
                 <th className="py-3 px-4">Ngày nhập</th>
                 <th className="py-3 px-4 text-center">Số SKU</th>
-                <th className="py-3 px-4 text-center">Quy đổi cơ sở (AC2)</th>
-                <th className="py-3 px-4 text-center">Trạng thái (AC4)</th>
+                <th className="py-3 px-4 text-center">Quy đổi cơ sở </th>
+                <th className="py-3 px-4 text-center">Trạng thái </th>
                 <th className="py-3 px-4 text-center w-28">Thao tác</th>
               </tr>
             </thead>
@@ -390,9 +390,8 @@ export const GoodsReceiptManagementPage: React.FC = () => {
                 <div>
                   <span className="text-gray-400 block text-[11px]">Trạng thái tồn kho (AC4)</span>
                   <span
-                    className={`font-bold ${
-                      selectedDetailReceipt.status === 'CONFIRMED' ? 'text-emerald-600' : 'text-gray-600'
-                    }`}
+                    className={`font-bold ${selectedDetailReceipt.status === 'CONFIRMED' ? 'text-emerald-600' : 'text-gray-600'
+                      }`}
                   >
                     {selectedDetailReceipt.status === 'CONFIRMED' ? 'ĐÃ CỘNG TỒN' : 'CHƯA CỘNG TỒN (NHÁP)'}
                   </span>

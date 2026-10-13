@@ -220,9 +220,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                           {item.productName}
                         </div>
                       </div>
-                      <span className="shrink-0 text-[10px] font-black px-1.5 py-0.5 rounded-md bg-white text-rose-700">
-                        -{item.deficitQuantity} {item.unit}
-                      </span>
+
                     </div>
 
                     <div className="flex items-center justify-between text-xs pt-1 border-t border-white/15">

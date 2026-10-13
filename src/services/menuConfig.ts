@@ -49,7 +49,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Bán hàng',
     icon: 'ShoppingCart',
     epic: 'Đặt hàng & Duyệt ngoại lệ',
-    description: '',
+    description: 'Theo dõi tiến trình xử lý đơn hàng toàn trình, phê duyệt và trạng thái giao hàng',
     allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_WAREHOUSE', 'ROLE_WH_MANAGER']
   },
 
@@ -112,7 +112,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Sản phẩm & Kho',
     icon: 'Package',
     epic: 'Sản phẩm & Tồn kho',
-    description: 'Lập phiếu nhập kho từ nhà cung cấp, ghi nhận số lô, hạn dùng và quy đổi đơn vị cơ sở (S5-04)',
+    description: 'Lập phiếu nhập kho từ nhà cung cấp, ghi nhận số lô, hạn dùng và quy đổi đơn vị cơ sở',
     allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
   },
 
@@ -122,7 +122,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Sản phẩm & Kho',
     icon: 'Truck',
     epic: 'Sản phẩm & Tồn kho',
-    description: 'Lập phiếu chuyển kho nội bộ, theo dõi hàng đang đi đường và xác nhận nhận đủ (S5-07)',
+    description: 'Lập phiếu chuyển kho nội bộ, theo dõi hàng đang đi đường và xác nhận nhận đủ ',
     allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
   },
 
