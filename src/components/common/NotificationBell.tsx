@@ -91,10 +91,16 @@ export const NotificationBell: React.FC = () => {
   const totalCount = alerts.length;
   const criticalCount = alerts.filter((a) => a.severity === 'CRITICAL').length;
 
-  const handleOpenLedger = (productSku?: string) => {
+  const handleOpenLedger = (productSku?: string, warehouseCode?: string) => {
     setIsOpen(false);
     if (productSku) {
-      navigate(`/inventory/ledger?sku=${encodeURIComponent(productSku)}`);
+      const q = new URLSearchParams();
+      q.set('sku', productSku);
+      if (warehouseCode) {
+        q.set('warehouseCode', warehouseCode);
+      }
+      q.set('highlight', 'true');
+      navigate(`/inventory/ledger?${q.toString()}`);
     } else {
       navigate('/inventory/ledger');
     }
@@ -202,7 +208,7 @@ export const NotificationBell: React.FC = () => {
                 return (
                   <div
                     key={item.id}
-                    onClick={() => handleOpenLedger(item.productSku)}
+                    onClick={() => handleOpenLedger(item.productSku, item.warehouseCode)}
                     className={`p-3.5 transition cursor-pointer group flex items-start gap-3 ${isDark
                       ? 'hover:bg-[#202024]/70 active:bg-[#202024]'
                       : 'hover:bg-rose-50/50 active:bg-rose-100/50'

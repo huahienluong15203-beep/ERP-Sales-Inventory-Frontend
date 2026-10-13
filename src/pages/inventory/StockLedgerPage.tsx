@@ -18,12 +18,13 @@ import {
   getDashboardMinStockSummary,
   updateMinStockThreshold
 } from '../../services/stockAlertApi';
-import { useNavigate, useLocation } from '../../routes/Router';
+import { useLocation } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { NumberInput } from '../../components/common/NumberInput';
 import { Pagination } from '../../components/common/Pagination';
 import { WarehouseMinStockDashboardAlert } from '../../components/inventory/WarehouseMinStockDashboardAlert';
+import { GoodsReceiptFormModal } from '../../components/inventory/GoodsReceiptFormModal';
 
 /**
  * S5-09 (Nguyễn Văn Minh): Sổ Tồn Kho & Khai Báo Ngưỡng Tồn Tối Thiểu
@@ -32,7 +33,6 @@ import { WarehouseMinStockDashboardAlert } from '../../components/inventory/Ware
  * - AC2: Hàng dưới ngưỡng hiển thị nổi bật trong sổ tồn và trên dashboard kho
  */
 export const StockLedgerPage: React.FC = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { showToast, currentRole } = useAuth();
 
@@ -51,8 +51,15 @@ export const StockLedgerPage: React.FC = () => {
 
   // Bộ lọc
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('ALL');
-  const [onlyBelowThreshold, setOnlyBelowThreshold] = useState<boolean>(false);
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'BELOW' | 'CRITICAL' | 'SAFE'>('ALL');
   const [keyword, setKeyword] = useState<string>('');
+
+  // Highlight SKU được bấm từ thông báo chuông hoặc thẻ cảnh báo
+  const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
+
+  // Modal lập nhanh phiếu nhập kho NCC trực tiếp tại trang
+  const [selectedAlertForReceipt, setSelectedAlertForReceipt] = useState<MinStockThresholdConfig | null>(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
 
   // Thống kê nhanh toàn bộ hệ thống
   const [stats, setStats] = useState({
@@ -71,7 +78,7 @@ export const StockLedgerPage: React.FC = () => {
     targetPage = page,
     targetSize = size,
     kw = keyword,
-    belowOnly = onlyBelowThreshold,
+    status = statusFilter,
     wh = selectedWarehouse
   ) => {
     setLoading(true);
@@ -79,7 +86,7 @@ export const StockLedgerPage: React.FC = () => {
       const [pagedRes, summary] = await Promise.all([
         fetchMinStockConfigsPaged({
           warehouseCode: wh,
-          onlyBelowThreshold: belowOnly,
+          status,
           keyword: kw,
           page: targetPage,
           size: targetSize
@@ -114,25 +121,37 @@ export const StockLedgerPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData(page, size, keyword, onlyBelowThreshold, selectedWarehouse);
-  }, [page, size, selectedWarehouse, onlyBelowThreshold]);
+    loadData(page, size, keyword, statusFilter, selectedWarehouse);
+  }, [page, size, selectedWarehouse, statusFilter]);
 
-  // Tự động nhận diện SKU từ thông báo chuông header nếu có
+  // Tự động nhận diện SKU & Kho từ thông báo chuông header nếu có
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const skuParam = params.get('sku');
-    if (skuParam) {
+    const whParam = params.get('warehouseCode');
+    const isHighlight = params.get('highlight') === 'true';
+
+    if (skuParam && isHighlight) {
+      const key = whParam ? `${skuParam}_${whParam}` : skuParam;
+      setHighlightedKey(key);
       setKeyword(skuParam);
-      setOnlyBelowThreshold(true);
+      if (whParam) {
+        setSelectedWarehouse(whParam);
+      }
       setPage(0);
-      loadData(0, size, skuParam, true, selectedWarehouse);
+      loadData(0, size, skuParam, 'ALL', whParam || selectedWarehouse);
     }
-  }, [location.search]);
+
+    return () => {
+      // Khi thoát page ra thì mất highlight
+      setHighlightedKey(null);
+    };
+  }, [location.pathname, location.search]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(0);
-    loadData(0, size, keyword, onlyBelowThreshold, selectedWarehouse);
+    loadData(0, size, keyword, statusFilter, selectedWarehouse);
   };
 
   const handleStartEdit = (cfg: MinStockThresholdConfig) => {
@@ -187,20 +206,40 @@ export const StockLedgerPage: React.FC = () => {
         hideLedgerButton={true}
       />
 
-      {/* KPI CARDS */}
+      {/* 4 THẺ THỐNG KÊ (KPI CARDS) - HỖ TRỢ NHẤP ĐỂ LỌC TRỰC TIẾP */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-2xs">
+        {/* Card 1: Tổng SKU theo kho */}
+        <div
+          onClick={() => {
+            setStatusFilter('ALL');
+            setPage(0);
+          }}
+          className={`p-3.5 rounded-2xl border shadow-2xs cursor-pointer transition select-none ${
+            statusFilter === 'ALL'
+              ? 'bg-gray-100/90 border-gray-400 ring-2 ring-gray-400/30'
+              : 'bg-white border-gray-200/80 hover:bg-gray-50/80'
+          }`}
+          title="Nhấp để hiển thị tất cả hàng hóa"
+        >
           <div className="text-[11px] text-gray-500 font-semibold">Tổng SKU theo kho</div>
           <div className="text-xl font-black text-gray-900 mt-0.5">{stats.total}</div>
+          <div className="text-[10px] text-gray-400 mt-1 font-medium">
+            {statusFilter === 'ALL' ? 'Đang hiển thị tất cả' : 'Nhấp để xem tất cả'}
+          </div>
         </div>
 
-        {/* THẺ BÁO ĐỎ QUAN TRỌNG NHẤT (AC2) */}
+        {/* Card 2: Dưới Định Mức (AC2) */}
         <div
-          onClick={() => setOnlyBelowThreshold(!onlyBelowThreshold)}
-          className={`p-4 rounded-2xl border shadow-xs cursor-pointer transition ${onlyBelowThreshold || stats.below > 0
-            ? 'bg-rose-50/70 border-rose-300 ring-2 ring-rose-500/20'
-            : 'bg-white border-gray-200/80'
-            }`}
+          onClick={() => {
+            setStatusFilter(statusFilter === 'BELOW' ? 'ALL' : 'BELOW');
+            setPage(0);
+          }}
+          className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition select-none ${
+            statusFilter === 'BELOW'
+              ? 'bg-rose-50/90 border-rose-400 ring-2 ring-rose-500/30 shadow-xs'
+              : 'bg-white border-rose-200/80 hover:bg-rose-50/40'
+          }`}
+          title="Nhấp để lọc nhanh các mặt hàng dưới định mức"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-rose-700 uppercase flex items-center gap-1">
@@ -215,21 +254,49 @@ export const StockLedgerPage: React.FC = () => {
             <span>{stats.below}</span>
             <span className="text-xs font-semibold text-rose-600">Mặt hàng</span>
           </div>
-          <div className="text-[11px] text-rose-600 mt-0.5">
-            {onlyBelowThreshold ? 'Đang lọc xem các SKU thiếu hụt' : 'Nhấp để lọc nhanh'}
+          <div className="text-[11px] text-rose-600 mt-0.5 font-medium">
+            {statusFilter === 'BELOW' ? 'Đang lọc xem các SKU thiếu hụt' : 'Nhấp để lọc nhanh'}
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-red-200/80 shadow-xs">
+        {/* Card 3: Cạn Kiệt Tồn (Tồn = 0) */}
+        <div
+          onClick={() => {
+            setStatusFilter(statusFilter === 'CRITICAL' ? 'ALL' : 'CRITICAL');
+            setPage(0);
+          }}
+          className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition select-none ${
+            statusFilter === 'CRITICAL'
+              ? 'bg-red-50/90 border-red-400 ring-2 ring-red-500/30 shadow-xs'
+              : 'bg-white border-red-200/80 hover:bg-red-50/40'
+          }`}
+          title="Nhấp để lọc nhanh các mặt hàng cạn kiệt tồn kho"
+        >
           <div className="text-xs text-red-600 font-bold">Cạn Kiệt Tồn (Tồn = 0)</div>
           <div className="text-2xl font-black text-red-700 mt-1">{stats.critical}</div>
-          <div className="text-[11px] text-red-500">Nguy cơ mất doanh số ngay lập tức</div>
+          <div className="text-[11px] text-red-500 mt-0.5 font-medium">
+            {statusFilter === 'CRITICAL' ? 'Đang lọc xem hàng hết sạch' : 'Nguy cơ mất doanh số ngay lập tức'}
+          </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-emerald-200/80 shadow-xs">
+        {/* Card 4: Tồn Kho An Toàn */}
+        <div
+          onClick={() => {
+            setStatusFilter(statusFilter === 'SAFE' ? 'ALL' : 'SAFE');
+            setPage(0);
+          }}
+          className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition select-none ${
+            statusFilter === 'SAFE'
+              ? 'bg-emerald-50/90 border-emerald-400 ring-2 ring-emerald-500/30 shadow-xs'
+              : 'bg-white border-emerald-200/80 hover:bg-emerald-50/40'
+          }`}
+          title="Nhấp để lọc nhanh các mặt hàng tồn an toàn"
+        >
           <div className="text-xs text-emerald-600 font-bold">Tồn Kho An Toàn</div>
           <div className="text-2xl font-black text-emerald-700 mt-1">{stats.safe}</div>
-          <div className="text-[11px] text-emerald-600">Đạt và vượt mức dự trữ tối thiểu</div>
+          <div className="text-[11px] text-emerald-600 mt-0.5 font-medium">
+            {statusFilter === 'SAFE' ? 'Đang lọc xem hàng an toàn' : 'Đạt và vượt mức dự trữ tối thiểu'}
+          </div>
         </div>
       </div>
 
@@ -265,21 +332,20 @@ export const StockLedgerPage: React.FC = () => {
               ))}
             </SearchSelect>
 
-            {/* Toggle Chỉ hiển thị SKU dưới định mức */}
-            <button
-              type="button"
-              onClick={() => {
-                setOnlyBelowThreshold(!onlyBelowThreshold);
+            {/* Ô chọn Trạng Thái Tồn (thay thế nút toggle) */}
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value as 'ALL' | 'BELOW' | 'CRITICAL' | 'SAFE');
                 setPage(0);
               }}
-              className={`px-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${onlyBelowThreshold
-                ? 'bg-rose-600 text-white shadow-xs'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+              className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 cursor-pointer text-gray-700"
             >
-              <AlertTriangle size={14} />
-              <span>Chỉ hiện SKU thiếu hụt</span>
-            </button>
+              <option value="ALL">Tất cả trạng thái tồn</option>
+              <option value="BELOW">⚠️ Dưới định mức (Cần bổ sung)</option>
+              <option value="CRITICAL">🚨 Cạn kiệt tồn (Tồn = 0)</option>
+              <option value="SAFE">✅ Tồn kho an toàn</option>
+            </select>
 
             <button
               type="submit"
@@ -306,16 +372,26 @@ export const StockLedgerPage: React.FC = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs table-fixed">
+              {/* Định nghĩa kích thước cố định cho từng cột: không xê dịch khi chỉnh sửa */}
+              <colgroup>
+                <col className="w-[28%]" />
+                <col className="w-[18%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[13%]" />
+                <col className="w-[11%]" />
+                <col className="w-[8%]" />
+              </colgroup>
               <thead className="bg-gray-50 text-gray-700 font-bold uppercase text-[11px] border-b border-gray-200">
                 <tr>
-                  <th className="py-3 px-4">Mã SKU & Tên Hàng</th>
-                  <th className="py-3 px-4">Kho Lưu Trữ</th>
-                  <th className="py-3 px-4 text-center">Tồn Hiện Tại</th>
-                  <th className="py-3 px-4 text-center">Tồn Khả Dụng</th>
-                  <th className="py-3 px-4 text-center min-w-[140px]">Định Mức Tối Thiểu</th>
-                  <th className="py-3 px-4 text-center">Trạng Thái Tồn</th>
-                  <th className="py-3 px-4 text-right">Thao Tác</th>
+                  <th className="py-3 px-3">Mã SKU & Tên Hàng</th>
+                  <th className="py-3 px-3">Kho Lưu Trữ</th>
+                  <th className="py-3 px-2 text-center">Tồn Hiện Tại</th>
+                  <th className="py-3 px-2 text-center">Tồn Khả Dụng</th>
+                  <th className="py-3 px-2 text-center">Định Mức Tối Thiểu</th>
+                  <th className="py-3 px-2 text-center">Trạng Thái Tồn</th>
+                  <th className="py-3 px-3 text-right">Thao Tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -323,154 +399,152 @@ export const StockLedgerPage: React.FC = () => {
                   const isEditing = editingId === item.id;
                   const isSaving = savingId === item.id;
                   const isBelow = Boolean(item.isBelowThreshold || (item as any).belowThreshold || item.currentStock < item.minThreshold);
+                  const itemKey = `${item.productSku}_${item.warehouseCode}`;
+                  const isHighlighted = highlightedKey ? (highlightedKey === itemKey || highlightedKey === item.productSku) : false;
 
                   return (
                     <tr
                       key={item.id}
-                      className={`transition ${isBelow
-                        ? 'bg-rose-50/40 hover:bg-rose-50/70 border-l-4 border-rose-500'
-                        : 'hover:bg-gray-50/70 border-l-4 border-transparent'
-                        }`}
+                      className={`transition duration-150 ${
+                        isHighlighted
+                          ? 'bg-rose-100/80 hover:bg-rose-100 border-l-4 border-rose-600 ring-2 ring-rose-500/40 shadow-sm'
+                          : isBelow
+                            ? 'bg-rose-50/20 hover:bg-rose-50/50 border-l-4 border-transparent'
+                            : 'hover:bg-gray-50/70 border-l-4 border-transparent'
+                      }`}
                     >
-                      {/* SKU & Tên hàng */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-mono font-bold text-gray-900">{item.productSku}</div>
-                        <div className="font-semibold text-gray-800 text-xs mt-0.5">{item.productName}</div>
-                        <div className="text-[10px] text-gray-400">Nhóm: {item.category}</div>
+                      {/* 1. Mã SKU & Tên hàng */}
+                      <td className="py-3 px-3 overflow-hidden">
+                        <div className="font-mono font-bold text-gray-900 truncate">{item.productSku}</div>
+                        <div className="font-semibold text-gray-800 text-xs mt-0.5 truncate" title={item.productName}>
+                          {item.productName}
+                        </div>
+                        <div className="text-[10px] text-gray-400 truncate">Nhóm: {item.category}</div>
                       </td>
 
-                      {/* Kho */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-gray-800">{item.warehouseName}</div>
+                      {/* 2. Kho lưu trữ */}
+                      <td className="py-3 px-3 overflow-hidden">
+                        <div className="font-bold text-gray-800 truncate" title={item.warehouseName}>
+                          {item.warehouseName}
+                        </div>
                         <div className="text-[10px] font-mono text-gray-400">{item.warehouseCode}</div>
                       </td>
 
-                      {/* Tồn hiện tại */}
-                      <td className="py-3.5 px-4 text-center">
+                      {/* 3. Tồn hiện tại */}
+                      <td className="py-3 px-2 text-center overflow-hidden">
                         <span
-                          className={`inline-block font-bold text-xs px-2.5 py-1 rounded-lg ${isBelow
-                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                            : 'bg-emerald-50 text-emerald-800 border border-emerald-100'
-                            }`}
+                          className={`inline-block font-bold text-xs px-2 py-0.5 rounded-lg whitespace-nowrap ${
+                            isBelow
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                              : 'bg-emerald-50 text-emerald-800 border border-emerald-100'
+                          }`}
                         >
                           {item.currentStock.toLocaleString('vi-VN')} {item.unit}
                         </span>
                       </td>
 
-                      {/* Tồn khả dụng */}
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="font-bold text-gray-700">
+                      {/* 4. Tồn khả dụng */}
+                      <td className="py-3 px-2 text-center overflow-hidden">
+                        <span className="font-bold text-gray-700 whitespace-nowrap">
                           {item.availableStock.toLocaleString('vi-VN')} {item.unit}
                         </span>
                       </td>
 
-                      {/* Định mức tồn tối thiểu & Module chỉnh sửa gợi ý */}
-                      <td className="py-3.5 px-4 text-center">
+                      {/* 5. Định mức tối thiểu (Sửa trực tiếp không làm xê dịch bảng) */}
+                      <td className="py-3 px-2 text-center overflow-visible">
                         {isEditing ? (
-                          <div className="inline-flex flex-col items-center gap-1.5 p-2 bg-rose-50/90 rounded-xl border border-rose-200 shadow-2xs">
-                            <div className="flex items-center gap-1">
-                              <NumberInput
-                                min="0"
-                                value={editMinValue}
-                                onChange={(e) => setEditMinValue(Math.max(0, Number(e.target.value)))}
-                                className="w-20 text-center font-bold text-xs border border-rose-300 rounded-lg p-1 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20"
-                                autoFocus
-                              />
-                              <button
-                                type="button"
-                                disabled={isSaving}
-                                onClick={() => handleSaveMinThreshold(item)}
-                                className="p-1 rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition"
-                                title="Lưu định mức"
-                              >
-                                <Check size={14} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={handleCancelEdit}
-                                className="p-1 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
-                                title="Hủy"
-                              >
-                                <X size={14} />
-                              </button>
-                            </div>
+                          <div className="relative inline-flex items-center justify-center gap-1">
+                            <NumberInput
+                              min="0"
+                              value={editMinValue}
+                              onChange={(e) => setEditMinValue(Math.max(0, Number(e.target.value)))}
+                              className="w-14 h-7 text-center font-bold text-xs border border-rose-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-rose-500 py-0 px-1"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              disabled={isSaving}
+                              onClick={() => handleSaveMinThreshold(item)}
+                              className="w-6 h-7 rounded-md bg-rose-600 text-white hover:bg-rose-700 transition flex items-center justify-center shrink-0 cursor-pointer"
+                              title="Lưu định mức"
+                            >
+                              <Check size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleCancelEdit}
+                              className="w-6 h-7 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 transition flex items-center justify-center shrink-0 cursor-pointer"
+                              title="Hủy"
+                            >
+                              <X size={13} />
+                            </button>
+                            {/* Gợi ý nhập nổi bên dưới tuyệt đối, không làm tăng chiều cao cell hay xê dịch cột */}
                             {item.suggestedReorderQuantity > 0 && (
-                              <div className="text-[10px] text-rose-700 font-semibold whitespace-nowrap flex items-center gap-1">
-                                <span>💡 Gợi ý nhập:</span>
-                                <strong className="font-bold">+{item.suggestedReorderQuantity} {item.unit}</strong>
+                              <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap z-20 text-[10px] bg-white text-rose-700 px-2 py-0.5 rounded-md shadow-md border border-rose-200 font-bold pointer-events-none">
+                                💡 Gợi ý: +{item.suggestedReorderQuantity} {item.unit}
                               </div>
                             )}
                           </div>
                         ) : (
-                          <div className="flex items-center justify-center gap-1.5 group">
-                            <span className="font-bold text-gray-800">
+                          <div
+                            className="inline-flex items-center justify-center gap-1.5 group cursor-pointer"
+                            onClick={() => canEditInventory && handleStartEdit(item)}
+                          >
+                            <span className="font-bold text-gray-800 whitespace-nowrap">
                               {item.minThreshold.toLocaleString('vi-VN')} {item.unit}
                             </span>
                             {canEditInventory && (
                               <button
                                 type="button"
-                                onClick={() => handleStartEdit(item)}
-                                className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-rose-600 rounded transition"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStartEdit(item);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-rose-600 rounded transition cursor-pointer"
                                 title="Sửa định mức tồn tối thiểu"
                               >
-                                <Edit2 size={12} />
+                                <Edit2 size={11} />
                               </button>
                             )}
                           </div>
                         )}
                       </td>
 
-                      {/* Trạng thái tồn */}
-                      <td className="py-3.5 px-4 text-center">
+                      {/* 6. Trạng thái tồn */}
+                      <td className="py-3 px-2 text-center overflow-hidden">
                         {item.severity === 'CRITICAL' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-                            <AlertTriangle size={12} className="text-rose-500 shrink-0" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
+                            <AlertTriangle size={11} className="text-rose-500 shrink-0" />
                             <span>Thiếu {item.deficitQuantity} {item.unit}</span>
                           </span>
                         ) : item.severity === 'WARNING' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                            <TrendingDown size={12} className="text-amber-500 shrink-0" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
+                            <TrendingDown size={11} className="text-amber-500 shrink-0" />
                             <span>Thiếu {item.deficitQuantity} {item.unit}</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                            <CheckCircle2 size={11} className="text-emerald-500 shrink-0" />
                             <span>Đạt định mức</span>
                           </span>
                         )}
                       </td>
 
-                      {/* Thao tác */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                      {/* 7. Thao tác */}
+                      <td className="py-3 px-3 text-right overflow-hidden">
+                        <div className="flex items-center justify-end">
                           {isBelow && canEditInventory && (
                             <button
                               type="button"
-                              onClick={() =>
-                                navigate(
-                                  `/inventory/receipts?warehouseCode=${encodeURIComponent(
-                                    item.warehouseCode
-                                  )}&sku=${encodeURIComponent(
-                                    item.productSku
-                                  )}&qty=${item.suggestedReorderQuantity}&create=1`
-                                )
-                              }
-                              className="px-2.5 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
-                              title={`Lập phiếu nhập NCC (Gợi ý đặt: +${item.suggestedReorderQuantity} ${item.unit})`}
+                              onClick={() => {
+                                setSelectedAlertForReceipt(item);
+                                setIsReceiptModalOpen(true);
+                              }}
+                              className="px-2.5 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                              title={`Lập phiếu nhập nhanh NCC (Gợi ý đặt: +${item.suggestedReorderQuantity} ${item.unit})`}
                             >
-                              <ShoppingCart size={13} />
+                              <ShoppingCart size={12} />
                               <span>Đặt NCC</span>
-                            </button>
-                          )}
-
-                          {canEditInventory && (
-                            <button
-                              type="button"
-                              onClick={() => handleStartEdit(item)}
-                              className="p-1.5 text-gray-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-gray-200 transition cursor-pointer"
-                              title={`Chỉnh sửa định mức${item.suggestedReorderQuantity > 0 ? ` (Gợi ý nhập: +${item.suggestedReorderQuantity} ${item.unit})` : ''}`}
-                            >
-                              <Edit2 size={13} />
                             </button>
                           )}
                         </div>
@@ -500,6 +574,30 @@ export const StockLedgerPage: React.FC = () => {
           />
         )}
       </div>
+
+      {/* MODAL LẬP PHIẾU NHẬP NCC TRỰC TIẾP (QUICK MODULE) */}
+      <GoodsReceiptFormModal
+        isOpen={isReceiptModalOpen}
+        initialWarehouseCode={selectedAlertForReceipt?.warehouseCode}
+        initialProductSku={selectedAlertForReceipt?.productSku}
+        initialProductName={selectedAlertForReceipt?.productName}
+        initialQuantity={selectedAlertForReceipt?.suggestedReorderQuantity}
+        initialNote={
+          selectedAlertForReceipt
+            ? `Nhập nhanh bù hàng dưới định mức tồn cho ${selectedAlertForReceipt.warehouseName} (Đề xuất: +${selectedAlertForReceipt.suggestedReorderQuantity} ${selectedAlertForReceipt.unit})`
+            : undefined
+        }
+        onClose={() => {
+          setIsReceiptModalOpen(false);
+          setSelectedAlertForReceipt(null);
+        }}
+        onSuccess={() => {
+          setIsReceiptModalOpen(false);
+          setSelectedAlertForReceipt(null);
+          showToast('Lập phiếu nhập thành công', 'Đã lưu phiếu nhập kho NCC', 'success');
+          loadData();
+        }}
+      />
     </div>
   );
 };

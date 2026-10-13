@@ -161,6 +161,7 @@ export interface PagedMinStockResult {
 export async function fetchMinStockConfigsPaged(params?: {
   warehouseCode?: string;
   onlyBelowThreshold?: boolean;
+  status?: 'ALL' | 'BELOW' | 'CRITICAL' | 'SAFE' | string;
   keyword?: string;
   page?: number;
   size?: number;
@@ -175,7 +176,9 @@ export async function fetchMinStockConfigsPaged(params?: {
     if (params?.warehouseCode && params.warehouseCode !== 'ALL') {
       q.set('warehouseCode', params.warehouseCode.trim());
     }
-    if (params?.onlyBelowThreshold) {
+    if (params?.status && params.status !== 'ALL') {
+      q.set('status', params.status.trim());
+    } else if (params?.onlyBelowThreshold) {
       q.set('belowThresholdOnly', 'true');
     }
     if (params?.keyword && params.keyword.trim()) {
@@ -218,7 +221,15 @@ export async function fetchMinStockConfigsPaged(params?: {
   if (params?.warehouseCode && params.warehouseCode !== 'ALL') {
     list = list.filter((c) => c.warehouseCode === params.warehouseCode);
   }
-  if (params?.onlyBelowThreshold) {
+  if (params?.status && params.status !== 'ALL') {
+    if (params.status === 'BELOW') {
+      list = list.filter((c) => c.isBelowThreshold);
+    } else if (params.status === 'CRITICAL') {
+      list = list.filter((c) => c.severity === 'CRITICAL');
+    } else if (params.status === 'SAFE') {
+      list = list.filter((c) => !c.isBelowThreshold);
+    }
+  } else if (params?.onlyBelowThreshold) {
     list = list.filter((c) => c.isBelowThreshold);
   }
   if (params?.keyword?.trim()) {
