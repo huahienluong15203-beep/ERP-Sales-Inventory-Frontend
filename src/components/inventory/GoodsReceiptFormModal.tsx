@@ -965,7 +965,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
 
             <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-xl border border-orange-200 shadow-2xs">
               <div className="text-right">
-                <div className="text-[10px] uppercase font-bold text-gray-400">Tổng quy đổi cơ sở (AC2)</div>
+                <div className="text-[10px] uppercase font-bold text-gray-400">Tổng quy đổi cơ sở</div>
                 <div className="text-sm font-black text-emerald-700 font-mono">
                   {formatQuantity(totalBaseQty)} đơn vị cơ sở
                 </div>

@@ -900,7 +900,7 @@ export const OrderCreatePage: React.FC = () => {
               </div>
               <p className="text-[11px] sm:text-xs text-amber-800 leading-relaxed">
                 Các sản phẩm ({belowFloorItems.map((i) => `${i.name} [${i.sku}]`).join(', ')}) có đơn giá thấp hơn giá sàn quy định.
-                Đơn hàng khi chốt sẽ chuyển sang trạng thái <strong>"Chờ duyệt" (Pending Approval)</strong> và cần Quản lý kinh doanh phê duyệt trước khi xuất kho.
+                Đơn hàng khi chốt sẽ chuyển sang trạng thái <strong>"Chờ duyệt"</strong> và cần Quản lý kinh doanh phê duyệt trước khi xuất kho.
               </p>
             </div>
           </div>
@@ -1230,7 +1230,7 @@ export const OrderCreatePage: React.FC = () => {
             </button>
           </div>
           <p className="text-[11px] text-gray-500 text-right">
-            {isAgencyLocked ? 'Đại lý đang bị khóa giao dịch - chặn tạo đơn mới (S3-07). ' : ''}
+            {isAgencyLocked ? 'Đại lý đang bị khóa giao dịch - chặn tạo đơn mới. ' : ''}
             {submitBlockedReason}
           </p>
         </div>

@@ -716,7 +716,7 @@ export const AgencyManagementPage: React.FC = () => {
               ? 'bg-orange-50 text-[#F85606] border border-orange-200/80 shadow-2xs'
               : 'text-gray-500 hover:text-gray-800'
               }`}
-            title="Chế độ danh thiếp / Tuyến ngoài đường cho Nhân viên kinh doanh (S3-08)"
+            title="Chế độ danh thiếp / Tuyến ngoài đường cho Nhân viên kinh doanh"
           >
             <Navigation size={13} />
             <span>Tuyến Đi Đường (Thẻ)</span>

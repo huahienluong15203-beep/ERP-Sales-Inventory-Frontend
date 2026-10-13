@@ -1141,7 +1141,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                   ) : (
                     <>
                       <Send size={16} />
-                      <span>GỬI ĐƠN HÀNG (CHỜ DUYỆT)</span>
+                      <span>GỬI ĐƠN HÀNG</span>
                     </>
                   )}
                 </button>
@@ -1193,7 +1193,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
 
             <div>
               <span className="inline-block px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold uppercase mb-1">
-                Trạng thái: Chờ duyệt (PENDING_APPROVAL)
+                Trạng thái: Chờ duyệt
               </span>
               <h3 className="text-lg font-black text-gray-900">
                 Gửi Đơn Hàng Thành Công!
