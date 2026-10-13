@@ -134,12 +134,26 @@ export const StockLedgerPage: React.FC = () => {
     if (skuParam && isHighlight) {
       const key = whParam ? `${skuParam}_${whParam}` : skuParam;
       setHighlightedKey(key);
-      setKeyword(skuParam);
-      if (whParam) {
-        setSelectedWarehouse(whParam);
-      }
+      // Để trống keyword để không bị bó cứng chỉ tìm mỗi sản phẩm đó
+      setKeyword('');
+      setStatusFilter('ALL');
+      const targetWarehouse = whParam || 'ALL';
+      setSelectedWarehouse(targetWarehouse);
       setPage(0);
-      loadData(0, size, skuParam, 'ALL', whParam || selectedWarehouse);
+      loadData(0, size, '', 'ALL', targetWarehouse);
+
+      // Xóa query params trên URL ngay sau khi load để khi F5/reload trang thì viền đỏ mất đi đúng thực tế
+      if (typeof window !== 'undefined' && window.history?.replaceState) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
+      // Cuộn mượt đến sản phẩm được bấm xem chi tiết
+      setTimeout(() => {
+        const el = document.querySelector(`[data-row-key="${key}"]`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 350);
     }
 
     return () => {
@@ -150,6 +164,7 @@ export const StockLedgerPage: React.FC = () => {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setHighlightedKey(null);
     setPage(0);
     loadData(0, size, keyword, statusFilter, selectedWarehouse);
   };
@@ -211,6 +226,7 @@ export const StockLedgerPage: React.FC = () => {
         {/* Card 1: Tổng SKU theo kho */}
         <div
           onClick={() => {
+            setHighlightedKey(null);
             setStatusFilter('ALL');
             setPage(0);
           }}
@@ -231,6 +247,7 @@ export const StockLedgerPage: React.FC = () => {
         {/* Card 2: Dưới Định Mức (AC2) */}
         <div
           onClick={() => {
+            setHighlightedKey(null);
             setStatusFilter(statusFilter === 'BELOW' ? 'ALL' : 'BELOW');
             setPage(0);
           }}
@@ -262,6 +279,7 @@ export const StockLedgerPage: React.FC = () => {
         {/* Card 3: Cạn Kiệt Tồn (Tồn = 0) */}
         <div
           onClick={() => {
+            setHighlightedKey(null);
             setStatusFilter(statusFilter === 'CRITICAL' ? 'ALL' : 'CRITICAL');
             setPage(0);
           }}
@@ -282,6 +300,7 @@ export const StockLedgerPage: React.FC = () => {
         {/* Card 4: Tồn Kho An Toàn */}
         <div
           onClick={() => {
+            setHighlightedKey(null);
             setStatusFilter(statusFilter === 'SAFE' ? 'ALL' : 'SAFE');
             setPage(0);
           }}
@@ -309,7 +328,10 @@ export const StockLedgerPage: React.FC = () => {
               type="text"
               placeholder="Tìm theo mã SKU, tên sản phẩm, nhóm hàng..."
               value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
+              onChange={(e) => {
+                setHighlightedKey(null);
+                setKeyword(e.target.value);
+              }}
               className="w-full text-xs pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
             />
           </div>
@@ -319,6 +341,7 @@ export const StockLedgerPage: React.FC = () => {
             <SearchSelect
               value={selectedWarehouse}
               onChange={(e) => {
+                setHighlightedKey(null);
                 setSelectedWarehouse(e.target.value);
                 setPage(0);
               }}
@@ -336,6 +359,7 @@ export const StockLedgerPage: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => {
+                setHighlightedKey(null);
                 setStatusFilter(e.target.value as 'ALL' | 'BELOW' | 'CRITICAL' | 'SAFE');
                 setPage(0);
               }}
@@ -375,13 +399,13 @@ export const StockLedgerPage: React.FC = () => {
             <table className="w-full text-left text-xs table-fixed">
               {/* Định nghĩa kích thước cố định cho từng cột: không xê dịch khi chỉnh sửa */}
               <colgroup>
-                <col className="w-[28%]" />
+                <col className="w-[26%]" />
                 <col className="w-[18%]" />
                 <col className="w-[11%]" />
                 <col className="w-[11%]" />
                 <col className="w-[13%]" />
                 <col className="w-[11%]" />
-                <col className="w-[8%]" />
+                <col className="w-[10%]" />
               </colgroup>
               <thead className="bg-gray-50 text-gray-700 font-bold uppercase text-[11px] border-b border-gray-200">
                 <tr>
@@ -391,7 +415,7 @@ export const StockLedgerPage: React.FC = () => {
                   <th className="py-3 px-2 text-center">Tồn Khả Dụng</th>
                   <th className="py-3 px-2 text-center">Định Mức Tối Thiểu</th>
                   <th className="py-3 px-2 text-center">Trạng Thái Tồn</th>
-                  <th className="py-3 px-3 text-right">Thao Tác</th>
+                  <th className="py-3 px-2 text-center">Thao Tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -405,6 +429,7 @@ export const StockLedgerPage: React.FC = () => {
                   return (
                     <tr
                       key={item.id}
+                      data-row-key={itemKey}
                       className={`transition duration-150 ${
                         isHighlighted
                           ? 'bg-rose-100/80 hover:bg-rose-100 border-l-4 border-rose-600 ring-2 ring-rose-500/40 shadow-sm'
@@ -531,8 +556,8 @@ export const StockLedgerPage: React.FC = () => {
                       </td>
 
                       {/* 7. Thao tác */}
-                      <td className="py-3 px-3 text-right overflow-hidden">
-                        <div className="flex items-center justify-end">
+                      <td className="py-3 px-2 text-center overflow-hidden">
+                        <div className="flex items-center justify-center">
                           {isBelow && canEditInventory && (
                             <button
                               type="button"
@@ -540,7 +565,7 @@ export const StockLedgerPage: React.FC = () => {
                                 setSelectedAlertForReceipt(item);
                                 setIsReceiptModalOpen(true);
                               }}
-                              className="px-2.5 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                              className="px-2.5 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition shadow-xs flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap mx-auto"
                               title={`Lập phiếu nhập nhanh NCC (Gợi ý đặt: +${item.suggestedReorderQuantity} ${item.unit})`}
                             >
                               <ShoppingCart size={12} />
