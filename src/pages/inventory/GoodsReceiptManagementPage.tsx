@@ -29,10 +29,10 @@ export const GoodsReceiptManagementPage: React.FC = () => {
   // Mục 12 (góp ý GV): chặn ở cả FE và BE - chỉ NV kho, QL kho, Admin được lập / xác nhận / sửa;
   // Kế toán, QL kinh doanh chỉ xem.
   const canEditInventory = ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'].includes(currentRole ?? '');
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
 
   const searchParams = new URLSearchParams(
-    pathname.includes('?') ? pathname.split('?')[1] : window.location.search
+    search || (pathname.includes('?') ? pathname.split('?')[1] : window.location.search)
   );
   const paramWarehouseCode = searchParams.get('warehouseCode') || '';
   const paramSku = searchParams.get('sku') || '';
@@ -54,6 +54,18 @@ export const GoodsReceiptManagementPage: React.FC = () => {
   const [initialQty, setInitialQty] = useState<number | undefined>(() => paramQty);
   const [selectedDetailReceipt, setSelectedDetailReceipt] = useState<GoodsReceipt | null>(null);
   const [confirmingId, setConfirmingId] = useState<number | string | null>(null);
+
+  // Lắng nghe thay đổi query param từ router để tự động bật modal lập phiếu
+  useEffect(() => {
+    const rawSearch = search || (pathname.includes('?') ? '?' + pathname.split('?')[1] : window.location.search);
+    const params = new URLSearchParams(rawSearch);
+    if ((params.get('create') === '1' || params.get('openModal') === '1') && canEditInventory) {
+      setIsFormModalOpen(true);
+      if (params.get('warehouseCode')) setInitialWarehouseCode(params.get('warehouseCode')!);
+      if (params.get('sku')) setInitialSku(params.get('sku')!);
+      if (params.get('qty')) setInitialQty(Number(params.get('qty')));
+    }
+  }, [pathname, search, canEditInventory]);
 
   const loadData = useCallback(async () => {
     setLoading(true);

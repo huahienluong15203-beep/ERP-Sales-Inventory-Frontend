@@ -109,7 +109,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     title: 'Phiếu nhập kho',
     path: '/inventory/receipts',
     group: 'Sản phẩm & Kho',
-    icon: 'Package',
+    icon: 'ClipboardList',
     epic: 'Sản phẩm & Tồn kho',
     description: 'Lập phiếu nhập kho từ nhà cung cấp, ghi nhận số lô, hạn dùng và quy đổi đơn vị cơ sở',
     allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
@@ -119,7 +119,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     title: 'Phiếu chuyển kho',
     path: '/inventory/transfers',
     group: 'Sản phẩm & Kho',
-    icon: 'Truck',
+    icon: 'ArrowLeftRight',
     epic: 'Sản phẩm & Tồn kho',
     description: 'Lập phiếu chuyển kho nội bộ, theo dõi hàng đang đi đường và xác nhận nhận đủ',
     allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
@@ -129,7 +129,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     title: 'Quản lý tồn kho',
     path: '/inventory/ledger',
     group: 'Sản phẩm & Kho',
-    icon: 'Boxes',
+    icon: 'Warehouse',
     epic: 'Sản phẩm & Tồn kho',
     description: 'Sổ theo dõi nhập xuất tồn 3 cột theo kho và thời gian',
     allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER']
@@ -139,9 +139,9 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     title: 'Kiểm kê kho',
     path: '/inventory/stocktakes',
     group: 'Sản phẩm & Kho',
-    icon: 'ClipboardList',
+    icon: 'CheckSquare',
     epic: 'Sản phẩm & Tồn kho',
-    description: '',
+    description: 'Kiểm đếm và đối soát số lượng tồn thực tế với hệ thống',
     allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
   },
 

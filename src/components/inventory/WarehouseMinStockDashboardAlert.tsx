@@ -5,13 +5,15 @@ import {
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
-  ArrowRightLeft
+  ArrowRightLeft,
+  CheckCircle2,
+  PackageCheck,
+  TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDashboardMinStockSummary } from '../../services/stockAlertApi';
 import type { MinStockThresholdConfig } from '../../types/stockAlert';
 import { useNavigate } from '../../routes/Router';
-import { GoodsReceiptFormModal } from './GoodsReceiptFormModal';
 
 interface WarehouseMinStockDashboardAlertProps {
   warehouseCode?: string;
@@ -19,35 +21,27 @@ interface WarehouseMinStockDashboardAlertProps {
 }
 
 /**
- * Subtask S5-09 (Nguyễn Văn Minh): FE: Code cảnh báo nổi bật trên UI
- * Acceptance Criteria (AC2):
- * - Hàng dưới ngưỡng hiển thị nổi bật trong sổ tồn và trên dashboard kho
- * - Hiển thị THÔNG BÁO ĐỎ phục vụ kịch bản kiểm thử của QA (Ngô Thị Ánh Ngọc)
- * - Phân quyền hiển thị: Chỉ hiển thị cho Quản lý kho (ROLE_WH_MANAGER), Thủ kho (ROLE_WAREHOUSE) và Quản trị viên (ROLE_ADMIN)
+ * Cảnh báo định mức tồn kho tối thiểu & nguy cơ thiếu hụt hàng hóa
+ * Hiển thị trên Dashboard cho: Quản lý kho (ROLE_WH_MANAGER)
  */
 export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboardAlertProps> = ({
   warehouseCode,
   hideLedgerButton = false
 }) => {
   const navigate = useNavigate();
-  const { currentRole } = useAuth();
+  const { user, currentRole } = useAuth();
   const [loading, setLoading] = useState<boolean>(true);
   const [criticalItems, setCriticalItems] = useState<MinStockThresholdConfig[]>([]);
   const [totalAlerts, setTotalAlerts] = useState<number>(0);
   const [criticalCount, setCriticalCount] = useState<number>(0);
 
-  // Modal lập phiếu nhập NCC trực tiếp theo kho & sản phẩm được click
-  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
-  const [selectedAlertForReceipt, setSelectedAlertForReceipt] = useState<MinStockThresholdConfig | null>(null);
-
-  // Chỉ hiển thị trên Dashboard cho các vai trò quản lý / phụ trách kho và admin
-  const isWarehouseOrAdmin =
-    currentRole === 'ROLE_ADMIN' ||
+  // Chỉ hiển thị trên Dashboard cho Quản lý kho (ROLE_WH_MANAGER) theo đúng phân quyền vai trò
+  const isWarehouseManager =
     currentRole === 'ROLE_WH_MANAGER' ||
-    currentRole === 'ROLE_WAREHOUSE';
+    Boolean(user?.roles?.some((r) => r === 'ROLE_WH_MANAGER'));
 
   const loadAlertData = () => {
-    if (!isWarehouseOrAdmin) {
+    if (!isWarehouseManager) {
       setLoading(false);
       return;
     }
@@ -57,7 +51,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
       .then((res) => {
         setTotalAlerts(res.totalAlerts);
         setCriticalCount(res.criticalCount);
-        setCriticalItems(res.criticalItems.slice(0, 4));
+        setCriticalItems(res.criticalItems);
         setLoading(false);
       })
       .catch((err) => {
@@ -68,60 +62,129 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
 
   useEffect(() => {
     loadAlertData();
-  }, [warehouseCode, isWarehouseOrAdmin]);
 
-  // Bấm vào thẻ cảnh báo -> mở phiếu nhập kho NCC theo kho đó
+    const handleUpdated = () => {
+      loadAlertData();
+    };
+    window.addEventListener('min_stock_updated', handleUpdated);
+    return () => {
+      window.removeEventListener('min_stock_updated', handleUpdated);
+    };
+  }, [warehouseCode, isWarehouseManager]);
+
+  // Bấm vào thẻ cảnh báo -> chuyển sang trang Phiếu nhập kho NCC và tự động kích hoạt tạo phiếu
   const handleCardClick = (item: MinStockThresholdConfig) => {
-    setSelectedAlertForReceipt(item);
-    setIsReceiptModalOpen(true);
+    navigate(
+      `/inventory/receipts?create=1&warehouseCode=${encodeURIComponent(item.warehouseCode)}&sku=${encodeURIComponent(item.productSku)}&qty=${encodeURIComponent(item.suggestedReorderQuantity)}`
+    );
   };
 
-  // Nếu không thuộc vai trò kho/admin thì không hiển thị cảnh báo
-  if (!isWarehouseOrAdmin) {
+  // Nếu không thuộc vai trò Quản lý kho thì không hiển thị cảnh báo
+  if (!isWarehouseManager) {
     return null;
   }
 
-  // Nếu không có mặt hàng nào dưới định mức thì hiện banner trạng thái an toàn kèm nút thao tác
+  // Khi không có hàng nào dưới định mức
   if (!loading && totalAlerts === 0) {
     return (
       <div className="mb-3.5 animate-in fade-in slide-in-from-top-2 duration-300">
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-emerald-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-              <ShieldCheck size={20} />
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 rounded-2xl p-4 sm:p-5 text-white shadow-xl shadow-emerald-700/15 border border-emerald-400/30 relative overflow-hidden">
+          {/* Họa tiết trang trí nền phát sáng */}
+          <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute left-1/3 bottom-0 translate-y-8 w-48 h-48 bg-emerald-300/10 rounded-full blur-xl pointer-events-none" />
+
+          <div className="relative z-10 space-y-3.5">
+            {/* HEADER TRẠNG THÁI TỒN KHO AN TOÀN */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 text-white shadow-sm">
+                  <ShieldCheck size={22} className="text-emerald-100" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-black text-sm sm:text-base tracking-tight uppercase flex items-center gap-2 text-white">
+                      <span>Tất Cả Kho Hàng Đạt Định Mức Dự Trữ An Toàn</span>
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-400/25 border border-emerald-200/40 text-[10px] font-black uppercase tracking-wider text-emerald-100">
+                      100% Đạt Chuẩn
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-100/90 mt-0.5">
+                    Toàn bộ mặt hàng tại các kho đều đang duy trì trên ngưỡng tồn tối thiểu. Không phát hiện nguy cơ thiếu hụt hay gián đoạn cung ứng!
+                  </p>
+                </div>
+              </div>
+
+              {/* CÁC NÚT THAO TÁC NGHIỆP VỤ NHANH */}
+              <div className="flex items-center gap-2 shrink-0">
+                {isWarehouseManager && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/inventory/receipts?create=1')}
+                      className="px-3.5 py-1.5 rounded-xl bg-white text-emerald-800 hover:bg-emerald-50 font-bold text-xs transition shadow-2xs flex items-center gap-1.5 cursor-pointer h-9"
+                    >
+                      <ShoppingCart size={14} className="text-emerald-600" />
+                      <span>Lập Phiếu Nhập NCC</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/inventory/transfers')}
+                      className="px-3.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs transition border border-white/30 flex items-center gap-1.5 cursor-pointer h-9 backdrop-blur-xs"
+                    >
+                      <ArrowRightLeft size={14} />
+                      <span>Lập Phiếu Chuyển Kho</span>
+                    </button>
+                  </>
+                )}
+
+                {!hideLedgerButton && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/inventory/ledger')}
+                    className="px-3.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs transition border border-white/30 flex items-center gap-1.5 cursor-pointer h-9 backdrop-blur-xs"
+                    title="Chuyển sang trang Quản lý tồn kho để kiểm tra toàn bộ danh mục"
+                  >
+                    <span>Xem sổ thẻ kho</span>
+                    <ChevronRight size={14} />
+                  </button>
+                )}
+              </div>
             </div>
-            <div>
-              <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
-                <span>Tất cả kho hàng đều đạt định mức dự trữ an toàn</span>
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Không có sản phẩm nào ở dưới ngưỡng tồn tối thiểu đã thiết lập.
-              </p>
+
+            {/* 3 THẺ TỔNG QUAN CHỈ SỐ AN TOÀN TỒN KHO */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              <div className="bg-white/15 backdrop-blur-md rounded-2xl p-3 border border-white/20 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0 text-emerald-200">
+                  <CheckCircle2 size={18} />
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-emerald-100">Cảnh báo thiếu hụt</div>
+                  <div className="text-sm font-black text-white">0 Mặt hàng</div>
+                </div>
+              </div>
+
+              <div className="bg-white/15 backdrop-blur-md rounded-2xl p-3 border border-white/20 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0 text-teal-200">
+                  <PackageCheck size={18} />
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-emerald-100">Định mức an toàn</div>
+                  <div className="text-sm font-black text-white">100% Đạt định mức</div>
+                </div>
+              </div>
+
+              <div className="bg-white/15 backdrop-blur-md rounded-2xl p-3 border border-white/20 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0 text-cyan-200">
+                  <TrendingUp size={18} />
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-emerald-100">Tình trạng đáp ứng</div>
+                  <div className="text-sm font-black text-white">Sẵn sàng xuất kho</div>
+                </div>
+              </div>
             </div>
           </div>
-          {isWarehouseOrAdmin && (
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedAlertForReceipt(null);
-                  setIsReceiptModalOpen(true);
-                }}
-                className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shadow-2xs flex items-center gap-1.5 cursor-pointer h-9"
-              >
-                <ShoppingCart size={14} />
-                <span>Lập Phiếu Nhập NCC</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/inventory/transfers')}
-                className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-2xs flex items-center gap-1.5 cursor-pointer h-9"
-              >
-                <ArrowRightLeft size={14} />
-                <span>Lập Phiếu Chuyển Kho</span>
-              </button>
-            </div>
-          )}
         </div>
       </div>
     );
@@ -130,7 +193,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
   return (
     <>
       <div className="mb-3.5 animate-in fade-in slide-in-from-top-2 duration-300">
-        <div className="bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 rounded-2xl p-4 sm:p-5 text-white shadow-xl shadow-rose-600/20 border border-rose-500/40 relative overflow-hidden">
+        <div className="bg-gradient-to-r from-[#F85606] via-orange-500 to-amber-500 rounded-2xl p-4 sm:p-5 text-white shadow-xl shadow-orange-500/20 border border-orange-400/40 relative overflow-hidden">
           {/* Họa tiết trang trí nền */}
           <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -147,7 +210,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                       <span>Cảnh Báo Tồn Kho Dưới Định Mức Tối Thiểu</span>
                     </h3>
                   </div>
-                  <p className="text-xs text-rose-100 mt-0.5">
+                  <p className="text-xs text-orange-100 mt-0.5">
                     Phát hiện <b>{totalAlerts} cảnh báo theo kho</b> đang ở dưới ngưỡng tồn tối thiểu, trong đó có{' '}
                     <b>{criticalCount} điểm kho cần bổ sung khẩn cấp</b> từ nhà cung ứng!
                   </p>
@@ -155,15 +218,12 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                {isWarehouseOrAdmin && (
+                {isWarehouseManager && (
                   <>
                     <button
                       type="button"
-                      onClick={() => {
-                        setSelectedAlertForReceipt(null);
-                        setIsReceiptModalOpen(true);
-                      }}
-                      className="px-3.5 py-1.5 rounded-xl bg-white text-rose-700 hover:bg-rose-50 font-bold text-xs transition shadow-2xs flex items-center gap-1.5 cursor-pointer h-9"
+                      onClick={() => navigate('/inventory/receipts?create=1')}
+                      className="px-3.5 py-1.5 rounded-xl bg-white text-[#F85606] hover:bg-orange-50 font-bold text-xs transition shadow-2xs flex items-center gap-1.5 cursor-pointer h-9"
                     >
                       <ShoppingCart size={14} />
                       <span>Lập Phiếu Nhập NCC</span>
@@ -182,10 +242,11 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                 {!hideLedgerButton && (
                   <button
                     type="button"
-                    onClick={() => navigate('/inventory/ledger')}
-                    className="px-3.5 py-1.5 rounded-lg bg-rose-800/80 hover:bg-rose-800 text-white font-bold text-xs transition border border-rose-400/50 flex items-center gap-1 cursor-pointer h-9"
+                    onClick={() => navigate('/inventory/ledger?status=BELOW')}
+                    className="px-3.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs transition border border-white/30 flex items-center gap-1.5 cursor-pointer h-9 backdrop-blur-xs"
+                    title="Chuyển sang trang Quản lý tồn kho để xem đầy đủ"
                   >
-                    <span>Xem Sổ Tồn</span>
+                    <span>Xem tất cả ({totalAlerts})</span>
                     <ChevronRight size={14} />
                   </button>
                 )}
@@ -194,13 +255,13 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
 
             {/* DANH SÁCH CÁC MẶT HÀNG BÁO ĐỎ TIÊU BIỂU */}
             {loading ? (
-              <div className="p-4 bg-white/10 rounded-2xl text-center text-xs text-rose-100 flex items-center justify-center gap-2">
+              <div className="p-4 bg-white/10 rounded-2xl text-center text-xs text-orange-100 flex items-center justify-center gap-2">
                 <RefreshCw size={14} className="animate-spin" />
                 <span>Đang kiểm tra ngưỡng tồn kho...</span>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {criticalItems.map((item) => (
+                {(totalAlerts > 3 ? criticalItems.slice(0, 3) : criticalItems.slice(0, 4)).map((item) => (
                   <div
                     key={item.id}
                     onClick={() => handleCardClick(item)}
@@ -213,25 +274,24 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                         <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/25 text-[10px] font-black text-yellow-300 uppercase tracking-wide mb-1 border border-white/20 shadow-xs">
                           <span>📍 Kho {item.warehouseName.replace(/Kho Tổng |Kho /g, '')}</span>
                         </div>
-                        <div className="font-mono text-[10px] uppercase font-bold text-rose-200">
+                        <div className="font-mono text-[10px] uppercase font-bold text-orange-100">
                           {item.productSku}
                         </div>
                         <div className="font-bold text-xs line-clamp-1 text-white" title={item.productName}>
                           {item.productName}
                         </div>
                       </div>
-
                     </div>
 
                     <div className="flex items-center justify-between text-xs pt-1 border-t border-white/15">
                       <div>
-                        <div className="text-[10px] text-rose-200">Tồn hiện tại:</div>
+                        <div className="text-[10px] text-orange-100">Tồn hiện tại:</div>
                         <div className="font-black text-sm text-yellow-300">
                           {item.currentStock} {item.unit}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-[10px] text-rose-200">Mức tối thiểu:</div>
+                        <div className="text-[10px] text-orange-100">Mức tối thiểu:</div>
                         <div className="font-bold text-xs text-white">
                           {item.minThreshold} {item.unit}
                         </div>
@@ -242,41 +302,42 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                       <span className="text-yellow-200 font-bold">
                         Đề xuất: +{item.suggestedReorderQuantity} {item.unit}
                       </span>
-                      <span className="inline-flex items-center gap-1 font-bold text-white bg-white/20 group-hover/card:bg-white group-hover/card:text-rose-700 px-2 py-0.5 rounded-md transition-colors">
+                      <span className="inline-flex items-center gap-1 font-bold text-white bg-white/20 group-hover/card:bg-white group-hover/card:text-[#F85606] px-2 py-0.5 rounded-md transition-colors">
                         <ShoppingCart size={11} />
                         <span>Nhập kho này &gt;</span>
                       </span>
                     </div>
                   </div>
                 ))}
+
+                {/* Thẻ xem thêm khi có nhiều hơn 3 mặt hàng dưới định mức */}
+                {totalAlerts > 3 && (
+                  <div
+                    onClick={() => navigate('/inventory/ledger?status=BELOW')}
+                    className="group/more bg-white/15 hover:bg-white/25 border border-white/20 hover:border-white/50 rounded-2xl p-3.5 backdrop-blur-md flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.99] text-white space-y-2 min-h-[140px]"
+                    title="Xem toàn bộ mặt hàng dưới định mức trên trang Quản lý tồn kho"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center group-hover/more:bg-white group-hover/more:text-[#F85606] transition-colors">
+                      <ChevronRight size={18} />
+                    </div>
+                    <div>
+                      <div className="font-black text-xs sm:text-sm text-yellow-300">
+                        +{totalAlerts - 3} mặt hàng khác
+                      </div>
+                      <div className="text-[10px] text-orange-100 mt-0.5">
+                        Đang dưới định mức tối thiểu
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-white group-hover/more:text-yellow-200 flex items-center gap-1 underline underline-offset-2">
+                      Xem chi tiết sổ tồn &gt;
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
-
-      {/* MODAL LẬP PHIẾU NHẬP NCC TRỰC TIẾP THEO KHO & MẶT HÀNG ĐƯỢC CHỌN (S5-04 / S5-09) */}
-      <GoodsReceiptFormModal
-        isOpen={isReceiptModalOpen}
-        initialWarehouseCode={selectedAlertForReceipt?.warehouseCode}
-        initialProductSku={selectedAlertForReceipt?.productSku}
-        initialProductName={selectedAlertForReceipt?.productName}
-        initialQuantity={selectedAlertForReceipt?.suggestedReorderQuantity}
-        initialNote={
-          selectedAlertForReceipt
-            ? `Nhập bù hàng dưới định mức tồn tối thiểu cho ${selectedAlertForReceipt.warehouseName || selectedAlertForReceipt.warehouseCode} (Đề xuất: +${selectedAlertForReceipt.suggestedReorderQuantity} ${selectedAlertForReceipt.unit})`
-            : undefined
-        }
-        onClose={() => {
-          setIsReceiptModalOpen(false);
-          setSelectedAlertForReceipt(null);
-        }}
-        onSuccess={() => {
-          setIsReceiptModalOpen(false);
-          setSelectedAlertForReceipt(null);
-          loadAlertData();
-        }}
-      />
     </>
   );
 };
