@@ -6,8 +6,7 @@ import {
   ChevronRight,
   ShoppingCart,
   Boxes,
-  CheckCircle2,
-  ExternalLink
+  CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';

@@ -62,7 +62,9 @@ export const BrowserRouter: React.FC<{ children: ReactNode }> = ({ children }) =
 
 export const useLocation = () => {
   const { pathname } = useContext(RouterContext);
-  return { pathname };
+  const [cleanPath, query] = pathname.split('?');
+  const search = query !== undefined ? `?${query}` : (typeof window !== 'undefined' ? window.location.search : '');
+  return { pathname: cleanPath || '/', search };
 };
 
 export const useNavigate = () => {
