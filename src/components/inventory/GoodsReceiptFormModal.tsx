@@ -963,14 +963,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                 <p className="text-[11px] text-gray-400">
                   Bấm &quot;Thêm dòng hàng&quot; để chọn sản phẩm từ xe dỡ hàng xuống kho.
                 </p>
-                <button
-                  type="button"
-                  onClick={handleAddNewLine}
-                  className="px-3.5 py-2 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer"
-                >
-                  <Plus size={14} />
-                  <span>Thêm dòng hàng đầu tiên</span>
-                </button>
+
               </div>
             ) : (
               <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-2xs divide-y divide-gray-100">
