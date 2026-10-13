@@ -32,14 +32,20 @@ export const StockLedgerPage: React.FC = () => {
   const location = useLocation();
   const { showToast, currentRole, user } = useAuth();
 
-  // Chỉ NV kho, QL kho, Admin được lập / xác nhận / sửa; Kế toán, QL kinh doanh chỉ xem.
-  const canEditInventory = ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'].includes(currentRole ?? '');
+  // Quyền khai báo / sửa định mức tồn tối thiểu:
+  // - Chỉ Quản lý kho (ROLE_WH_MANAGER) và Quản trị viên (ROLE_ADMIN) mới có quyền sửa
+  // - Nhân viên kho (ROLE_WAREHOUSE), Kế toán, QL kinh doanh chỉ được xem sổ tồn
+  const canEditMinThreshold =
+    currentRole === 'ROLE_WH_MANAGER' ||
+    currentRole === 'ROLE_ADMIN' ||
+    Boolean(user?.roles?.some((r) => r === 'ROLE_WH_MANAGER' || r === 'ROLE_ADMIN'));
 
   // Kiểm tra quyền sửa theo từng kho:
   // - Admin: được sửa tất cả các kho
-  // - Quản lý kho / Nhân viên kho: chỉ được sửa tại các kho mà tài khoản được phân công
+  // - Quản lý kho: chỉ được sửa tại các kho mà tài khoản được phân công
+  // - Nhân viên kho / người dùng khác: không được sửa
   const canEditItem = (item: MinStockThresholdConfig) => {
-    if (!canEditInventory) return false;
+    if (!canEditMinThreshold) return false;
     if (currentRole === 'ROLE_ADMIN' || user?.roles?.includes('ROLE_ADMIN')) return true;
     if (user?.warehouseCodes && user.warehouseCodes.length > 0) {
       return user.warehouseCodes.includes(item.warehouseCode);
