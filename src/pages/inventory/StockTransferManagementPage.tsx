@@ -83,7 +83,7 @@ export const StockTransferManagementPage: React.FC = () => {
     try {
       const updated = await dispatchStockTransfer(transfer.id);
       showToast(
-        'Đã xuất kho vận chuyển (AC2)',
+        'Đã xuất kho vận chuyển',
         `Phiếu [${updated.code}] đã bắt đầu vận chuyển. Hàng ghi nhận ĐANG ĐI ĐƯỜNG, kho đến chưa cộng tồn!`,
         'success',
         5000
@@ -243,9 +243,9 @@ export const StockTransferManagementPage: React.FC = () => {
             >
               <option value="ALL">Tất cả trạng thái</option>
               <option value="DRAFT">Phiếu nháp</option>
-              <option value="IN_TRANSIT">Đang đi đường (AC2)</option>
-              <option value="COMPLETED">Đã nhận đủ (AC3)</option>
-              <option value="DISCREPANCY_RESOLVED">Nhận chênh lệch (AC4)</option>
+              <option value="IN_TRANSIT">Đang đi đường</option>
+              <option value="COMPLETED">Đã nhận đủ</option>
+              <option value="DISCREPANCY_RESOLVED">Nhận chênh lệch</option>
             </SearchSelect>
 
             {/* Lọc Kho đi */}

@@ -140,7 +140,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
 
     setIsCartDrawerOpen(true);
     showToast(
-      'Đã đưa vào giỏ hàng (S5-02)',
+      'Đã đưa vào giỏ hàng',
       `Đã lấy lại ${items.length} mặt hàng theo bảng giá hiện hành!`,
       'success',
       4000
@@ -922,7 +922,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                             setIsReorderModalOpen(true);
                           }}
                           className="px-3 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#F85606] border border-orange-200 font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer"
-                          title="Đặt lại các mặt hàng trong đơn này (S5-02)"
+                          title="Đặt lại các mặt hàng trong đơn này"
                         >
                           <RotateCcw size={13} />
                           <span>Mua lại</span>
@@ -1146,7 +1146,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                   )}
                 </button>
                 <p className="text-[10px] text-gray-400 text-center mt-2">
-                  * Đơn hàng gửi lên sẽ luôn ở trạng thái <strong>Chờ duyệt</strong> để NVKD phụ trách xác nhận (S4-10 AC3).
+                  * Đơn hàng gửi lên sẽ ở trạng thái <strong>Chờ duyệt</strong> để NVKD phụ trách xác nhận.
                 </p>
               </div>
             </div>
@@ -1245,10 +1245,16 @@ export const CustomerOrderPortalPage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL CHI TIẾT ĐƠN HÀNG & TIMELINE VÒNG ĐỜI (S4-06 & S4-08) */}
+      {/* MODAL CHI TIẾT ĐƠN HÀNG */}
       <OrderDetailModal
         orderId={selectedDetailOrderId}
         isOpen={isDetailModalOpen}
+        onCloneOrder={(id) => {
+          setIsDetailModalOpen(false);
+          setSelectedDetailOrderId(null);
+          setReorderModalOrderId(id);
+          setIsReorderModalOpen(true);
+        }}
         onClose={() => {
           setIsDetailModalOpen(false);
           setSelectedDetailOrderId(null);

@@ -137,7 +137,7 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
           <div className="space-y-1.5 flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-xs sm:text-sm font-bold text-gray-900">
-                Lịch Sử Mua Hàng & Gợi Ý Mặt Hàng (S4-04)
+                Lịch Sử Mua Hàng & Gợi Ý Mặt Hàng
               </h3>
               <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
                 Giới hạn quyền xem

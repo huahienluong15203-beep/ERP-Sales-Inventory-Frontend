@@ -524,10 +524,10 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   // Validate form trước khi lưu
   const validateForm = (): boolean => {
     const errors: string[] = [];
-    if (!selectedSupplierId) errors.push('Vui lòng chọn Nhà cung cấp giao hàng (AC1).');
-    if (!documentNumber.trim()) errors.push('Vui lòng nhập Số chứng từ / hóa đơn giao hàng của NCC (AC1).');
-    if (!receiptDate) errors.push('Vui lòng chọn Ngày nhập kho (AC1).');
-    if (!selectedWarehouseCode) errors.push('Vui lòng chọn Kho nhận hàng (AC1).');
+    if (!selectedSupplierId) errors.push('Vui lòng chọn Nhà cung cấp giao hàng.');
+    if (!documentNumber.trim()) errors.push('Vui lòng nhập Số chứng từ / hóa đơn giao hàng của NCC.');
+    if (!receiptDate) errors.push('Vui lòng chọn Ngày nhập kho.');
+    if (!selectedWarehouseCode) errors.push('Vui lòng chọn Kho nhận hàng.');
     if (!vehiclePlate.trim()) errors.push('Vui lòng nhập Biển số xe giao hàng.');
     if (!driverName.trim()) errors.push('Vui lòng nhập Tên tài xế / Người giao hàng.');
 
@@ -540,10 +540,10 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
         errors.push(`Dòng ${idx + 1} (${l.productName}): Số lượng nhập phải lớn hơn 0.`);
       }
       if (l.hasBatchManagement && !l.batchNumber.trim()) {
-        errors.push(`Dòng ${idx + 1} (${l.productName}): Bắt buộc nhập Số lô sản xuất (AC3).`);
+        errors.push(`Dòng ${idx + 1} (${l.productName}): Bắt buộc nhập Số lô sản xuất.`);
       }
       if (l.hasBatchManagement && !l.expiredDate) {
-        errors.push(`Dòng ${idx + 1} (${l.productName}): Bắt buộc chọn Hạn sử dụng (AC3).`);
+        errors.push(`Dòng ${idx + 1} (${l.productName}): Bắt buộc chọn Hạn sử dụng.`);
       }
     });
 

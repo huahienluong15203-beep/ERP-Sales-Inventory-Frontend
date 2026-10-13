@@ -104,9 +104,9 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
         (l) => Number(l.receivedQuantity) !== Number(l.transferQuantity) && !l.discrepancyReason.trim()
       );
       if (lineMissingReason && !generalReason.trim()) {
-        const msg = `Mặt hàng [${lineMissingReason.productName}] bị chênh lệch số lượng (${lineMissingReason.receivedQuantity}/${lineMissingReason.transferQuantity}). Vui lòng nhập lý do chênh lệch cụ thể hoặc lý do giải trình chung theo AC4.`;
+        const msg = `Mặt hàng [${lineMissingReason.productName}] bị chênh lệch số lượng (${lineMissingReason.receivedQuantity}/${lineMissingReason.transferQuantity}). Vui lòng nhập lý do chênh lệch cụ thể hoặc lý do giải trình chung.`;
         setErrorMsg(msg);
-        showToast('Bắt buộc nhập lý do chênh lệch (AC4)', msg, 'error');
+        showToast('Bắt buộc nhập lý do chênh lệch', msg, 'error');
         return;
       }
     }
@@ -125,14 +125,14 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
 
       if (result.status === 'COMPLETED') {
         showToast(
-          'Đã nhận đủ hàng (AC3)',
+          'Đã nhận đủ hàng',
           `Phiếu [${transfer.code}] đã hoàn tất nhận đủ 100%. Tồn kho tại [${transfer.destWarehouseName}] đã được CỘNG CHÍNH THỨC!`,
           'success',
           5000
         );
       } else {
         showToast(
-          'Đã ghi nhận nhận hàng chênh lệch (AC4)',
+          'Đã ghi nhận nhận hàng chênh lệch',
           `Phiếu [${transfer.code}] đã được ghi sổ kèm lý do giải trình. Tồn kho đến được cộng theo số lượng thực nhận.`,
           'info',
           5000
@@ -211,7 +211,7 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
                   <th className="py-2.5 px-3 text-center w-28">Số lượng chuyển</th>
                   <th className="py-2.5 px-3 text-center w-36">Thực nhận tại kho</th>
                   <th className="py-2.5 px-3 text-center w-24">Chênh lệch</th>
-                  <th className="py-2.5 px-3 min-w-[200px]">Lý do chênh lệch (AC4)</th>
+                  <th className="py-2.5 px-3 min-w-[200px]">Lý do chênh lệch</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -264,7 +264,7 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
                         {isDiff ? (
                           <input
                             type="text"
-                            placeholder="Nhập lý do chênh lệch (bắt buộc theo AC4)..."
+                            placeholder="Nhập lý do chênh lệch..."
                             value={line.discrepancyReason}
                             onChange={(e) => handleUpdateReason(line.lineId, e.target.value)}
                             className="w-full text-xs border border-amber-300 rounded-lg p-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20"
@@ -327,7 +327,7 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
             className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             <CheckCircle2 size={15} />
-            <span>{submitting ? 'Đang xác nhận...' : 'Xác nhận nhận hàng & Cộng tồn '}</span>
+            <span>{submitting ? 'Đang xác nhận...' : 'Xác nhận nhận hàng & Cộng tồn'}</span>
           </button>
         </div>
       </div>

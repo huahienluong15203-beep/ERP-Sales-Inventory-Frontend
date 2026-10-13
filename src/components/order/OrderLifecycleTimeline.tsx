@@ -137,7 +137,7 @@ export const OrderLifecycleTimeline: React.FC<OrderLifecycleTimelineProps> = ({
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full bg-[#F85606] animate-pulse"></div>
           <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wider">
-            Timeline Hành Trình Đơn Hàng (S4-06)
+            Hành Trình Đơn Hàng
           </h4>
         </div>
 

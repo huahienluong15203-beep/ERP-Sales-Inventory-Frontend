@@ -40,15 +40,15 @@ export const OrderCancelModal: React.FC<OrderCancelModalProps> = ({
 
     if (isDispatchedOrLater) {
       showToast(
-        'Không thể huỷ đơn (S4-06 AC3)',
-        'Đơn hàng đã xuất kho hoặc đã giao. Theo quy chuẩn S4-06 AC3, không thể hủy đơn mà phải làm thủ tục Trả hàng (EP-08).',
+        'Không thể hủy đơn',
+        'Đơn hàng đã xuất kho hoặc đã giao, không thể hủy đơn mà phải làm thủ tục Trả hàng.',
         'error'
       );
       return;
     }
 
     if (!reason.trim()) {
-      setValidationError('Bắt buộc nhập lý do hủy đơn hàng theo quy chuẩn S4-06 AC2!');
+      setValidationError('Bắt buộc nhập lý do hủy đơn hàng!');
       return;
     }
 
@@ -56,13 +56,12 @@ export const OrderCancelModal: React.FC<OrderCancelModalProps> = ({
     setValidationError(null);
 
     try {
-      // Gọi API chuyển trạng thái đơn sang CANCELLED (S4-06 BE do Lê Hồng Phong phụ trách)
       const res = await authFetch(`${API_BASE_URL}/api/orders/${order.id}/cancel`, {
         method: 'POST',
         body: JSON.stringify({ reason: reason.trim() })
-      }).catch(() => null);
+      });
 
-      if (res && !res.ok) {
+      if (!res.ok) {
         const data = await res.json().catch(() => null);
         throw new Error(data?.message || 'Không thể hủy đơn hàng trên máy chủ');
       }
@@ -100,7 +99,7 @@ export const OrderCancelModal: React.FC<OrderCancelModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-bold leading-tight">
-                Hủy Đơn Hàng (S4-06)
+                Hủy Đơn Hàng
               </h3>
               <p className="text-xs text-gray-500 mt-0.5">
                 Mã đơn: <strong className="font-mono text-gray-800">{order.code || `#${order.id}`}</strong>
@@ -120,7 +119,7 @@ export const OrderCancelModal: React.FC<OrderCancelModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {/* Cảnh báo AC3 nếu đã xuất kho */}
+          {/* Cảnh báo nếu đã xuất kho */}
           {isDispatchedOrLater ? (
             <div className="p-3.5 rounded-xl bg-rose-50 border-2 border-rose-300 text-xs text-rose-900 space-y-1.5">
               <div className="flex items-center gap-2 font-bold text-rose-950">
@@ -128,8 +127,8 @@ export const OrderCancelModal: React.FC<OrderCancelModalProps> = ({
                 <span>CHẶN HỦY ĐƠN: ĐƠN ĐÃ XUẤT KHO!</span>
               </div>
               <p className="text-[11px] leading-relaxed text-rose-800">
-                Theo quy chuẩn <strong>Story S4-06 AC3</strong>: Đơn hàng đã xuất kho thì <strong>không thể hủy được</strong>.
-                Hàng hóa đã rời kho và ghi thẻ kho xuất. Vui lòng hướng dẫn đại lý làm thủ tục <strong>Trả hàng (Phân hệ EP-08)</strong> khi nhận hàng.
+                Đơn hàng đã xuất kho thì <strong>không thể hủy được</strong>.
+                Hàng hóa đã rời kho và ghi thẻ kho xuất. Vui lòng hướng dẫn đại lý làm thủ tục <strong>Trả hàng</strong> khi nhận hàng.
               </p>
             </div>
           ) : (

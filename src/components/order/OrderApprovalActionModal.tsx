@@ -259,7 +259,7 @@ export const OrderApprovalActionModal: React.FC<OrderApprovalActionModalProps> =
             )}
 
             <p className="text-[10px] text-gray-400 leading-tight">
-              {isApprove && 'Ý kiến sẽ được ghi nhận vào Lịch sử duyệt (S4-05 AC4). Đơn sẽ chuyển sang trạng thái ĐÃ DUYỆT.'}
+              {isApprove && 'Ý kiến sẽ được ghi nhận vào Lịch sử duyệt. Đơn sẽ chuyển sang trạng thái ĐÃ DUYỆT.'}
               {isReject && 'Ý kiến bắt buộc để NVKD nắm được lý do không duyệt. Đơn sẽ chuyển sang TỪ CHỐI.'}
               {isReturn && 'Ý kiến bắt buộc để NVKD biết cần sửa gì. Đơn sẽ trả về ĐƠN NHÁP để sửa lại.'}
             </p>

@@ -29,7 +29,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Bán hàng',
     icon: 'ShoppingBag',
     epic: 'Đặt hàng & Duyệt ngoại lệ',
-    description: 'Cổng đại lý tự đặt hàng trực tuyến B2B lúc nửa đêm, quản lý công nợ (S4-10)',
+    description: 'Cổng đại lý tự đặt hàng trực tuyến B2B, quản lý công nợ',
     allowedRoles: ['ROLE_CUSTOMER', 'ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
   },
 
@@ -122,7 +122,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Sản phẩm & Kho',
     icon: 'Truck',
     epic: 'Sản phẩm & Tồn kho',
-    description: 'Lập phiếu chuyển kho nội bộ, theo dõi hàng đang đi đường và xác nhận nhận đủ ',
+    description: 'Lập phiếu chuyển kho nội bộ, theo dõi hàng đang đi đường và xác nhận nhận đủ',
     allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
   },
 
@@ -132,7 +132,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Sản phẩm & Kho',
     icon: 'Boxes',
     epic: 'Sản phẩm & Tồn kho',
-    description: 'Khai báo định mức tồn tối thiểu theo SKU và kho, cảnh báo đỏ nguy cơ đứt hàng ',
+    description: 'Khai báo định mức tồn tối thiểu theo SKU và kho, cảnh báo đỏ nguy cơ đứt hàng trước khi hết tồn',
     allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
   },
 

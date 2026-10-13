@@ -614,7 +614,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
                 disabled={updatingStatus}
                 onClick={() => handleUpdateStatus('PICKING', 'Đang soạn hàng')}
                 className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
-                title="Bắt đầu lấy hàng và soạn hàng theo FEFO (S4-06)"
+                title="Bắt đầu lấy hàng và soạn hàng theo FEFO"
               >
                 <Package size={14} className={updatingStatus ? 'animate-spin' : ''} />
                 <span>Bắt đầu soạn hàng</span>
@@ -627,7 +627,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
                 disabled={updatingStatus}
                 onClick={() => handleUpdateStatus('DISPATCHED', 'Đã xuất kho')}
                 className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
-                title="Xác nhận hàng đã rời kho và trừ tồn thực tế (S4-06 / S5-06)"
+                title="Xác nhận hàng đã rời kho và trừ tồn thực tế"
               >
                 <Truck size={14} className={updatingStatus ? 'animate-spin' : ''} />
                 <span>Xác nhận xuất kho</span>
@@ -640,7 +640,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
                 disabled={updatingStatus}
                 onClick={() => handleUpdateStatus('DELIVERED', 'Đã giao hàng')}
                 className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
-                title="Xác nhận đại lý đã nhận hàng (S4-06 / S5-01)"
+                title="Xác nhận đại lý đã nhận hàng"
               >
                 <CheckCheck size={14} className={updatingStatus ? 'animate-spin' : ''} />
                 <span>Xác nhận đã giao hàng</span>
@@ -653,7 +653,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
                 disabled={updatingStatus}
                 onClick={() => handleUpdateStatus('CLOSED', 'Hoàn tất')}
                 className="px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
-                title="Hoàn tất và đóng đơn hàng (S4-06)"
+                title="Hoàn tất và đóng đơn hàng"
               >
                 <Archive size={14} className={updatingStatus ? 'animate-spin' : ''} />
                 <span>Hoàn tất đơn</span>
@@ -662,26 +662,24 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
           </div>
 
           <div className="flex items-center gap-2">
-            {/* S4-06 AC3: Đơn hàng đã xuất kho (DISPATCHED trở đi) thì nghiêm cấm hủy đơn */}
             {activeOrder && !['CANCELLED', 'REJECTED', 'CLOSED', 'DISPATCHED', 'DELIVERED'].includes(activeOrder.status) && (
               <button
                 type="button"
                 onClick={() => setIsCancelModalOpen(true)}
                 className="px-3.5 py-2 rounded-xl border border-rose-300 text-rose-700 hover:bg-rose-50 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
-                title="Hủy đơn hàng (S4-06)"
+                title="Hủy đơn hàng"
               >
                 <Ban size={14} />
                 <span>Hủy đơn</span>
               </button>
             )}
 
-            {/* S4-08: Nút Xem trước và Tải file PDF */}
             {activeOrder && (
               <button
                 type="button"
                 onClick={() => setIsPdfModalOpen(true)}
                 className="px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
-                title="Xem trước & Tải file PDF (S4-08)"
+                title="Xem trước & Tải file PDF"
               >
                 <Printer size={14} />
                 <span>In / Xuất PDF</span>

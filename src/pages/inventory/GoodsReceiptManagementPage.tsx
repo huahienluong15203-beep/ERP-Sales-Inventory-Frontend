@@ -81,7 +81,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
     try {
       const confirmed = await confirmGoodsReceipt(receiptId, user?.username || 'wh_manager');
       showToast(
-        'Đã xác nhận nhập kho (AC4)',
+        'Đã xác nhận nhập kho',
         `Phiếu [${confirmed.code}] đã được ghi sổ thành công. Tồn kho đã được cộng thêm theo đơn vị cơ sở!`,
         'success',
         5000
@@ -222,13 +222,13 @@ export const GoodsReceiptManagementPage: React.FC = () => {
             <thead>
               <tr className="bg-gray-50/90 text-gray-600 font-bold border-b border-gray-200">
                 <th className="py-3 px-4">Mã phiếu</th>
-                <th className="py-3 px-4">Nhà cung cấp </th>
-                <th className="py-3 px-4">Số chứng từ </th>
-                <th className="py-3 px-4">Kho nhập </th>
+                <th className="py-3 px-4">Nhà cung cấp</th>
+                <th className="py-3 px-4">Số chứng từ</th>
+                <th className="py-3 px-4">Kho nhập</th>
                 <th className="py-3 px-4">Ngày nhập</th>
                 <th className="py-3 px-4 text-center">Số SKU</th>
-                <th className="py-3 px-4 text-center">Quy đổi cơ sở </th>
-                <th className="py-3 px-4 text-center">Trạng thái </th>
+                <th className="py-3 px-4 text-center">Quy đổi cơ sở</th>
+                <th className="py-3 px-4 text-center">Trạng thái</th>
                 <th className="py-3 px-4 text-center w-28">Thao tác</th>
               </tr>
             </thead>
@@ -306,7 +306,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
                             onClick={() => handleConfirmDirect(r.id)}
                             disabled={confirmingId === r.id}
                             className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition cursor-pointer"
-                            title="Xác nhận nhập kho & cộng tồn kho (AC4)"
+                            title="Xác nhận nhập kho & cộng tồn kho"
                           >
                             <Check size={15} className={confirmingId === r.id ? 'animate-spin' : ''} />
                           </button>
@@ -388,7 +388,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
                   <span className="font-bold text-gray-800">{selectedDetailReceipt.driverName || '—'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-400 block text-[11px]">Trạng thái tồn kho (AC4)</span>
+                  <span className="text-gray-400 block text-[11px]">Trạng thái tồn kho</span>
                   <span
                     className={`font-bold ${selectedDetailReceipt.status === 'CONFIRMED' ? 'text-emerald-600' : 'text-gray-600'
                       }`}
@@ -398,16 +398,16 @@ export const GoodsReceiptManagementPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Chi tiết từng dòng hàng kèm số lô & hạn dùng (AC2, AC3) */}
+              {/* Chi tiết từng dòng hàng kèm số lô & hạn dùng */}
               <div className="border border-gray-200 rounded-xl overflow-hidden">
                 <table className="w-full text-xs text-left">
                   <thead className="bg-gray-50 font-bold text-gray-600 border-b border-gray-200">
                     <tr>
                       <th className="py-2.5 px-3">Mặt hàng</th>
-                      <th className="py-2.5 px-3 text-center">ĐVT Nhập (AC2)</th>
+                      <th className="py-2.5 px-3 text-center">ĐVT Nhập</th>
                       <th className="py-2.5 px-3 text-center">Số lượng</th>
-                      <th className="py-2.5 px-3 text-center">Quy về cơ sở (AC2)</th>
-                      <th className="py-2.5 px-3">Số lô & Hạn dùng (AC3)</th>
+                      <th className="py-2.5 px-3 text-center">Quy về cơ sở</th>
+                      <th className="py-2.5 px-3">Số lô & Hạn dùng</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
