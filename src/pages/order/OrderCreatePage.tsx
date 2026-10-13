@@ -881,9 +881,6 @@ export const OrderCreatePage: React.FC = () => {
                   {items.length} món
                 </span>
               </h2>
-              <p className="text-[11px] text-gray-500">
-                Tìm kiếm mã SKU, chọn ĐVT (thùng/lốc/lon) và nhập số lượng
-              </p>
             </div>
 
             {/* Nút mở Picker thêm sản phẩm duy nhất */}
@@ -1095,14 +1092,6 @@ export const OrderCreatePage: React.FC = () => {
               </div>
             </div>
           )}
-
-          <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-[11px] leading-relaxed flex items-start gap-2">
-            <Tag size={14} className="shrink-0 text-amber-600 mt-0.5" />
-            <div>
-              Đơn giá lấy từ <strong>bảng giá đang hiệu lực</strong> của nhóm khách hàng mà đại lý thuộc về; chiết khấu sản lượng
-              tự động nhảy lại theo <strong>chính sách chiết khấu</strong> mỗi khi số lượng hoặc đơn giá thay đổi. Nếu sửa giá dưới giá sàn hoặc đơn vượt hạn mức công nợ, đơn sẽ chuyển sang <strong>Chờ Quản lý duyệt</strong>.
-            </div>
-          </div>
 
           {/* Hàng nút bấm Lưu Nháp & Chốt Đơn (Nằm gọn trong trang, không bám theo taskbar/sidebar) */}
           <div className="pt-3 border-t border-gray-100 flex flex-wrap items-center justify-end gap-3">
