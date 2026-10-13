@@ -145,9 +145,27 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
         </div>
 
         {selectedAgency && (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
-            {selectedAgency.customerGroupName}
-          </span>
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
+              {selectedAgency.customerGroupName}
+            </span>
+            {selectedAgency.status === 'SUSPENDED' ? (
+              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1 animate-pulse shadow-2xs">
+                <AlertTriangle size={11} className="text-rose-600" />
+                ĐÃ NGỪNG GIAO DỊCH
+              </span>
+            ) : selectedAgency.transactionLocked ? (
+              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1 shadow-2xs">
+                <Lock size={11} className="text-rose-600" />
+                BỊ KHÓA GIAO DỊCH
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                Đang giao dịch
+              </span>
+            )}
+          </div>
         )}
       </div>
 
@@ -162,13 +180,23 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
             <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-mono text-xs font-bold text-blue-700">
                       {selectedAgency.code}
                     </span>
                     <strong className="text-xs text-gray-900">
                       {selectedAgency.name}
                     </strong>
+                    {selectedAgency.status === 'SUSPENDED' && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                        <AlertTriangle size={10} className="text-rose-600" /> Ngừng giao dịch
+                      </span>
+                    )}
+                    {selectedAgency.transactionLocked && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                        <Lock size={10} className="text-rose-600" /> Khóa giao dịch
+                      </span>
+                    )}
                   </div>
                   <div className="text-[11px] text-gray-500 flex flex-wrap items-center gap-2 mt-0.5">
                     <span>MST: {selectedAgency.taxCode}</span>
@@ -254,8 +282,8 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                     const isExceeded = avail < 0;
                     return (
                       <div className={`p-2 rounded-xl border shadow-2xs ${isExceeded
-                          ? 'bg-rose-50/80 border-rose-200 text-rose-800'
-                          : 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
+                        ? 'bg-rose-50/80 border-rose-200 text-rose-800'
+                        : 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
                         }`}>
                         <span className="text-[10px] block opacity-80">Phần còn lại</span>
                         <span className="text-xs font-bold font-mono">
@@ -323,18 +351,55 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                 </div>
               )}
 
+              {/* CẢNH BÁO NẾU ĐẠI LÝ ĐÃ NGỪNG GIAO DỊCH (INACTIVE / SUSPENDED) */}
+              {selectedAgency.status === 'SUSPENDED' && (
+                <div className="p-3 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-950 text-xs flex items-start gap-2.5 animate-in fade-in shadow-xs">
+                  <AlertTriangle size={17} className="text-rose-600 shrink-0 mt-0.5" />
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <strong className="font-bold text-rose-950 uppercase tracking-wide text-[11px]">
+                        Đại lý đã ngừng giao dịch (INACTIVE)
+                      </strong>
+                      <span className="text-[10px] bg-rose-200 text-rose-900 font-bold px-2 py-0.5 rounded">
+                        Chặn tạo đơn
+                      </span>
+                    </div>
+                    <span className="text-[11px] leading-relaxed block text-rose-800">
+                      Đại lý <strong>{selectedAgency.name} ({selectedAgency.code})</strong> hiện đang ở trạng thái <strong>Ngừng giao dịch</strong>
+                      {selectedAgency.suspendReason ? `: "${selectedAgency.suspendReason}"` : ''}.
+                      Hệ thống <strong>chặn hoàn toàn</strong> việc tính giá và tạo đơn hàng mới cho đại lý này.
+                    </span>
+                    <p className="text-[11px] text-gray-700 bg-white/85 border border-rose-200 rounded-md p-1.5 mt-1 leading-normal">
+                      💡 <strong>Hướng dẫn:</strong> Vui lòng bấm nút <strong>"Đổi đại lý"</strong> ở trên để chọn khách hàng khác, hoặc truy cập <a href="/customers" className="underline font-bold text-blue-700 hover:text-blue-900">Hồ sơ đại lý</a> để mở lại trạng thái giao dịch cho khách hàng này.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* CẢNH BÁO NẾU ĐẠI LÝ BỊ KHÓA GIAO DỊCH (S3-07 / Description 1) */}
               {selectedAgency.transactionLocked && (
                 <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2 animate-in fade-in">
                   <Lock size={15} className="text-rose-600 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="font-bold block text-rose-900">
-                      Đại lý đang bị khóa giao dịch!
-                    </strong>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <strong className="font-bold text-rose-900">
+                        Đại lý đang bị khóa giao dịch hành chính (S3-07)
+                      </strong>
+                      {((creditStatus?.currentDebt ?? selectedAgency.totalDebt ?? 0) <= 0) && (
+                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">
+                          Dư nợ hiện tại: 0 đ
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[11px] leading-tight block mt-0.5">
-                      Lý do: {selectedAgency.transactionLockReason || 'Có rủi ro công nợ quá hạn'}.
+                      Lý do khóa: <em>{selectedAgency.transactionLockReason || 'Có rủi ro công nợ quá hạn'}</em>.
                       Hệ thống nghiêm cấm tạo đơn mới cho đại lý này.
                     </span>
+                    {((creditStatus?.currentDebt ?? selectedAgency.totalDebt ?? 0) <= 0) && (
+                      <p className="text-[11px] text-amber-800 bg-amber-50/90 border border-amber-200 rounded-md p-1.5 mt-1.5 leading-normal">
+                        💡 <strong>Lưu ý:</strong> Đại lý này hiện <strong>không còn nợ tồn đọng (0 đ)</strong>. Lý do khóa trên là quyết định hành chính do Quản trị viên/Kế toán thiết lập trước đó. Nếu đại lý đã thanh toán xong nghĩa vụ, vui lòng vào <a href="/customers" className="underline font-bold text-amber-900 hover:text-amber-950">Hồ sơ đại lý</a> để thực hiện <strong>Mở khóa giao dịch</strong>.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -376,54 +441,68 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                   Không tìm thấy đại lý phù hợp
                 </div>
               ) : (
-                filteredAgencies.map((agency) => (
-                  <div
-                    key={agency.id}
-                    onClick={() => {
-                      onSelectAgency(agency);
-                      setIsDropdownOpen(false);
-                      setAgencySearchText('');
-                    }}
-                    className={`p-2.5 hover:bg-orange-50/70 cursor-pointer transition flex items-center justify-between gap-2 ${agency.transactionLocked ? 'bg-rose-50/30' : ''
-                      }`}
-                  >
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-bold text-gray-700">
-                          {agency.code}
-                        </span>
-                        <strong className="text-gray-900 font-medium">
-                          {agency.name}
-                        </strong>
-                        {agency.transactionLocked && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 flex items-center gap-0.5">
-                            <Lock size={9} /> Bị khóa
+                filteredAgencies.map((agency) => {
+                  const isSuspended = agency.status === 'SUSPENDED';
+                  const isLocked = agency.transactionLocked;
+                  return (
+                    <div
+                      key={agency.id}
+                      onClick={() => {
+                        onSelectAgency(agency);
+                        setIsDropdownOpen(false);
+                        setAgencySearchText('');
+                      }}
+                      className={`p-2.5 hover:bg-orange-50/70 cursor-pointer transition flex items-center justify-between gap-2 ${isSuspended ? 'bg-rose-50/40 hover:bg-rose-100/60' : isLocked ? 'bg-amber-50/30 hover:bg-amber-100/50' : ''
+                        }`}
+                    >
+                      <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono font-bold text-gray-700">
+                            {agency.code}
                           </span>
-                        )}
+                          <strong className="text-gray-900 font-medium">
+                            {agency.name}
+                          </strong>
+                          {isSuspended && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-0.5">
+                              <AlertTriangle size={9} /> Ngừng giao dịch
+                            </span>
+                          )}
+                          {isLocked && !isSuspended && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-0.5">
+                              <Lock size={9} /> Bị khóa
+                            </span>
+                          )}
+                          {!isSuspended && !isLocked && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700">
+                              Đang giao dịch
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-gray-400 flex items-center gap-2 mt-0.5">
+                          <span>{agency.customerGroupName}</span>
+                          <span>•</span>
+                          <span>{agency.regionName}</span>
+                          {!agency.priceList && (
+                            <>
+                              <span>•</span>
+                              <span className="text-amber-600 font-medium">Chưa có bảng giá</span>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-[10px] text-gray-400 flex items-center gap-2 mt-0.5">
-                        <span>{agency.customerGroupName}</span>
-                        <span>•</span>
-                        <span>{agency.regionName}</span>
-                        {!agency.priceList && (
-                          <>
-                            <span>•</span>
-                            <span className="text-amber-600 font-medium">Chưa có bảng giá</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
 
-                    <div className="text-right text-[11px] shrink-0">
-                      <span
-                        className={`font-mono block ${agency.totalDebt > 0 ? 'text-rose-600 font-semibold' : 'text-gray-600'
-                          }`}
-                      >
-                        Nợ: {formatCurrencyVND(agency.totalDebt)}
-                      </span>
+                      <div className="text-right text-[11px] shrink-0">
+                        <span
+                          className={`font-mono block ${agency.totalDebt > 0 ? 'text-rose-600 font-semibold' : 'text-gray-600'
+                            }`}
+                        >
+                          Nợ: {formatCurrencyVND(agency.totalDebt)}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}
