@@ -204,10 +204,10 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
         </button>
       </div>
 
-      {/* Hàng 2: Chọn ĐVT & Bộ Tăng Giảm Số Lượng (Tối ưu 360px & Chặn vượt tồn) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 border-t border-gray-100">
-        {/* Chọn đơn vị tính */}
-        <div>
+      {/* Hàng 2: Chọn ĐVT & Bộ Tăng Giảm Số Lượng (Tối ưu gọn gàng & Chặn vượt tồn) */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-end justify-between w-full sm:pr-10 md:pr-14 gap-4 pt-1 border-t border-gray-100">
+        {/* Chọn đơn vị tính: thu gọn gàng vừa vặn khoảng 320px - 350px */}
+        <div className="w-full sm:w-[320px] md:w-[350px] shrink-0">
           <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
             Đơn Vị Đặt Hàng
           </label>
@@ -230,16 +230,16 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
           </SearchSelect>
         </div>
 
-        {/* Bộ tăng giảm số lượng (+ / - to bản dễ bấm ngón tay, vô hiệu hoá + khi đạt tồn khả dụng) */}
-        <div>
-          <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1 flex items-center justify-between">
+        {/* Bộ tăng giảm số lượng: mở rộng vừa vặn bằng chiều rộng dòng nhãn (vạch đỏ) */}
+        <div className="shrink-0 flex flex-col w-60 sm:w-64">
+          <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1 flex items-center justify-between gap-2 w-full">
             <span>Số Lượng Đặt</span>
             <span className={isOverStock ? 'text-rose-600 font-bold text-[10px]' : 'text-gray-400 font-normal text-[10px]'}>
-              (= {item.baseQuantity} {item.baseUnit} / Tối đa: {maxAllowed} {item.selectedUnit})
+              (= {item.baseQuantity} {item.baseUnit} / Tối đa: {maxAllowed})
             </span>
           </label>
           <div
-            className={`flex items-center h-9 rounded-xl border overflow-hidden ${
+            className={`flex items-center h-9 w-full rounded-xl border overflow-hidden shadow-2xs ${
               isOverStock
                 ? 'border-rose-400 bg-rose-50/40 ring-1 ring-rose-400'
                 : 'border-gray-200 bg-gray-50'
@@ -250,16 +250,17 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleDecrease}
               disabled={item.quantity <= 0}
-              className="w-10 h-full flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-40 transition-colors cursor-pointer"
+              className="w-9 h-full flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-40 transition-colors cursor-pointer shrink-0"
               title="Giảm 1"
             >
-              <Minus size={14} />
+              <Minus size={13} />
             </button>
             <NumberInput
               value={localQtyText}
               onChange={handleQuantityChange}
               onBlur={handleQuantityBlur}
-              className={`flex-1 h-full text-center text-xs font-bold border-x focus:outline-none ${
+              style={{ textAlign: 'center' }}
+              className={`w-0 min-w-0 flex-1 h-full text-center text-xs font-bold font-mono border-x focus:outline-none ${
                 isOverStock
                   ? 'bg-rose-50 text-rose-900 border-rose-300 focus:ring-1 focus:ring-rose-500'
                   : 'bg-white text-gray-900 border-gray-200 focus:ring-1 focus:ring-[#F85606]'
@@ -270,14 +271,14 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleIncrease}
               disabled={item.quantity >= maxAllowed}
-              className="w-10 h-full flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="w-9 h-full flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer shrink-0"
               title={
                 item.quantity >= maxAllowed
                   ? `Đã đạt giới hạn tồn khả dụng (${maxAllowed} ${item.selectedUnit})`
                   : 'Tăng 1'
               }
             >
-              <Plus size={14} />
+              <Plus size={13} />
             </button>
           </div>
         </div>
@@ -326,9 +327,9 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
 
       {/* Hàng 3: Sửa Đơn Giá Thủ Công & Kiểm Tra Giá Sàn (S4-01) */}
       <div className="p-2.5 rounded-xl bg-orange-50/40 border border-orange-100/80 space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between w-full sm:pr-10 md:pr-14 gap-4 text-xs">
           {/* Cột Trái: Đơn giá và Form sửa giá */}
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 sm:w-[320px] md:w-[350px] shrink-0">
             <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">
               Đơn Giá Áp Dụng
             </span>
@@ -430,10 +431,10 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
             )}
           </div>
 
-          {/* Cột Phải: Thành tiền sau chiết khấu */}
-          <div className="text-right shrink-0">
-            <span className="text-[10px] text-gray-400 block uppercase tracking-wider">Thành tiền</span>
-            <div className="flex items-center gap-1.5 justify-end">
+          {/* Cột Phải: Thành tiền sau chiết khấu - thẳng hàng dọc với Số Lượng Đặt */}
+          <div className="shrink-0 text-left sm:text-right w-60 sm:w-64">
+            <span className="text-[10px] text-gray-400 block uppercase tracking-wider mb-0.5">Thành tiền</span>
+            <div className="flex items-center gap-1.5 justify-start sm:justify-end">
               {item.discountAmount > 0 && (
                 <span className="text-[11px] text-gray-400 line-through">
                   {formatCurrencyVND(item.rawAmount)}
