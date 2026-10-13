@@ -583,29 +583,6 @@ export async function fetchBackendProductOptionsPage(
     totalElements: data.totalElements ?? content.length,
     hasMore: currentPage + 1 < totalPages,
   };
-}ervingWarehouse?.code || 'WH-MB01',
-      warehouseName: item.warehouseName || servingWarehouse?.name || 'Kho Tổng Miền Bắc',
-      physicalStock: stock.physicalStock,
-      reservedStock: stock.reservedStock,
-      availableStock: stock.availableStock,
-      availableUnits: (item.units || []).map((u) => ({
-        unitName: u.unitName,
-        conversionFactor: Number(u.conversionFactor),
-        isBaseUnit: u.unitName.trim().toLowerCase() === item.baseUnit.trim().toLowerCase()
-      }))
-    };
-  });
-
-  // Nếu là tải toàn bộ bảng giá (không có keyword), lưu vào cache
-  if (!kw) {
-    productOptionsCache.set(baseKey, {
-      items: mappedItems,
-      timestamp: Date.now()
-    });
-  }
-
-  return mappedItems;
->>>>>>> Stashed changes
 }
 
 /**

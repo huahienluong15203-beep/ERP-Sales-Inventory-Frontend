@@ -140,7 +140,6 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setKeyword('');
-      setDisplayLimit(50);
     }
   }, [isOpen]);
 
@@ -345,8 +344,7 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
               )}
             </div>
           ) : (
-            <>
-              {products.slice(0, displayLimit).map((p) => {
+            products.map((p) => {
               const cartItem = cartItems?.find((i) => i.sku === p.sku);
               const cartBaseQty = cartItem ? cartItem.baseQuantity : 0;
               const availableStock = p.availableStock ?? 0;
@@ -497,8 +495,7 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
                   )}
                 </div>
               );
-            })}
-          </>
+            })
           )}
 
           {/* Tải thêm khi cuộn tới cuối; nút dự phòng khi danh sách chưa đủ dài để cuộn */}
