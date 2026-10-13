@@ -24,14 +24,15 @@ export const NotificationBell: React.FC = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Chỉ hiển thị dữ liệu cảnh báo tồn cho vai trò kho và admin
-  const isWarehouseOrAdmin =
+  // Chỉ kích hoạt và hiển thị dữ liệu cảnh báo tồn cho các vai trò liên quan phân hệ Kho & Sổ tồn (S5-09)
+  const isAllowedRole =
     currentRole === 'ROLE_ADMIN' ||
     currentRole === 'ROLE_WH_MANAGER' ||
-    currentRole === 'ROLE_WAREHOUSE';
+    currentRole === 'ROLE_WAREHOUSE' ||
+    currentRole === 'ROLE_ACCOUNTANT';
 
   const loadAlerts = async () => {
-    if (!isWarehouseOrAdmin) {
+    if (!isAllowedRole) {
       setAlerts([]);
       return;
     }
@@ -61,7 +62,7 @@ export const NotificationBell: React.FC = () => {
     return () => {
       window.removeEventListener('min_stock_updated', handleUpdate);
     };
-  }, [isWarehouseOrAdmin]);
+  }, [isAllowedRole]);
 
   // Đóng khi click ngoài hoặc ấn ESC
   useEffect(() => {
@@ -105,6 +106,11 @@ export const NotificationBell: React.FC = () => {
       navigate('/inventory/ledger');
     }
   };
+
+  // Ẩn hoàn toàn chuông cảnh báo kho cho các vai trò không liên quan tính năng (Đại lý, NVKD, QL kinh doanh)
+  if (!isAllowedRole) {
+    return null;
+  }
 
   return (
     <div className="relative" ref={containerRef}>
