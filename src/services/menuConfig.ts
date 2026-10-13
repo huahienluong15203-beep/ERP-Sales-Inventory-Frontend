@@ -127,13 +127,13 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
-    title: 'Sổ tồn & Cảnh báo',
+    title: 'Quản lý tồn kho',
     path: '/inventory/ledger',
     group: 'Sản phẩm & Kho',
     icon: 'Boxes',
     epic: 'Sản phẩm & Tồn kho',
-    description: 'Khai báo định mức tồn tối thiểu theo SKU và kho, cảnh báo đỏ nguy cơ đứt hàng trước khi hết tồn',
-    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
+    description: 'Sổ theo dõi nhập xuất tồn 3 cột theo kho và thời gian',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER']
   },
 
   {
