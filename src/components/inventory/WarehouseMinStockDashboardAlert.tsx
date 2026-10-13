@@ -8,9 +8,7 @@ import {
   ArrowRightLeft,
   CheckCircle2,
   PackageCheck,
-  TrendingUp,
-  Sparkles,
-  Eye
+  TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDashboardMinStockSummary } from '../../services/stockAlertApi';
@@ -36,7 +34,6 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
   const [criticalItems, setCriticalItems] = useState<MinStockThresholdConfig[]>([]);
   const [totalAlerts, setTotalAlerts] = useState<number>(0);
   const [criticalCount, setCriticalCount] = useState<number>(0);
-  const [demoSafeView, setDemoSafeView] = useState<boolean>(false);
 
   // Chỉ hiển thị trên Dashboard cho Quản lý kho (ROLE_WH_MANAGER) và Quản trị viên (ROLE_ADMIN)
   const isWarehouseManager =
@@ -88,8 +85,8 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
     return null;
   }
 
-  // Khi không có hàng nào dưới định mức (hoặc bấm xem thử giao diện an toàn)
-  if (!loading && (totalAlerts === 0 || demoSafeView)) {
+  // Khi không có hàng nào dưới định mức
+  if (!loading && totalAlerts === 0) {
     return (
       <div className="mb-3.5 animate-in fade-in slide-in-from-top-2 duration-300">
         <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 rounded-2xl p-4 sm:p-5 text-white shadow-xl shadow-emerald-700/15 border border-emerald-400/30 relative overflow-hidden">
@@ -121,18 +118,6 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
 
               {/* CÁC NÚT THAO TÁC NGHIỆP VỤ NHANH */}
               <div className="flex items-center gap-2 shrink-0">
-                {demoSafeView && totalAlerts > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setDemoSafeView(false)}
-                    className="px-2.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs transition border border-white/30 flex items-center gap-1.5 cursor-pointer h-9 backdrop-blur-xs"
-                    title="Trở về xem cảnh báo thực tế từ hệ thống"
-                  >
-                    <Eye size={13} />
-                    <span>Dữ liệu thực ({totalAlerts} cảnh báo)</span>
-                  </button>
-                )}
-
                 {isWarehouseManager && (
                   <>
                     <button
@@ -234,16 +219,6 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setDemoSafeView(true)}
-                  className="px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs transition border border-white/25 flex items-center gap-1.5 cursor-pointer h-9 backdrop-blur-xs"
-                  title="Bấm để xem trước giao diện khi toàn bộ kho hàng đều đạt định mức an toàn (0 cảnh báo)"
-                >
-                  <Sparkles size={13} className="text-yellow-300" />
-                  <span>Xem khi an toàn</span>
-                </button>
-
                 {isWarehouseManager && (
                   <>
                     <button
