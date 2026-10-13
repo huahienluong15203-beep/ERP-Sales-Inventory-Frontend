@@ -523,7 +523,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
           </div>
 
           {/* Phím tắt điều hướng dành cho quản trị viên / nhân viên nội bộ (nếu có quyền) */}
-          {(currentRole !== 'ROLE_CUSTOMER' || (user?.roles && user.roles.some((r) => r !== 'ROLE_CUSTOMER'))) && (
+          {currentRole !== 'ROLE_CUSTOMER' && (
             <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
               <button
                 type="button"

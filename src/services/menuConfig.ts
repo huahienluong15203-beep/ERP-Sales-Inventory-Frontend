@@ -18,8 +18,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
       'ROLE_SALES_MANAGER',
       'ROLE_WAREHOUSE',
       'ROLE_WH_MANAGER',
-      'ROLE_ACCOUNTANT',
-      'ROLE_CUSTOMER'
+      'ROLE_ACCOUNTANT'
     ]
   },
 

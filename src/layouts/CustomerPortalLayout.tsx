@@ -87,18 +87,20 @@ export const CustomerPortalLayout: React.FC<CustomerPortalLayoutProps> = ({
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200/80 shadow-xs">
         <div className="max-w-7xl mx-auto px-3 sm:px-6">
           <div className="flex items-center justify-between h-16 gap-2">
-            {/* Logo & Nhãn Cổng Đại Lý + Nút Quay Lại */}
+            {/* Logo & Nhãn Cổng Đại Lý + Nút Quay Lại (Ẩn với vai trò Đại lý) */}
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <button
-                type="button"
-                onClick={handleGoBack}
-                className="p-2 sm:px-3 sm:py-2 rounded-xl border border-gray-200 hover:bg-gray-100 hover:border-gray-300 text-gray-700 flex items-center gap-1.5 transition cursor-pointer text-xs font-bold shrink-0 shadow-xs active:scale-95"
-                title="Quay lại trang trước"
-                id="portal-back-btn"
-              >
-                <ArrowLeft size={16} />
-                <span className="hidden sm:inline">Quay lại</span>
-              </button>
+              {currentRole !== 'ROLE_CUSTOMER' && (
+                <button
+                  type="button"
+                  onClick={handleGoBack}
+                  className="p-2 sm:px-3 sm:py-2 rounded-xl border border-gray-200 hover:bg-gray-100 hover:border-gray-300 text-gray-700 flex items-center gap-1.5 transition cursor-pointer text-xs font-bold shrink-0 shadow-xs active:scale-95"
+                  title="Quay lại trang trước"
+                  id="portal-back-btn"
+                >
+                  <ArrowLeft size={16} />
+                  <span className="hidden sm:inline">Quay lại</span>
+                </button>
+              )}
 
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-[#F85606] to-orange-500 flex items-center justify-center text-white font-black shadow-md shadow-orange-500/20 shrink-0">
                 <Building2 size={20} className="sm:hidden" />
@@ -230,7 +232,7 @@ export const CustomerPortalLayout: React.FC<CustomerPortalLayoutProps> = ({
                     )}
 
                     <div className="py-1">
-                      {(currentRole !== 'ROLE_CUSTOMER' || (user?.roles && user.roles.some((r) => r !== 'ROLE_CUSTOMER'))) && (
+                      {currentRole !== 'ROLE_CUSTOMER' && (
                         <button
                           type="button"
                           onClick={() => {
