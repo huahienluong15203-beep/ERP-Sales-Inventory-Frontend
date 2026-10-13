@@ -146,6 +146,22 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Danh mục kho & vị trí',
+    path: '/inventory/warehouses',
+    group: 'Sản phẩm & Kho',
+    icon: 'Building2',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Quản lý danh sách kho hàng và sơ đồ vị trí lưu trữ (khu vực, kệ hàng, tầng giá, ô chứa)',
+    allowedRoles: [
+      'ROLE_WAREHOUSE',
+      'ROLE_WH_MANAGER',
+      'ROLE_ADMIN',
+      'ROLE_ACCOUNTANT',
+      'ROLE_SALES_MANAGER'
+    ]
+  },
+
+  {
     title: 'Bảng giá sản phẩm',
     path: '/pricing',
     group: 'Giá & Chiết khấu',
