@@ -153,9 +153,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
       ? 'Thông tin cá nhân & thiết lập an toàn tài khoản'
       : location.pathname === '/products/import'
         ? 'Tải tệp mẫu, xem trước từng dòng và nhập hàng loạt đến 5.000 SKU'
-        : location.pathname === '/orders'
-          ? ''
-          : (currentMenu?.description ?? 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống');
+        : (currentMenu?.description ?? 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống');
 
   return (
     <div className="erp-app-shell">
@@ -325,7 +323,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             {/* Tiêu đề trang + mô tả hoạt động bên dưới */}
             <div className="erp-page-title-box">
               <h1 className="erp-page-heading">{pageTitle}</h1>
-              {location.pathname !== '/categories' && location.pathname !== '/orders' && Boolean(pageSubtitle) && (
+              {location.pathname !== '/categories' && Boolean(pageSubtitle) && (
                 <span className="erp-page-subheading">{pageSubtitle}</span>
               )}
             </div>
