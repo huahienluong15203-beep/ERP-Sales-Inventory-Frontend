@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Boxes,
   AlertTriangle,
@@ -17,6 +17,7 @@ import {
   getDashboardMinStockSummary,
   updateMinStockThreshold
 } from '../../services/stockAlertApi';
+import { fetchCategories } from '../../services/categoryApi';
 import { useLocation } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
 import { SearchSelect } from '../../components/common/SearchSelect';
@@ -49,11 +50,23 @@ export const StockLedgerPage: React.FC = () => {
 
   // Bộ lọc
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('ALL');
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'BELOW' | 'CRITICAL' | 'SAFE'>('ALL');
   const [keyword, setKeyword] = useState<string>('');
+  const [debouncedKeyword, setDebouncedKeyword] = useState<string>('');
+
+  // Danh mục nhóm hàng
+  const [categoryList, setCategoryList] = useState<{ code: string; name: string }[]>([]);
 
   // Highlight SKU được bấm từ thông báo chuông hoặc thẻ cảnh báo
   const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
+
+  // Bộ nhớ đệm phân trang tránh query liên tục khi đã load dữ liệu
+  const cacheRef = useRef<Map<string, {
+    content: MinStockThresholdConfig[];
+    totalElements: number;
+    totalPages: number;
+  }>>(new Map());
 
   // Thống kê nhanh toàn bộ hệ thống
   const [stats, setStats] = useState({
@@ -68,18 +81,62 @@ export const StockLedgerPage: React.FC = () => {
   const [editMinValue, setEditMinValue] = useState<number>(0);
   const [savingId, setSavingId] = useState<string | null>(null);
 
+  // Tải danh mục nhóm hàng từ backend khi mount
+  useEffect(() => {
+    fetchCategories()
+      .then((res) => {
+        if (Array.isArray(res)) {
+          setCategoryList(res.map((c) => ({ code: c.code || String(c.id), name: c.name })));
+        }
+      })
+      .catch((err) => console.warn('Lỗi tải nhóm hàng:', err));
+  }, []);
+
+  // Tổng hợp danh sách nhóm hàng bao gồm cả các nhóm hàng thực tế từ sản phẩm
+  const allCategoryNames = useMemo(() => {
+    const set = new Set<string>();
+    categoryList.forEach((c) => c.name && set.add(c.name));
+    configs.forEach((cfg) => cfg.category && set.add(cfg.category));
+    return Array.from(set).filter(Boolean).sort();
+  }, [categoryList, configs]);
+
+  // Debounce tìm kiếm reactive: gõ là tự lọc sau 300ms, không bắt buộc bấm nút Lọc
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (debouncedKeyword !== keyword) {
+        setDebouncedKeyword(keyword);
+        setPage(0);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [keyword, debouncedKeyword]);
+
   const loadData = async (
     targetPage = page,
     targetSize = size,
-    kw = keyword,
+    kw = debouncedKeyword,
     status = statusFilter,
-    wh = selectedWarehouse
+    wh = selectedWarehouse,
+    cat = selectedCategory
   ) => {
+    const cacheKey = `${wh}__${cat}__${status}__${(kw || '').trim().toLowerCase()}__${targetPage}__${targetSize}`;
+
+    // Nếu đã load data đó rồi thì lấy luôn từ cache, tránh lag trang
+    if (cacheRef.current.has(cacheKey)) {
+      const cached = cacheRef.current.get(cacheKey)!;
+      setConfigs(cached.content);
+      setTotalElements(cached.totalElements);
+      setTotalPages(cached.totalPages);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const [pagedRes, summary] = await Promise.all([
         fetchMinStockConfigsPaged({
           warehouseCode: wh,
+          category: cat,
           status,
           keyword: kw,
           page: targetPage,
@@ -91,6 +148,13 @@ export const StockLedgerPage: React.FC = () => {
       setConfigs(pagedRes.content);
       setTotalElements(pagedRes.totalElements);
       setTotalPages(pagedRes.totalPages);
+
+      // Lưu kết quả vào cache
+      cacheRef.current.set(cacheKey, {
+        content: pagedRes.content,
+        totalElements: pagedRes.totalElements,
+        totalPages: pagedRes.totalPages
+      });
 
       if (summary) {
         const total = summary.totalSkuCount || pagedRes.totalElements;
@@ -115,8 +179,8 @@ export const StockLedgerPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData(page, size, keyword, statusFilter, selectedWarehouse);
-  }, [page, size, selectedWarehouse, statusFilter]);
+    loadData(page, size, debouncedKeyword, statusFilter, selectedWarehouse, selectedCategory);
+  }, [page, size, debouncedKeyword, statusFilter, selectedWarehouse, selectedCategory]);
 
   // Tự động nhận diện SKU & Kho từ thông báo chuông header nếu có
   useEffect(() => {
@@ -159,8 +223,9 @@ export const StockLedgerPage: React.FC = () => {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setHighlightedKey(null);
+    setDebouncedKeyword(keyword);
     setPage(0);
-    loadData(0, size, keyword, statusFilter, selectedWarehouse);
+    loadData(0, size, keyword, statusFilter, selectedWarehouse, selectedCategory);
   };
 
   const handleStartEdit = (cfg: MinStockThresholdConfig) => {
@@ -196,6 +261,7 @@ export const StockLedgerPage: React.FC = () => {
 
       setConfigs((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       setEditingId(null);
+      cacheRef.current.clear();
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('min_stock_updated'));
       }
@@ -225,8 +291,8 @@ export const StockLedgerPage: React.FC = () => {
             setPage(0);
           }}
           className={`p-3.5 rounded-2xl border shadow-2xs cursor-pointer transition select-none ${statusFilter === 'ALL'
-              ? 'bg-gray-100/90 border-gray-400 ring-2 ring-gray-400/30'
-              : 'bg-white border-gray-200/80 hover:bg-gray-50/80'
+            ? 'bg-gray-100/90 border-gray-400 ring-2 ring-gray-400/30'
+            : 'bg-white border-gray-200/80 hover:bg-gray-50/80'
             }`}
           title="Nhấp để hiển thị tất cả hàng hóa"
         >
@@ -245,8 +311,8 @@ export const StockLedgerPage: React.FC = () => {
             setPage(0);
           }}
           className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition select-none ${statusFilter === 'BELOW'
-              ? 'bg-rose-50/90 border-rose-400 ring-2 ring-rose-500/30 shadow-xs'
-              : 'bg-white border-rose-200/80 hover:bg-rose-50/40'
+            ? 'bg-rose-50/90 border-rose-400 ring-2 ring-rose-500/30 shadow-xs'
+            : 'bg-white border-rose-200/80 hover:bg-rose-50/40'
             }`}
           title="Nhấp để lọc nhanh các mặt hàng dưới định mức"
         >
@@ -255,9 +321,7 @@ export const StockLedgerPage: React.FC = () => {
               <AlertTriangle size={14} className="text-rose-600" />
               <span>Dưới Định Mức</span>
             </span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200">
-              Cần Bổ Sung
-            </span>
+
           </div>
           <div className="text-2xl font-black text-rose-700 mt-1 flex items-center gap-2">
             <span>{stats.below}</span>
@@ -276,12 +340,12 @@ export const StockLedgerPage: React.FC = () => {
             setPage(0);
           }}
           className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition select-none ${statusFilter === 'CRITICAL'
-              ? 'bg-red-50/90 border-red-400 ring-2 ring-red-500/30 shadow-xs'
-              : 'bg-white border-red-200/80 hover:bg-red-50/40'
+            ? 'bg-red-50/90 border-red-400 ring-2 ring-red-500/30 shadow-xs'
+            : 'bg-white border-red-200/80 hover:bg-red-50/40'
             }`}
           title="Nhấp để lọc nhanh các mặt hàng cạn kiệt tồn kho"
         >
-          <div className="text-xs text-red-600 font-bold">Cạn Kiệt Tồn (Tồn = 0)</div>
+          <div className="text-xs text-red-600 font-bold">Cạn Kiệt Tồn </div>
           <div className="text-2xl font-black text-red-700 mt-1">{stats.critical}</div>
           <div className="text-[11px] text-red-500 mt-0.5 font-medium">
             {statusFilter === 'CRITICAL' ? 'Đang lọc xem hàng hết sạch' : 'Nguy cơ mất doanh số ngay lập tức'}
@@ -296,8 +360,8 @@ export const StockLedgerPage: React.FC = () => {
             setPage(0);
           }}
           className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition select-none ${statusFilter === 'SAFE'
-              ? 'bg-emerald-50/90 border-emerald-400 ring-2 ring-emerald-500/30 shadow-xs'
-              : 'bg-white border-emerald-200/80 hover:bg-emerald-50/40'
+            ? 'bg-emerald-50/90 border-emerald-400 ring-2 ring-emerald-500/30 shadow-xs'
+            : 'bg-white border-emerald-200/80 hover:bg-emerald-50/40'
             }`}
           title="Nhấp để lọc nhanh các mặt hàng tồn an toàn"
         >
@@ -311,12 +375,13 @@ export const StockLedgerPage: React.FC = () => {
 
       {/* THANH TÌM KIẾM & BỘ LỌC */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-xs">
-        <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="relative w-full sm:max-w-sm">
+        <form onSubmit={handleSearchSubmit} className="flex flex-col lg:flex-row items-center justify-between gap-3">
+          {/* Ô Tìm Nhanh Reactive */}
+          <div className="relative w-full lg:max-w-xs">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Tìm theo mã SKU, tên sản phẩm, nhóm hàng..."
+              placeholder="Tìm nhanh theo mã hoặc tên..."
               value={keyword}
               onChange={(e) => {
                 setHighlightedKey(null);
@@ -326,8 +391,8 @@ export const StockLedgerPage: React.FC = () => {
             />
           </div>
 
-          <div className="flex flex-wrap items-center sm:justify-end gap-2 w-full sm:w-auto">
-            {/* Lọc Kho */}
+          <div className="flex flex-wrap items-center lg:justify-end gap-2 w-full lg:w-auto">
+            {/* 1. Lọc Kho */}
             <SearchSelect
               value={selectedWarehouse}
               onChange={(e) => {
@@ -345,7 +410,25 @@ export const StockLedgerPage: React.FC = () => {
               ))}
             </SearchSelect>
 
-            {/* Ô chọn Trạng Thái Tồn (thay thế nút toggle) */}
+            {/* 2. Lọc Nhóm Hàng */}
+            <select
+              value={selectedCategory}
+              onChange={(e) => {
+                setHighlightedKey(null);
+                setSelectedCategory(e.target.value);
+                setPage(0);
+              }}
+              className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606] cursor-pointer text-gray-700"
+            >
+              <option value="ALL">Tất cả nhóm hàng</option>
+              {allCategoryNames.map((catName) => (
+                <option key={catName} value={catName}>
+                  {catName}
+                </option>
+              ))}
+            </select>
+
+            {/* 3. Lọc Trạng Thái Tồn */}
             <select
               value={statusFilter}
               onChange={(e) => {
@@ -387,12 +470,13 @@ export const StockLedgerPage: React.FC = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs table-fixed">
-              {/* Định nghĩa kích thước cố định cho từng cột: không xê dịch khi chỉnh sửa */}
+              {/* Định nghĩa kích thước cố định cho 7 cột tách bạch */}
               <colgroup>
-                <col className="w-[28%]" />
-                <col className="w-[20%]" />
-                <col className="w-[13%]" />
-                <col className="w-[13%]" />
+                <col className="w-[24%]" />
+                <col className="w-[17%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
                 <col className="w-[13%]" />
                 <col className="w-[13%]" />
               </colgroup>
@@ -400,7 +484,8 @@ export const StockLedgerPage: React.FC = () => {
                 <tr>
                   <th className="py-3 px-3">Mã SKU & Tên Hàng</th>
                   <th className="py-3 px-3">Kho Lưu Trữ</th>
-                  <th className="py-3 px-2 text-center">Tồn Hiện Tại</th>
+                  <th className="py-3 px-2 text-center">Tồn Thực Tế</th>
+                  <th className="py-3 px-2 text-center">Đang Giữ Chỗ</th>
                   <th className="py-3 px-2 text-center">Tồn Khả Dụng</th>
                   <th className="py-3 px-2 text-center">Định Mức Tối Thiểu</th>
                   <th className="py-3 px-2 text-center">Trạng Thái Tồn</th>
@@ -413,16 +498,17 @@ export const StockLedgerPage: React.FC = () => {
                   const isBelow = Boolean(item.isBelowThreshold || (item as any).belowThreshold || item.currentStock < item.minThreshold);
                   const itemKey = `${item.productSku}_${item.warehouseCode}`;
                   const isHighlighted = highlightedKey ? (highlightedKey === itemKey || highlightedKey === item.productSku) : false;
+                  const reserved = item.reservedStock ?? Math.max(0, item.currentStock - item.availableStock);
 
                   return (
                     <tr
                       key={item.id}
                       data-row-key={itemKey}
                       className={`transition duration-150 ${isHighlighted
-                          ? 'bg-rose-100/80 hover:bg-rose-100 border-l-4 border-rose-600 ring-2 ring-rose-500/40 shadow-sm'
-                          : isBelow
-                            ? 'bg-rose-50/20 hover:bg-rose-50/50 border-l-4 border-transparent'
-                            : 'hover:bg-gray-50/70 border-l-4 border-transparent'
+                        ? 'bg-rose-100/80 hover:bg-rose-100 border-l-4 border-rose-600 ring-2 ring-rose-500/40 shadow-sm'
+                        : isBelow
+                          ? 'bg-rose-50/20 hover:bg-rose-50/50 border-l-4 border-transparent'
+                          : 'hover:bg-gray-50/70 border-l-4 border-transparent'
                         }`}
                     >
                       {/* 1. Mã SKU & Tên hàng */}
@@ -442,19 +528,32 @@ export const StockLedgerPage: React.FC = () => {
                         <div className="text-[10px] font-mono text-gray-400">{item.warehouseCode}</div>
                       </td>
 
-                      {/* 3. Tồn hiện tại */}
+                      {/* 3. Tồn thực tế */}
                       <td className="py-3 px-2 text-center overflow-hidden">
                         <span
                           className={`inline-block font-bold text-xs px-2 py-0.5 rounded-lg whitespace-nowrap ${isBelow
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                              : 'bg-emerald-50 text-emerald-800 border border-emerald-100'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : 'bg-emerald-50 text-emerald-800 border border-emerald-100'
                             }`}
                         >
                           {item.currentStock.toLocaleString('vi-VN')} {item.unit}
                         </span>
                       </td>
 
-                      {/* 4. Tồn khả dụng */}
+                      {/* 4. Tồn đang giữ chỗ (Tạm giữ) */}
+                      <td className="py-3 px-2 text-center overflow-hidden">
+                        <span
+                          className={`inline-block font-bold text-xs px-2 py-0.5 rounded-lg whitespace-nowrap ${
+                            reserved > 0
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'text-gray-400 font-medium'
+                          }`}
+                        >
+                          {reserved.toLocaleString('vi-VN')} {item.unit}
+                        </span>
+                      </td>
+
+                      {/* 5. Tồn khả dụng */}
                       <td className="py-3 px-2 text-center overflow-hidden">
                         <span className="font-bold text-gray-700 whitespace-nowrap">
                           {item.availableStock.toLocaleString('vi-VN')} {item.unit}

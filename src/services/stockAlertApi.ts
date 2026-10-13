@@ -160,6 +160,7 @@ export interface PagedMinStockResult {
  */
 export async function fetchMinStockConfigsPaged(params?: {
   warehouseCode?: string;
+  category?: string;
   onlyBelowThreshold?: boolean;
   status?: 'ALL' | 'BELOW' | 'CRITICAL' | 'SAFE' | string;
   keyword?: string;
@@ -175,6 +176,9 @@ export async function fetchMinStockConfigsPaged(params?: {
     q.set('size', String(size));
     if (params?.warehouseCode && params.warehouseCode !== 'ALL') {
       q.set('warehouseCode', params.warehouseCode.trim());
+    }
+    if (params?.category && params.category !== 'ALL') {
+      q.set('category', params.category.trim());
     }
     if (params?.status && params.status !== 'ALL') {
       q.set('status', params.status.trim());
@@ -196,12 +200,23 @@ export async function fetchMinStockConfigsPaged(params?: {
         ? data.totalPages
         : (Math.ceil(totalElements / size) || 1);
 
-      const content: MinStockThresholdConfig[] = rawList.map((item: any) => ({
-        ...item,
-        isBelowThreshold: Boolean(
-          item.isBelowThreshold ?? item.belowThreshold ?? (Number(item.currentStock) < Number(item.minThreshold))
-        )
-      }));
+      const content: MinStockThresholdConfig[] = rawList.map((item: any) => {
+        const current = Number(item.currentStock ?? 0);
+        const available = Number(item.availableStock ?? 0);
+        const reserved = typeof item.reservedStock === 'number'
+          ? Number(item.reservedStock)
+          : Math.max(0, current - available);
+
+        return {
+          ...item,
+          currentStock: current,
+          reservedStock: reserved,
+          availableStock: available,
+          isBelowThreshold: Boolean(
+            item.isBelowThreshold ?? item.belowThreshold ?? (current < Number(item.minThreshold))
+          )
+        };
+      });
 
       return {
         content,
@@ -220,6 +235,9 @@ export async function fetchMinStockConfigsPaged(params?: {
 
   if (params?.warehouseCode && params.warehouseCode !== 'ALL') {
     list = list.filter((c) => c.warehouseCode === params.warehouseCode);
+  }
+  if (params?.category && params.category !== 'ALL') {
+    list = list.filter((c) => c.category && c.category.toLowerCase().includes(params.category!.toLowerCase()));
   }
   if (params?.status && params.status !== 'ALL') {
     if (params.status === 'BELOW') {
@@ -245,7 +263,10 @@ export async function fetchMinStockConfigsPaged(params?: {
   const totalElements = list.length;
   const totalPages = Math.ceil(totalElements / size) || 1;
   const start = page * size;
-  const content = list.slice(start, start + size);
+  const content = list.slice(start, start + size).map((item) => ({
+    ...item,
+    reservedStock: item.reservedStock ?? Math.max(0, item.currentStock - item.availableStock)
+  }));
 
   return { content, totalElements, totalPages, page, size };
 }

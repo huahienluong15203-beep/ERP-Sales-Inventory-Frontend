@@ -18,6 +18,7 @@ export interface MinStockThresholdConfig {
   warehouseName: string;
   minThreshold: number;          // Ngưỡng tồn tối thiểu khai báo (AC1)
   currentStock: number;          // Tồn kho thực tế hiện tại
+  reservedStock?: number;        // Tồn đang giữ chỗ (Tạm giữ)
   availableStock: number;        // Tồn khả dụng
   isBelowThreshold: boolean;     // Cờ báo hiệu dưới ngưỡng (AC2)
   deficitQuantity: number;       // Số lượng thiếu hụt (minThreshold - currentStock)
