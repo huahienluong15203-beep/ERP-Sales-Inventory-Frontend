@@ -364,7 +364,7 @@ export async function receiveStockTransfer(payload: ReceiveTransferPayload): Pro
   if (hasDiscrepancy && !payload.generalReason?.trim()) {
     const lineMissingReason = updatedLines.find((l) => (l.differenceQuantity || 0) !== 0 && !l.discrepancyReason?.trim());
     if (lineMissingReason) {
-      throw new Error(`Phát hiện chênh lệch tại mặt hàng ${lineMissingReason.productName}. Bắt buộc nhập lý do chênh lệch theo AC4.`);
+      throw new Error(`Phát hiện chênh lệch tại mặt hàng ${lineMissingReason.productName}. Bắt buộc nhập lý do chênh lệch.`);
     }
   }
 

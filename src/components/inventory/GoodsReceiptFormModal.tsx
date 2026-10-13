@@ -901,7 +901,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                       {/* Cột 4: Quy đổi về đơn vị cơ sở khi ghi sổ (AC2) */}
                       <div className="lg:col-span-2 text-center">
                         <span className="lg:hidden text-[10px] font-bold text-gray-400 uppercase block mb-1">
-                          Quy về Cơ sở (AC2)
+                          Quy về Cơ sở
                         </span>
                         <div className="bg-emerald-50 border border-emerald-200 rounded-xl py-1.5 px-2 text-center">
                           <span className="font-black text-xs font-mono text-emerald-700">
@@ -916,7 +916,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                       {/* Cột 5: Số lô & Hạn sử dụng (AC3) */}
                       <div className="lg:col-span-2 space-y-1">
                         <span className="lg:hidden text-[10px] font-bold text-gray-400 uppercase block mb-1">
-                          Số lô & Hạn dùng (AC3)
+                          Số lô & Hạn dùng
                         </span>
                         <input
                           type="text"

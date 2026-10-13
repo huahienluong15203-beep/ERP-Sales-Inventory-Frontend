@@ -440,7 +440,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    3. Nhóm hàng (Cây S2-06) <span className="text-red-500">*</span>
+                    3. Nhóm hàng (Cây phân cấp) <span className="text-red-500">*</span>
                   </label>
                   {loadingCategories && (
                     <span className="text-[11px] text-gray-400">Đang tải cây...</span>

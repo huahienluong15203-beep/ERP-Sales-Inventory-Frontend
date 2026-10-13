@@ -383,7 +383,7 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
                       <strong className="font-bold text-rose-900">
-                        Đại lý đang bị khóa giao dịch hành chính (S3-07)
+                        Đại lý đang bị khóa giao dịch hành chính
                       </strong>
                       {((creditStatus?.currentDebt ?? selectedAgency.totalDebt ?? 0) <= 0) && (
                         <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">

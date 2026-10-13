@@ -753,7 +753,7 @@ export async function fetchOrderApprovalHistory(id: number | string): Promise<Or
  */
 export async function cancelOrder(id: number | string, reason: string): Promise<OrderBackendResponse> {
   if (!reason || !reason.trim()) {
-    throw new Error('Bắt buộc nhập lý do hủy đơn hàng theo quy chuẩn S4-06 AC2!');
+    throw new Error('Bắt buộc nhập lý do hủy đơn hàng!');
   }
   const res = await callBackend(`${API_BASE_URL}/api/orders/${id}/cancel`, {
     method: 'POST',
