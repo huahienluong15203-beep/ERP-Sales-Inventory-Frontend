@@ -18,11 +18,8 @@ interface WarehouseMinStockDashboardAlertProps {
 }
 
 /**
- * Subtask S5-09 (Nguyễn Văn Minh): FE: Code cảnh báo nổi bật trên UI
- * Acceptance Criteria (AC2):
- * - Hàng dưới ngưỡng hiển thị nổi bật trong sổ tồn và trên dashboard kho
- * - Hiển thị THÔNG BÁO ĐỎ phục vụ kịch bản kiểm thử của QA (Ngô Thị Ánh Ngọc)
- * - Phân quyền hiển thị: Chỉ hiển thị cho Quản lý kho (ROLE_WH_MANAGER), Thủ kho (ROLE_WAREHOUSE) và Quản trị viên (ROLE_ADMIN)
+ * Cảnh báo định mức tồn kho tối thiểu & nguy cơ thiếu hụt hàng hóa
+ * Hiển thị trên Dashboard cho: Quản lý kho (ROLE_WH_MANAGER), Thủ kho (ROLE_WAREHOUSE) và Quản trị viên (ROLE_ADMIN)
  */
 export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboardAlertProps> = ({
   warehouseCode,
@@ -52,7 +49,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
       .then((res) => {
         setTotalAlerts(res.totalAlerts);
         setCriticalCount(res.criticalCount);
-        setCriticalItems(res.criticalItems.slice(0, 4));
+        setCriticalItems(res.criticalItems);
         setLoading(false);
       })
       .catch((err) => {
@@ -63,6 +60,14 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
 
   useEffect(() => {
     loadAlertData();
+
+    const handleUpdated = () => {
+      loadAlertData();
+    };
+    window.addEventListener('min_stock_updated', handleUpdated);
+    return () => {
+      window.removeEventListener('min_stock_updated', handleUpdated);
+    };
   }, [warehouseCode, isWarehouseOrAdmin]);
 
   // Bấm vào thẻ cảnh báo -> chuyển sang trang Phiếu nhập kho NCC và tự động kích hoạt tạo phiếu
@@ -172,10 +177,11 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                 {!hideLedgerButton && (
                   <button
                     type="button"
-                    onClick={() => navigate('/inventory/ledger')}
-                    className="px-3.5 py-1.5 rounded-lg bg-orange-600/80 hover:bg-orange-600 text-white font-bold text-xs transition border border-orange-300/40 flex items-center gap-1 cursor-pointer h-9"
+                    onClick={() => navigate('/inventory/ledger?status=BELOW')}
+                    className="px-3.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs transition border border-white/30 flex items-center gap-1.5 cursor-pointer h-9 backdrop-blur-xs"
+                    title="Chuyển sang trang Quản lý tồn kho để xem đầy đủ"
                   >
-                    <span>Xem Sổ Tồn</span>
+                    <span>Xem tất cả ({totalAlerts})</span>
                     <ChevronRight size={14} />
                   </button>
                 )}
@@ -190,7 +196,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {criticalItems.map((item) => (
+                {(totalAlerts > 3 ? criticalItems.slice(0, 3) : criticalItems.slice(0, 4)).map((item) => (
                   <div
                     key={item.id}
                     onClick={() => handleCardClick(item)}
@@ -210,7 +216,6 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                           {item.productName}
                         </div>
                       </div>
-
                     </div>
 
                     <div className="flex items-center justify-between text-xs pt-1 border-t border-white/15">
@@ -239,6 +244,30 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                     </div>
                   </div>
                 ))}
+
+                {/* Thẻ xem thêm khi có nhiều hơn 3 mặt hàng dưới định mức */}
+                {totalAlerts > 3 && (
+                  <div
+                    onClick={() => navigate('/inventory/ledger?status=BELOW')}
+                    className="group/more bg-white/15 hover:bg-white/25 border border-white/20 hover:border-white/50 rounded-2xl p-3.5 backdrop-blur-md flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.99] text-white space-y-2 min-h-[140px]"
+                    title="Xem toàn bộ mặt hàng dưới định mức trên trang Quản lý tồn kho"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center group-hover/more:bg-white group-hover/more:text-[#F85606] transition-colors">
+                      <ChevronRight size={18} />
+                    </div>
+                    <div>
+                      <div className="font-black text-xs sm:text-sm text-yellow-300">
+                        +{totalAlerts - 3} mặt hàng khác
+                      </div>
+                      <div className="text-[10px] text-orange-100 mt-0.5">
+                        Đang dưới định mức tối thiểu
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-white group-hover/more:text-yellow-200 flex items-center gap-1 underline underline-offset-2">
+                      Xem chi tiết sổ tồn &gt;
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>

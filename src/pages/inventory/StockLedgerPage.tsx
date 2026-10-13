@@ -23,13 +23,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { NumberInput } from '../../components/common/NumberInput';
 import { Pagination } from '../../components/common/Pagination';
-import { WarehouseMinStockDashboardAlert } from '../../components/inventory/WarehouseMinStockDashboardAlert';
 
 /**
- * S5-09 (Nguyễn Văn Minh): Sổ Tồn Kho & Khai Báo Ngưỡng Tồn Tối Thiểu
- * Acceptance Criteria:
- * - AC1: Khai báo tồn tối thiểu theo SKU và theo kho
- * - AC2: Hàng dưới ngưỡng hiển thị nổi bật trong sổ tồn và trên dashboard kho
+ * Sổ Tồn Kho & Khai Báo Ngưỡng Tồn Tối Thiểu
+ * Hiển thị số liệu tồn thực tế, đang giữ chỗ, khả dụng và thiết lập định mức an toàn
  */
 export const StockLedgerPage: React.FC = () => {
   const location = useLocation();
@@ -182,12 +179,18 @@ export const StockLedgerPage: React.FC = () => {
     loadData(page, size, debouncedKeyword, statusFilter, selectedWarehouse, selectedCategory);
   }, [page, size, debouncedKeyword, statusFilter, selectedWarehouse, selectedCategory]);
 
-  // Tự động nhận diện SKU & Kho từ thông báo chuông header nếu có
+  // Tự động nhận diện SKU & Kho hoặc trạng thái lọc từ URL nếu có
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const skuParam = params.get('sku');
     const whParam = params.get('warehouseCode');
     const isHighlight = params.get('highlight') === 'true';
+    const statusParam = params.get('status');
+
+    if (statusParam === 'BELOW' || statusParam === 'CRITICAL' || statusParam === 'SAFE') {
+      setStatusFilter(statusParam as any);
+      setPage(0);
+    }
 
     if (skuParam && isHighlight) {
       const key = whParam ? `${skuParam}_${whParam}` : skuParam;
@@ -274,13 +277,6 @@ export const StockLedgerPage: React.FC = () => {
 
   return (
     <div className="space-y-3.5 pb-8">
-
-      {/* CẢNH BÁO TỒN KHO DƯỚI ĐỊNH MỨC TỐI THIỂU NỔI BẬT (S5-09 / AC2) */}
-      <WarehouseMinStockDashboardAlert
-        warehouseCode={selectedWarehouse === 'ALL' ? undefined : selectedWarehouse}
-        hideLedgerButton={true}
-      />
-
       {/* 4 THẺ THỐNG KÊ (KPI CARDS) - HỖ TRỢ NHẤP ĐỂ LỌC TRỰC TIẾP */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Card 1: Tổng SKU theo kho */}
@@ -487,7 +483,7 @@ export const StockLedgerPage: React.FC = () => {
                   <th className="py-3 px-2 text-center">Tồn Thực Tế</th>
                   <th className="py-3 px-2 text-center">Đang Giữ Chỗ</th>
                   <th className="py-3 px-2 text-center">Tồn Khả Dụng</th>
-                  <th className="py-3 px-2 text-center">Định Mức Tối Thiểu</th>
+                  <th className="py-3 px-2 text-center">Tồn Tối Thiểu</th>
                   <th className="py-3 px-2 text-center">Trạng Thái Tồn</th>
                 </tr>
               </thead>
@@ -543,11 +539,10 @@ export const StockLedgerPage: React.FC = () => {
                       {/* 4. Tồn đang giữ chỗ (Tạm giữ) */}
                       <td className="py-3 px-2 text-center overflow-hidden">
                         <span
-                          className={`inline-block font-bold text-xs px-2 py-0.5 rounded-lg whitespace-nowrap ${
-                            reserved > 0
-                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                              : 'text-gray-400 font-medium'
-                          }`}
+                          className={`inline-block font-bold text-xs px-2 py-0.5 rounded-lg whitespace-nowrap ${reserved > 0
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'text-gray-400 font-medium'
+                            }`}
                         >
                           {reserved.toLocaleString('vi-VN')} {item.unit}
                         </span>
@@ -597,7 +592,7 @@ export const StockLedgerPage: React.FC = () => {
                           </div>
                         ) : (
                           <div
-                            className="inline-flex items-center justify-center gap-1.5 group cursor-pointer"
+                            className="relative inline-flex items-center justify-center group cursor-pointer"
                             onClick={() => canEditInventory && handleStartEdit(item)}
                           >
                             <span className="font-bold text-gray-800 whitespace-nowrap">
@@ -610,7 +605,7 @@ export const StockLedgerPage: React.FC = () => {
                                   e.stopPropagation();
                                   handleStartEdit(item);
                                 }}
-                                className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-rose-600 rounded transition cursor-pointer"
+                                className="absolute left-full ml-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-rose-600 rounded transition cursor-pointer"
                                 title="Sửa định mức tồn tối thiểu"
                               >
                                 <Edit2 size={11} />
