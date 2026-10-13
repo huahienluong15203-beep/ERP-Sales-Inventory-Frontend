@@ -11,7 +11,7 @@ import {
 } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, ChevronDown, Search } from 'lucide-react';
+import { Check, ChevronDown, Search, RefreshCw } from 'lucide-react';
 import { normalizeSearchText } from '../../hooks/useServerSearch';
 
 /**
@@ -41,6 +41,18 @@ export interface SearchSelectProps {
   title?: string;
   /** Chữ gợi ý trong ô tìm kiếm của danh sách. */
   searchPlaceholder?: string;
+  /** Nhãn hiển thị của giá trị đang chọn khi option chưa có trong danh sách tải động */
+  selectedLabel?: string;
+  /** Hỗ trợ tìm kiếm từ server */
+  onSearchChange?: (query: string) => void;
+  /** Sự kiện khi cuộn gần cuối danh sách để tải thêm trang tiếp theo */
+  onLoadMore?: () => void;
+  /** Còn dữ liệu để tải tiếp hay không */
+  hasMore?: boolean;
+  /** Đang tải thêm dữ liệu hoặc đang tìm kiếm */
+  isLoading?: boolean;
+  /** Chế độ tìm kiếm qua API server (không lọc lại ở client) */
+  isAsync?: boolean;
 }
 
 /** Lấy chữ hiển thị của một <option> (children có thể là chuỗi, số, mảng hoặc phần tử lồng nhau). */
@@ -115,6 +127,12 @@ export function SearchSelect({
   id,
   title,
   searchPlaceholder = 'Gõ để tìm...',
+  selectedLabel,
+  onSearchChange,
+  onLoadMore,
+  hasMore = false,
+  isLoading = false,
+  isAsync = false,
 }: SearchSelectProps) {
   const options = useMemo(() => {
     const list: SelectOption[] = [];
@@ -128,8 +146,12 @@ export function SearchSelect({
   );
   const currentValue = isControlled ? (value === null ? '' : String(value)) : innerValue;
 
-  // Giống <select> thật: giá trị không khớp option nào thì hiện option đầu tiên.
-  const selected = options.find((o) => o.value === currentValue) ?? options[0];
+  const matchedOption = options.find((o) => o.value === currentValue);
+  const selected =
+    matchedOption ??
+    (selectedLabel !== undefined && currentValue !== ''
+      ? { value: currentValue, label: selectedLabel, disabled: false }
+      : options[0]);
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -141,12 +163,18 @@ export function SearchSelect({
   const searchRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const listboxId = useId();
+  const searchTimerRef = useRef<any>(null);
 
   const filtered = useMemo(() => {
+    let baseList = options;
+    if (!query && selectedLabel && currentValue !== '' && !options.some((o) => o.value === currentValue)) {
+      baseList = [{ value: currentValue, label: selectedLabel, disabled: false }, ...options];
+    }
+    if (isAsync) return baseList;
     const kw = normalizeSearchText(query);
-    if (!kw) return options;
-    return options.filter((o) => normalizeSearchText(o.label).includes(kw));
-  }, [options, query]);
+    if (!kw) return baseList;
+    return baseList.filter((o) => normalizeSearchText(o.label).includes(kw));
+  }, [options, query, isAsync, selectedLabel, currentValue]);
 
   const updatePosition = () => {
     const el = triggerRef.current;
@@ -176,11 +204,20 @@ export function SearchSelect({
     setActiveIndex(initialQuery ? 0 : Math.max(0, idx));
     updatePosition();
     setOpen(true);
+    if (onSearchChange && initialQuery) {
+      onSearchChange(initialQuery);
+    }
   };
 
   const closePanel = (focusTrigger = true) => {
     setOpen(false);
     setQuery('');
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
+    if (onSearchChange && query !== '') {
+      onSearchChange('');
+    }
     if (focusTrigger) triggerRef.current?.focus();
   };
 
@@ -189,6 +226,25 @@ export function SearchSelect({
     if (!isControlled) setInnerValue(opt.value);
     if (opt.value !== currentValue) onChange?.(makeChangeEvent(opt.value, name));
     closePanel();
+  };
+
+  const handleQueryChange = (val: string) => {
+    setQuery(val);
+    setActiveIndex(0);
+    if (onSearchChange) {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+      searchTimerRef.current = setTimeout(() => {
+        onSearchChange(val);
+      }, 300);
+    }
+  };
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (!onLoadMore || !hasMore || isLoading) return;
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight <= 40) {
+      onLoadMore();
+    }
   };
 
   // Đóng khi bấm ra ngoài; tự đặt lại vị trí khi cuộn trang / đổi kích thước cửa sổ.
@@ -329,10 +385,7 @@ export function SearchSelect({
                   ref={searchRef}
                   type="text"
                   value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value);
-                    setActiveIndex(0);
-                  }}
+                  onChange={(e) => handleQueryChange(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
                   placeholder={searchPlaceholder}
                   className="w-full h-8 pl-8 pr-2 rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-800 outline-none focus:border-[#F85606] focus:bg-white"
@@ -343,44 +396,53 @@ export function SearchSelect({
               ref={listRef}
               id={listboxId}
               role="listbox"
+              onScroll={handleListScroll}
               style={{ maxHeight: position.maxHeight }}
               className="overflow-y-auto py-1"
             >
-              {filtered.length === 0 ? (
+              {filtered.length === 0 && !isLoading ? (
                 <div className="px-3 py-4 text-center text-gray-400">Không tìm thấy kết quả phù hợp</div>
               ) : (
-                filtered.map((opt, idx) => {
-                  const isSelected = opt.value === selected?.value;
-                  const showGroup = opt.group && (idx === 0 || filtered[idx - 1].group !== opt.group);
-                  return (
-                    <Fragment key={`${opt.group ?? ''}|${opt.value}|${idx}`}>
-                      {showGroup && (
-                        <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                          {opt.group}
+                <>
+                  {filtered.map((opt, idx) => {
+                    const isSelected = opt.value === selected?.value;
+                    const showGroup = opt.group && (idx === 0 || filtered[idx - 1].group !== opt.group);
+                    return (
+                      <Fragment key={`${opt.group ?? ''}|${opt.value}|${idx}`}>
+                        {showGroup && (
+                          <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                            {opt.group}
+                          </div>
+                        )}
+                        <div
+                          role="option"
+                          aria-selected={isSelected}
+                          aria-disabled={opt.disabled}
+                          data-index={idx}
+                          onMouseEnter={() => !opt.disabled && setActiveIndex(idx)}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => choose(opt)}
+                          className={`flex items-center gap-2 px-3 py-2 ${
+                            opt.disabled
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : idx === activeIndex
+                                ? 'erp-search-select-active bg-orange-50 text-[#F85606] cursor-pointer'
+                                : 'text-gray-700 cursor-pointer'
+                          }`}
+                        >
+                          <span className="flex-1 min-w-0 break-words">{opt.label}</span>
+                          {isSelected && <Check size={13} className="shrink-0 text-[#F85606]" />}
                         </div>
-                      )}
-                      <div
-                        role="option"
-                        aria-selected={isSelected}
-                        aria-disabled={opt.disabled}
-                        data-index={idx}
-                        onMouseEnter={() => !opt.disabled && setActiveIndex(idx)}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => choose(opt)}
-                        className={`flex items-center gap-2 px-3 py-2 ${
-                          opt.disabled
-                            ? 'text-gray-300 cursor-not-allowed'
-                            : idx === activeIndex
-                              ? 'erp-search-select-active bg-orange-50 text-[#F85606] cursor-pointer'
-                              : 'text-gray-700 cursor-pointer'
-                        }`}
-                      >
-                        <span className="flex-1 min-w-0 break-words">{opt.label}</span>
-                        {isSelected && <Check size={13} className="shrink-0 text-[#F85606]" />}
-                      </div>
-                    </Fragment>
-                  );
-                })
+                      </Fragment>
+                    );
+                  })}
+                  {isLoading && (
+                    <div className="px-3 py-2.5 text-center text-gray-400 flex items-center justify-center gap-1.5 text-[11px] bg-orange-50/30">
+                      <RefreshCw size={12} className="animate-spin text-[#F85606]" />
+                      <span>Đang truy vấn dữ liệu...</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>,

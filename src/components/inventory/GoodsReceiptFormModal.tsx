@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -102,7 +102,7 @@ interface FormLineState {
 }
 
 /**
- * Trích xuất các đơn vị tính có thể dùng cho sản phẩm dựa trên ĐVT cơ sở và quy cách đóng gói (AC2)
+ * Trích xuất các đơn vị tính có thể dùng cho sản phẩm dựa trên ĐVT cơ sở và quy cách đóng gói
  */
 function getAvailableUnitsForProduct(prod: Product): Array<{ unitName: string; conversionFactor: number }> {
   const units: Array<{ unitName: string; conversionFactor: number }> = [
@@ -255,11 +255,11 @@ const ReceiptLineQuantityInput: React.FC<ReceiptLineQuantityInputProps> = ({
 };
 
 /**
- * S5-04: Form lập phiếu nhập kho chi tiết từ nhà cung cấp
- * - AC1: Khai báo nhà cung cấp, số chứng từ, ngày nhập, kho nhập
- * - AC2: Nhập theo đơn vị tính bất kỳ, tự động quy về đơn vị cơ sở
- * - AC3: Ghi nhận số lô và hạn sử dụng cho mặt hàng quản lý lô
- * - AC4: Phân tách rõ ràng giữa Lưu nháp (không ảnh hưởng tồn) và Xác nhận (cộng tồn kho)
+ * Form lập phiếu nhập kho chi tiết từ nhà cung cấp:
+ * - Khai báo nhà cung cấp, số chứng từ, ngày nhập, kho nhập
+ * - Nhập theo đơn vị tính bất kỳ, tự động quy về đơn vị cơ sở
+ * - Ghi nhận số lô và hạn sử dụng cho mặt hàng quản lý lô
+ * - Phân tách rõ ràng giữa Lưu nháp (không ảnh hưởng tồn) và Xác nhận (cộng tồn kho)
  */
 export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   isOpen,
@@ -276,10 +276,18 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
 
   // Dữ liệu danh mục hỗ trợ chọn
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [systemProducts, setSystemProducts] = useState<Product[]>([]);
   const [loadingData, setLoadingData] = useState<boolean>(true);
 
-  // Form Fields Thông tin chung (AC1)
+  // Danh mục sản phẩm phân trang theo cuộn (infinite scroll) & tìm kiếm động từ server
+  const [pagedProducts, setPagedProducts] = useState<Product[]>([]);
+  const [productPage, setProductPage] = useState<number>(0);
+  const [hasMoreProducts, setHasMoreProducts] = useState<boolean>(true);
+  const [loadingProducts, setLoadingProducts] = useState<boolean>(false);
+  const [productKeyword, setProductKeyword] = useState<string>('');
+  const productCacheRef = useRef<Map<number, Product>>(new Map());
+  const productRequestIdRef = useRef<number>(0);
+
+  // Form Fields Thông tin chung
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | string>('');
   const [documentNumber, setDocumentNumber] = useState<string>('');
   const [receiptDate, setReceiptDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
@@ -288,41 +296,102 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   const [driverName, setDriverName] = useState<string>('');
   const [generalNote, setGeneralNote] = useState<string>('');
 
-  // Danh sách dòng hàng nhập kho (AC2, AC3)
+  // Danh sách dòng hàng nhập kho
   const [lines, setLines] = useState<FormLineState[]>([]);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [formErrors, setFormErrors] = useState<string[]>([]);
 
-  // Tải danh sách nhà cung cấp & danh mục sản phẩm
+  // Tải danh mục sản phẩm từ backend với phân trang và tìm kiếm
+  const fetchProductsPage = useCallback(
+    async (page: number, keyword: string, isAppend: boolean) => {
+      const reqId = ++productRequestIdRef.current;
+      setLoadingProducts(true);
+      try {
+        const res = await productService.getProducts({
+          page,
+          size: 20,
+          keyword: keyword.trim() || undefined,
+          status: 'ACTIVE'
+        });
+
+        if (reqId !== productRequestIdRef.current) return;
+
+        const items = res.products || [];
+        items.forEach((p) => {
+          if (p.id) {
+            productCacheRef.current.set(Number(p.id), p);
+          }
+        });
+
+        setPagedProducts((prev) => {
+          if (!isAppend) return items;
+          const existingIds = new Set(prev.map((p) => String(p.id)));
+          const uniqueItems = items.filter((p) => !existingIds.has(String(p.id)));
+          return [...prev, ...uniqueItems];
+        });
+
+        setProductPage(page);
+        setHasMoreProducts(page + 1 < res.totalPages);
+      } catch (err) {
+        if (reqId !== productRequestIdRef.current) return;
+        console.warn('Lỗi tải danh mục sản phẩm từ backend:', err);
+        if (!isAppend) {
+          setPagedProducts(FALLBACK_PRODUCTS);
+          FALLBACK_PRODUCTS.forEach((p) => productCacheRef.current.set(Number(p.id), p));
+          setHasMoreProducts(false);
+        }
+      } finally {
+        if (reqId === productRequestIdRef.current) {
+          setLoadingProducts(false);
+        }
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  const handleProductSearchChange = useCallback(
+    (kw: string) => {
+      setProductKeyword(kw);
+      fetchProductsPage(0, kw, false);
+    },
+    [fetchProductsPage]
+  );
+
+  const handleProductLoadMore = useCallback(() => {
+    if (loadingProducts || !hasMoreProducts) return;
+    fetchProductsPage(productPage + 1, productKeyword, true);
+  }, [loadingProducts, hasMoreProducts, productPage, productKeyword, fetchProductsPage]);
+
+  // Tải danh sách nhà cung cấp & trang sản phẩm đầu tiên khi mở modal
   useEffect(() => {
     if (!isOpen) return;
 
     setLoadingData(true);
+    setProductKeyword('');
+
     Promise.all([
       fetchSuppliers({ size: 50 }).catch(() => ({ content: [] })),
-      productService.getProducts({ size: 50, status: 'ACTIVE' }).catch(() => ({ products: [] }))
+      fetchProductsPage(0, '', false)
     ])
-      .then(([supRes, prodRes]) => {
+      .then(([supRes]) => {
         const sups = supRes.content && supRes.content.length > 0 ? supRes.content : INITIAL_SUPPLIERS;
         setSuppliers(sups);
         if (!selectedSupplierId && sups.length > 0) {
           setSelectedSupplierId(sups[0].id);
         }
-
-        const prods = prodRes.products && prodRes.products.length > 0 ? prodRes.products : FALLBACK_PRODUCTS;
-        setSystemProducts(prods);
-        setLoadingData(false);
       })
       .catch((err) => {
-        console.warn('Lỗi tải danh mục NCC và sản phẩm, dùng dữ liệu khởi tạo:', err);
+        console.warn('Lỗi tải danh mục NCC, dùng dữ liệu khởi tạo:', err);
         setSuppliers(INITIAL_SUPPLIERS);
         if (!selectedSupplierId && INITIAL_SUPPLIERS.length > 0) {
           setSelectedSupplierId(INITIAL_SUPPLIERS[0].id);
         }
-        setSystemProducts(FALLBACK_PRODUCTS);
+      })
+      .finally(() => {
         setLoadingData(false);
       });
-  }, [isOpen]);
+  }, [isOpen, fetchProductsPage]);
 
   // Khởi tạo dòng hàng mẫu ban đầu nếu form mới hoặc từ cảnh báo tồn kho
   useEffect(() => {
@@ -371,25 +440,46 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
         setGeneralNote('');
       }
 
-      // Nếu có truyền sản phẩm ban đầu để lập phiếu nhập bù tồn kho (S5-09 -> S5-04)
+      // Nếu có truyền sản phẩm ban đầu để lập phiếu nhập bù tồn kho
       if (initialProductSku) {
-        const allProds = systemProducts.length > 0 ? systemProducts : FALLBACK_PRODUCTS;
-        const matched = allProds.find(
+        let targetProd = Array.from(productCacheRef.current.values()).find(
           (p) =>
             p.sku?.toLowerCase() === initialProductSku.toLowerCase() ||
             p.sku?.replace(/-/g, '').toLowerCase() === initialProductSku.replace(/-/g, '').toLowerCase()
         );
-        const targetProd: Product = matched || {
-          id: '5001',
-          sku: initialProductSku,
-          name: initialProductName || 'Nước ngọt Pepsi lon 330ml',
-          category: 'Nước giải khát',
-          baseUnit: 'Lon',
-          packagingSpec: '24 Lon / Thùng',
-          costPrice: 8500,
-          status: 'ACTIVE',
-          transactionCount: 0
-        };
+        if (!targetProd) {
+          targetProd = pagedProducts.find(
+            (p) =>
+              p.sku?.toLowerCase() === initialProductSku.toLowerCase() ||
+              p.sku?.replace(/-/g, '').toLowerCase() === initialProductSku.replace(/-/g, '').toLowerCase()
+          );
+        }
+        if (!targetProd) {
+          targetProd = FALLBACK_PRODUCTS.find(
+            (p) =>
+              p.sku?.toLowerCase() === initialProductSku.toLowerCase() ||
+              p.sku?.replace(/-/g, '').toLowerCase() === initialProductSku.replace(/-/g, '').toLowerCase()
+          );
+        }
+        if (!targetProd) {
+          targetProd = {
+            id: '5001',
+            sku: initialProductSku,
+            name: initialProductName || 'Sản phẩm bổ sung tồn kho',
+            category: 'Hàng nhập kho',
+            baseUnit: 'Lon',
+            packagingSpec: '24 Lon / Thùng',
+            costPrice: 8500,
+            status: 'ACTIVE',
+            transactionCount: 0
+          };
+        }
+
+        productCacheRef.current.set(Number(targetProd.id), targetProd);
+        setPagedProducts((prev) => {
+          if (prev.some((p) => String(p.id) === String(targetProd!.id))) return prev;
+          return [targetProd!, ...prev];
+        });
 
         const availableUnits = getAvailableUnitsForProduct(targetProd);
         const firstUnit = availableUnits[0];
@@ -412,6 +502,48 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
             availableUnits
           }
         ]);
+
+        // Truy vấn chính xác từ backend để lấy thông tin sản phẩm đầy đủ nhất
+        productService
+          .getProducts({ keyword: initialProductSku, size: 5, status: 'ACTIVE' })
+          .then((res) => {
+            if (res.products && res.products.length > 0) {
+              const exact =
+                res.products.find((p) => p.sku.toLowerCase() === initialProductSku.toLowerCase()) ||
+                res.products[0];
+              productCacheRef.current.set(Number(exact.id), exact);
+              setPagedProducts((prev) => {
+                if (prev.some((p) => String(p.id) === String(exact.id))) return prev;
+                return [exact, ...prev];
+              });
+              setLines((prev) => {
+                if (
+                  prev.length > 0 &&
+                  prev[0].productSku.toLowerCase() === initialProductSku.toLowerCase()
+                ) {
+                  const units = getAvailableUnitsForProduct(exact);
+                  const u1 = units[0];
+                  return [
+                    {
+                      ...prev[0],
+                      productId: Number(exact.id),
+                      productSku: exact.sku,
+                      productName: exact.name,
+                      category: exact.category,
+                      baseUnit: exact.baseUnit,
+                      selectedUnit: u1.unitName,
+                      conversionFactor: u1.conversionFactor,
+                      unitPrice: Number(exact.costPrice || 0),
+                      availableUnits: units
+                    },
+                    ...prev.slice(1)
+                  ];
+                }
+                return prev;
+              });
+            }
+          })
+          .catch(() => {});
       } else {
         setLines([]);
       }
@@ -424,16 +556,17 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
     initialQuantity,
     initialProductName,
     initialNote,
-    systemProducts.length
+    pagedProducts.length
   ]);
 
   if (!isOpen) return null;
 
   // Thêm một dòng hàng mới
   const handleAddNewLine = () => {
-    const prods = systemProducts.length > 0 ? systemProducts : FALLBACK_PRODUCTS;
+    const prods = pagedProducts.length > 0 ? pagedProducts : FALLBACK_PRODUCTS;
     if (prods.length === 0) return;
     const defaultProd = prods[0];
+    productCacheRef.current.set(Number(defaultProd.id), defaultProd);
     const availableUnits = getAvailableUnitsForProduct(defaultProd);
     const firstUnit = availableUnits[0];
 
@@ -459,9 +592,16 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
 
   // Thay đổi sản phẩm của một dòng
   const handleChangeProduct = (lineIndex: number, newProductId: number) => {
-    const prod = systemProducts.find((p) => Number(p.id) === newProductId);
+    let prod = productCacheRef.current.get(newProductId);
+    if (!prod) {
+      prod = pagedProducts.find((p) => Number(p.id) === newProductId);
+    }
+    if (!prod) {
+      prod = FALLBACK_PRODUCTS.find((p) => Number(p.id) === newProductId);
+    }
     if (!prod) return;
 
+    productCacheRef.current.set(Number(prod.id), prod);
     const availableUnits = getAvailableUnitsForProduct(prod);
     const firstUnit = availableUnits[0];
 
@@ -483,7 +623,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
     });
   };
 
-  // Thay đổi đơn vị tính (AC2: Tự động cập nhật hệ số quy đổi ra đơn vị cơ sở)
+  // Thay đổi đơn vị tính (Tự động cập nhật hệ số quy đổi ra đơn vị cơ sở)
   const handleChangeUnit = (lineIndex: number, newUnitName: string) => {
     setLines((prev) => {
       const next = [...prev];
@@ -517,7 +657,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
     setLines((prev) => prev.filter((_, idx) => idx !== lineIndex));
   };
 
-  // Tính tổng tiền & tổng số lượng cơ sở (AC2)
+  // Tính tổng tiền & tổng số lượng cơ sở
   const totalBaseQty = lines.reduce((s, l) => s + l.quantity * l.conversionFactor, 0);
   const totalAmount = lines.reduce((s, l) => s + l.quantity * l.unitPrice * l.conversionFactor, 0);
 
@@ -551,7 +691,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
     return errors.length === 0;
   };
 
-  // Xử lý Lưu Phiếu (DRAFT hoặc CONFIRMED - AC4)
+  // Xử lý Lưu Phiếu (DRAFT hoặc CONFIRMED)
   const handleSaveReceipt = async (targetStatus: 'DRAFT' | 'CONFIRMED') => {
     if (!validateForm()) {
       showToast('Dữ liệu chưa hợp lệ', 'Vui lòng bổ sung đẩy đủ các trường thông tin (*)', 'error');
@@ -677,7 +817,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
             </div>
           )}
 
-          {/* PHẦN 1: THÔNG TIN CHỨNG TỪ & NHÀ CUNG CẤP (AC1) */}
+          {/* PHẦN 1: THÔNG TIN CHỨNG TỪ & NHÀ CUNG CẤP */}
           <div className="bg-gray-50/80 rounded-2xl p-4 border border-gray-200/80 space-y-4">
             <div className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wider">
               <Building2 size={15} className="text-[#F85606]" />
@@ -799,7 +939,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
             </div>
           </div>
 
-          {/* PHẦN 2: CHI TIẾT DÒNG HÀNG, QUY ĐỔI ĐƠN VỊ & LÔ/HẠN (AC2, AC3) */}
+          {/* PHẦN 2: CHI TIẾT DÒNG HÀNG, QUY ĐỔI ĐƠN VỊ & LÔ/HẠN */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wider">
@@ -851,7 +991,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                       key={line.id}
                       className="p-3 lg:p-2.5 flex flex-col lg:grid lg:grid-cols-12 gap-2.5 items-stretch lg:items-center hover:bg-orange-50/15 transition"
                     >
-                      {/* Cột 1: Sản phẩm */}
+                      {/* Cột 1: Sản phẩm (Tìm kiếm & cuộn tải thêm từ backend) */}
                       <div className="lg:col-span-3">
                         <span className="lg:hidden text-[10px] font-bold text-gray-400 uppercase block mb-1">
                           Sản phẩm
@@ -859,9 +999,15 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                         <SearchSelect
                           value={line.productId}
                           onChange={(e) => handleChangeProduct(idx, Number(e.target.value))}
+                          selectedLabel={`[${line.productSku}] ${line.productName}`}
+                          isAsync={true}
+                          isLoading={loadingProducts}
+                          hasMore={hasMoreProducts}
+                          onSearchChange={handleProductSearchChange}
+                          onLoadMore={handleProductLoadMore}
                           className="w-full text-xs font-bold border border-gray-200 rounded-xl p-2 bg-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                         >
-                          {systemProducts.map((p) => (
+                          {pagedProducts.map((p) => (
                             <option key={p.id} value={p.id}>
                               [{p.sku}] {p.name}
                             </option>
@@ -869,7 +1015,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                         </SearchSelect>
                       </div>
 
-                      {/* Cột 2: Đơn vị tính nhập (AC2) */}
+                      {/* Cột 2: Đơn vị tính nhập */}
                       <div className="lg:col-span-2">
                         <span className="lg:hidden text-[10px] font-bold text-gray-400 uppercase block mb-1">
                           Đơn vị tính nhập
@@ -898,7 +1044,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                         />
                       </div>
 
-                      {/* Cột 4: Quy đổi về đơn vị cơ sở khi ghi sổ (AC2) */}
+                      {/* Cột 4: Quy đổi về đơn vị cơ sở khi ghi sổ */}
                       <div className="lg:col-span-2 text-center">
                         <span className="lg:hidden text-[10px] font-bold text-gray-400 uppercase block mb-1">
                           Quy về Cơ sở
@@ -913,7 +1059,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Cột 5: Số lô & Hạn sử dụng (AC3) */}
+                      {/* Cột 5: Số lô & Hạn sử dụng */}
                       <div className="lg:col-span-2 space-y-1">
                         <span className="lg:hidden text-[10px] font-bold text-gray-400 uppercase block mb-1">
                           Số lô & Hạn dùng
@@ -1008,7 +1154,7 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
               <span>Lưu Phiếu Nháp</span>
             </button>
 
-            {/* Nút 2: Xác Nhận Nhập Kho (AC4: Cộng tồn kho ngay) */}
+            {/* Nút 2: Xác Nhận Nhập Kho (Cộng tồn kho ngay) */}
             <button
               type="button"
               onClick={() => handleSaveReceipt('CONFIRMED')}
