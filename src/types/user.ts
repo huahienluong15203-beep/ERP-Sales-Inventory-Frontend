@@ -21,6 +21,7 @@ export interface UserProfile {
   role: RoleName;
   roles: RoleName[];
   warehouse?: string;     // Kho làm việc (đối với nhân sự kho/admin)
+  warehouseCodes?: string[]; // Danh sách mã kho phụ trách
   workLocation?: string;  // Địa bàn làm việc (đối với kinh doanh/đại lý)
   avatar?: string;
   avatarUrl?: string;

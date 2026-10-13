@@ -30,11 +30,25 @@ import { Pagination } from '../../components/common/Pagination';
  */
 export const StockLedgerPage: React.FC = () => {
   const location = useLocation();
-  const { showToast, currentRole } = useAuth();
+  const { showToast, currentRole, user } = useAuth();
 
-  // Mục 12 (góp ý GV): chặn ở cả FE và BE - chỉ NV kho, QL kho, Admin được lập / xác nhận / sửa;
-  // Kế toán, QL kinh doanh chỉ xem.
+  // Chỉ NV kho, QL kho, Admin được lập / xác nhận / sửa; Kế toán, QL kinh doanh chỉ xem.
   const canEditInventory = ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'].includes(currentRole ?? '');
+
+  // Kiểm tra quyền sửa theo từng kho:
+  // - Admin: được sửa tất cả các kho
+  // - Quản lý kho / Nhân viên kho: chỉ được sửa tại các kho mà tài khoản được phân công
+  const canEditItem = (item: MinStockThresholdConfig) => {
+    if (!canEditInventory) return false;
+    if (currentRole === 'ROLE_ADMIN' || user?.roles?.includes('ROLE_ADMIN')) return true;
+    if (user?.warehouseCodes && user.warehouseCodes.length > 0) {
+      return user.warehouseCodes.includes(item.warehouseCode);
+    }
+    if (user?.warehouse) {
+      return user.warehouse.includes(item.warehouseCode) || user.warehouse.includes(item.warehouseName);
+    }
+    return false;
+  };
 
   const [configs, setConfigs] = useState<MinStockThresholdConfig[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -604,13 +618,14 @@ export const StockLedgerPage: React.FC = () => {
                           </div>
                         ) : (
                           <div
-                            className="relative inline-flex items-center justify-center group cursor-pointer"
-                            onClick={() => canEditInventory && handleStartEdit(item)}
+                            className={`relative inline-flex items-center justify-center group ${canEditItem(item) ? 'cursor-pointer' : 'cursor-default'}`}
+                            onClick={() => canEditItem(item) && handleStartEdit(item)}
+                            title={canEditItem(item) ? 'Nhấp để sửa định mức tối thiểu' : `Chỉ Quản lý phụ trách ${item.warehouseName} mới được sửa định mức`}
                           >
                             <span className="font-bold text-gray-800 whitespace-nowrap">
                               {item.minThreshold.toLocaleString('vi-VN')} {item.unit}
                             </span>
-                            {canEditInventory && (
+                            {canEditItem(item) && (
                               <button
                                 type="button"
                                 onClick={(e) => {
