@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { OrderItem } from '../../types/order';
 import { formatCurrencyVND } from '../../services/orderService';
-import { Trash2, Plus, Minus, Tag, Edit, Check, X, RotateCw, AlertTriangle, Package } from '../common/Icons';
+import { Trash2, Plus, Minus, Edit, Check, X, RotateCw, AlertTriangle, Package } from '../common/Icons';
 import { SearchSelect } from '../common/SearchSelect';
 import { NumberInput } from '../common/NumberInput';
 
@@ -186,9 +186,6 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
               >
                 Khả dụng: <strong>{availableInSelectedUnit}</strong> {item.selectedUnit}
               </span>
-              <span className="text-gray-400 text-[10px]">
-                (Thực tế: {item.physicalStock ?? item.availableStock ?? 0} | Giữ chỗ: {item.reservedStock ?? 0} {item.baseUnit})
-              </span>
             </div>
           </div>
         </div>
@@ -204,10 +201,10 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
         </button>
       </div>
 
-      {/* Hàng 2: Chọn ĐVT & Bộ Tăng Giảm Số Lượng (Tối ưu 360px & Chặn vượt tồn) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 border-t border-gray-100">
-        {/* Chọn đơn vị tính */}
-        <div>
+      {/* Hàng điều khiển: Đơn Vị, Số Lượng, Đơn Giá & Thành Tiền trên cùng một hàng (Gọn gàng & Không bị dãn) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 pt-2.5 border-t border-gray-100 items-start">
+        {/* Cột 1: Đơn Vị Đặt Hàng */}
+        <div className="sm:col-span-1 lg:col-span-4">
           <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
             Đơn Vị Đặt Hàng
           </label>
@@ -223,23 +220,25 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
                   : Math.floor((item.availableStock ?? 0) / (u.conversionFactor || 1));
               return (
                 <option key={u.unitName} value={u.unitName}>
-                  {u.unitName} (x{u.conversionFactor} {item.baseUnit}) — Tồn: {uStock} {u.unitName} — Niêm yết: {formatCurrencyVND(u.unitPrice)}
+                  {u.unitName} {u.conversionFactor > 1 ? `(x${u.conversionFactor} ${item.baseUnit})` : ''} — Tồn: {uStock} — {formatCurrencyVND(u.unitPrice)}
                 </option>
               );
             })}
           </SearchSelect>
         </div>
 
-        {/* Bộ tăng giảm số lượng (+ / - to bản dễ bấm ngón tay, vô hiệu hoá + khi đạt tồn khả dụng) */}
-        <div>
+        {/* Cột 2: Số Lượng Đặt (Bé lại, không bị kéo dãn và bỏ bớt chữ lặp) */}
+        <div className="sm:col-span-1 lg:col-span-2">
           <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1 flex items-center justify-between">
             <span>Số Lượng Đặt</span>
-            <span className={isOverStock ? 'text-rose-600 font-bold text-[10px]' : 'text-gray-400 font-normal text-[10px]'}>
-              (= {item.baseQuantity} {item.baseUnit} / Tối đa: {maxAllowed} {item.selectedUnit})
-            </span>
+            {isOverStock && (
+              <span className="text-rose-600 font-bold text-[10px]">
+                (Tối đa: {maxAllowed})
+              </span>
+            )}
           </label>
           <div
-            className={`flex items-center h-9 rounded-xl border overflow-hidden ${
+            className={`flex items-center h-9 w-28 sm:w-32 rounded-xl border overflow-hidden ${
               isOverStock
                 ? 'border-rose-400 bg-rose-50/40 ring-1 ring-rose-400'
                 : 'border-gray-200 bg-gray-50'
@@ -250,16 +249,16 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleDecrease}
               disabled={item.quantity <= 0}
-              className="w-10 h-full flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-40 transition-colors cursor-pointer"
+              className="w-8 h-full flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-40 transition-colors cursor-pointer shrink-0"
               title="Giảm 1"
             >
-              <Minus size={14} />
+              <Minus size={13} />
             </button>
             <NumberInput
               value={localQtyText}
               onChange={handleQuantityChange}
               onBlur={handleQuantityBlur}
-              className={`flex-1 h-full text-center text-xs font-bold border-x focus:outline-none ${
+              className={`w-12 sm:w-16 h-full text-center text-xs font-bold border-x focus:outline-none ${
                 isOverStock
                   ? 'bg-rose-50 text-rose-900 border-rose-300 focus:ring-1 focus:ring-rose-500'
                   : 'bg-white text-gray-900 border-gray-200 focus:ring-1 focus:ring-[#F85606]'
@@ -270,15 +269,134 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleIncrease}
               disabled={item.quantity >= maxAllowed}
-              className="w-10 h-full flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="w-8 h-full flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer shrink-0"
               title={
                 item.quantity >= maxAllowed
                   ? `Đã đạt giới hạn tồn khả dụng (${maxAllowed} ${item.selectedUnit})`
                   : 'Tăng 1'
               }
             >
-              <Plus size={14} />
+              <Plus size={13} />
             </button>
+          </div>
+        </div>
+
+        {/* Cột 3: Đơn Giá Áp Dụng (Đưa lên cùng hàng với số lượng) */}
+        <div className="sm:col-span-1 lg:col-span-4 min-w-0">
+          <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+            Đơn Giá Áp Dụng
+          </label>
+          {isEditingPrice ? (
+            <div className="flex items-center gap-1.5 flex-wrap h-9">
+              <div className="relative">
+                <NumberInput
+                  min={0}
+                  step={1000}
+                  value={priceInput}
+                  onChange={(e) => setPriceInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSavePrice();
+                    if (e.key === 'Escape') handleCancelEdit();
+                  }}
+                  autoFocus
+                  className="w-28 sm:w-32 h-9 px-2 text-xs font-bold rounded-xl border border-orange-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#F85606]"
+                  placeholder="Đơn giá mới..."
+                />
+                <span className="absolute right-2 top-2.5 text-[10px] text-gray-400 font-semibold pointer-events-none">
+                  đ
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSavePrice}
+                className="h-9 px-2.5 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer"
+                title="Xác nhận lưu giá mới"
+              >
+                <Check size={13} />
+                <span>Lưu</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="h-9 px-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium flex items-center gap-1 cursor-pointer"
+                title="Hủy"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 flex-wrap h-9">
+              <span className="text-xs sm:text-sm font-extrabold text-gray-900 font-mono">
+                {formatCurrencyVND(item.unitPrice)}
+              </span>
+              <span className="text-[11px] text-gray-500 font-medium">/{item.selectedUnit}</span>
+
+              {/* Nút sửa giá */}
+              <button
+                type="button"
+                onClick={handleStartEdit}
+                className="px-2 py-1 rounded-lg bg-white border border-gray-200 hover:border-orange-300 hover:text-[#F85606] text-gray-600 text-[11px] font-bold flex items-center gap-1 transition shadow-2xs cursor-pointer"
+                title="Nhấn để sửa đơn giá thủ công"
+              >
+                <Edit size={12} />
+                <span>Sửa giá</span>
+              </button>
+
+              {/* Nút Đặt lại giá gốc niêm yết nếu đã sửa */}
+              {item.isCustomPrice && (
+                <button
+                  type="button"
+                  onClick={handleResetPrice}
+                  className="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-[11px] font-medium flex items-center gap-1 transition cursor-pointer"
+                  title="Khôi phục giá niêm yết theo bảng giá"
+                >
+                  <RotateCw size={11} />
+                  <span>Giá gốc ({formatCurrencyVND(originalPrice)})</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Chi tiết niêm yết, sàn & chiết khấu */}
+          <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-gray-500">
+            <span>
+              Niêm yết: <strong className="text-gray-700">{formatCurrencyVND(originalPrice)}</strong>
+            </span>
+            {floorPrice > 0 && (
+              <>
+                <span>•</span>
+                <span>
+                  Sàn: <strong className={isBelowFloor ? 'text-amber-700 font-bold' : 'text-gray-700'}>{formatCurrencyVND(floorPrice)}</strong>
+                </span>
+              </>
+            )}
+            {item.discountAmount > 0 && (
+              <>
+                <span>•</span>
+                <span className="text-emerald-700 font-bold">
+                  CK: -{item.discountPercent}% (-{formatCurrencyVND(item.discountAmount)})
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Cột 4: Thành Tiền */}
+        <div className="sm:col-span-1 lg:col-span-2 text-left lg:text-right">
+          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-1">
+            Thành Tiền
+          </span>
+          <div className="flex items-center gap-1.5 justify-start lg:justify-end h-9">
+            {item.discountAmount > 0 && (
+              <span className="text-[11px] text-gray-400 line-through">
+                {formatCurrencyVND(item.rawAmount)}
+              </span>
+            )}
+            <strong className="text-sm sm:text-base font-extrabold text-[#F85606] font-mono">
+              {formatCurrencyVND(item.finalAmount)}
+            </strong>
           </div>
         </div>
       </div>
@@ -324,138 +442,15 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
         </div>
       )}
 
-      {/* Hàng 3: Sửa Đơn Giá Thủ Công & Kiểm Tra Giá Sàn (S4-01) */}
-      <div className="p-2.5 rounded-xl bg-orange-50/40 border border-orange-100/80 space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          {/* Cột Trái: Đơn giá và Form sửa giá */}
-          <div className="min-w-0 flex-1">
-            <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">
-              Đơn Giá Áp Dụng
-            </span>
-
-            {isEditingPrice ? (
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <div className="relative">
-                  <NumberInput
-                    min={0}
-                    step={1000}
-                    value={priceInput}
-                    onChange={(e) => setPriceInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSavePrice();
-                      if (e.key === 'Escape') handleCancelEdit();
-                    }}
-                    autoFocus
-                    className="w-36 sm:w-44 h-8 px-2 text-xs font-bold rounded-lg border border-orange-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#F85606]"
-                    placeholder="Nhập đơn giá mới..."
-                  />
-                  <span className="absolute right-2 top-2 text-[10px] text-gray-400 font-semibold pointer-events-none">
-                    đ
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleSavePrice}
-                  className="h-8 px-2.5 rounded-lg bg-[#F85606] hover:bg-orange-600 text-white text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer"
-                  title="Xác nhận lưu giá mới"
-                >
-                  <Check size={14} />
-                  <span>Lưu</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  className="h-8 px-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium flex items-center gap-1 cursor-pointer"
-                  title="Hủy"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs sm:text-sm font-extrabold text-gray-900 font-mono">
-                  {formatCurrencyVND(item.unitPrice)}
-                </span>
-                <span className="text-[11px] text-gray-500 font-medium">/{item.selectedUnit}</span>
-
-                {/* Nút sửa giá */}
-                <button
-                  type="button"
-                  onClick={handleStartEdit}
-                  className="px-2 py-0.5 rounded-lg bg-white border border-gray-200 hover:border-orange-300 hover:text-[#F85606] text-gray-600 text-[11px] font-bold flex items-center gap-1 transition shadow-2xs cursor-pointer"
-                  title="Nhấn để sửa đơn giá thủ công"
-                >
-                  <Edit size={12} />
-                  <span>Sửa giá</span>
-                </button>
-
-                {/* Nút Đặt lại giá gốc niêm yết nếu đã sửa */}
-                {item.isCustomPrice && (
-                  <button
-                    type="button"
-                    onClick={handleResetPrice}
-                    className="px-2 py-0.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-[11px] font-medium flex items-center gap-1 transition cursor-pointer"
-                    title="Khôi phục giá niêm yết theo bảng giá"
-                  >
-                    <RotateCw size={11} />
-                    <span>Giá gốc ({formatCurrencyVND(originalPrice)})</span>
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Chi tiết giá niêm yết & giá sàn tham chiếu */}
-            <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-gray-500">
-              <span>
-                Niêm yết: <strong className="text-gray-700">{formatCurrencyVND(originalPrice)}</strong>
-              </span>
-              {floorPrice > 0 && (
-                <>
-                  <span>•</span>
-                  <span>
-                    Giá sàn: <strong className={isBelowFloor ? 'text-amber-700 font-bold' : 'text-gray-700'}>{formatCurrencyVND(floorPrice)}</strong>
-                  </span>
-                </>
-              )}
-            </div>
-
-            {/* Chiết khấu sản lượng */}
-            {item.discountAmount > 0 && (
-              <div className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 mt-1">
-                <Tag size={11} />
-                <span>CK sản lượng: -{item.discountPercent}% (-{formatCurrencyVND(item.discountAmount)})</span>
-              </div>
-            )}
-          </div>
-
-          {/* Cột Phải: Thành tiền sau chiết khấu */}
-          <div className="text-right shrink-0">
-            <span className="text-[10px] text-gray-400 block uppercase tracking-wider">Thành tiền</span>
-            <div className="flex items-center gap-1.5 justify-end">
-              {item.discountAmount > 0 && (
-                <span className="text-[11px] text-gray-400 line-through">
-                  {formatCurrencyVND(item.rawAmount)}
-                </span>
-              )}
-              <strong className="text-sm sm:text-base font-extrabold text-[#F85606] font-mono">
-                {formatCurrencyVND(item.finalAmount)}
-              </strong>
-            </div>
-          </div>
+      {/* CẢNH BÁO VI PHẠM GIÁ SÀN (AC3) */}
+      {isBelowFloor && !isOverStock && (
+        <div className="flex items-center gap-1.5 p-2 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 text-[11px] font-semibold animate-in fade-in">
+          <AlertTriangle size={14} className="text-amber-600 shrink-0" />
+          <span>
+            Đơn giá thấp hơn giá sàn ({formatCurrencyVND(floorPrice)}/{item.selectedUnit}) — Đơn hàng sẽ bị đánh dấu <strong>CẦN DUYỆT</strong> bởi Quản lý!
+          </span>
         </div>
-
-        {/* CẢNH BÁO VI PHẠM GIÁ SÀN (AC3) */}
-        {isBelowFloor && !isOverStock && (
-          <div className="flex items-center gap-1.5 p-2 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 text-[11px] font-semibold animate-in fade-in">
-            <AlertTriangle size={14} className="text-amber-600 shrink-0" />
-            <span>
-              Đơn giá thấp hơn giá sàn ({formatCurrencyVND(floorPrice)}/{item.selectedUnit}) — Đơn hàng sẽ bị đánh dấu <strong>CẦN DUYỆT</strong> bởi Quản lý!
-            </span>
-          </div>
-        )}
-      </div>
+      )}
 
       {item.appliedDiscountNote && (
         <div className="text-[10px] text-emerald-700 italic flex items-center gap-1">

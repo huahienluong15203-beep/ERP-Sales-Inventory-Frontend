@@ -23,11 +23,12 @@ import {
 interface ProductPickerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectProduct: (product: OrderProductCatalogItem) => void;
+  onSelectProduct: (product: OrderProductCatalogItem, preferredUnitName?: string) => void;
   addedSkuList: string[];
   agency?: Agency | null;
   cartItems?: OrderItem[];
   onUpdateQuantity?: (id: string, newQty: number) => void;
+  onUpdateUnit?: (id: string, newUnitName: string) => void;
   onRemoveItem?: (id: string) => void;
 }
 
@@ -39,10 +40,12 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
   agency,
   cartItems,
   onUpdateQuantity,
+  onUpdateUnit,
   onRemoveItem
 }) => {
   const [keyword, setKeyword] = useState<string>('');
   const [products, setProducts] = useState<OrderProductCatalogItem[]>([]);
+  const [selectedUnitBySku, setSelectedUnitBySku] = useState<Record<string, string>>({});
   const [loadingBackend, setLoadingBackend] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -352,6 +355,11 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
               const isMaxInCart = availableStock > 0 && cartBaseQty >= availableStock;
               const isBlocked = p.priceAvailable === false || isOutOfStock || isMaxInCart;
 
+              const currentUnitName = cartItem?.selectedUnit || selectedUnitBySku[p.sku] || p.baseUnit;
+              const currentUnitOption = p.availableUnits.find((u) => u.unitName === currentUnitName) || p.availableUnits[0];
+              const factor = currentUnitOption?.conversionFactor || 1;
+              const displayPrice = cartItem ? cartItem.unitPrice : Math.round(p.basePrice * factor);
+
               return (
                 <div
                   key={p.id}
@@ -376,17 +384,7 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
                       )}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-gray-500">
-                      <span>ĐVT cơ sở: <strong className="text-gray-700">{p.baseUnit}</strong></span>
-                      {p.availableUnits.length > 1 && (
-                        <>
-                          <span>•</span>
-                          <span>Quy cách: {p.availableUnits.map((u) => u.unitName).join(', ')}</span>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Hiển thị tồn khả dụng (S4-03 AC1 & AC2) */}
+                    {/* Hiển thị tồn khả dụng & trạng thái đã chọn (Gọn gàng, loại bỏ chữ lặp) */}
                     <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px]">
                       <span
                         className={`font-semibold px-1.5 py-0.5 rounded ${
@@ -395,14 +393,12 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
                             : 'text-emerald-700 bg-emerald-50 border border-emerald-200'
                         }`}
                       >
-                        Tồn khả dụng: <strong className="font-mono">{availableStock}</strong> {p.baseUnit}
+                        Khả dụng: <strong className="font-mono">{availableStock}</strong> {p.baseUnit}
                       </span>
-                      <span className="text-gray-400 text-[10px]">
-                        (Thực tế: {p.physicalStock ?? availableStock} | Giữ chỗ: {p.reservedStock ?? 0})
-                      </span>
-                      {cartBaseQty > 0 && (
+                      {cartBaseQty > 0 && cartItem && (
                         <span className="text-blue-700 text-[10px] font-medium bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
-                          Đã chọn: {cartItem?.quantity} {cartItem?.selectedUnit} ({cartBaseQty} {p.baseUnit})
+                          Đã chọn: {cartItem.quantity} {cartItem.selectedUnit}
+                          {cartItem.selectedUnit !== p.baseUnit && ` (= ${cartBaseQty} ${p.baseUnit})`}
                         </span>
                       )}
                     </div>
@@ -415,7 +411,8 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
                     ) : (
                       <div className="mt-1 flex items-center gap-2">
                         <div className="text-xs sm:text-sm font-bold text-[#F85606]">
-                          {formatCurrencyVND(p.basePrice)} <span className="text-[10px] text-gray-400 font-normal">/{p.baseUnit}</span>
+                          {formatCurrencyVND(displayPrice)}{' '}
+                          <span className="text-[10px] text-gray-400 font-normal">/{currentUnitName}</span>
                         </div>
                         {p.priceListCode && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-mono">
@@ -426,7 +423,7 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
                     )}
                   </div>
 
-                  {/* Cụm thao tác thêm / sửa số lượng trực tiếp trong Modal */}
+                  {/* Cụm thao tác: Đổi ĐVT & Tăng/Giảm số lượng hoặc Thêm mới */}
                   {cartItem && onUpdateQuantity ? (
                     <div className="flex items-center gap-1.5 shrink-0">
                       <div className="flex items-center h-8 rounded-xl border border-orange-300 bg-orange-50/60 overflow-hidden shadow-2xs">
@@ -457,41 +454,74 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
                           <Plus size={13} />
                         </button>
                       </div>
-                      <span className="text-[11px] text-gray-600 font-medium">
-                        {cartItem.selectedUnit}
-                      </span>
+
+                      {p.availableUnits && p.availableUnits.length > 1 && onUpdateUnit ? (
+                        <select
+                          value={cartItem.selectedUnit}
+                          onChange={(e) => onUpdateUnit(cartItem.id, e.target.value)}
+                          className="h-8 px-2 text-xs font-semibold rounded-lg border border-orange-300 bg-white text-gray-800 hover:border-[#F85606] focus:outline-none focus:ring-1 focus:ring-[#F85606] cursor-pointer shadow-2xs"
+                          title="Đổi đơn vị tính"
+                        >
+                          {p.availableUnits.map((u) => (
+                            <option key={u.unitName} value={u.unitName}>
+                              {u.unitName}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="text-xs text-gray-700 font-semibold px-2 py-1 bg-gray-100 rounded-lg">
+                          {cartItem.selectedUnit}
+                        </span>
+                      )}
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      disabled={isBlocked}
-                      onClick={() => onSelectProduct(p)}
-                      title={
-                        p.priceAvailable === false
-                          ? (p.priceMessage || 'Sản phẩm chưa có giá áp dụng')
-                          : isOutOfStock
-                          ? 'Kho phục vụ đã hết hàng (Tồn khả dụng = 0)'
-                          : isMaxInCart
-                          ? `Đã thêm tối đa ${availableStock} ${p.baseUnit} vào đơn`
-                          : undefined
-                      }
-                      className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all shadow-xs cursor-pointer ${
-                        isBlocked
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                          : 'bg-[#F85606] hover:bg-orange-600 active:scale-98 text-white'
-                      }`}
-                    >
-                      {p.priceAvailable === false ? (
-                        <span>Chặn thêm</span>
-                      ) : isOutOfStock ? (
-                        <span className="text-rose-600 font-bold">Hết hàng</span>
-                      ) : (
-                        <>
-                          <Plus size={14} />
-                          <span>Thêm vào đơn</span>
-                        </>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {p.availableUnits && p.availableUnits.length > 1 && (
+                        <select
+                          value={currentUnitName}
+                          onChange={(e) => setSelectedUnitBySku((prev) => ({ ...prev, [p.sku]: e.target.value }))}
+                          disabled={isBlocked}
+                          className="h-8 px-2 text-xs font-semibold rounded-lg border border-gray-300 bg-white text-gray-800 focus:outline-none focus:border-[#F85606] cursor-pointer"
+                          title="Chọn đơn vị tính trước khi thêm"
+                        >
+                          {p.availableUnits.map((u) => (
+                            <option key={u.unitName} value={u.unitName}>
+                              {u.unitName}
+                            </option>
+                          ))}
+                        </select>
                       )}
-                    </button>
+                      <button
+                        type="button"
+                        disabled={isBlocked}
+                        onClick={() => onSelectProduct(p, currentUnitName)}
+                        title={
+                          p.priceAvailable === false
+                            ? (p.priceMessage || 'Sản phẩm chưa có giá áp dụng')
+                            : isOutOfStock
+                            ? 'Kho phục vụ đã hết hàng (Tồn khả dụng = 0)'
+                            : isMaxInCart
+                            ? `Đã thêm tối đa ${availableStock} ${p.baseUnit} vào đơn`
+                            : undefined
+                        }
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-xs cursor-pointer ${
+                          isBlocked
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                            : 'bg-[#F85606] hover:bg-orange-600 active:scale-98 text-white'
+                        }`}
+                      >
+                        {p.priceAvailable === false ? (
+                          <span>Chặn thêm</span>
+                        ) : isOutOfStock ? (
+                          <span className="text-rose-600 font-bold">Hết hàng</span>
+                        ) : (
+                          <>
+                            <Plus size={13} />
+                            <span>Thêm</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   )}
                 </div>
               );

@@ -283,17 +283,21 @@ export const OrderCreatePage: React.FC = () => {
   const servingWarehouse = useMemo(() => getServingWarehouseInfo(selectedAgency), [selectedAgency]);
 
   // Thêm sản phẩm từ picker vào đơn hàng
-  const handleAddProduct = (product: OrderProductCatalogItem) => {
+  const handleAddProduct = (product: OrderProductCatalogItem, preferredUnitName?: string) => {
     setItems((prev) => {
       const existingIdx = prev.findIndex((i) => i.sku === product.sku);
       if (existingIdx >= 0) {
         // Đã có -> Tăng số lượng lên 1
         const updated = [...prev];
         const curr = updated[existingIdx];
-        updated[existingIdx] = recalculateOrderItem(curr, curr.quantity + 1, curr.selectedUnit);
+        updated[existingIdx] = recalculateOrderItem(curr, curr.quantity + 1, preferredUnitName || curr.selectedUnit);
         return updated;
       }
-      return [...prev, createOrderItemFromCatalog(product, 1, servingWarehouse)];
+      const newItem = createOrderItemFromCatalog(product, 1, servingWarehouse);
+      if (preferredUnitName && preferredUnitName !== newItem.selectedUnit) {
+        return [...prev, recalculateOrderItem(newItem, 1, preferredUnitName)];
+      }
+      return [...prev, newItem];
     });
 
     showToast('Đã thêm sản phẩm vào đơn', `Đã thêm ${product.name} vào danh sách`, 'success');
@@ -1191,6 +1195,7 @@ export const OrderCreatePage: React.FC = () => {
         agency={selectedAgency}
         cartItems={items}
         onUpdateQuantity={handleUpdateQuantity}
+        onUpdateUnit={handleUpdateUnit}
         onRemoveItem={handleRemoveItem}
       />
 
