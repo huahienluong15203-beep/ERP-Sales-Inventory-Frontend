@@ -662,7 +662,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
           </div>
 
           <div className="flex items-center gap-2">
-            {activeOrder && !['CANCELLED', 'REJECTED', 'CLOSED', 'DISPATCHED', 'DELIVERED'].includes(activeOrder.status) && (
+            {activeOrder &&
+              !['CANCELLED', 'REJECTED', 'CLOSED', 'DISPATCHED', 'DELIVERED'].includes(activeOrder.status) &&
+              // Đại lý chỉ tự huỷ được đơn Chờ duyệt / Nháp (khớp quy tắc ở server); kho, kế toán không huỷ đơn
+              (currentRole === 'ROLE_CUSTOMER'
+                ? ['PENDING_APPROVAL', 'DRAFT'].includes(activeOrder.status)
+                : ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP'].includes(currentRole ?? '')) && (
               <button
                 type="button"
                 onClick={() => setIsCancelModalOpen(true)}
