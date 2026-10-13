@@ -147,29 +147,24 @@ export const StockTransferManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-3.5 pb-8">
-      {/* HEADER TRANG */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/20">
-              <ArrowRightLeft size={20} />
-            </div>
-            <div>
-              <h1 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-                <span>Điều Chuyển Kho Nội Bộ</span>
-              </h1>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Quản lý luân chuyển hàng giữa các kho chi nhánh và theo dõi chặt chẽ trạng thái hàng đi đường
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* Tiêu đề trang & Nút thao tác chính (Tinh gọn giống Danh mục nhà cung cấp) */}
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={loadTransfers}
+          disabled={loading}
+          title="Làm mới danh sách phiếu chuyển kho"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:text-blue-600 hover:border-blue-300 rounded-lg hover:bg-blue-50/40 text-xs font-semibold transition cursor-pointer shadow-2xs h-9"
+        >
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          <span>Làm mới</span>
+        </button>
 
         {canEditInventory && (
           <button
             type="button"
             onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm shadow-blue-600/20 cursor-pointer h-9"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm hover:shadow cursor-pointer h-9"
           >
             <Plus size={16} />
             <span>Lập Phiếu Chuyển Kho</span>

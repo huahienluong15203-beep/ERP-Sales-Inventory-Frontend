@@ -26,6 +26,7 @@ import { CustomerOrderPortalPage } from '../pages/portal/CustomerOrderPortalPage
 import { GoodsReceiptManagementPage } from '../pages/inventory/GoodsReceiptManagementPage';
 import { StockTransferManagementPage } from '../pages/inventory/StockTransferManagementPage';
 import { StockLedgerPage } from '../pages/inventory/StockLedgerPage';
+import { StockTakeManagementPage } from '../pages/inventory/StockTakeManagementPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -207,10 +208,32 @@ export const AppRoutes: React.FC = () => {
                 'ROLE_WAREHOUSE',
                 'ROLE_WH_MANAGER',
                 'ROLE_ADMIN',
-                'ROLE_ACCOUNTANT'
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
               ]}
             >
               <StockLedgerPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/stock-ledger"
+          element={<Navigate to="/inventory/ledger" replace />}
+        />
+
+        {/* S5-08: Kiểm kê kho & ghi nhận chênh lệch */}
+        <Route
+          path="/inventory/stocktakes"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockTakeManagementPage />
             </ProtectedRoute>
           }
         />
