@@ -2,7 +2,6 @@ import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Printer,
-  Download,
   X,
   Building2,
   MapPin,
@@ -156,10 +155,6 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
     void printFromBackend(false);
   };
 
-  const handleDownloadPdf = () => {
-    void printFromBackend(true);
-  };
-
   const lines = order.lines || [];
 
   // Render thẳng ra document.body: nếu nằm trong vùng nội dung trang (có hiệu ứng / transform), "fixed" bị tính
@@ -197,15 +192,7 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
               <span>In Phiếu</span>
             </button>
 
-            <button
-              type="button"
-              onClick={handleDownloadPdf}
-              className="px-3 py-1.5 rounded-xl bg-[#F85606] hover:bg-[#d94800] text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
-              title="Tải file PDF"
-            >
-              <Download size={14} />
-              <span>Tải file PDF</span>
-            </button>
+
 
             <button
               type="button"

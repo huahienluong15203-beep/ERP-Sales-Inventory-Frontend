@@ -109,6 +109,18 @@ export const CustomerOrderPortalPage: React.FC = () => {
   const [reorderModalOrderId, setReorderModalOrderId] = useState<number | string | null>(null);
   const [isReorderModalOpen, setIsReorderModalOpen] = useState<boolean>(false);
 
+  // Khóa cuộn trang khi mở giỏ hàng trên mobile
+  useEffect(() => {
+    if (isCartDrawerOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isCartDrawerOpen]);
+
   const handleConfirmReorder = (items: ReorderItemDraft[]) => {
     if (items.length === 0) return;
     setCart((prev) => {
@@ -960,8 +972,8 @@ export const CustomerOrderPortalPage: React.FC = () => {
             onClick={() => setIsCartDrawerOpen(false)}
           />
 
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
-            <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col">
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-2 sm:pl-10">
+            <div className="w-screen max-w-full sm:max-w-md bg-white shadow-2xl flex flex-col rounded-l-2xl sm:rounded-none overflow-hidden">
               {/* Header Drawer */}
               <div className="p-4 sm:p-5 border-b border-gray-200 flex items-center justify-between bg-orange-50/50">
                 <div className="flex items-center gap-2">
@@ -1604,57 +1616,114 @@ const PortalCartItemRow: React.FC<PortalCartItemRowProps> = ({
 // ==============================================================
 // HELPER: BADGE TRẠNG THÁI ĐƠN HÀNG BẰNG TIẾNG VIỆT
 // ==============================================================
+// Bản đồ dịch dự phòng cho các mã trạng thái đơn hàng sang Tiếng Việt
+const STATUS_VI_TRANSLATIONS: Record<string, string> = {
+  PENDING_APPROVAL: 'Chờ duyệt',
+  APPROVED: 'Đã duyệt',
+  PICKING: 'Đang soạn hàng',
+  DISPATCHED: 'Đã xuất kho',
+  DELIVERED: 'Đã giao hàng',
+  COMPLETED: 'Hoàn thành',
+  CLOSED: 'Đã hoàn tất',
+  DRAFT: 'Đơn nháp',
+  REJECTED: 'Từ chối',
+  CANCELLED: 'Đã hủy',
+  CONFIRMED: 'Đã xác nhận',
+  SHIPPING: 'Đang giao hàng',
+  DELIVERING: 'Đang giao hàng',
+  IN_TRANSIT: 'Đang vận chuyển',
+  PROCESSING: 'Đang xử lý'
+};
+
 function renderStatusBadge(status: string) {
   switch (status) {
     case 'PENDING_APPROVAL':
       return (
-        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 inline-flex items-center gap-1">
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 inline-flex items-center gap-1 border border-amber-200">
           <Clock size={12} />
           <span>Chờ duyệt</span>
         </span>
       );
     case 'APPROVED':
       return (
-        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 inline-flex items-center gap-1">
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 inline-flex items-center gap-1 border border-emerald-200">
           <CheckCircle2 size={12} />
           <span>Đã duyệt</span>
         </span>
       );
     case 'PICKING':
       return (
-        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 inline-flex items-center gap-1">
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 inline-flex items-center gap-1 border border-blue-200">
           <span>Đang soạn hàng</span>
         </span>
       );
     case 'DISPATCHED':
       return (
-        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-800 inline-flex items-center gap-1">
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-800 inline-flex items-center gap-1 border border-indigo-200">
           <span>Đã xuất kho</span>
         </span>
       );
     case 'DELIVERED':
       return (
-        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 inline-flex items-center gap-1">
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 inline-flex items-center gap-1 border border-teal-200">
+          <CheckCircle2 size={12} />
           <span>Đã giao hàng</span>
+        </span>
+      );
+    case 'COMPLETED':
+      return (
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 inline-flex items-center gap-1 border border-emerald-200">
+          <CheckCircle2 size={12} />
+          <span>Hoàn thành</span>
+        </span>
+      );
+    case 'CLOSED':
+      return (
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-800 inline-flex items-center gap-1 border border-slate-200">
+          <CheckCircle2 size={12} />
+          <span>Đã hoàn tất</span>
+        </span>
+      );
+    case 'DRAFT':
+      return (
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-700 inline-flex items-center gap-1 border border-gray-200">
+          <span>Đơn nháp</span>
+        </span>
+      );
+    case 'SHIPPING':
+    case 'DELIVERING':
+    case 'IN_TRANSIT':
+      return (
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 inline-flex items-center gap-1 border border-sky-200">
+          <span>Đang giao hàng</span>
+        </span>
+      );
+    case 'CONFIRMED':
+      return (
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 inline-flex items-center gap-1 border border-emerald-200">
+          <CheckCircle2 size={12} />
+          <span>Đã xác nhận</span>
         </span>
       );
     case 'REJECTED':
       return (
-        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 inline-flex items-center gap-1">
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 inline-flex items-center gap-1 border border-rose-200">
           <span>Từ chối</span>
         </span>
       );
     case 'CANCELLED':
       return (
-        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-700 inline-flex items-center gap-1">
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-700 inline-flex items-center gap-1 border border-gray-200">
           <span>Đã hủy</span>
         </span>
       );
-    default:
+    default: {
+      const viLabel = STATUS_VI_TRANSLATIONS[status] || status;
       return (
-        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-700">
-          {status}
+        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-700 border border-gray-200">
+          {viLabel}
         </span>
       );
+    }
   }
 }
