@@ -27,6 +27,7 @@ import { GoodsReceiptManagementPage } from '../pages/inventory/GoodsReceiptManag
 import { StockTransferManagementPage } from '../pages/inventory/StockTransferManagementPage';
 import { StockLedgerPage } from '../pages/inventory/StockLedgerPage';
 import { StockTakeManagementPage } from '../pages/inventory/StockTakeManagementPage';
+import { WarehouseManagementPage } from '../pages/inventory/WarehouseManagementPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -237,6 +238,26 @@ export const AppRoutes: React.FC = () => {
             </ProtectedRoute>
           }
         />
+
+        {/* Quản lý kho hàng & sơ đồ vị trí lưu trữ */}
+        <Route
+          path="/inventory/warehouses"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <WarehouseManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/warehouses" element={<Navigate to="/inventory/warehouses" replace />} />
+
         <Route path="/inventory" element={<Navigate to="/inventory/receipts" replace />} />
 
         {/* Quản lý bảng giá sản phẩm (S2-10 / SCRUM-55 / EP-02) */}
