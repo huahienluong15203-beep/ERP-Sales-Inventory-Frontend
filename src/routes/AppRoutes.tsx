@@ -53,7 +53,15 @@ export const AppRoutes: React.FC = () => {
   }
 
   // 2b. S4-10: Cổng đại lý đặt hàng (B2B Customer Portal)
-  if (pathname === '/portal' || (pathname === '/' && currentRole === 'ROLE_CUSTOMER')) {
+  // Khách hàng/đại lý (ROLE_CUSTOMER) không dùng giao diện Dashboard nội bộ, luôn vào thẳng cổng đặt hàng
+  if (currentRole === 'ROLE_CUSTOMER') {
+    if (pathname !== '/portal') {
+      return <Navigate to="/portal" replace />;
+    }
+    return <CustomerOrderPortalPage />;
+  }
+
+  if (pathname === '/portal') {
     return <CustomerOrderPortalPage />;
   }
 
