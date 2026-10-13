@@ -3,7 +3,9 @@ import {
   ShoppingCart,
   ChevronRight,
   RefreshCw,
-  BellRing
+  ShieldAlert,
+  ShieldCheck,
+  ArrowRightLeft
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDashboardMinStockSummary } from '../../services/stockAlertApi';
@@ -79,38 +81,25 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
     return null;
   }
 
-  // Nếu không có mặt hàng nào dưới định mức thì không hiện cảnh báo đỏ
+  // Nếu không có mặt hàng nào dưới định mức thì hiện banner trạng thái an toàn kèm nút thao tác
   if (!loading && totalAlerts === 0) {
-    return null;
-  }
-
-  return (
-    <>
+    return (
       <div className="mb-3.5 animate-in fade-in slide-in-from-top-2 duration-300">
-      <div className="bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 rounded-2xl p-4 sm:p-5 text-white shadow-xl shadow-rose-600/20 border border-rose-500/40 relative overflow-hidden">
-        {/* Họa tiết trang trí nền */}
-        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="relative z-10 space-y-3">
-          {/* HEADER THÔNG BÁO ĐỎ (AC2) */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 text-white animate-bounce">
-                <BellRing size={20} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-black text-sm sm:text-base tracking-tight uppercase flex items-center gap-2">
-                    <span>Cảnh Báo Tồn Kho Dưới Định Mức Tối Thiểu</span>
-                  </h3>
-                </div>
-                <p className="text-xs text-rose-100 mt-0.5">
-                  Phát hiện <b>{totalAlerts} cảnh báo theo kho</b> đang ở dưới ngưỡng tồn tối thiểu, trong đó có{' '}
-                  <b>{criticalCount} điểm kho báo động đỏ nghiêm trọng</b> cần đặt hàng gấp từ nhà cung ứng!
-                </p>
-              </div>
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-emerald-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+              <ShieldCheck size={20} />
             </div>
-
+            <div>
+              <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                <span>Tất cả kho hàng đều đạt định mức dự trữ an toàn</span>
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Không có sản phẩm nào ở dưới ngưỡng tồn tối thiểu đã thiết lập.
+              </p>
+            </div>
+          </div>
+          {isWarehouseOrAdmin && (
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
@@ -118,89 +107,155 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                   setSelectedAlertForReceipt(null);
                   setIsReceiptModalOpen(true);
                 }}
-                className="px-3.5 py-1.5 rounded-lg bg-white text-rose-700 font-bold text-xs hover:bg-rose-50 transition shadow-2xs flex items-center gap-1.5 cursor-pointer h-9"
+                className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shadow-2xs flex items-center gap-1.5 cursor-pointer h-9"
               >
                 <ShoppingCart size={14} />
                 <span>Lập Phiếu Nhập NCC</span>
               </button>
-
-              {!hideLedgerButton && (
-                <button
-                  type="button"
-                  onClick={() => navigate('/inventory/ledger')}
-                  className="px-3.5 py-1.5 rounded-lg bg-rose-800/80 hover:bg-rose-800 text-white font-bold text-xs transition border border-rose-400/50 flex items-center gap-1 cursor-pointer h-9"
-                >
-                  <span>Xem Sổ Tồn</span>
-                  <ChevronRight size={14} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* DANH SÁCH CÁC MẶT HÀNG BÁO ĐỎ TIÊU BIỂU */}
-          {loading ? (
-            <div className="p-4 bg-white/10 rounded-2xl text-center text-xs text-rose-100 flex items-center justify-center gap-2">
-              <RefreshCw size={14} className="animate-spin" />
-              <span>Đang kiểm tra ngưỡng tồn kho...</span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {criticalItems.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => handleCardClick(item)}
-                  className="group/card bg-white/15 backdrop-blur-md rounded-2xl p-3.5 border border-white/20 hover:bg-white/25 hover:border-white/50 hover:shadow-xl hover:scale-[1.02] active:scale-[0.99] transition-all duration-200 space-y-2 text-white cursor-pointer relative"
-                  title={`Nhấp để mở phiếu nhập NCC cho kho ${item.warehouseName}`}
-                >
-                  <div className="flex items-start justify-between gap-1">
-                    <div className="min-w-0 flex-1">
-                      {/* Badge Tên Kho nổi bật để phân biệt rõ ràng từng kho lưu trữ */}
-                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/25 text-[10px] font-black text-yellow-300 uppercase tracking-wide mb-1 border border-white/20 shadow-xs">
-                        <span>📍 Kho {item.warehouseName.replace(/Kho Tổng |Kho /g, '')}</span>
-                      </div>
-                      <div className="font-mono text-[10px] uppercase font-bold text-rose-200">
-                        {item.productSku}
-                      </div>
-                      <div className="font-bold text-xs line-clamp-1 text-white" title={item.productName}>
-                        {item.productName}
-                      </div>
-                    </div>
-                    <span className="shrink-0 text-[10px] font-black px-1.5 py-0.5 rounded-md bg-white text-rose-700">
-                      -{item.deficitQuantity} {item.unit}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs pt-1 border-t border-white/15">
-                    <div>
-                      <div className="text-[10px] text-rose-200">Tồn hiện tại:</div>
-                      <div className="font-black text-sm text-yellow-300">
-                        {item.currentStock} {item.unit}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[10px] text-rose-200">Mức tối thiểu:</div>
-                      <div className="font-bold text-xs text-white">
-                        {item.minThreshold} {item.unit}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-1.5 border-t border-white/15 flex items-center justify-between text-[10px]">
-                    <span className="text-yellow-200 font-bold">
-                      Đề xuất: +{item.suggestedReorderQuantity} {item.unit}
-                    </span>
-                    <span className="inline-flex items-center gap-1 font-bold text-white bg-white/20 group-hover/card:bg-white group-hover/card:text-rose-700 px-2 py-0.5 rounded-md transition-colors">
-                      <ShoppingCart size={11} />
-                      <span>Nhập kho này &gt;</span>
-                    </span>
-                  </div>
-                </div>
-              ))}
+              <button
+                type="button"
+                onClick={() => navigate('/inventory/transfers')}
+                className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-2xs flex items-center gap-1.5 cursor-pointer h-9"
+              >
+                <ArrowRightLeft size={14} />
+                <span>Lập Phiếu Chuyển Kho</span>
+              </button>
             </div>
           )}
         </div>
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="mb-3.5 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 rounded-2xl p-4 sm:p-5 text-white shadow-xl shadow-rose-600/20 border border-rose-500/40 relative overflow-hidden">
+          {/* Họa tiết trang trí nền */}
+          <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 space-y-3">
+            {/* HEADER THÔNG BÁO CẢNH BÁO TỒN KHO */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 text-white">
+                  <ShieldAlert size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-black text-sm sm:text-base tracking-tight uppercase flex items-center gap-2">
+                      <span>Cảnh Báo Tồn Kho Dưới Định Mức Tối Thiểu</span>
+                    </h3>
+                  </div>
+                  <p className="text-xs text-rose-100 mt-0.5">
+                    Phát hiện <b>{totalAlerts} cảnh báo theo kho</b> đang ở dưới ngưỡng tồn tối thiểu, trong đó có{' '}
+                    <b>{criticalCount} điểm kho cần bổ sung khẩn cấp</b> từ nhà cung ứng!
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {isWarehouseOrAdmin && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAlertForReceipt(null);
+                        setIsReceiptModalOpen(true);
+                      }}
+                      className="px-3.5 py-1.5 rounded-xl bg-white text-rose-700 hover:bg-rose-50 font-bold text-xs transition shadow-2xs flex items-center gap-1.5 cursor-pointer h-9"
+                    >
+                      <ShoppingCart size={14} />
+                      <span>Lập Phiếu Nhập NCC</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/inventory/transfers')}
+                      className="px-3.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs transition border border-white/30 flex items-center gap-1.5 cursor-pointer h-9 backdrop-blur-xs"
+                    >
+                      <ArrowRightLeft size={14} />
+                      <span>Lập Phiếu Chuyển Kho</span>
+                    </button>
+                  </>
+                )}
+
+                {!hideLedgerButton && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/inventory/ledger')}
+                    className="px-3.5 py-1.5 rounded-lg bg-rose-800/80 hover:bg-rose-800 text-white font-bold text-xs transition border border-rose-400/50 flex items-center gap-1 cursor-pointer h-9"
+                  >
+                    <span>Xem Sổ Tồn</span>
+                    <ChevronRight size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* DANH SÁCH CÁC MẶT HÀNG BÁO ĐỎ TIÊU BIỂU */}
+            {loading ? (
+              <div className="p-4 bg-white/10 rounded-2xl text-center text-xs text-rose-100 flex items-center justify-center gap-2">
+                <RefreshCw size={14} className="animate-spin" />
+                <span>Đang kiểm tra ngưỡng tồn kho...</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {criticalItems.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleCardClick(item)}
+                    className="group/card bg-white/15 backdrop-blur-md rounded-2xl p-3.5 border border-white/20 hover:bg-white/25 hover:border-white/50 hover:shadow-xl hover:scale-[1.02] active:scale-[0.99] transition-all duration-200 space-y-2 text-white cursor-pointer relative"
+                    title={`Nhấp để mở phiếu nhập NCC cho kho ${item.warehouseName}`}
+                  >
+                    <div className="flex items-start justify-between gap-1">
+                      <div className="min-w-0 flex-1">
+                        {/* Badge Tên Kho nổi bật để phân biệt rõ ràng từng kho lưu trữ */}
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/25 text-[10px] font-black text-yellow-300 uppercase tracking-wide mb-1 border border-white/20 shadow-xs">
+                          <span>📍 Kho {item.warehouseName.replace(/Kho Tổng |Kho /g, '')}</span>
+                        </div>
+                        <div className="font-mono text-[10px] uppercase font-bold text-rose-200">
+                          {item.productSku}
+                        </div>
+                        <div className="font-bold text-xs line-clamp-1 text-white" title={item.productName}>
+                          {item.productName}
+                        </div>
+                      </div>
+                      <span className="shrink-0 text-[10px] font-black px-1.5 py-0.5 rounded-md bg-white text-rose-700">
+                        -{item.deficitQuantity} {item.unit}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-white/15">
+                      <div>
+                        <div className="text-[10px] text-rose-200">Tồn hiện tại:</div>
+                        <div className="font-black text-sm text-yellow-300">
+                          {item.currentStock} {item.unit}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[10px] text-rose-200">Mức tối thiểu:</div>
+                        <div className="font-bold text-xs text-white">
+                          {item.minThreshold} {item.unit}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-1.5 border-t border-white/15 flex items-center justify-between text-[10px]">
+                      <span className="text-yellow-200 font-bold">
+                        Đề xuất: +{item.suggestedReorderQuantity} {item.unit}
+                      </span>
+                      <span className="inline-flex items-center gap-1 font-bold text-white bg-white/20 group-hover/card:bg-white group-hover/card:text-rose-700 px-2 py-0.5 rounded-md transition-colors">
+                        <ShoppingCart size={11} />
+                        <span>Nhập kho này &gt;</span>
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* MODAL LẬP PHIẾU NHẬP NCC TRỰC TIẾP THEO KHO & MẶT HÀNG ĐƯỢC CHỌN (S5-04 / S5-09) */}
       <GoodsReceiptFormModal
