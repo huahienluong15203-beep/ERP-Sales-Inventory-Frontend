@@ -22,6 +22,7 @@ import {
   previewOrderOnBackend,
   saveDraftToBackend,
   submitOrderToBackend,
+  cancelOrder,
   fetchBackendDrafts,
   fetchBackendDraftById,
   fetchBackendProductOptions,
@@ -743,6 +744,39 @@ export const OrderCreatePage: React.FC = () => {
     }
   };
 
+  // Xóa / Hủy đơn nháp
+  const handleDeleteDraft = async (draftId: string) => {
+    const draftToDelete = savedDrafts.find((d) => d.id === draftId);
+    if (!draftToDelete) return;
+
+    const draftDisplayName = draftToDelete.orderNumber || draftToDelete.agencyName || draftToDelete.id;
+
+    try {
+      if (draftToDelete.backendDraftId) {
+        await cancelOrder(draftToDelete.backendDraftId, 'Xóa đơn hàng nháp');
+      }
+
+      // Xóa cache đơn đang gõ dở nếu trùng
+      const active = getActiveDraft();
+      if (active && (active.id === draftId || (draftToDelete.backendDraftId && active.backendDraftId === draftToDelete.backendDraftId))) {
+        clearActiveDraft();
+      }
+
+      // Nếu đơn bị xóa đang mở trên form hiện tại thì reset form
+      if (backendDraftId && draftToDelete.backendDraftId && backendDraftId === draftToDelete.backendDraftId) {
+        setBackendDraftId(null);
+        setCurrentDraftId(`DRAFT-${Date.now()}`);
+        setItems([]);
+        setPreview({ status: 'idle' });
+      }
+
+      setSavedDrafts((prev) => prev.filter((d) => d.id !== draftId));
+      showToast('Đã xóa đơn nháp', `Đã xóa đơn nháp "${draftDisplayName}" thành công`, 'success', 3000);
+    } catch (err: unknown) {
+      showToast('Không thể xóa đơn nháp', err instanceof Error ? err.message : 'Vui lòng thử lại', 'error');
+    }
+  };
+
   const isAgencyLocked = Boolean(selectedAgency?.transactionLocked);
   const isAgencySuspended = selectedAgency?.status === 'SUSPENDED';
   const money = preview.status === 'ok' ? preview.order : null;
@@ -1227,6 +1261,7 @@ export const OrderCreatePage: React.FC = () => {
         onClose={() => setIsDraftsModalOpen(false)}
         drafts={savedDrafts}
         onSelectDraft={handleSelectSavedDraft}
+        onDeleteDraft={handleDeleteDraft}
       />
 
     </div>
