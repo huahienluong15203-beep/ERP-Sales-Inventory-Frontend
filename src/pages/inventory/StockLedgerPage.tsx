@@ -194,7 +194,7 @@ export const StockLedgerPage: React.FC = () => {
       });
 
       showToast(
-        'Đã cập nhật định mức tồn (AC1)',
+        'Đã cập nhật định mức tồn',
         `SKU [${cfg.productSku}] tại ${cfg.warehouseName} đã được cập nhật định mức: ${editMinValue} ${cfg.unit}`,
         'success',
         4000
@@ -259,7 +259,7 @@ export const StockLedgerPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-rose-700 uppercase flex items-center gap-1">
               <AlertTriangle size={14} className="text-rose-600" />
-              <span>Dưới Định Mức </span>
+              <span>Dưới Định Mức</span>
             </span>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200">
               Cần Bổ Sung

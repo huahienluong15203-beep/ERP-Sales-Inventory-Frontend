@@ -286,7 +286,7 @@ export const OrderCreatePage: React.FC = () => {
     }
     if (creditStatus?.blocked || creditStatus?.overdue) {
       showToast(
-        'Chặn tạo đơn hoàn toàn (S4-02)',
+        'Chặn tạo đơn hoàn toàn',
         creditStatus.message || 'Đại lý có khoản nợ quá hạn hoặc đang bị khóa giao dịch. Không thể tạo đơn mới.',
         'error'
       );
@@ -586,8 +586,8 @@ export const OrderCreatePage: React.FC = () => {
 
     if (creditStatus?.blocked || creditStatus?.overdue) {
       showToast(
-        'Chặn tạo đơn hoàn toàn (S4-02)',
-        creditStatus.message || 'Đại lý có khoản nợ quá hạn hoặc bị khóa. Không thể lưu nháp theo quy định S4-02.',
+        'Chặn tạo đơn hoàn toàn',
+        creditStatus.message || 'Đại lý có khoản nợ quá hạn hoặc bị khóa. Không thể lưu nháp.',
         'error'
       );
       return;
@@ -646,8 +646,8 @@ export const OrderCreatePage: React.FC = () => {
     }
     if (creditStatus?.blocked || creditStatus?.overdue) {
       showToast(
-        'Chặn tạo đơn hoàn toàn (S4-02)',
-        creditStatus.message || 'Đại lý có nợ quá hạn hoặc đang bị khóa, hệ thống chặn chốt đơn theo quy định S4-02.',
+        'Chặn tạo đơn hoàn toàn',
+        creditStatus.message || 'Đại lý có nợ quá hạn hoặc đang bị khóa, hệ thống chặn chốt đơn.',
         'error'
       );
       return;
@@ -791,13 +791,13 @@ export const OrderCreatePage: React.FC = () => {
       return `Chặn tạo đơn: Đại lý ${selectedAgency?.name || ''} (${selectedAgency?.code || ''}) đã ngừng giao dịch. Vui lòng đổi đại lý khác.`;
     }
     if (creditStatus?.overdue || creditStatus?.blocked) {
-      return creditStatus?.message || `Chặn tạo đơn hoàn toàn: Đại lý có nợ quá hạn (${creditStatus?.overdueDays || 0} ngày) hoặc đang bị khóa giao dịch (S4-02).`;
+      return creditStatus?.message || `Chặn tạo đơn hoàn toàn: Đại lý có nợ quá hạn (${creditStatus?.overdueDays || 0} ngày) hoặc đang bị khóa giao dịch.`;
     }
     if (overStockItems.length > 0) {
       return `Chặn chốt đơn: Có ${overStockItems.length} mặt hàng vượt quá tồn khả dụng tại kho ${servingWarehouse.name}. Vui lòng chỉnh số lượng.`;
     }
     if (isAgencyLocked) {
-      return 'Đại lý đang bị khóa giao dịch - chặn tạo đơn mới (S3-07).';
+      return 'Đại lý đang bị khóa giao dịch - chặn tạo đơn mới.';
     }
     return undefined;
   }, [isAgencySuspended, creditStatus?.overdue, creditStatus?.blocked, creditStatus?.message, creditStatus?.overdueDays, overStockItems.length, servingWarehouse.name, isAgencyLocked, selectedAgency?.name, selectedAgency?.code]);
@@ -839,7 +839,7 @@ export const OrderCreatePage: React.FC = () => {
       {/* Nội dung tạo đơn */}
       <div className="space-y-3.5">
 
-        {/* S4-09: BANNER THÔNG BÁO SAO CHÉP ĐƠN CŨ */}
+
 
 
         {/* CẢNH BÁO TỪ BACKEND NẾU CÓ (S3-07 / S3-09) */}
@@ -1170,7 +1170,7 @@ export const OrderCreatePage: React.FC = () => {
                 }`}
               title={
                 creditStatus?.blocked || creditStatus?.overdue
-                  ? 'Không thể lưu nháp do đại lý bị chặn nợ quá hạn (S4-02)'
+                  ? 'Không thể lưu nháp do đại lý bị chặn nợ quá hạn'
                   : overStockItems.length > 0
                     ? 'Không thể lưu nháp khi có mặt hàng vượt tồn khả dụng'
                     : belowFloorItems.length > 0

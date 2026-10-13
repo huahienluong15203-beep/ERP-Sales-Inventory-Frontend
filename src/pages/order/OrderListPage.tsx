@@ -224,7 +224,7 @@ export const OrderListPage: React.FC = () => {
       setCloningOrderId(orderId);
       const res = await cloneOrderToDraft(orderId);
       showToast(
-        'Đã sao chép đơn cũ (S4-09)',
+        'Đã sao chép đơn cũ',
         `Đã sao chép ${res.itemCount} dòng hàng từ đơn ${res.sourceCode}. Đơn giá và chiết khấu đã được tự động tính lại theo bảng giá hiện hành!`,
         'success'
       );

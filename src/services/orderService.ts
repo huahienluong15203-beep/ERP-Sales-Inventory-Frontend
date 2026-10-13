@@ -1258,7 +1258,7 @@ export function canViewCustomerPurchaseHistory(
   const repDisplay = agency.assignedRepName || 'chưa phân công';
   return {
     allowed: false,
-    reason: `Bạn không được phân công phụ trách đại lý này (Người phụ trách: ${repDisplay}). Theo quy định bảo mật kinh doanh (S4-04), bạn chỉ có thể xem lịch sử mua hàng của các đại lý trong địa bàn được phân công.`
+    reason: `Bạn không được phân công phụ trách đại lý này (Người phụ trách: ${repDisplay}). Theo quy định bảo mật kinh doanh, bạn chỉ có thể xem lịch sử mua hàng của các đại lý trong địa bàn được phân công.`
   };
 }
 

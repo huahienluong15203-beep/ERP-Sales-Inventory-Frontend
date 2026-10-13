@@ -187,7 +187,7 @@ export const CustomerReorderModal: React.FC<CustomerReorderModalProps> = ({
                 )}
               </h2>
               <p className="text-xs text-gray-500">
-                Lấy lại các dòng hàng định kỳ và tự động cập nhật bảng giá hiện hành (S5-02)
+                Lấy lại các dòng hàng định kỳ và tự động cập nhật bảng giá hiện hành
               </p>
             </div>
           </div>

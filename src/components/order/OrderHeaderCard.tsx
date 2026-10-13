@@ -250,7 +250,7 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                 <div className="flex items-center justify-between text-xs font-bold text-gray-700">
                   <span className="flex items-center gap-1.5 text-gray-800">
                     <CreditCard size={13} className="text-[#F85606]" />
-                    <span>Hạn Mức & Dư Nợ Đại Lý (S4-02)</span>
+                    <span>Hạn Mức & Dư Nợ Đại Lý</span>
                   </span>
                   {loadingCreditStatus && (
                     <span className="text-[10px] text-gray-400 font-normal animate-pulse">
@@ -308,7 +308,7 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                     <AlertTriangle size={16} className="text-rose-600 shrink-0 mt-0.5" />
                     <div>
                       <strong className="font-bold block text-rose-950 uppercase tracking-wide text-[11px]">
-                        Chặn tạo đơn hoàn toàn (S4-02)
+                        Chặn tạo đơn hoàn toàn
                       </strong>
                       <span className="text-[11px] leading-relaxed block mt-0.5 text-rose-800">
                         Đại lý có khoản nợ quá hạn <strong>{creditStatus.overdueDays} ngày</strong> (vượt quá {creditStatus.maxDebtDays || 30} ngày cho phép).
