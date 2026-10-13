@@ -94,83 +94,158 @@ export const DashboardPage: React.FC = () => {
 
         if (canViewOrders) {
           try {
+            // 1. Tải danh sách đơn gần đây để hiển thị bảng tiến độ
             const res = await authFetch(`${API_BASE_URL}/api/orders?page=0&size=10`);
             let backendOrders: any[] = [];
-            let backendTotal = 0;
             if (res.ok) {
               const data = await res.json();
               backendOrders = data.content || [];
-              backendTotal = data.totalElements || backendOrders.length;
             }
 
-          // Lấy đơn hàng đã chốt từ localStorage nếu có
-          let localConfirmedOrders: any[] = [];
-          try {
-            const raw = localStorage.getItem('erp_confirmed_orders_v1');
-            if (raw) localConfirmedOrders = JSON.parse(raw);
-          } catch {
-            // ignore
-          }
+            // 2. Tải tổng tiền doanh thu thực tế từ Backend (chỉ đơn đã xuất kho / đã giao / đóng đơn)
+            let backendRevenue = 0;
+            let backendOfficialOrdersCount = 0;
+            let hasBackendTotals = false;
 
-          const combinedOrders = [...backendOrders];
-          localConfirmedOrders.forEach((lo: any) => {
-            if (!combinedOrders.some((bo: any) => bo.code === lo.orderNumber || bo.id === lo.id)) {
-              combinedOrders.push({
-                id: lo.id || lo.orderNumber,
-                code: lo.orderNumber || lo.code,
-                customerName: lo.agencyName || lo.customerName || 'Đại lý',
-                status: lo.status || 'CONFIRMED',
-                totalAmount: lo.totalPayable || lo.totalAmount || 0,
-                desiredDeliveryDate: lo.expectedDeliveryDate || lo.updatedAt
-              });
-            }
-          });
+            try {
+              const [revTotalsRes, officialTotalsRes] = await Promise.all([
+                authFetch(`${API_BASE_URL}/api/orders/totals?status=DISPATCHED,DELIVERED,CLOSED`),
+                authFetch(`${API_BASE_URL}/api/orders/totals?status=PENDING_APPROVAL,APPROVED,PICKING,DISPATCHED,DELIVERED,CLOSED`)
+              ]);
 
-          if (isMounted) {
-            const finalOrdersCount = Math.max(backendTotal, combinedOrders.length);
-            setOrdersCount(finalOrdersCount);
-
-            // Tính tổng doanh thu thực tế
-            const revenue = combinedOrders.reduce(
-              (sum, o) => sum + (Number(o.totalAmount) || 0),
-              0
-            );
-            setTotalRevenue(revenue);
-
-            // Ước tính giá vốn hàng bán tương ứng
-            const cogs = Math.round(revenue * 0.7);
-            setTotalCogs(cogs);
-
-            // Chuyển đổi danh sách đơn hàng thật gần đây (lấy tối đa 10 đơn gần nhất)
-            const formattedRecent: RecentOrderItem[] = combinedOrders.slice(0, 10).map((o) => {
-              const status = o.status || 'DRAFT';
-              let step = '1/4 bước (Đơn nháp)';
-              let percent = 25;
-
-              if (status === 'CONFIRMED') {
-                step = '2/4 bước (Đã xác nhận & chờ xuất kho)';
-                percent = 50;
-              } else if (status === 'SHIPPING' || status === 'IN_TRANSIT') {
-                step = '3/4 bước (Đang giao hàng)';
-                percent = 75;
-              } else if (status === 'COMPLETED' || status === 'DELIVERED') {
-                step = '4/4 bước (Đã hoàn tất & đối soát)';
-                percent = 100;
+              if (revTotalsRes.ok) {
+                const revData = await revTotalsRes.json();
+                backendRevenue = Number(revData.totalAmount) || 0;
+                hasBackendTotals = true;
               }
 
-              return {
-                id: o.id,
-                code: o.code || 'DH-ERP',
-                customer: o.customerName || 'Đại lý',
-                totalAmount: Number(o.totalAmount || 0),
-                step,
-                percent,
-                path: o.status === 'DRAFT' && o.id ? `/orders/create?draftId=${o.id}` : '/orders'
-              };
+              if (officialTotalsRes.ok) {
+                const officialData = await officialTotalsRes.json();
+                backendOfficialOrdersCount = Number(officialData.orderCount) || 0;
+              }
+            } catch (errTotals) {
+              console.warn('Không tải được totals từ backend, fallback tính từ danh sách đơn:', errTotals);
+            }
+
+            // Lấy đơn hàng đã chốt từ localStorage nếu có (hỗ trợ chế độ demo/offline)
+            let localConfirmedOrders: any[] = [];
+            try {
+              const raw = localStorage.getItem('erp_confirmed_orders_v1');
+              if (raw) localConfirmedOrders = JSON.parse(raw);
+            } catch {
+              // ignore
+            }
+
+            const combinedOrders = [...backendOrders];
+            localConfirmedOrders.forEach((lo: any) => {
+              if (!combinedOrders.some((bo: any) => bo.code === lo.orderNumber || bo.id === lo.id)) {
+                combinedOrders.push({
+                  id: lo.id || lo.orderNumber,
+                  code: lo.orderNumber || lo.code,
+                  customerName: lo.agencyName || lo.customerName || 'Đại lý',
+                  status: lo.status || 'CONFIRMED',
+                  totalAmount: lo.totalPayable || lo.totalAmount || 0,
+                  desiredDeliveryDate: lo.expectedDeliveryDate || lo.updatedAt
+                });
+              }
             });
 
-            setRecentOrders(formattedRecent);
-          }
+            if (isMounted) {
+              // Trạng thái đơn hàng đủ điều kiện ghi nhận doanh thu thực tế:
+              // Hàng đã rời kho hoặc đại lý đã nhận hàng hoàn tất (DISPATCHED, DELIVERED, CLOSED, COMPLETED).
+              // Tuyệt đối KHÔNG tính: DRAFT (nháp), PENDING_APPROVAL (chờ duyệt), APPROVED (mới duyệt chưa xuất), CANCELLED (hủy), REJECTED (từ chối).
+              const REVENUE_ELIGIBLE_STATUSES = ['DISPATCHED', 'DELIVERED', 'CLOSED', 'COMPLETED'];
+
+              // Trạng thái đơn hàng chính thức phát sinh trong kỳ:
+              // Loại trừ đơn nháp (DRAFT), đơn hủy (CANCELLED) và đơn từ chối (REJECTED).
+              const OFFICIAL_ORDER_STATUSES = [
+                'PENDING_APPROVAL',
+                'APPROVED',
+                'CONFIRMED',
+                'PICKING',
+                'PREPARING',
+                'DISPATCHED',
+                'DELIVERED',
+                'CLOSED',
+                'COMPLETED'
+              ];
+
+              // Tính tổng doanh thu thực tế:
+              let finalRevenue = 0;
+              if (hasBackendTotals) {
+                finalRevenue = backendRevenue;
+                // Cộng thêm từ local nếu có đơn local thỏa mãn tiêu chuẩn doanh thu
+                const extraLocalRevenue = localConfirmedOrders
+                  .filter((lo: any) => REVENUE_ELIGIBLE_STATUSES.includes(String(lo.status || '').toUpperCase()))
+                  .reduce((sum: number, o: any) => sum + (Number(o.totalPayable || o.totalAmount) || 0), 0);
+                finalRevenue += extraLocalRevenue;
+              } else {
+                finalRevenue = combinedOrders
+                  .filter((o: any) => REVENUE_ELIGIBLE_STATUSES.includes(String(o.status || '').toUpperCase()))
+                  .reduce((sum: number, o: any) => sum + (Number(o.totalAmount) || 0), 0);
+              }
+              setTotalRevenue(finalRevenue);
+
+              // Số đơn hàng chính thức trong kỳ:
+              let finalCount = 0;
+              if (hasBackendTotals && backendOfficialOrdersCount > 0) {
+                finalCount = backendOfficialOrdersCount;
+              } else {
+                finalCount = combinedOrders.filter((o: any) =>
+                  OFFICIAL_ORDER_STATUSES.includes(String(o.status || '').toUpperCase())
+                ).length;
+              }
+              setOrdersCount(finalCount);
+
+              // Ước tính giá vốn hàng bán tương ứng
+              const cogs = Math.round(finalRevenue * 0.7);
+              setTotalCogs(cogs);
+
+              // Chuyển đổi danh sách 10 đơn gần đây hiển thị theo chuẩn 7 nấc vòng đời đơn hàng
+              const formattedRecent: RecentOrderItem[] = combinedOrders.slice(0, 10).map((o) => {
+                const status = String(o.status || 'DRAFT').toUpperCase();
+                let step = '1/7 bước (Đơn nháp)';
+                let percent = 14;
+
+                if (status === 'PENDING_APPROVAL') {
+                  step = '2/7 bước (Chờ quản lý duyệt)';
+                  percent = 28;
+                } else if (status === 'APPROVED' || status === 'CONFIRMED') {
+                  step = '3/7 bước (Đã duyệt & giữ tồn)';
+                  percent = 43;
+                } else if (status === 'PICKING' || status === 'PREPARING') {
+                  step = '4/7 bước (Đang soạn hàng theo FEFO)';
+                  percent = 57;
+                } else if (status === 'DISPATCHED' || status === 'SHIPPING' || status === 'IN_TRANSIT') {
+                  step = '5/7 bước (Đã xuất kho)';
+                  percent = 71;
+                } else if (status === 'DELIVERED') {
+                  step = '6/7 bước (Đại lý đã nhận)';
+                  percent = 86;
+                } else if (status === 'CLOSED' || status === 'COMPLETED') {
+                  step = '7/7 bước (Đã đóng & hoàn tất)';
+                  percent = 100;
+                } else if (status === 'CANCELLED') {
+                  step = 'Đã hủy đơn';
+                  percent = 0;
+                } else if (status === 'REJECTED') {
+                  step = 'Bị từ chối duyệt';
+                  percent = 0;
+                }
+
+                return {
+                  id: o.id,
+                  code: o.code || 'DH-ERP',
+                  customer: o.customerName || 'Đại lý',
+                  totalAmount: Number(o.totalAmount || 0),
+                  step,
+                  percent,
+                  path: status === 'DRAFT' && o.id ? `/orders/create?draftId=${o.id}` : '/orders'
+                };
+              });
+
+              setRecentOrders(formattedRecent);
+            }
           } catch (err) {
             console.warn('Không tải được đơn hàng từ backend:', err);
           }
@@ -218,7 +293,7 @@ export const DashboardPage: React.FC = () => {
             <TrendingUp size={14} />
             <span>
               {totalRevenue > 0
-                ? 'Doanh thu ghi nhận từ đơn hàng thực tế'
+                ? 'Ghi nhận từ đơn xuất kho & giao hàng'
                 : 'Chưa phát sinh doanh thu trong kỳ'}
             </span>
           </div>
@@ -241,7 +316,7 @@ export const DashboardPage: React.FC = () => {
           <div className="erp-stat-subtext">
             <span>
               {ordersCount > 0
-                ? `${ordersCount} đơn hàng ghi nhận trong hệ thống`
+                ? `${ordersCount} đơn hàng chính thức phát sinh`
                 : 'Chưa phát sinh đơn hàng mới'}
             </span>
           </div>
