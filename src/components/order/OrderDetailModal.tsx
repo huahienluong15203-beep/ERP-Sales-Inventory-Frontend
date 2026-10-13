@@ -175,6 +175,39 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
             <span>Từ chối</span>
           </span>
         );
+      case 'COMPLETED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <CheckCircle2 size={13} />
+            <span>Hoàn thành</span>
+          </span>
+        );
+      case 'CLOSED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
+            <CheckCircle2 size={13} />
+            <span>Đã hoàn tất</span>
+          </span>
+        );
+      case 'DELIVERED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 border border-teal-200">
+            <CheckCircle2 size={13} />
+            <span>Đã giao hàng</span>
+          </span>
+        );
+      case 'PICKING':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+            <span>Đang soạn hàng</span>
+          </span>
+        );
+      case 'DISPATCHED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+            <span>Đã xuất kho</span>
+          </span>
+        );
       case 'CANCELLED':
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-zinc-100 text-zinc-700 border border-zinc-200">
