@@ -299,6 +299,56 @@ export function handleSessionExpired(customMessage?: string) {
   window.dispatchEvent(new CustomEvent('erp-session-expired', { detail: { message } }));
 }
 
+/** Đọc thời điểm cấp (iat) và hết hạn (exp) trong JWT, tính bằng giây. */
+function readTokenTimes(token: string): { iat: number; exp: number } | null {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const json = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    if (typeof json.iat !== 'number' || typeof json.exp !== 'number') return null;
+    return { iat: json.iat, exp: json.exp };
+  } catch {
+    return null;
+  }
+}
+
+let refreshInFlight = false;
+let lastRefreshAttempt = 0;
+
+/**
+ * S1-02: Duy trì phiên - khi người dùng còn thao tác và token đã dùng quá nửa thời hạn,
+ * gọi /api/auth/refresh để lấy token mới (cùng phiên). Không thao tác thì token tự hết hạn -> về đăng nhập.
+ */
+async function maybeRefreshSession(): Promise<void> {
+  const token = getStoredToken();
+  if (!token || refreshInFlight) return;
+  const times = readTokenTimes(token);
+  if (!times) return;
+  const now = Date.now() / 1000;
+  const halfLife = (times.exp - times.iat) / 2;
+  if (times.exp <= now || now - times.iat < halfLife) return;
+  if (Date.now() - lastRefreshAttempt < 60_000) return;
+
+  refreshInFlight = true;
+  lastRefreshAttempt = Date.now();
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json().catch(() => null);
+    if (data?.accessToken && getStoredToken() === token) {
+      const remembered = localStorage.getItem('accessToken') === token;
+      setStoredToken(data.accessToken, remembered);
+    }
+  } catch {
+    // Mạng lỗi thì thôi, lần thao tác sau sẽ thử lại
+  } finally {
+    refreshInFlight = false;
+  }
+}
+
 /**
  * Hàm gọi API xác thực có kèm Access Token và tự động phát hiện 401 (Phiên bị huỷ/hết hạn)
  */
@@ -313,6 +363,10 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
   }
 
   const response = await fetch(url, { ...options, headers });
+  if (response.ok) {
+    // S1-02: đang hoạt động -> tự gia hạn phiên khi token đã dùng quá nửa thời hạn
+    void maybeRefreshSession();
+  }
   if (response.status === 401) {
     const data = await response.clone().json().catch(() => null);
     const message =
