@@ -359,28 +359,22 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
             </div>
           )}
 
-          {/* Chi tiết niêm yết, sàn & chiết khấu */}
-          <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-gray-500">
-            <span>
-              Niêm yết: <strong className="text-gray-700">{formatCurrencyVND(originalPrice)}</strong>
-            </span>
-            {floorPrice > 0 && (
-              <>
-                <span>•</span>
+          {/* Chi tiết sàn & chiết khấu */}
+          {(floorPrice > 0 || item.discountAmount > 0) && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-gray-500">
+              {floorPrice > 0 && (
                 <span>
                   Sàn: <strong className={isBelowFloor ? 'text-amber-700 font-bold' : 'text-gray-700'}>{formatCurrencyVND(floorPrice)}</strong>
                 </span>
-              </>
-            )}
-            {item.discountAmount > 0 && (
-              <>
-                <span>•</span>
+              )}
+              {floorPrice > 0 && item.discountAmount > 0 && <span>•</span>}
+              {item.discountAmount > 0 && (
                 <span className="text-emerald-700 font-bold">
                   CK: -{item.discountPercent}% (-{formatCurrencyVND(item.discountAmount)})
                 </span>
-              </>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Cột 4: Thành Tiền */}
@@ -449,12 +443,6 @@ export const OrderItemRow: React.FC<OrderItemRowProps> = ({
           <span>
             Đơn giá thấp hơn giá sàn ({formatCurrencyVND(floorPrice)}/{item.selectedUnit}) — Đơn hàng sẽ bị đánh dấu <strong>CẦN DUYỆT</strong> bởi Quản lý!
           </span>
-        </div>
-      )}
-
-      {item.appliedDiscountNote && (
-        <div className="text-[10px] text-emerald-700 italic flex items-center gap-1">
-          <span>🎯 {item.appliedDiscountNote}</span>
         </div>
       )}
     </div>
