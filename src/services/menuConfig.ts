@@ -126,7 +126,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
-    title: 'Sổ tồn & Cảnh báo',
+    title: 'Quản lý tồn kho',
     path: '/inventory/ledger',
     group: 'Sản phẩm & Kho',
     icon: 'Boxes',

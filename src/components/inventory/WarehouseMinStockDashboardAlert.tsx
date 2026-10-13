@@ -130,7 +130,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
   return (
     <>
       <div className="mb-3.5 animate-in fade-in slide-in-from-top-2 duration-300">
-        <div className="bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 rounded-2xl p-4 sm:p-5 text-white shadow-xl shadow-rose-600/20 border border-rose-500/40 relative overflow-hidden">
+        <div className="bg-gradient-to-r from-[#F85606] via-orange-500 to-amber-500 rounded-2xl p-4 sm:p-5 text-white shadow-xl shadow-orange-500/20 border border-orange-400/40 relative overflow-hidden">
           {/* Họa tiết trang trí nền */}
           <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -147,7 +147,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                       <span>Cảnh Báo Tồn Kho Dưới Định Mức Tối Thiểu</span>
                     </h3>
                   </div>
-                  <p className="text-xs text-rose-100 mt-0.5">
+                  <p className="text-xs text-orange-100 mt-0.5">
                     Phát hiện <b>{totalAlerts} cảnh báo theo kho</b> đang ở dưới ngưỡng tồn tối thiểu, trong đó có{' '}
                     <b>{criticalCount} điểm kho cần bổ sung khẩn cấp</b> từ nhà cung ứng!
                   </p>
@@ -163,7 +163,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                         setSelectedAlertForReceipt(null);
                         setIsReceiptModalOpen(true);
                       }}
-                      className="px-3.5 py-1.5 rounded-xl bg-white text-rose-700 hover:bg-rose-50 font-bold text-xs transition shadow-2xs flex items-center gap-1.5 cursor-pointer h-9"
+                      className="px-3.5 py-1.5 rounded-xl bg-white text-[#F85606] hover:bg-orange-50 font-bold text-xs transition shadow-2xs flex items-center gap-1.5 cursor-pointer h-9"
                     >
                       <ShoppingCart size={14} />
                       <span>Lập Phiếu Nhập NCC</span>
@@ -183,7 +183,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                   <button
                     type="button"
                     onClick={() => navigate('/inventory/ledger')}
-                    className="px-3.5 py-1.5 rounded-lg bg-rose-800/80 hover:bg-rose-800 text-white font-bold text-xs transition border border-rose-400/50 flex items-center gap-1 cursor-pointer h-9"
+                    className="px-3.5 py-1.5 rounded-lg bg-orange-600/80 hover:bg-orange-600 text-white font-bold text-xs transition border border-orange-300/40 flex items-center gap-1 cursor-pointer h-9"
                   >
                     <span>Xem Sổ Tồn</span>
                     <ChevronRight size={14} />
@@ -194,7 +194,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
 
             {/* DANH SÁCH CÁC MẶT HÀNG BÁO ĐỎ TIÊU BIỂU */}
             {loading ? (
-              <div className="p-4 bg-white/10 rounded-2xl text-center text-xs text-rose-100 flex items-center justify-center gap-2">
+              <div className="p-4 bg-white/10 rounded-2xl text-center text-xs text-orange-100 flex items-center justify-center gap-2">
                 <RefreshCw size={14} className="animate-spin" />
                 <span>Đang kiểm tra ngưỡng tồn kho...</span>
               </div>
@@ -213,7 +213,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                         <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/25 text-[10px] font-black text-yellow-300 uppercase tracking-wide mb-1 border border-white/20 shadow-xs">
                           <span>📍 Kho {item.warehouseName.replace(/Kho Tổng |Kho /g, '')}</span>
                         </div>
-                        <div className="font-mono text-[10px] uppercase font-bold text-rose-200">
+                        <div className="font-mono text-[10px] uppercase font-bold text-orange-100">
                           {item.productSku}
                         </div>
                         <div className="font-bold text-xs line-clamp-1 text-white" title={item.productName}>
@@ -225,13 +225,13 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
 
                     <div className="flex items-center justify-between text-xs pt-1 border-t border-white/15">
                       <div>
-                        <div className="text-[10px] text-rose-200">Tồn hiện tại:</div>
+                        <div className="text-[10px] text-orange-100">Tồn hiện tại:</div>
                         <div className="font-black text-sm text-yellow-300">
                           {item.currentStock} {item.unit}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-[10px] text-rose-200">Mức tối thiểu:</div>
+                        <div className="text-[10px] text-orange-100">Mức tối thiểu:</div>
                         <div className="font-bold text-xs text-white">
                           {item.minThreshold} {item.unit}
                         </div>
@@ -242,7 +242,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
                       <span className="text-yellow-200 font-bold">
                         Đề xuất: +{item.suggestedReorderQuantity} {item.unit}
                       </span>
-                      <span className="inline-flex items-center gap-1 font-bold text-white bg-white/20 group-hover/card:bg-white group-hover/card:text-rose-700 px-2 py-0.5 rounded-md transition-colors">
+                      <span className="inline-flex items-center gap-1 font-bold text-white bg-white/20 group-hover/card:bg-white group-hover/card:text-[#F85606] px-2 py-0.5 rounded-md transition-colors">
                         <ShoppingCart size={11} />
                         <span>Nhập kho này &gt;</span>
                       </span>

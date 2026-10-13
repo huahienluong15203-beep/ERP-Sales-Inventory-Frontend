@@ -3,7 +3,6 @@ import {
   Boxes,
   AlertTriangle,
   Search,
-  ShoppingCart,
   RefreshCw,
   CheckCircle2,
   TrendingDown,
@@ -24,7 +23,6 @@ import { SearchSelect } from '../../components/common/SearchSelect';
 import { NumberInput } from '../../components/common/NumberInput';
 import { Pagination } from '../../components/common/Pagination';
 import { WarehouseMinStockDashboardAlert } from '../../components/inventory/WarehouseMinStockDashboardAlert';
-import { GoodsReceiptFormModal } from '../../components/inventory/GoodsReceiptFormModal';
 
 /**
  * S5-09 (Nguyễn Văn Minh): Sổ Tồn Kho & Khai Báo Ngưỡng Tồn Tối Thiểu
@@ -56,10 +54,6 @@ export const StockLedgerPage: React.FC = () => {
 
   // Highlight SKU được bấm từ thông báo chuông hoặc thẻ cảnh báo
   const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
-
-  // Modal lập nhanh phiếu nhập kho NCC trực tiếp tại trang
-  const [selectedAlertForReceipt, setSelectedAlertForReceipt] = useState<MinStockThresholdConfig | null>(null);
-  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
 
   // Thống kê nhanh toàn bộ hệ thống
   const [stats, setStats] = useState({
@@ -328,7 +322,7 @@ export const StockLedgerPage: React.FC = () => {
                 setHighlightedKey(null);
                 setKeyword(e.target.value);
               }}
-              className="w-full text-xs pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+              className="w-full text-xs pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
             />
           </div>
 
@@ -341,7 +335,7 @@ export const StockLedgerPage: React.FC = () => {
                 setSelectedWarehouse(e.target.value);
                 setPage(0);
               }}
-              className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+              className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
             >
               <option value="ALL">Tất cả kho hàng</option>
               {SYSTEM_WAREHOUSES.map((w) => (
@@ -359,7 +353,7 @@ export const StockLedgerPage: React.FC = () => {
                 setStatusFilter(e.target.value as 'ALL' | 'BELOW' | 'CRITICAL' | 'SAFE');
                 setPage(0);
               }}
-              className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 cursor-pointer text-gray-700"
+              className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606] cursor-pointer text-gray-700"
             >
               <option value="ALL">Tất cả trạng thái tồn</option>
               <option value="BELOW">⚠️ Dưới định mức (Cần bổ sung)</option>
@@ -369,7 +363,7 @@ export const StockLedgerPage: React.FC = () => {
 
             <button
               type="submit"
-              className="px-4 py-2.5 bg-rose-600 text-white font-bold text-xs rounded-xl hover:bg-rose-700 transition cursor-pointer"
+              className="px-4 py-2.5 bg-[#F85606] hover:bg-[#E04D05] text-white font-bold text-xs rounded-xl transition cursor-pointer shadow-xs active:scale-95"
             >
               Lọc
             </button>
@@ -395,13 +389,12 @@ export const StockLedgerPage: React.FC = () => {
             <table className="w-full text-left text-xs table-fixed">
               {/* Định nghĩa kích thước cố định cho từng cột: không xê dịch khi chỉnh sửa */}
               <colgroup>
-                <col className="w-[26%]" />
-                <col className="w-[18%]" />
-                <col className="w-[11%]" />
-                <col className="w-[11%]" />
+                <col className="w-[28%]" />
+                <col className="w-[20%]" />
                 <col className="w-[13%]" />
-                <col className="w-[11%]" />
-                <col className="w-[10%]" />
+                <col className="w-[13%]" />
+                <col className="w-[13%]" />
+                <col className="w-[13%]" />
               </colgroup>
               <thead className="bg-gray-50 text-gray-700 font-bold uppercase text-[11px] border-b border-gray-200">
                 <tr>
@@ -411,7 +404,6 @@ export const StockLedgerPage: React.FC = () => {
                   <th className="py-3 px-2 text-center">Tồn Khả Dụng</th>
                   <th className="py-3 px-2 text-center">Định Mức Tối Thiểu</th>
                   <th className="py-3 px-2 text-center">Trạng Thái Tồn</th>
-                  <th className="py-3 px-2 text-center">Thao Tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -548,26 +540,6 @@ export const StockLedgerPage: React.FC = () => {
                           </span>
                         )}
                       </td>
-
-                      {/* 7. Thao tác */}
-                      <td className="py-3 px-2 text-center overflow-hidden">
-                        <div className="flex items-center justify-center">
-                          {isBelow && canEditInventory && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedAlertForReceipt(item);
-                                setIsReceiptModalOpen(true);
-                              }}
-                              className="px-2.5 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition shadow-xs flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap mx-auto"
-                              title={`Lập phiếu nhập nhanh NCC (Gợi ý đặt: +${item.suggestedReorderQuantity} ${item.unit})`}
-                            >
-                              <ShoppingCart size={12} />
-                              <span>Đặt NCC</span>
-                            </button>
-                          )}
-                        </div>
-                      </td>
                     </tr>
                   );
                 })}
@@ -593,30 +565,6 @@ export const StockLedgerPage: React.FC = () => {
           />
         )}
       </div>
-
-      {/* MODAL LẬP PHIẾU NHẬP NCC TRỰC TIẾP (QUICK MODULE) */}
-      <GoodsReceiptFormModal
-        isOpen={isReceiptModalOpen}
-        initialWarehouseCode={selectedAlertForReceipt?.warehouseCode}
-        initialProductSku={selectedAlertForReceipt?.productSku}
-        initialProductName={selectedAlertForReceipt?.productName}
-        initialQuantity={selectedAlertForReceipt?.suggestedReorderQuantity}
-        initialNote={
-          selectedAlertForReceipt
-            ? `Nhập nhanh bù hàng dưới định mức tồn cho ${selectedAlertForReceipt.warehouseName} (Đề xuất: +${selectedAlertForReceipt.suggestedReorderQuantity} ${selectedAlertForReceipt.unit})`
-            : undefined
-        }
-        onClose={() => {
-          setIsReceiptModalOpen(false);
-          setSelectedAlertForReceipt(null);
-        }}
-        onSuccess={() => {
-          setIsReceiptModalOpen(false);
-          setSelectedAlertForReceipt(null);
-          showToast('Lập phiếu nhập thành công', 'Đã lưu phiếu nhập kho NCC', 'success');
-          loadData();
-        }}
-      />
     </div>
   );
 };
