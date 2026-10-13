@@ -601,7 +601,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                 <b>Lưu nháp:</b> Phiếu được lưu ở trạng thái nháp, chưa trừ kho xuất và chưa vận chuyển.
               </li>
               <li>
-                <b>Xuất kho & Vận chuyển:</b> Hệ thống trừ tồn kho đi và đánh dấu là <b>"Đang đi đường (IN_TRANSIT)"</b>. Kho đến <b>chưa được cộng tồn</b>.
+                <b>Xuất kho & Vận chuyển:</b> Hệ thống trừ tồn kho đi và đánh dấu là <b>Đang đi đường</b>. Kho đến <b>chưa được cộng tồn</b>.
               </li>
               <li>
                 <b>Nhận hàng tại kho đến:</b> Khi xe đến nơi, thủ kho đến mở phiếu để xác nhận nhận đủ hoặc nhập lý do giải trình nếu phát hiện chênh lệch.

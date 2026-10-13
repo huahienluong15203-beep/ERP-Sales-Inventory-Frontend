@@ -230,11 +230,10 @@ export const StockLedgerPage: React.FC = () => {
             setStatusFilter('ALL');
             setPage(0);
           }}
-          className={`p-3.5 rounded-2xl border shadow-2xs cursor-pointer transition select-none ${
-            statusFilter === 'ALL'
+          className={`p-3.5 rounded-2xl border shadow-2xs cursor-pointer transition select-none ${statusFilter === 'ALL'
               ? 'bg-gray-100/90 border-gray-400 ring-2 ring-gray-400/30'
               : 'bg-white border-gray-200/80 hover:bg-gray-50/80'
-          }`}
+            }`}
           title="Nhấp để hiển thị tất cả hàng hóa"
         >
           <div className="text-[11px] text-gray-500 font-semibold">Tổng SKU theo kho</div>
@@ -251,17 +250,16 @@ export const StockLedgerPage: React.FC = () => {
             setStatusFilter(statusFilter === 'BELOW' ? 'ALL' : 'BELOW');
             setPage(0);
           }}
-          className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition select-none ${
-            statusFilter === 'BELOW'
+          className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition select-none ${statusFilter === 'BELOW'
               ? 'bg-rose-50/90 border-rose-400 ring-2 ring-rose-500/30 shadow-xs'
               : 'bg-white border-rose-200/80 hover:bg-rose-50/40'
-          }`}
+            }`}
           title="Nhấp để lọc nhanh các mặt hàng dưới định mức"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-rose-700 uppercase flex items-center gap-1">
               <AlertTriangle size={14} className="text-rose-600" />
-              <span>Dưới Định Mức (AC2)</span>
+              <span>Dưới Định Mức </span>
             </span>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200">
               Cần Bổ Sung
@@ -283,11 +281,10 @@ export const StockLedgerPage: React.FC = () => {
             setStatusFilter(statusFilter === 'CRITICAL' ? 'ALL' : 'CRITICAL');
             setPage(0);
           }}
-          className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition select-none ${
-            statusFilter === 'CRITICAL'
+          className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition select-none ${statusFilter === 'CRITICAL'
               ? 'bg-red-50/90 border-red-400 ring-2 ring-red-500/30 shadow-xs'
               : 'bg-white border-red-200/80 hover:bg-red-50/40'
-          }`}
+            }`}
           title="Nhấp để lọc nhanh các mặt hàng cạn kiệt tồn kho"
         >
           <div className="text-xs text-red-600 font-bold">Cạn Kiệt Tồn (Tồn = 0)</div>
@@ -304,11 +301,10 @@ export const StockLedgerPage: React.FC = () => {
             setStatusFilter(statusFilter === 'SAFE' ? 'ALL' : 'SAFE');
             setPage(0);
           }}
-          className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition select-none ${
-            statusFilter === 'SAFE'
+          className={`p-3.5 rounded-2xl border shadow-xs cursor-pointer transition select-none ${statusFilter === 'SAFE'
               ? 'bg-emerald-50/90 border-emerald-400 ring-2 ring-emerald-500/30 shadow-xs'
               : 'bg-white border-emerald-200/80 hover:bg-emerald-50/40'
-          }`}
+            }`}
           title="Nhấp để lọc nhanh các mặt hàng tồn an toàn"
         >
           <div className="text-xs text-emerald-600 font-bold">Tồn Kho An Toàn</div>
@@ -430,13 +426,12 @@ export const StockLedgerPage: React.FC = () => {
                     <tr
                       key={item.id}
                       data-row-key={itemKey}
-                      className={`transition duration-150 ${
-                        isHighlighted
+                      className={`transition duration-150 ${isHighlighted
                           ? 'bg-rose-100/80 hover:bg-rose-100 border-l-4 border-rose-600 ring-2 ring-rose-500/40 shadow-sm'
                           : isBelow
                             ? 'bg-rose-50/20 hover:bg-rose-50/50 border-l-4 border-transparent'
                             : 'hover:bg-gray-50/70 border-l-4 border-transparent'
-                      }`}
+                        }`}
                     >
                       {/* 1. Mã SKU & Tên hàng */}
                       <td className="py-3 px-3 overflow-hidden">
@@ -458,11 +453,10 @@ export const StockLedgerPage: React.FC = () => {
                       {/* 3. Tồn hiện tại */}
                       <td className="py-3 px-2 text-center overflow-hidden">
                         <span
-                          className={`inline-block font-bold text-xs px-2 py-0.5 rounded-lg whitespace-nowrap ${
-                            isBelow
+                          className={`inline-block font-bold text-xs px-2 py-0.5 rounded-lg whitespace-nowrap ${isBelow
                               ? 'bg-rose-50 text-rose-700 border border-rose-200'
                               : 'bg-emerald-50 text-emerald-800 border border-emerald-100'
-                          }`}
+                            }`}
                         >
                           {item.currentStock.toLocaleString('vi-VN')} {item.unit}
                         </span>

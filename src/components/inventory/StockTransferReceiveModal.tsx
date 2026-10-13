@@ -237,11 +237,10 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
                           min="0"
                           value={line.receivedQuantity}
                           onChange={(e) => handleUpdateQuantity(line.lineId, Number(e.target.value))}
-                          className={`w-24 text-center font-black text-xs border rounded-lg p-1.5 focus:outline-none focus:ring-2 ${
-                            isDiff
-                              ? 'border-amber-400 bg-amber-50/50 text-amber-900 focus:ring-amber-500/20'
-                              : 'border-gray-300 bg-white text-gray-900 focus:ring-emerald-500/20'
-                          }`}
+                          className={`w-24 text-center font-black text-xs border rounded-lg p-1.5 focus:outline-none focus:ring-2 ${isDiff
+                            ? 'border-amber-400 bg-amber-50/50 text-amber-900 focus:ring-amber-500/20'
+                            : 'border-gray-300 bg-white text-gray-900 focus:ring-emerald-500/20'
+                            }`}
                         />
                       </td>
 
@@ -286,7 +285,7 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
                 <AlertTriangle size={15} className="text-amber-600" />
-                <span>Giải trình chênh lệch kiểm nhận (Tiêu chí AC4):</span>
+                <span>Giải trình chênh lệch kiểm nhận</span>
               </div>
               <textarea
                 rows={2}
@@ -305,7 +304,7 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
           <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-start gap-2">
             <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
             <div>
-              <b>Quy tắc cộng tồn kho (AC3):</b> Sau khi bấm "Xác nhận nhận hàng", hệ thống sẽ chính thức cộng số lượng thực nhận vào tồn kho đích <b>[{transfer.destWarehouseName}]</b>.
+              <b>Quy tắc cộng tồn kho:</b> Sau khi bấm "Xác nhận nhận hàng", hệ thống sẽ chính thức cộng số lượng thực nhận vào tồn kho đích <b>[{transfer.destWarehouseName}]</b>.
             </div>
           </div>
         </div>
@@ -328,7 +327,7 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
             className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             <CheckCircle2 size={15} />
-            <span>{submitting ? 'Đang xác nhận...' : 'Xác nhận nhận hàng & Cộng tồn (AC3)'}</span>
+            <span>{submitting ? 'Đang xác nhận...' : 'Xác nhận nhận hàng & Cộng tồn '}</span>
           </button>
         </div>
       </div>
