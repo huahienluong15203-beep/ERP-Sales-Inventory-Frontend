@@ -231,7 +231,14 @@ export const OrderCreatePage: React.FC = () => {
       setBackendWarnings([]);
       setBackendDraftId(null);
 
-      if (!agency.priceList) {
+      if (agency.status === 'SUSPENDED') {
+        showToast(
+          'Đại lý đã ngừng giao dịch',
+          `Đại lý "${agency.name}" hiện đang ở trạng thái NGỪNG GIAO DỊCH${agency.suspendReason ? `: "${agency.suspendReason}"` : ''}. Hệ thống sẽ chặn tạo đơn mới.`,
+          'error',
+          6000
+        );
+      } else if (!agency.priceList) {
         showToast(
           'Đại lý chưa có bảng giá',
           `Đại lý "${agency.name}" chưa có bảng giá hiệu lực. Đã làm mới danh sách sản phẩm.`,
@@ -245,7 +252,14 @@ export const OrderCreatePage: React.FC = () => {
         );
       }
     } else {
-      if (!agency.priceList) {
+      if (agency.status === 'SUSPENDED') {
+        showToast(
+          'Đại lý đã ngừng giao dịch',
+          `Đại lý "${agency.name}" hiện đang ở trạng thái NGỪNG GIAO DỊCH${agency.suspendReason ? `: "${agency.suspendReason}"` : ''}. Hệ thống sẽ chặn tạo đơn mới.`,
+          'error',
+          6000
+        );
+      } else if (!agency.priceList) {
         showToast(
           'Đại lý chưa có bảng giá',
           `Đại lý "${agency.name}" chưa có bảng giá hiệu lực trong hệ thống.`,
@@ -258,6 +272,15 @@ export const OrderCreatePage: React.FC = () => {
   const openProductPicker = () => {
     if (!selectedAgency) {
       showToast('Chưa chọn đại lý', 'Vui lòng chọn đại lý trước để lấy đúng bảng giá', 'error');
+      return;
+    }
+    if (selectedAgency.status === 'SUSPENDED') {
+      showToast(
+        'Đại lý đã ngừng giao dịch',
+        `Đại lý "${selectedAgency.name}" đã ngừng giao dịch. Không thể chọn hàng để lên đơn mới.`,
+        'error',
+        5000
+      );
       return;
     }
     if (creditStatus?.blocked || creditStatus?.overdue) {
@@ -725,10 +748,14 @@ export const OrderCreatePage: React.FC = () => {
   };
 
   const isAgencyLocked = Boolean(selectedAgency?.transactionLocked);
+  const isAgencySuspended = selectedAgency?.status === 'SUSPENDED';
   const money = preview.status === 'ok' ? preview.order : null;
 
-  // S4-02 & S4-03: Lý do chặn chốt đơn (quá hạn công nợ, vượt tồn khả dụng, khóa giao dịch)
+  // S4-02 & S4-03: Lý do chặn chốt đơn (ngừng giao dịch, quá hạn công nợ, vượt tồn khả dụng, khóa giao dịch)
   const submitBlockedReason = useMemo(() => {
+    if (isAgencySuspended) {
+      return `Chặn tạo đơn: Đại lý ${selectedAgency?.name || ''} (${selectedAgency?.code || ''}) đã ngừng giao dịch. Vui lòng đổi đại lý khác.`;
+    }
     if (creditStatus?.overdue || creditStatus?.blocked) {
       return creditStatus?.message || `Chặn tạo đơn hoàn toàn: Đại lý có nợ quá hạn (${creditStatus?.overdueDays || 0} ngày) hoặc đang bị khóa giao dịch (S4-02).`;
     }
@@ -739,7 +766,7 @@ export const OrderCreatePage: React.FC = () => {
       return 'Đại lý đang bị khóa giao dịch - chặn tạo đơn mới (S3-07).';
     }
     return undefined;
-  }, [creditStatus?.overdue, creditStatus?.blocked, creditStatus?.message, creditStatus?.overdueDays, overStockItems.length, servingWarehouse.name, isAgencyLocked]);
+  }, [isAgencySuspended, creditStatus?.overdue, creditStatus?.blocked, creditStatus?.message, creditStatus?.overdueDays, overStockItems.length, servingWarehouse.name, isAgencyLocked, selectedAgency?.name, selectedAgency?.code]);
 
   return (
     <div className="w-full min-w-0 space-y-3.5 animate-in fade-in duration-300 pb-8">

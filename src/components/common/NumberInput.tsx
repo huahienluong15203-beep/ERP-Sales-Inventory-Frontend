@@ -32,6 +32,7 @@ export interface NumberInputProps {
   name?: string;
   id?: string;
   title?: string;
+  style?: React.CSSProperties;
 }
 
 /** "1234567.5" -> "1.234.567,5" */
@@ -123,6 +124,7 @@ export function NumberInput({
   id,
   title,
   inputMode,
+  style,
 }: NumberInputProps) {
   const allowDecimal = decimal ?? step === 'any';
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -188,6 +190,7 @@ export function NumberInput({
       onFocus={onFocus}
       onKeyDown={onKeyDown}
       className={className}
+      style={style}
       placeholder={placeholder}
       disabled={disabled}
       readOnly={readOnly}

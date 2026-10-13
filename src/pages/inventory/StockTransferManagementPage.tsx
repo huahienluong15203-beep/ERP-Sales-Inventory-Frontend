@@ -166,14 +166,14 @@ export const StockTransferManagementPage: React.FC = () => {
         </div>
 
         {canEditInventory && (
-        <button
-          type="button"
-          onClick={() => setIsCreateModalOpen(true)}
-          className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm shadow-blue-600/20 cursor-pointer h-9"
-        >
-          <Plus size={16} />
-          <span>Lập Phiếu Chuyển Kho</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm shadow-blue-600/20 cursor-pointer h-9"
+          >
+            <Plus size={16} />
+            <span>Lập Phiếu Chuyển Kho</span>
+          </button>
         )}
       </div>
 
@@ -475,7 +475,7 @@ export const StockTransferManagementPage: React.FC = () => {
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-1">
                 <div className="font-bold flex items-center gap-1.5">
                   <AlertTriangle size={14} className="text-amber-600" />
-                  <span>Biên bản giải trình chênh lệch khi nhận (AC4):</span>
+                  <span>Biên bản giải trình chênh lệch khi nhận:</span>
                 </div>
                 <p>{selectedTransferDetail.discrepancyGeneralReason}</p>
               </div>
