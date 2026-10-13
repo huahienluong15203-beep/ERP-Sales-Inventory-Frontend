@@ -141,12 +141,9 @@ function saveLocalConfigs(data: MinStockThresholdConfig[]): void {
 }
 
 let memoryCachedConfigs: MinStockThresholdConfig[] | null = null;
-let lastCacheFetchTime = 0;
-const CACHE_TTL_MS = 60 * 1000; // Cache 1 phút
 
 export function invalidateMinStockCache() {
   memoryCachedConfigs = null;
-  lastCacheFetchTime = 0;
 }
 
 export interface PagedMinStockResult {
@@ -171,52 +168,51 @@ export async function fetchMinStockConfigsPaged(params?: {
   const page = Math.max(0, params?.page ?? 0);
   const size = Math.max(1, params?.size ?? 50);
 
-  // Nếu chỉ tìm SKU dưới ngưỡng (Báo đỏ), gọi thẳng endpoint /check siêu nhẹ (~150ms)
-  if (params?.onlyBelowThreshold && !params?.keyword?.trim()) {
-    try {
-      const q = new URLSearchParams();
-      if (params?.warehouseCode && params.warehouseCode !== 'ALL') {
-        q.set('warehouseCode', params.warehouseCode);
-      }
-      const checkRes = await authFetch(`${API_BASE_URL}/api/inventory/min-stock-alerts/check?${q.toString()}`);
-      if (checkRes.ok) {
-        const rawList = await checkRes.json();
-        const list: MinStockThresholdConfig[] = (Array.isArray(rawList) ? rawList : (rawList.content || [])).map((item: any) => ({
-          ...item,
-          isBelowThreshold: true
-        }));
-        const totalElements = list.length;
-        const totalPages = Math.ceil(totalElements / size) || 1;
-        const start = page * size;
-        const content = list.slice(start, start + size);
-        return { content, totalElements, totalPages, page, size };
-      }
-    } catch {
-      // fallback to full flow
+  try {
+    const q = new URLSearchParams();
+    q.set('page', String(page));
+    q.set('size', String(size));
+    if (params?.warehouseCode && params.warehouseCode !== 'ALL') {
+      q.set('warehouseCode', params.warehouseCode.trim());
     }
+    if (params?.onlyBelowThreshold) {
+      q.set('belowThresholdOnly', 'true');
+    }
+    if (params?.keyword && params.keyword.trim()) {
+      q.set('keyword', params.keyword.trim());
+    }
+
+    const res = await authFetch(`${API_BASE_URL}/api/inventory/min-stock-alerts?${q.toString()}`);
+    if (res.ok) {
+      const data = await res.json();
+      const rawList = Array.isArray(data) ? data : (data.content || []);
+      const totalElements = typeof data.totalElements === 'number'
+        ? data.totalElements
+        : Number(res.headers.get('X-Total-Count') || rawList.length);
+      const totalPages = typeof data.totalPages === 'number'
+        ? data.totalPages
+        : (Math.ceil(totalElements / size) || 1);
+
+      const content: MinStockThresholdConfig[] = rawList.map((item: any) => ({
+        ...item,
+        isBelowThreshold: Boolean(
+          item.isBelowThreshold ?? item.belowThreshold ?? (Number(item.currentStock) < Number(item.minThreshold))
+        )
+      }));
+
+      return {
+        content,
+        totalElements,
+        totalPages,
+        page: data.page ?? page,
+        size: data.size ?? size
+      };
+    }
+  } catch (err) {
+    console.warn('Lỗi gọi API phân trang sổ tồn từ backend, dùng fallback nội bộ:', err);
   }
 
-  // Kiểm tra cache trong bộ nhớ
-  const isCacheFresh = memoryCachedConfigs && (Date.now() - lastCacheFetchTime < CACHE_TTL_MS);
-
-  if (!isCacheFresh) {
-    try {
-      const res = await authFetch(`${API_BASE_URL}/api/inventory/min-stock-alerts`);
-      if (res.ok) {
-        const data = await res.json();
-        const rawList = Array.isArray(data) ? data : (data.content || []);
-        memoryCachedConfigs = rawList.map((item: any) => ({
-          ...item,
-          isBelowThreshold: Boolean(item.isBelowThreshold ?? item.belowThreshold ?? (item.currentStock < item.minThreshold))
-        }));
-        lastCacheFetchTime = Date.now();
-      }
-    } catch (err) {
-      console.warn('Lỗi gọi API danh sách sổ tồn:', err);
-    }
-  }
-
-  // Dùng dữ liệu từ cache hoặc fallback
+  // Dùng dữ liệu từ cache hoặc fallback nếu lỗi mạng
   let list = memoryCachedConfigs || getLocalConfigs();
 
   if (params?.warehouseCode && params.warehouseCode !== 'ALL') {
@@ -238,7 +234,6 @@ export async function fetchMinStockConfigsPaged(params?: {
   const totalElements = list.length;
   const totalPages = Math.ceil(totalElements / size) || 1;
   const start = page * size;
-  // Cắt đúng 50 sản phẩm để đưa vào React state, không bao giờ render hàng nghìn dòng
   const content = list.slice(start, start + size);
 
   return { content, totalElements, totalPages, page, size };
@@ -385,21 +380,21 @@ export async function getDashboardMinStockSummary(warehouseCode?: string): Promi
       query.set('warehouseCode', warehouseCode);
     }
 
-    // Gọi endpoint /check đã được kiểm thử siêu tốc (~150ms)
-    const checkRes = await authFetch(`${API_BASE_URL}/api/inventory/min-stock-alerts/check?${query.toString()}`);
-    if (checkRes.ok) {
-      const data = await checkRes.json();
-      const rawList: any[] = Array.isArray(data) ? data : (data.content || []);
-      const criticalItems = rawList.filter((c) => c.severity === 'CRITICAL');
-      const warningItems = rawList.filter((c) => c.severity === 'WARNING');
+    // Gọi endpoint /summary để lấy số liệu tổng hợp chính xác từ backend
+    const summaryRes = await authFetch(`${API_BASE_URL}/api/inventory/min-stock-alerts/summary?${query.toString()}`);
+    if (summaryRes.ok) {
+      const data = await summaryRes.json();
+      const criticalItems = (Array.isArray(data.criticalItems) ? data.criticalItems : []).map((item: any) => ({
+        ...item,
+        isBelowThreshold: true
+      }));
       return {
-        totalAlerts: rawList.length,
-        criticalCount: criticalItems.length,
-        warningCount: warningItems.length,
-        criticalItems: rawList.map((item) => ({
-          ...item,
-          isBelowThreshold: true
-        }))
+        totalAlerts: Number(data.totalAlerts ?? criticalItems.length),
+        criticalCount: Number(data.criticalCount ?? 0),
+        warningCount: Number(data.warningCount ?? 0),
+        totalSkuCount: Number(data.totalSkuCount ?? 0),
+        totalSafeCount: Number(data.safeCount ?? 0),
+        criticalItems
       };
     }
   } catch (err) {

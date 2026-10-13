@@ -4,8 +4,6 @@ import {
   AlertTriangle,
   RefreshCw,
   ChevronRight,
-  ShoppingCart,
-  Boxes,
   CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -102,11 +100,6 @@ export const NotificationBell: React.FC = () => {
     }
   };
 
-  const handleOpenReceipts = () => {
-    setIsOpen(false);
-    navigate('/inventory/receipts');
-  };
-
   return (
     <div className="relative" ref={containerRef}>
       {/* NÚT CHUÔNG THÔNG BÁO TẠI HEADER */}
@@ -116,15 +109,14 @@ export const NotificationBell: React.FC = () => {
         aria-label="Thông báo và cảnh báo hệ thống"
         aria-expanded={isOpen}
         onClick={() => setIsOpen(!isOpen)}
-        className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer border ${
-          isOpen
-            ? isDark
-              ? 'bg-[#202024] border-rose-500/50 text-rose-400 shadow-sm'
-              : 'bg-rose-50 border-rose-200 text-rose-600 shadow-2xs'
-            : isDark
-              ? 'bg-transparent border-transparent text-zinc-300 hover:bg-[#202024] hover:text-white'
-              : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
-        }`}
+        className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer border ${isOpen
+          ? isDark
+            ? 'bg-[#202024] border-rose-500/50 text-rose-400 shadow-sm'
+            : 'bg-rose-50 border-rose-200 text-rose-600 shadow-2xs'
+          : isDark
+            ? 'bg-transparent border-transparent text-zinc-300 hover:bg-[#202024] hover:text-white'
+            : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
+          }`}
         title="Cảnh báo & Thông báo"
       >
         <Bell size={20} className={criticalCount > 0 ? 'text-rose-500' : ''} />
@@ -145,17 +137,15 @@ export const NotificationBell: React.FC = () => {
       {/* DROPDOWN DANH SÁCH CẢNH BÁO */}
       {isOpen && (
         <div
-          className={`absolute right-0 top-full mt-2 w-[340px] sm:w-[410px] max-w-[calc(100vw-32px)] rounded-2xl shadow-2xl border z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 ${
-            isDark
-              ? 'bg-[#18181b] border-zinc-800 text-zinc-100 shadow-black/60'
-              : 'bg-white border-gray-200 text-gray-900 shadow-xl'
-          }`}
+          className={`absolute right-0 top-full mt-2 w-[340px] sm:w-[410px] max-w-[calc(100vw-32px)] rounded-2xl shadow-2xl border z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 ${isDark
+            ? 'bg-[#18181b] border-zinc-800 text-zinc-100 shadow-black/60'
+            : 'bg-white border-gray-200 text-gray-900 shadow-xl'
+            }`}
         >
           {/* HEADER DROPDOWN */}
           <div
-            className={`px-4 py-3 border-b flex items-center justify-between gap-2 ${
-              isDark ? 'border-zinc-800 bg-[#202024]/60' : 'border-gray-100 bg-gray-50/80'
-            }`}
+            className={`px-4 py-3 border-b flex items-center justify-between gap-2 ${isDark ? 'border-zinc-800 bg-[#202024]/60' : 'border-gray-100 bg-gray-50/80'
+              }`}
           >
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold">
@@ -179,9 +169,8 @@ export const NotificationBell: React.FC = () => {
               type="button"
               onClick={loadAlerts}
               disabled={loading}
-              className={`p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 hover:bg-gray-200/50 dark:hover:bg-zinc-700/50 transition cursor-pointer ${
-                loading ? 'animate-spin text-rose-600' : ''
-              }`}
+              className={`p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 hover:bg-gray-200/50 dark:hover:bg-zinc-700/50 transition cursor-pointer ${loading ? 'animate-spin text-rose-600' : ''
+                }`}
               title="Làm mới cảnh báo"
             >
               <RefreshCw size={14} />
@@ -214,18 +203,16 @@ export const NotificationBell: React.FC = () => {
                   <div
                     key={item.id}
                     onClick={() => handleOpenLedger(item.productSku)}
-                    className={`p-3.5 transition cursor-pointer group flex items-start gap-3 ${
-                      isDark
-                        ? 'hover:bg-[#202024]/70 active:bg-[#202024]'
-                        : 'hover:bg-rose-50/50 active:bg-rose-100/50'
-                    }`}
+                    className={`p-3.5 transition cursor-pointer group flex items-start gap-3 ${isDark
+                      ? 'hover:bg-[#202024]/70 active:bg-[#202024]'
+                      : 'hover:bg-rose-50/50 active:bg-rose-100/50'
+                      }`}
                   >
                     <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                        isCritical
-                          ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400'
-                          : 'bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'
-                      }`}
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${isCritical
+                        ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400'
+                        : 'bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'
+                        }`}
                     >
                       <AlertTriangle size={16} />
                     </div>
@@ -236,11 +223,10 @@ export const NotificationBell: React.FC = () => {
                           {item.productSku}
                         </span>
                         <span
-                          className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
-                            isCritical
-                              ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300'
-                              : 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300'
-                          }`}
+                          className={`text-[10px] font-black px-1.5 py-0.5 rounded ${isCritical
+                            ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300'
+                            : 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300'
+                            }`}
                         >
                           {isCritical ? 'Báo Đỏ' : 'Cảnh Báo'}
                         </span>
@@ -278,29 +264,7 @@ export const NotificationBell: React.FC = () => {
           </div>
 
           {/* FOOTER DROPDOWN */}
-          <div
-            className={`p-2.5 border-t grid grid-cols-2 gap-2 text-xs font-bold ${
-              isDark ? 'border-zinc-800 bg-[#202024]/40' : 'border-gray-100 bg-gray-50/60'
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => handleOpenLedger()}
-              className="py-2 px-3 rounded-xl bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-800 dark:text-zinc-200 border border-gray-200 dark:border-zinc-700 flex items-center justify-center gap-1.5 transition cursor-pointer"
-            >
-              <Boxes size={13} className="text-rose-600" />
-              <span>Đến Sổ Tồn Kho</span>
-            </button>
 
-            <button
-              type="button"
-              onClick={handleOpenReceipts}
-              className="py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs"
-            >
-              <ShoppingCart size={13} />
-              <span>Phiếu Nhập NCC</span>
-            </button>
-          </div>
         </div>
       )}
     </div>

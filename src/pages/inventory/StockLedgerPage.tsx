@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   Search,
   ShoppingCart,
-  ArrowRightLeft,
   RefreshCw,
   CheckCircle2,
   TrendingDown,
@@ -181,45 +180,6 @@ export const StockLedgerPage: React.FC = () => {
 
   return (
     <div className="space-y-3.5 pb-8">
-      {/* HEADER TRANG */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center shadow-md shadow-rose-600/20">
-            <Boxes size={20} />
-          </div>
-          <div>
-            <h1 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-              <span>Sổ Tồn Kho & Cảnh Báo Tồn Tối Thiểu</span>
-            </h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Khai báo định mức tối thiểu theo SKU và kho, cảnh báo nguy cơ đứt hàng trước khi hết tồn
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {canEditInventory && (
-          <>
-          <button
-            type="button"
-            onClick={() => navigate('/inventory/receipts')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 transition shadow-2xs cursor-pointer h-9"
-          >
-            <ShoppingCart size={14} />
-            <span>Lập Phiếu Nhập NCC</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/inventory/transfers')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-2xs cursor-pointer h-9"
-          >
-            <ArrowRightLeft size={14} />
-            <span>Lập Phiếu Chuyển Kho</span>
-          </button>
-          </>
-          )}
-        </div>
-      </div>
 
       {/* CẢNH BÁO TỒN KHO DƯỚI ĐỊNH MỨC TỐI THIỂU NỔI BẬT (S5-09 / AC2) */}
       <WarehouseMinStockDashboardAlert
@@ -238,8 +198,8 @@ export const StockLedgerPage: React.FC = () => {
         <div
           onClick={() => setOnlyBelowThreshold(!onlyBelowThreshold)}
           className={`p-4 rounded-2xl border shadow-xs cursor-pointer transition ${onlyBelowThreshold || stats.below > 0
-              ? 'bg-rose-50/70 border-rose-300 ring-2 ring-rose-500/20'
-              : 'bg-white border-gray-200/80'
+            ? 'bg-rose-50/70 border-rose-300 ring-2 ring-rose-500/20'
+            : 'bg-white border-gray-200/80'
             }`}
         >
           <div className="flex items-center justify-between">
@@ -247,8 +207,8 @@ export const StockLedgerPage: React.FC = () => {
               <AlertTriangle size={14} className="text-rose-600" />
               <span>Dưới Định Mức (AC2)</span>
             </span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-600 text-white">
-              Báo Đỏ
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200">
+              Cần Bổ Sung
             </span>
           </div>
           <div className="text-2xl font-black text-rose-700 mt-1 flex items-center gap-2">
@@ -256,7 +216,7 @@ export const StockLedgerPage: React.FC = () => {
             <span className="text-xs font-semibold text-rose-600">Mặt hàng</span>
           </div>
           <div className="text-[11px] text-rose-600 mt-0.5">
-            {onlyBelowThreshold ? 'Đang lọc xem các SKU báo đỏ' : 'Nhấp để lọc nhanh'}
+            {onlyBelowThreshold ? 'Đang lọc xem các SKU thiếu hụt' : 'Nhấp để lọc nhanh'}
           </div>
         </div>
 
@@ -313,12 +273,12 @@ export const StockLedgerPage: React.FC = () => {
                 setPage(0);
               }}
               className={`px-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${onlyBelowThreshold
-                  ? 'bg-rose-600 text-white shadow-xs'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
               <AlertTriangle size={14} />
-              <span>Chỉ hiện SKU Báo Đỏ</span>
+              <span>Chỉ hiện SKU thiếu hụt</span>
             </button>
 
             <button
@@ -353,9 +313,8 @@ export const StockLedgerPage: React.FC = () => {
                   <th className="py-3 px-4">Kho Lưu Trữ</th>
                   <th className="py-3 px-4 text-center">Tồn Hiện Tại</th>
                   <th className="py-3 px-4 text-center">Tồn Khả Dụng</th>
-                  <th className="py-3 px-4 text-center min-w-[140px]">Định Mức Tối Thiểu (AC1)</th>
-                  <th className="py-3 px-4 text-center">Trạng Thái Tồn (AC2)</th>
-                  <th className="py-3 px-4 text-center">Đề Xuất Đặt Hàng</th>
+                  <th className="py-3 px-4 text-center min-w-[140px]">Định Mức Tối Thiểu</th>
+                  <th className="py-3 px-4 text-center">Trạng Thái Tồn</th>
                   <th className="py-3 px-4 text-right">Thao Tác</th>
                 </tr>
               </thead>
@@ -365,13 +324,12 @@ export const StockLedgerPage: React.FC = () => {
                   const isSaving = savingId === item.id;
                   const isBelow = Boolean(item.isBelowThreshold || (item as any).belowThreshold || item.currentStock < item.minThreshold);
 
-                  // AC2: Highlight nổi bật màu đỏ khi hàng dưới định mức
                   return (
                     <tr
                       key={item.id}
                       className={`transition ${isBelow
-                          ? 'bg-rose-50/70 hover:bg-rose-50 border-l-4 border-rose-500'
-                          : 'hover:bg-gray-50/70 border-l-4 border-transparent'
+                        ? 'bg-rose-50/40 hover:bg-rose-50/70 border-l-4 border-rose-500'
+                        : 'hover:bg-gray-50/70 border-l-4 border-transparent'
                         }`}
                     >
                       {/* SKU & Tên hàng */}
@@ -387,12 +345,12 @@ export const StockLedgerPage: React.FC = () => {
                         <div className="text-[10px] font-mono text-gray-400">{item.warehouseCode}</div>
                       </td>
 
-                      {/* Tồn hiện tại (AC2: đỏ rực in đậm nếu dưới ngưỡng) */}
+                      {/* Tồn hiện tại */}
                       <td className="py-3.5 px-4 text-center">
                         <span
-                          className={`inline-block font-black text-sm px-2.5 py-1 rounded-xl ${isBelow
-                              ? 'bg-rose-600 text-white shadow-xs'
-                              : 'bg-emerald-50 text-emerald-800'
+                          className={`inline-block font-bold text-xs px-2.5 py-1 rounded-lg ${isBelow
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : 'bg-emerald-50 text-emerald-800 border border-emerald-100'
                             }`}
                         >
                           {item.currentStock.toLocaleString('vi-VN')} {item.unit}
@@ -406,34 +364,42 @@ export const StockLedgerPage: React.FC = () => {
                         </span>
                       </td>
 
-                      {/* Định mức tồn tối thiểu (AC1: cho phép sửa trực tiếp) */}
+                      {/* Định mức tồn tối thiểu & Module chỉnh sửa gợi ý */}
                       <td className="py-3.5 px-4 text-center">
                         {isEditing ? (
-                          <div className="flex items-center justify-center gap-1">
-                            <NumberInput
-                              min="0"
-                              value={editMinValue}
-                              onChange={(e) => setEditMinValue(Math.max(0, Number(e.target.value)))}
-                              className="w-20 text-center font-black text-xs border border-rose-400 rounded-lg p-1 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20"
-                              autoFocus
-                            />
-                            <button
-                              type="button"
-                              disabled={isSaving}
-                              onClick={() => handleSaveMinThreshold(item)}
-                              className="p-1 rounded bg-rose-600 text-white hover:bg-rose-700"
-                              title="Lưu định mức"
-                            >
-                              <Check size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleCancelEdit}
-                              className="p-1 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
-                              title="Hủy"
-                            >
-                              <X size={14} />
-                            </button>
+                          <div className="inline-flex flex-col items-center gap-1.5 p-2 bg-rose-50/90 rounded-xl border border-rose-200 shadow-2xs">
+                            <div className="flex items-center gap-1">
+                              <NumberInput
+                                min="0"
+                                value={editMinValue}
+                                onChange={(e) => setEditMinValue(Math.max(0, Number(e.target.value)))}
+                                className="w-20 text-center font-bold text-xs border border-rose-300 rounded-lg p-1 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                                autoFocus
+                              />
+                              <button
+                                type="button"
+                                disabled={isSaving}
+                                onClick={() => handleSaveMinThreshold(item)}
+                                className="p-1 rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition"
+                                title="Lưu định mức"
+                              >
+                                <Check size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleCancelEdit}
+                                className="p-1 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
+                                title="Hủy"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                            {item.suggestedReorderQuantity > 0 && (
+                              <div className="text-[10px] text-rose-700 font-semibold whitespace-nowrap flex items-center gap-1">
+                                <span>💡 Gợi ý nhập:</span>
+                                <strong className="font-bold">+{item.suggestedReorderQuantity} {item.unit}</strong>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="flex items-center justify-center gap-1.5 group">
@@ -441,47 +407,36 @@ export const StockLedgerPage: React.FC = () => {
                               {item.minThreshold.toLocaleString('vi-VN')} {item.unit}
                             </span>
                             {canEditInventory && (
-                            <button
-                              type="button"
-                              onClick={() => handleStartEdit(item)}
-                              className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-rose-600 rounded transition"
-                              title="Sửa định mức tồn tối thiểu (AC1)"
-                            >
-                              <Edit2 size={12} />
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => handleStartEdit(item)}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-rose-600 rounded transition"
+                                title="Sửa định mức tồn tối thiểu"
+                              >
+                                <Edit2 size={12} />
+                              </button>
                             )}
                           </div>
                         )}
                       </td>
 
-                      {/* Trạng thái tồn (AC2: Báo đỏ nổi bật) */}
+                      {/* Trạng thái tồn */}
                       <td className="py-3.5 px-4 text-center">
                         {item.severity === 'CRITICAL' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-rose-600 text-white shadow-xs animate-pulse">
-                            <AlertTriangle size={12} />
-                            <span>BÁO ĐỎ: Thiếu {item.deficitQuantity}</span>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                            <AlertTriangle size={12} className="text-rose-500 shrink-0" />
+                            <span>Thiếu {item.deficitQuantity} {item.unit}</span>
                           </span>
                         ) : item.severity === 'WARNING' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800">
-                            <TrendingDown size={12} />
-                            <span>CẢNH BÁO: Thiếu {item.deficitQuantity}</span>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                            <TrendingDown size={12} className="text-amber-500 shrink-0" />
+                            <span>Thiếu {item.deficitQuantity} {item.unit}</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
-                            <CheckCircle2 size={12} />
-                            <span>An toàn</span>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                            <span>Đạt định mức</span>
                           </span>
-                        )}
-                      </td>
-
-                      {/* Đề xuất đặt hàng */}
-                      <td className="py-3.5 px-4 text-center">
-                        {item.suggestedReorderQuantity > 0 ? (
-                          <span className="font-extrabold text-rose-700 bg-rose-100 px-2.5 py-0.5 rounded-full text-[11px]">
-                            +{item.suggestedReorderQuantity} {item.unit}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 font-semibold">—</span>
                         )}
                       </td>
 
@@ -500,22 +455,23 @@ export const StockLedgerPage: React.FC = () => {
                                   )}&qty=${item.suggestedReorderQuantity}&create=1`
                                 )
                               }
-                              className="px-2.5 py-1 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
-                              title="Lập phiếu nhập kho từ nhà cung cấp"
+                              className="px-2.5 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
+                              title={`Lập phiếu nhập NCC (Gợi ý đặt: +${item.suggestedReorderQuantity} ${item.unit})`}
                             >
-                              <ShoppingCart size={12} />
+                              <ShoppingCart size={13} />
                               <span>Đặt NCC</span>
                             </button>
                           )}
 
                           {canEditInventory && (
-                          <button
-                            type="button"
-                            onClick={() => handleStartEdit(item)}
-                            className="px-2.5 py-1 text-xs font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition cursor-pointer"
-                          >
-                            Định mức
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => handleStartEdit(item)}
+                              className="p-1.5 text-gray-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-gray-200 transition cursor-pointer"
+                              title={`Chỉnh sửa định mức${item.suggestedReorderQuantity > 0 ? ` (Gợi ý nhập: +${item.suggestedReorderQuantity} ${item.unit})` : ''}`}
+                            >
+                              <Edit2 size={13} />
+                            </button>
                           )}
                         </div>
                       </td>
