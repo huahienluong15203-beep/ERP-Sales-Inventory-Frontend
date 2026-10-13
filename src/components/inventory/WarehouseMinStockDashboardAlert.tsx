@@ -19,27 +19,27 @@ interface WarehouseMinStockDashboardAlertProps {
 
 /**
  * Cảnh báo định mức tồn kho tối thiểu & nguy cơ thiếu hụt hàng hóa
- * Hiển thị trên Dashboard cho: Quản lý kho (ROLE_WH_MANAGER), Thủ kho (ROLE_WAREHOUSE) và Quản trị viên (ROLE_ADMIN)
+ * Hiển thị trên Dashboard cho: Quản lý kho (ROLE_WH_MANAGER) và Quản trị viên (ROLE_ADMIN)
  */
 export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboardAlertProps> = ({
   warehouseCode,
   hideLedgerButton = false
 }) => {
   const navigate = useNavigate();
-  const { currentRole } = useAuth();
+  const { user, currentRole } = useAuth();
   const [loading, setLoading] = useState<boolean>(true);
   const [criticalItems, setCriticalItems] = useState<MinStockThresholdConfig[]>([]);
   const [totalAlerts, setTotalAlerts] = useState<number>(0);
   const [criticalCount, setCriticalCount] = useState<number>(0);
 
-  // Chỉ hiển thị trên Dashboard cho các vai trò quản lý / phụ trách kho và admin
-  const isWarehouseOrAdmin =
-    currentRole === 'ROLE_ADMIN' ||
+  // Chỉ hiển thị trên Dashboard cho Quản lý kho (ROLE_WH_MANAGER) và Quản trị viên (ROLE_ADMIN)
+  const isWarehouseManager =
     currentRole === 'ROLE_WH_MANAGER' ||
-    currentRole === 'ROLE_WAREHOUSE';
+    currentRole === 'ROLE_ADMIN' ||
+    Boolean(user?.roles?.some((r) => r === 'ROLE_WH_MANAGER' || r === 'ROLE_ADMIN'));
 
   const loadAlertData = () => {
-    if (!isWarehouseOrAdmin) {
+    if (!isWarehouseManager) {
       setLoading(false);
       return;
     }
@@ -68,7 +68,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
     return () => {
       window.removeEventListener('min_stock_updated', handleUpdated);
     };
-  }, [warehouseCode, isWarehouseOrAdmin]);
+  }, [warehouseCode, isWarehouseManager]);
 
   // Bấm vào thẻ cảnh báo -> chuyển sang trang Phiếu nhập kho NCC và tự động kích hoạt tạo phiếu
   const handleCardClick = (item: MinStockThresholdConfig) => {
@@ -77,8 +77,8 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
     );
   };
 
-  // Nếu không thuộc vai trò kho/admin thì không hiển thị cảnh báo
-  if (!isWarehouseOrAdmin) {
+  // Nếu không thuộc vai trò quản lý kho/admin thì không hiển thị cảnh báo
+  if (!isWarehouseManager) {
     return null;
   }
 
@@ -100,7 +100,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
               </p>
             </div>
           </div>
-          {isWarehouseOrAdmin && (
+          {isWarehouseManager && (
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
@@ -153,7 +153,7 @@ export const WarehouseMinStockDashboardAlert: React.FC<WarehouseMinStockDashboar
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                {isWarehouseOrAdmin && (
+                {isWarehouseManager && (
                   <>
                     <button
                       type="button"

@@ -109,7 +109,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     title: 'Phiếu nhập kho',
     path: '/inventory/receipts',
     group: 'Sản phẩm & Kho',
-    icon: 'Package',
+    icon: 'ClipboardList',
     epic: 'Sản phẩm & Tồn kho',
     description: 'Lập phiếu nhập kho từ nhà cung cấp, ghi nhận số lô, hạn dùng và quy đổi đơn vị cơ sở',
     allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
@@ -119,7 +119,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     title: 'Phiếu chuyển kho',
     path: '/inventory/transfers',
     group: 'Sản phẩm & Kho',
-    icon: 'Truck',
+    icon: 'ArrowLeftRight',
     epic: 'Sản phẩm & Tồn kho',
     description: 'Lập phiếu chuyển kho nội bộ, theo dõi hàng đang đi đường và xác nhận nhận đủ',
     allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']

@@ -1,8 +1,5 @@
 /**
- * S5-09: API Service Quản lý cấu hình ngưỡng tồn tối thiểu & Cảnh báo đứt hàng
- * Acceptance Criteria:
- * - AC1: Khai báo tồn tối thiểu theo SKU và theo kho
- * - AC2: Hàng dưới ngưỡng hiển thị nổi bật trong sổ tồn và trên dashboard kho
+ * API Service Quản lý cấu hình ngưỡng tồn tối thiểu & Cảnh báo đứt hàng
  */
 
 import { authFetch, API_BASE_URL } from './api';
@@ -438,13 +435,17 @@ export async function getDashboardMinStockSummary(warehouseCode?: string): Promi
     onlyBelowThreshold: true
   });
 
-  const criticalItems = configs.filter((c) => c.severity === 'CRITICAL');
-  const warningItems = configs.filter((c) => c.severity === 'WARNING');
+  const alerts = configs.filter((c) => c.isBelowThreshold || c.currentStock < c.minThreshold);
+  alerts.sort((a, b) => {
+    if (a.severity === 'CRITICAL' && b.severity !== 'CRITICAL') return -1;
+    if (b.severity === 'CRITICAL' && a.severity !== 'CRITICAL') return 1;
+    return (b.deficitQuantity ?? 0) - (a.deficitQuantity ?? 0);
+  });
 
   return {
-    totalAlerts: configs.length,
-    criticalCount: criticalItems.length,
-    warningCount: warningItems.length,
-    criticalItems
+    totalAlerts: alerts.length,
+    criticalCount: alerts.filter((c) => c.severity === 'CRITICAL').length,
+    warningCount: alerts.filter((c) => c.severity === 'WARNING').length,
+    criticalItems: alerts
   };
 }
