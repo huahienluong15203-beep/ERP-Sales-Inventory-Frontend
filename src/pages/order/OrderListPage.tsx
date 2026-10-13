@@ -279,6 +279,17 @@ export const OrderListPage: React.FC = () => {
       }
     }, 0);
 
+    const OFFICIAL_ORDER_STATUSES = [
+      'PENDING_APPROVAL',
+      'APPROVED',
+      'PICKING',
+      'PREPARING',
+      'DISPATCHED',
+      'DELIVERED',
+      'CLOSED',
+      'COMPLETED'
+    ];
+
     const criteria: OrderFilterCriteria = {
       page,
       size: pageSize,
@@ -291,9 +302,15 @@ export const OrderListPage: React.FC = () => {
       statuses: selectedStatusTab ? selectedStatusTab.split(',') : undefined
     };
 
+    // Khi ở tab "Tất cả trạng thái", tính tổng tiền các đơn chính thức (loại trừ đơn nháp DRAFT, đơn hủy CANCELLED và đơn từ chối REJECTED)
+    const totalsCriteria: OrderFilterCriteria = {
+      ...criteria,
+      statuses: selectedStatusTab ? selectedStatusTab.split(',') : OFFICIAL_ORDER_STATUSES
+    };
+
     Promise.all([
       fetchOrders(criteria),
-      fetchOrderTotals(criteria)
+      fetchOrderTotals(totalsCriteria)
     ])
       .then(([pageRes, totalsRes]) => {
         if (isSubscribed) {
@@ -444,9 +461,11 @@ export const OrderListPage: React.FC = () => {
               Tổng số đơn đang lọc
             </span>
             <div className="text-xl font-black text-gray-900">
-              {loading ? '...' : `${formatQuantity(totals.orderCount)} đơn`}
+              {loading ? '...' : `${formatQuantity(totalElements)} đơn`}
             </div>
-            <p className="text-[10px] text-gray-400">Khớp với tất cả tiêu chí đang lọc</p>
+            <p className="text-[10px] text-gray-400">
+              {selectedStatusTab ? 'Khớp với trạng thái đang chọn' : `Gồm ${formatQuantity(totals.orderCount)} đơn chính thức (kèm nháp & hủy)`}
+            </p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-orange-50 text-[#F85606] flex items-center justify-center shrink-0 border border-orange-100">
             <ShoppingCart size={18} />
@@ -458,12 +477,32 @@ export const OrderListPage: React.FC = () => {
           <div className="space-y-0.5">
             <span className="text-[11px] font-bold text-[#F85606] uppercase tracking-wider flex items-center gap-1">
               <TrendingUp size={12} />
-              <span>Tổng tiền đang lọc</span>
+              <span>
+                {selectedStatusTab === 'DRAFT'
+                  ? 'Tổng giá trị đơn nháp'
+                  : selectedStatusTab === 'REJECTED,CANCELLED'
+                  ? 'Tổng tiền đơn hủy / từ chối'
+                  : selectedStatusTab === 'PENDING_APPROVAL'
+                  ? 'Tổng tiền chờ duyệt'
+                  : selectedStatusTab === 'APPROVED'
+                  ? 'Tổng tiền đã duyệt'
+                  : 'Tổng tiền đơn chính thức'}
+              </span>
             </span>
             <div className="text-xl font-black text-[#F85606] leading-tight">
               {loading ? '...' : formatCurrencyVND(totals.totalAmount)}
             </div>
-            <p className="text-[10px] text-orange-700/80">Tổng phải thu từ toàn bộ kết quả lọc trong DB</p>
+            <p className="text-[10px] text-orange-700/80">
+              {selectedStatusTab === 'DRAFT'
+                ? 'Tổng giá trị các bản nháp đang soạn'
+                : selectedStatusTab === 'REJECTED,CANCELLED'
+                ? 'Giá trị các đơn bị từ chối hoặc đã hủy'
+                : selectedStatusTab === 'PENDING_APPROVAL'
+                ? 'Giá trị các đơn hàng đang chờ quản lý duyệt'
+                : selectedStatusTab === 'APPROVED'
+                ? 'Giá trị các đơn hàng đã phê duyệt thành công'
+                : 'Giá trị đơn chính thức (không gồm đơn nháp & đã hủy)'}
+            </p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F85606] to-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-orange-500/20">
             <span className="font-extrabold text-sm">₫</span>
