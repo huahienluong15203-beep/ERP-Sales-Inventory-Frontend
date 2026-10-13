@@ -103,42 +103,30 @@ export const GoodsReceiptManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-3.5 antialiased">
-      {/* 1. HEADER TRANG PHIẾU NHẬP KHO */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight">
-              Quản Lý Phiếu Nhập Kho Từ Nhà Cung Cấp
-            </h1>
-          </div>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Ghi nhận hàng về đúng lô/hạn, quy đổi đơn vị cơ sở và quản lý cộng tồn kho khi xác nhận
-          </p>
-        </div>
+      {/* Tiêu đề trang & Nút thao tác chính (Tinh gọn giống Danh mục nhà cung cấp) */}
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={loadData}
+          disabled={loading}
+          title="Làm mới danh sách phiếu nhập kho"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:text-[#F85606] hover:border-orange-300 rounded-lg hover:bg-orange-50/40 text-xs font-semibold transition-all cursor-pointer shadow-2xs h-9"
+        >
+          <RefreshCw size={14} />
+          <span>Làm mới</span>
+        </button>
 
-        <div className="flex items-center gap-2">
+        {canEditInventory && (
           <button
             type="button"
-            onClick={loadData}
-            disabled={loading}
-            className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs h-9"
+            onClick={() => setIsFormModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-[#F85606] to-orange-500 hover:from-orange-600 hover:to-orange-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow transition cursor-pointer h-9"
+            id="create-receipt-btn"
           >
-            <RefreshCw size={14} />
-            <span className="hidden sm:inline">Làm mới</span>
+            <Plus size={16} />
+            <span>Lập Phiếu Nhập Kho</span>
           </button>
-
-          {canEditInventory && (
-            <button
-              type="button"
-              onClick={() => setIsFormModalOpen(true)}
-              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#F85606] to-orange-500 hover:from-orange-600 hover:to-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-orange-500/20 transition cursor-pointer h-9"
-              id="create-receipt-btn"
-            >
-              <Plus size={16} />
-              <span>Lập Phiếu Nhập Kho</span>
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* 2. THẺ THỐNG KÊ NHANH */}
