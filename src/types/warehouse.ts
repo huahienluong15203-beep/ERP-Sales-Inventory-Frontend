@@ -29,6 +29,7 @@ export interface Warehouse {
   address?: string | null;
   status: 'ACTIVE' | 'INACTIVE';
   manager?: WarehouseManager | null;
+  managerName?: string | null;
   managerPhone?: string | null;
   managerEmail?: string | null;
   locationCount: number;

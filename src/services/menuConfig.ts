@@ -151,7 +151,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Sản phẩm & Kho',
     icon: 'Building2',
     epic: 'Sản phẩm & Tồn kho',
-    description: 'Quản lý danh sách kho hàng và sơ đồ vị trí lưu trữ (khu vực, kệ hàng, tầng giá, ô chứa)',
+    description: '',
     allowedRoles: [
       'ROLE_WAREHOUSE',
       'ROLE_WH_MANAGER',
