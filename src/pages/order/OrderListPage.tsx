@@ -32,7 +32,13 @@ import {
   cloneOrderToDraft,
   bulkApproveOrders,
   formatCurrencyVND,
-  formatQuantity
+  formatQuantity,
+  fetchBackendDrafts,
+  fetchBackendDraftById,
+  setActiveDraft,
+  getActiveDraft,
+  clearActiveDraft,
+  cancelOrder
 } from '../../services/orderService';
 import { fetchAgencies, fetchAgencyFormOptions } from '../../services/agencyApi';
 import type { Agency, RegionOption, SalesRepOption } from '../../types/agency';
@@ -41,11 +47,13 @@ import type {
   OrderTotalsSummary,
   OrderFilterCriteria,
   PendingOrderResponse,
-  OrderBackendResponse
+  OrderBackendResponse,
+  OrderDraft
 } from '../../types/order';
 import { OrderDetailModal } from '../../components/order/OrderDetailModal';
 import { OrderApprovalActionModal, type ApprovalActionType } from '../../components/order/OrderApprovalActionModal';
 import { OrderPdfPreviewModal } from '../../components/order/OrderPdfPreviewModal';
+import { OrderDraftsModal } from '../../components/order/OrderDraftsModal';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { RowActionMenu } from '../../components/common/RowActionMenu';
 
@@ -156,6 +164,58 @@ export const OrderListPage: React.FC = () => {
   const [approvalModalOrder, setApprovalModalOrder] = useState<PendingOrderResponse | null>(null);
   const [approvalModalAction, setApprovalModalAction] = useState<ApprovalActionType>('APPROVE');
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState<boolean>(false);
+
+  // Modal và dữ liệu đơn hàng nháp
+  const [drafts, setDrafts] = useState<OrderDraft[]>([]);
+  const [isDraftsModalOpen, setIsDraftsModalOpen] = useState<boolean>(false);
+
+  const loadDrafts = () => {
+    if (isWarehouseRole) return;
+    fetchBackendDrafts()
+      .then(setDrafts)
+      .catch(() => setDrafts([]));
+  };
+
+  useEffect(() => {
+    loadDrafts();
+  }, [refreshKey, isWarehouseRole]);
+
+  const handleSelectDraft = async (draft: OrderDraft) => {
+    try {
+      if (draft.backendDraftId) {
+        const full = await fetchBackendDraftById(Number(draft.backendDraftId));
+        setActiveDraft(full);
+      } else {
+        setActiveDraft(draft);
+      }
+      setIsDraftsModalOpen(false);
+      navigate('/orders/create');
+    } catch (err: unknown) {
+      showToast('Lỗi mở đơn nháp', err instanceof Error ? err.message : 'Không mở được đơn nháp', 'error');
+    }
+  };
+
+  const handleDeleteDraft = async (draftId: string) => {
+    const draftToDelete = drafts.find((d) => d.id === draftId);
+    if (!draftToDelete) return;
+    const draftDisplayName = draftToDelete.orderNumber || draftToDelete.agencyName || draftToDelete.id;
+    try {
+      if (draftToDelete.backendDraftId) {
+        await cancelOrder(draftToDelete.backendDraftId, 'Xóa đơn hàng nháp');
+      }
+      const active = getActiveDraft();
+      if (active && (active.id === draftId || (draftToDelete.backendDraftId && active.backendDraftId === draftToDelete.backendDraftId))) {
+        clearActiveDraft();
+      }
+      setDrafts((prev) => prev.filter((d) => d.id !== draftId));
+      if (selectedStatusTab === 'DRAFT') {
+        setRefreshKey((k) => k + 1);
+      }
+      showToast('Đã xóa đơn nháp', `Đã xóa đơn nháp "${draftDisplayName}" thành công`, 'success', 3000);
+    } catch (err: unknown) {
+      showToast('Không thể xóa đơn nháp', err instanceof Error ? err.message : 'Vui lòng thử lại', 'error');
+    }
+  };
 
   // S4-05: Mở modal Duyệt / Trả lại / Từ chối từ menu thao tác của dòng đơn
   const openApprovalModal = (o: OrderSummaryItem, action: ApprovalActionType) => {
@@ -515,16 +575,37 @@ export const OrderListPage: React.FC = () => {
     <div className="space-y-3.5 pb-8 animate-in fade-in duration-200">
       {/* 1. Header Trang - Nút tác vụ (đồng bộ giao diện hệ thống) */}
       <div className="flex items-center justify-end gap-2">
+        {/* Nút tải lại ở vị trí khoanh đỏ: chỉ icon, không cần chữ */}
         <button
           type="button"
           onClick={() => setRefreshKey((k) => k + 1)}
           disabled={loading}
-          title="Làm mới danh sách đơn hàng"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 text-xs font-semibold transition-colors cursor-pointer shadow-2xs h-9"
+          title="Tải lại danh sách đơn hàng"
+          className="w-9 h-9 rounded-lg border border-gray-200 bg-white text-gray-600 hover:text-[#F85606] hover:border-orange-200 hover:bg-gray-50 flex items-center justify-center transition-colors cursor-pointer shadow-2xs shrink-0"
         >
-          <RefreshCw size={14} />
-          <span>Làm mới</span>
+          <RefreshCw size={14} className={loading ? 'animate-spin text-[#F85606]' : ''} />
         </button>
+
+        {/* Nút đơn nháp ở vị trí khoanh màu xanh */}
+        {!isWarehouseRole && (
+          <button
+            type="button"
+            onClick={() => {
+              loadDrafts();
+              setIsDraftsModalOpen(true);
+            }}
+            title="Xem danh sách đơn hàng nháp"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-orange-50 hover:text-[#F85606] hover:border-orange-200 text-xs font-semibold transition-colors cursor-pointer shadow-2xs h-9"
+          >
+            <FileText size={14} />
+            <span>Đơn nháp</span>
+            {drafts.length > 0 && (
+              <span className="w-5 h-5 rounded-full bg-[#F85606] text-white text-[10px] font-bold flex items-center justify-center">
+                {drafts.length}
+              </span>
+            )}
+          </button>
+        )}
 
         {!isWarehouseRole && (
           <button
@@ -1212,6 +1293,15 @@ export const OrderListPage: React.FC = () => {
           setIsPdfModalOpen(false);
           setPdfPreviewOrder(null);
         }}
+      />
+
+      {/* 9. MODAL DANH SÁCH ĐƠN HÀNG NHÁP */}
+      <OrderDraftsModal
+        isOpen={isDraftsModalOpen}
+        onClose={() => setIsDraftsModalOpen(false)}
+        drafts={drafts}
+        onSelectDraft={handleSelectDraft}
+        onDeleteDraft={handleDeleteDraft}
       />
     </div>
   );

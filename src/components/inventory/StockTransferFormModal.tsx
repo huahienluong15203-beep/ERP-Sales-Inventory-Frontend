@@ -18,6 +18,7 @@ import type { Product } from '../../types/product';
 import { createStockTransfer } from '../../services/stockTransferApi';
 import { fetchMinStockConfigs } from '../../services/stockAlertApi';
 import { fetchStockLedgerWarehouses } from '../../services/stockLedgerApi';
+import { fetchWarehouses } from '../../services/warehouseApi';
 import { useAuth } from '../../contexts/AuthContext';
 import { SearchSelect } from '../common/SearchSelect';
 import { NumberInput } from '../common/NumberInput';
@@ -53,10 +54,19 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
   onClose,
   onSuccess
 }) => {
-  const { user, showToast } = useAuth();
+  const { user, showToast, currentRole } = useAuth();
 
-  // Danh sách kho hệ thống
-  const [warehouses, setWarehouses] = useState<WarehouseOption[]>(SYSTEM_WAREHOUSES);
+  // Phân quyền: Chỉ Quản lý kho (ROLE_WH_MANAGER) hoặc Admin (ROLE_ADMIN) mới có quyền duyệt xuất kho ngay.
+  // Nhân viên kho (ROLE_WAREHOUSE) chỉ lập phiếu ở trạng thái chờ duyệt.
+  const isManagerOrAdmin =
+    currentRole === 'ROLE_WH_MANAGER' ||
+    currentRole === 'ROLE_ADMIN' ||
+    Boolean(user?.roles?.some((r) => r === 'ROLE_WH_MANAGER' || r === 'ROLE_ADMIN'));
+
+  // Danh sách kho nguồn (Kho Đi): theo phân quyền kho của tài khoản
+  const [sourceWarehouses, setSourceWarehouses] = useState<WarehouseOption[]>(SYSTEM_WAREHOUSES);
+  // Danh sách kho nhận (Kho Đến): FULL tất cả các kho hoạt động trong hệ thống
+  const [destWarehouses, setDestWarehouses] = useState<WarehouseOption[]>(SYSTEM_WAREHOUSES);
 
   // Danh mục sản phẩm hệ thống
   const [products, setProducts] = useState<Product[]>([]);
@@ -84,14 +94,17 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Tải danh mục kho thực tế khi mở modal
+  // Tải danh mục kho thực tế khi mở modal:
+  // - Kho Đi: Lấy theo danh mục kho người dùng được phân công
+  // - Kho Đến: Tải FULL toàn bộ các kho hoạt động trong hệ thống
   useEffect(() => {
     if (!isOpen) return;
 
+    // 1. Tải kho xuất
     fetchStockLedgerWarehouses()
       .then((data) => {
         if (data && data.length > 0) {
-          setWarehouses(
+          setSourceWarehouses(
             data.map((w) => ({
               id: w.id,
               code: w.code,
@@ -103,7 +116,26 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
         }
       })
       .catch((err) => {
-        console.warn('Lỗi tải danh sách kho từ backend, dùng fallback:', err);
+        console.warn('Lỗi tải danh sách kho xuất từ backend, dùng fallback:', err);
+      });
+
+    // 2. Tải FULL toàn bộ kho cho Kho Đến
+    fetchWarehouses({ status: 'ACTIVE' })
+      .then((data) => {
+        if (data && data.length > 0) {
+          setDestWarehouses(
+            data.map((w) => ({
+              id: w.id,
+              code: w.code,
+              name: w.name,
+              address: w.address || undefined,
+              status: w.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn('Lỗi tải full danh sách kho nhận từ backend, dùng fallback:', err);
       });
   }, [isOpen]);
 
@@ -178,7 +210,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
   const handleSourceWarehouseChange = (newCode: string) => {
     setSourceWarehouseCode(newCode);
     if (destWarehouseCode === newCode) {
-      const other = warehouses.find((w) => w.code !== newCode);
+      const other = destWarehouses.find((w) => w.code !== newCode);
       if (other) {
         setDestWarehouseCode(other.code);
       }
@@ -414,7 +446,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                   onChange={(e) => handleSourceWarehouseChange(e.target.value)}
                   className="w-full text-xs font-bold border border-gray-300 rounded-xl p-2.5 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 >
-                  {warehouses.map((wh) => (
+                  {sourceWarehouses.map((wh) => (
                     <option key={wh.code} value={wh.code}>
                       [{wh.code}] {wh.name} {wh.address ? `(${wh.address})` : ''}
                     </option>
@@ -425,7 +457,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                 </p>
               </div>
 
-              {/* Chọn Kho Đến (Kho Đích) */}
+              {/* Chọn Kho Đến (Kho Đích - FULL toàn bộ kho trong hệ thống) */}
               <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-xs space-y-2">
                 <label className="block text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
@@ -437,7 +469,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                   onChange={(e) => setDestWarehouseCode(e.target.value)}
                   className="w-full text-xs font-bold border border-gray-300 rounded-xl p-2.5 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 >
-                  {warehouses.map((wh) => (
+                  {destWarehouses.map((wh) => (
                     <option key={wh.code} value={wh.code}>
                       [{wh.code}] {wh.name} {wh.address ? `(${wh.address})` : ''}
                     </option>
@@ -699,21 +731,21 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
             )}
           </div>
 
-          {/* Banner giải thích trạng thái */}
+          {/* Banner giải thích trạng thái theo đúng quy trình chuẩn */}
           <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-3.5 text-xs text-blue-900 space-y-1.5">
             <div className="font-bold flex items-center gap-1.5 text-blue-800">
               <Truck size={14} className="text-blue-600" />
-              <span>Quy trình ghi nhận điều chuyển hàng kho:</span>
+              <span>Quy trình điều chuyển hàng kho nội bộ:</span>
             </div>
             <ul className="list-disc list-inside text-[11px] text-blue-800/90 space-y-1 pl-1">
               <li>
-                <b>Lưu nháp:</b> Phiếu được lưu ở trạng thái nháp, chưa trừ kho xuất và chưa vận chuyển.
+                <b>1. Lập phiếu chuyển:</b> Nhân viên kho lập phiếu chuyển → phiếu ở trạng thái <b>Chờ QL duyệt xuất</b> (chưa trừ kho xuất).
               </li>
               <li>
-                <b>Xuất kho & Vận chuyển:</b> Hệ thống trừ tồn kho đi và đánh dấu là <b>Đang đi đường</b>. Kho đến <b>chưa được cộng tồn</b>.
+                <b>2. Quản lý kho xác nhận phiếu:</b> Quản lý kho phê duyệt → Hệ thống trừ tồn kho xuất và ghi nhận <b>Đang đi đường</b>.
               </li>
               <li>
-                <b>Nhận hàng tại kho đến:</b> Khi xe đến nơi, thủ kho đến mở phiếu để xác nhận nhận đủ hoặc nhập lý do giải trình nếu phát hiện chênh lệch.
+                <b>3. Kho đến kiểm tra & nhận đủ:</b> Thủ kho đến tiếp nhận hàng, kiểm tra thực tế và <b>xác nhận nhận đủ</b> để kết thúc 1 quy trình.
               </li>
             </ul>
           </div>
@@ -731,26 +763,40 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
           </button>
 
           <div className="flex items-center gap-2">
-            {/* Nút 1: Lưu nháp */}
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => handleSubmit('DRAFT')}
-              className="px-4 py-2.5 text-xs font-bold text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 rounded-xl transition cursor-pointer disabled:opacity-50"
-            >
-              Lưu nháp (Chưa xuất kho)
-            </button>
+            {!isManagerOrAdmin ? (
+              // Nhân viên kho: Lập phiếu chuyển gửi Quản lý kho duyệt
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => handleSubmit('DRAFT')}
+                className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-md shadow-blue-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Plus size={15} />
+                <span>{isSubmitting ? 'Đang tạo phiếu...' : 'Lập phiếu chuyển (Chờ quản lý duyệt)'}</span>
+              </button>
+            ) : (
+              // Quản lý kho / Admin: Được lưu nháp hoặc duyệt & xuất kho ngay
+              <>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => handleSubmit('DRAFT')}
+                  className="px-4 py-2.5 text-xs font-bold text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 rounded-xl transition cursor-pointer disabled:opacity-50"
+                >
+                  Lưu nháp (Chưa xuất kho)
+                </button>
 
-            {/* Nút 2: Xuất kho & Chuyển (AC2) */}
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => handleSubmit('IN_TRANSIT')}
-              className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-md shadow-blue-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              <Truck size={15} />
-              <span>{isSubmitting ? 'Đang xử lý...' : 'Xuất kho & Vận chuyển (Ghi nhận Đang đi đường)'}</span>
-            </button>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => handleSubmit('IN_TRANSIT')}
+                  className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-md shadow-blue-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Truck size={15} />
+                  <span>{isSubmitting ? 'Đang xử lý...' : 'Phê duyệt & Xuất kho (Ghi nhận Đang đi đường)'}</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -8,7 +8,8 @@ import {
   AlertTriangle,
   Clock,
   Layers,
-  RefreshCw
+  RefreshCw,
+  PackageCheck
 } from 'lucide-react';
 import type { StockTransfer, StockTransferStatus } from '../../types/stockTransfer';
 import { SYSTEM_WAREHOUSES } from '../../types/inventory';
@@ -25,16 +26,22 @@ import { SearchSelect } from '../../components/common/SearchSelect';
  * S5-07 (Nguyễn Văn Minh): Phân hệ Quản lý Phiếu Chuyển Kho Nội Bộ
  * Acceptance Criteria:
  * - AC1: Chọn kho đi, kho đến, danh sách hàng và số lượng
- * - AC2: Hàng đang chuyển được ghi nhận là đang trên đường, chưa cộng vào kho đến
- * - AC3: Kho đến xác nhận nhận đủ thì tồn mới được cộng
+ * - AC2: Quản lý kho xác nhận phiếu xuất kho -> hàng đang đi đường
+ * - AC3: Kho đến kiểm tra, xác nhận nhận đủ -> cộng tồn, kết thúc 1 quy trình
  * - AC4: Chênh lệch khi nhận phải nhập lý do
  */
 export const StockTransferManagementPage: React.FC = () => {
-  const { showToast, currentRole } = useAuth();
+  const { showToast, currentRole, user } = useAuth();
 
   // Mục 12 (góp ý GV): chặn ở cả FE và BE - chỉ NV kho, QL kho, Admin được lập / xuất / nhận phiếu chuyển;
   // Kế toán chỉ xem.
   const canEditInventory = ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'].includes(currentRole ?? '');
+
+  // Phân quyền Quản lý kho / Admin: Chỉ Quản lý kho hoặc Admin mới có quyền phê duyệt & xuất kho
+  const isManagerOrAdmin =
+    currentRole === 'ROLE_WH_MANAGER' ||
+    currentRole === 'ROLE_ADMIN' ||
+    Boolean(user?.roles?.some((r) => r === 'ROLE_WH_MANAGER' || r === 'ROLE_ADMIN'));
 
   const [transfers, setTransfers] = useState<StockTransfer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -108,9 +115,9 @@ export const StockTransferManagementPage: React.FC = () => {
     switch (status) {
       case 'DRAFT':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700">
-            <Clock size={12} />
-            <span>Phiếu nháp</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+            <Clock size={12} className="text-amber-600" />
+            <span>Chờ QL duyệt</span>
           </span>
         );
       case 'IN_TRANSIT':
@@ -371,16 +378,23 @@ export const StockTransferManagementPage: React.FC = () => {
                             Chi tiết
                           </button>
 
-                          {/* Nút Xuất kho nếu đang DRAFT */}
+                          {/* Nút Xuất kho nếu đang DRAFT: Chỉ Quản lý kho / Admin mới được duyệt xuất kho */}
                           {item.status === 'DRAFT' && canEditInventory && (
-                            <button
-                              type="button"
-                              onClick={() => handleDispatch(item)}
-                              className="px-2.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
-                            >
-                              <Truck size={13} />
-                              <span>Xuất kho</span>
-                            </button>
+                            isManagerOrAdmin ? (
+                              <button
+                                type="button"
+                                onClick={() => handleDispatch(item)}
+                                className="px-2.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
+                                title="Quản lý kho xác nhận phiếu & xuất kho bắt đầu vận chuyển"
+                              >
+                                <CheckCircle2 size={13} />
+                                <span>Duyệt & Xuất kho</span>
+                              </button>
+                            ) : (
+                              <span className="text-[11px] font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-200">
+                                Chờ QL duyệt
+                              </span>
+                            )
                           )}
 
                           {/* Nút Kho đến nhận hàng nếu IN_TRANSIT */}
@@ -389,9 +403,10 @@ export const StockTransferManagementPage: React.FC = () => {
                               type="button"
                               onClick={() => setSelectedTransferForReceive(item)}
                               className="px-2.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
+                              title="Kho đến kiểm tra thực tế & xác nhận nhận đủ để kết thúc quy trình"
                             >
-                              <CheckCircle2 size={13} />
-                              <span>Nhận hàng</span>
+                              <PackageCheck size={13} />
+                              <span>Kiểm tra & Nhận</span>
                             </button>
                           )}
                         </div>
