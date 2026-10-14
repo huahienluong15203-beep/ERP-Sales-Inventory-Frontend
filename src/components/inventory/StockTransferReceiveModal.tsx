@@ -95,6 +95,18 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
     (l) => Number(l.receivedQuantity) !== Number(l.transferQuantity)
   );
 
+  // Thao tác kiểm tra nhanh: Xác nhận nhận đủ 100% tất cả các mặt hàng
+  const handleCheckAllMatch = () => {
+    setReceiveLines((prev) =>
+      prev.map((l) => ({
+        ...l,
+        receivedQuantity: l.transferQuantity,
+        discrepancyReason: ''
+      }))
+    );
+    setGeneralReason('');
+  };
+
   const handleSubmitReceive = async () => {
     setErrorMsg('');
 
@@ -125,15 +137,15 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
 
       if (result.status === 'COMPLETED') {
         showToast(
-          'Đã nhận đủ hàng',
-          `Phiếu [${transfer.code}] đã hoàn tất nhận đủ 100%. Tồn kho tại [${transfer.destWarehouseName}] đã được CỘNG CHÍNH THỨC!`,
+          'Kết thúc quy trình chuyển kho',
+          `Phiếu [${transfer.code}] đã hoàn tất nhận đủ 100%. Đã cộng tồn kho đích [${transfer.destWarehouseName}] và kết thúc thành công 1 quy trình điều chuyển!`,
           'success',
           5000
         );
       } else {
         showToast(
-          'Đã ghi nhận nhận hàng chênh lệch',
-          `Phiếu [${transfer.code}] đã được ghi sổ kèm lý do giải trình. Tồn kho đến được cộng theo số lượng thực nhận.`,
+          'Hoàn tất nhận hàng chênh lệch',
+          `Phiếu [${transfer.code}] đã được ghi sổ kèm biên bản giải trình. Đã cộng tồn kho đích theo số thực nhận và kết thúc quy trình điều chuyển.`,
           'info',
           5000
         );
@@ -188,6 +200,42 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
             </div>
           )}
 
+          {/* Quy trình kiểm nhận 3 bước */}
+          <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-3.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                <PackageCheck size={16} className="text-emerald-700" />
+                Quy trình tiếp nhận & kiểm tra thực tế tại kho đích:
+              </span>
+              <span className="text-[11px] font-semibold text-emerald-800 bg-white/80 border border-emerald-200 px-2 py-0.5 rounded-full">
+                Bước 3/3: Nhận & Kết thúc quy trình
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px]">
+              <div className="bg-white p-2 rounded-xl border border-emerald-100 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">1</span>
+                <div>
+                  <div className="font-bold text-gray-800">Tiếp nhận xe giao</div>
+                  <div className="text-gray-400 font-mono text-[10px]">{transfer.vehiclePlate || 'Chưa có biển số'}</div>
+                </div>
+              </div>
+              <div className="bg-white p-2 rounded-xl border border-emerald-100 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">2</span>
+                <div>
+                  <div className="font-bold text-gray-800">Kiểm tra thực tế</div>
+                  <div className="text-gray-400 text-[10px]">Đếm số lượng & chất lượng</div>
+                </div>
+              </div>
+              <div className="bg-white p-2 rounded-xl border border-emerald-100 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">3</span>
+                <div>
+                  <div className="font-bold text-gray-800">Xác nhận nhận đủ</div>
+                  <div className="text-gray-400 text-[10px]">Cộng tồn & kết thúc quy trình</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Banner thông tin xe vận chuyển */}
           <div className="bg-gray-50 rounded-2xl p-3 border border-gray-200 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 text-gray-700">
@@ -200,6 +248,21 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
             <div className="text-gray-500">
               Ngày xuất chuyển: <b>{transfer.transferDate}</b>
             </div>
+          </div>
+
+          {/* Tiêu đề & Nút kiểm tra nhanh */}
+          <div className="flex items-center justify-between pt-1">
+            <div className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+              <span>Kiểm đếm thực tế danh sách hàng ({receiveLines.length} mặt hàng):</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleCheckAllMatch}
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-xl transition cursor-pointer"
+            >
+              <CheckCircle2 size={13} />
+              <span>Kiểm tra nhanh: Nhận đủ 100%</span>
+            </button>
           </div>
 
           {/* Bảng kiểm đếm hàng nhận */}
@@ -327,7 +390,13 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
             className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             <CheckCircle2 size={15} />
-            <span>{submitting ? 'Đang xác nhận...' : 'Xác nhận nhận hàng & Cộng tồn'}</span>
+            <span>
+              {submitting
+                ? 'Đang xử lý...'
+                : hasAnyDiscrepancy
+                ? 'Xác nhận giải trình & Kết thúc quy trình'
+                : 'Xác nhận kiểm tra & Nhận đủ (Kết thúc quy trình)'}
+            </span>
           </button>
         </div>
       </div>
