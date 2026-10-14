@@ -29,6 +29,8 @@ import { GoodsReceiptDetailPage } from '../pages/inventory/GoodsReceiptDetailPag
 import { StockTransferManagementPage } from '../pages/inventory/StockTransferManagementPage';
 import { StockLedgerPage } from '../pages/inventory/StockLedgerPage';
 import { StockTakeManagementPage } from '../pages/inventory/StockTakeManagementPage';
+import { StockTakeCreatePage } from '../pages/inventory/StockTakeCreatePage';
+import { StockTakeDetailPage } from '../pages/inventory/StockTakeDetailPage';
 import { WarehouseManagementPage } from '../pages/inventory/WarehouseManagementPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
@@ -288,6 +290,56 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <StockTakeManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* S5-08: Tạo phiếu kiểm kê kho trang riêng */}
+        <Route
+          path="/inventory/stocktakes/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <StockTakeCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/stock-takes/create"
+          element={<Navigate to="/inventory/stocktakes/create" replace />}
+        />
+        {/* S5-08: Chi tiết & thực hiện kiểm kê kho trang riêng */}
+        <Route
+          path="/inventory/stocktakes/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockTakeDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/stock-takes/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockTakeDetailPage />
             </ProtectedRoute>
           }
         />

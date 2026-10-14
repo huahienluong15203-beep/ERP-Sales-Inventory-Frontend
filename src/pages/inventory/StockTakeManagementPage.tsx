@@ -14,9 +14,8 @@ import {
 import type { StockTake } from '../../types/stockTake';
 import type { WarehouseOption } from '../../types/inventory';
 import { fetchStockTakes, fetchWarehousesList } from '../../services/stockTakeApi';
-import { StockTakeCreateModal } from '../../components/stocktake/StockTakeCreateModal';
-import { StockTakeDetailModal } from '../../components/stocktake/StockTakeDetailModal';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from '../../routes/Router';
 
 /**
  * S5-08: Trang Quản Lý Kiểm Kê Kho & Ghi Nhận Chênh Lệch
@@ -28,6 +27,7 @@ import { useAuth } from '../../contexts/AuthContext';
  * - AC4: Chỉ Quản lý kho (ROLE_WH_MANAGER) được chốt phiếu kiểm kê.
  */
 export const StockTakeManagementPage: React.FC = () => {
+  const navigate = useNavigate();
   const { currentRole } = useAuth();
 
   const canCreate = ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'].includes(currentRole ?? '');
@@ -46,10 +46,6 @@ export const StockTakeManagementPage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
-
-  // Modals state
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
-  const [selectedStockTakeId, setSelectedStockTakeId] = useState<number | null>(null);
 
   // Load list of warehouses for filter
   useEffect(() => {
@@ -114,8 +110,8 @@ export const StockTakeManagementPage: React.FC = () => {
         {canCreate && (
           <button
             type="button"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow transition-all cursor-pointer h-9"
+            onClick={() => navigate('/inventory/stocktakes/create')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow transition-all cursor-pointer h-9 active:scale-95"
           >
             <Plus size={16} />
             <span>Tạo phiếu kiểm kê mới</span>
@@ -318,7 +314,7 @@ export const StockTakeManagementPage: React.FC = () => {
                     <tr
                       key={st.id}
                       className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
-                      onClick={() => setSelectedStockTakeId(st.id)}
+                      onClick={() => navigate(`/inventory/stocktakes/${st.id}`)}
                     >
                       {/* Mã phiếu */}
                       <td className="py-3 px-4">
@@ -430,8 +426,8 @@ export const StockTakeManagementPage: React.FC = () => {
                       >
                         <button
                           type="button"
-                          onClick={() => setSelectedStockTakeId(st.id)}
-                          className="px-3 py-1.5 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-950/50 rounded-xl transition inline-flex items-center gap-1 border border-primary-200 dark:border-primary-800"
+                          onClick={() => navigate(`/inventory/stocktakes/${st.id}`)}
+                          className="px-3 py-1.5 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-950/50 rounded-xl transition inline-flex items-center gap-1 border border-primary-200 dark:border-primary-800 cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           {st.status === 'DRAFT' ? 'Đếm / Chốt' : 'Chi tiết'}
@@ -473,23 +469,6 @@ export const StockTakeManagementPage: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Modals */}
-      <StockTakeCreateModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={(created) => {
-          loadData();
-          setSelectedStockTakeId(created.id);
-        }}
-      />
-
-      <StockTakeDetailModal
-        isOpen={selectedStockTakeId !== null}
-        stockTakeId={selectedStockTakeId}
-        onClose={() => setSelectedStockTakeId(null)}
-        onUpdated={() => loadData()}
-      />
     </div>
   );
 };
