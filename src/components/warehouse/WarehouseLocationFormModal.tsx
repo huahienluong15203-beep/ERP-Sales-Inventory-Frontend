@@ -108,7 +108,7 @@ export const WarehouseLocationFormModal: React.FC<WarehouseLocationFormModalProp
           zone: zone.trim() || undefined,
           shelf: shelf.trim() || undefined,
           description: description.trim() || undefined,
-          status
+          status: 'ACTIVE'
         };
         const saved = await createWarehouseLocation(warehouse.id, payload);
         showToast('Tạo mới thành công', `Đã thêm vị trí [${saved.code}] vào kho ${warehouse.name}`, 'success');
@@ -219,14 +219,29 @@ export const WarehouseLocationFormModal: React.FC<WarehouseLocationFormModalProp
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Trạng thái hoạt động
               </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
-                className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs font-semibold focus:outline-none focus:border-[#F85606] transition cursor-pointer"
-              >
-                <option value="ACTIVE">Đang sử dụng</option>
-                <option value="INACTIVE">Tạm khóa / Ngừng dùng</option>
-              </select>
+              {isEdit ? (
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
+                  className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs font-semibold focus:outline-none focus:border-[#F85606] transition cursor-pointer"
+                >
+                  <option value="ACTIVE">Đang sử dụng</option>
+                  <option value="INACTIVE">Tạm khóa / Ngừng dùng</option>
+                </select>
+              ) : (
+                <div
+                  className="w-full h-10 px-3 rounded-xl border border-emerald-200 bg-emerald-50/60 text-emerald-700 text-xs font-semibold flex items-center justify-between cursor-not-allowed select-none"
+                  title="Vị trí mới tạo luôn mặc định ở trạng thái Đang sử dụng"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                    <span>Đang sử dụng</span>
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-medium">
+                    Mặc định
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

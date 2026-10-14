@@ -113,7 +113,7 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
           name: cleanName,
           address: address.trim() || undefined,
           managerId: managerId || null,
-          status
+          status: 'ACTIVE'
         };
         const saved = await createWarehouse(payload);
         showToast('Tạo mới thành công', `Đã khởi tạo kho mới [${saved.code}] - ${saved.name}`, 'success');
@@ -204,14 +204,29 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Trạng thái hoạt động
               </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
-                className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs font-semibold focus:outline-none focus:border-[#F85606] transition cursor-pointer"
-              >
-                <option value="ACTIVE">Đang hoạt động</option>
-                <option value="INACTIVE">Ngừng hoạt động</option>
-              </select>
+              {isEdit ? (
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
+                  className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs font-semibold focus:outline-none focus:border-[#F85606] transition cursor-pointer"
+                >
+                  <option value="ACTIVE">Đang hoạt động</option>
+                  <option value="INACTIVE">Ngừng hoạt động</option>
+                </select>
+              ) : (
+                <div
+                  className="w-full h-10 px-3 rounded-xl border border-emerald-200 bg-emerald-50/60 text-emerald-700 text-xs font-semibold flex items-center justify-between cursor-not-allowed select-none"
+                  title="Kho mới tạo luôn mặc định ở trạng thái Đang hoạt động"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                    <span>Đang hoạt động</span>
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-medium">
+                    Mặc định
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
