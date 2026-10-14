@@ -248,7 +248,7 @@ export const DashboardPage: React.FC = () => {
                   totalAmount: Number(o.totalAmount || 0),
                   step,
                   percent,
-                  path: status === 'DRAFT' && o.id && canCreateOrder ? `/orders/create?draftId=${o.id}` : '/orders'
+                  path: status === 'DRAFT' && o.id && canCreateOrder ? `/orders/create?draftId=${o.id}` : (o.id ? `/orders/${o.id}` : '/orders')
                 };
               });
 

@@ -15,6 +15,7 @@ import { VolumeDiscountPage } from '../pages/pricing/VolumeDiscountPage';
 import { CategoryManagementPage } from '../pages/category/CategoryManagementPage';
 import { OrderCreatePage } from '../pages/order/OrderCreatePage';
 import { OrderListPage } from '../pages/order/OrderListPage';
+import { OrderDetailPage } from '../pages/order/OrderDetailPage';
 import { SupplierManagementPage } from '../pages/supplier/SupplierManagementPage';
 import { SystemLogPage } from '../pages/system-log/SystemLogPage';
 import { ModulePage } from '../pages/common/ModulePage';
@@ -431,6 +432,24 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <OrderCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        {/* S4-06 / S4-07: Chi tiết đơn hàng trang riêng biệt */}
+        <Route
+          path="/orders/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_REP',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER'
+              ]}
+            >
+              <OrderDetailPage />
             </ProtectedRoute>
           }
         />
