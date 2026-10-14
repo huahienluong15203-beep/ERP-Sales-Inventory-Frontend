@@ -1032,20 +1032,15 @@ export const OrderListPage: React.FC = () => {
                           <Eye size={16} />
                         </button>
 
-                        {o.status === 'DRAFT' && (
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/orders/create?draftId=${o.id}`)}
-                            className="p-1.5 rounded-lg text-amber-600 hover:text-amber-800 hover:bg-amber-50 transition cursor-pointer"
-                            title="Sửa đơn nháp"
-                          >
-                            <Edit size={16} />
-                          </button>
-                        )}
-
-                        {/* Thao tác phụ gom vào menu "⋯" cho gọn: Sao chép (S4-09), In/PDF (S4-08), Duyệt/Trả lại/Từ chối (S4-05) */}
+                        {/* Thao tác phụ gom vào menu "⋯" cho gọn: Chỉnh sửa nháp, Sao chép (S4-09), In/PDF (S4-08), Duyệt/Trả lại/Từ chối (S4-05) */}
                         <RowActionMenu
                           items={[
+                            {
+                              label: 'Chỉnh sửa đơn nháp',
+                              icon: <Edit size={14} />,
+                              onClick: () => navigate(`/orders/create?draftId=${o.id}`),
+                              hidden: o.status !== 'DRAFT',
+                            },
                             {
                               label: 'Sao chép thành đơn mới',
                               icon: <Copy size={14} />,

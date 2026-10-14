@@ -655,10 +655,17 @@ export async function fetchPendingApprovalOrders(
 /**
  * S4-05: Duyệt đơn hàng (POST /api/orders/{id}/approve) - chuyển trạng thái ĐÃ DUYỆT (APPROVED)
  */
-export async function approveOrder(id: number | string, comment?: string): Promise<OrderBackendResponse> {
+export async function approveOrder(
+  id: number | string,
+  comment?: string,
+  confirmedDeliveryDate?: string | null
+): Promise<OrderBackendResponse> {
   const res = await callBackend(`${API_BASE_URL}/api/orders/${id}/approve`, {
     method: 'POST',
-    body: JSON.stringify({ comment: comment?.trim() || null })
+    body: JSON.stringify({
+      comment: comment?.trim() || null,
+      confirmedDeliveryDate: confirmedDeliveryDate || null
+    })
   });
   if (!res.ok) {
     throw new Error(await readBackendError(res, 'Không thể duyệt đơn hàng'));

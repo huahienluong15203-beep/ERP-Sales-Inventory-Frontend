@@ -58,6 +58,27 @@ interface CartItem {
   availableUnits: Array<{ unitName: string; conversionFactor: number }>;
 }
 
+function getMinDeliveryDateString(): string {
+  const now = new Date();
+  // Đặt sau 12h trưa: tối thiểu N+2 ngày; đặt trước 12h trưa: tối thiểu N+1 (ngày mai)
+  const daysToAdd = now.getHours() >= 12 ? 2 : 1;
+  const target = new Date(now.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+  return target.toISOString().split('T')[0];
+}
+
+function formatDateVN(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+  } catch {
+    return dateStr;
+  }
+}
+
 export const CustomerOrderPortalPage: React.FC = () => {
   const { user, currentRole, showToast } = useAuth();
   const navigate = useNavigate();
@@ -71,6 +92,10 @@ export const CustomerOrderPortalPage: React.FC = () => {
   const [selectedDeliveryPointId, setSelectedDeliveryPointId] = useState<number | string>('');
   const [orderNote, setOrderNote] = useState<string>('');
   const [creditStatus, setCreditStatus] = useState<CreditStatusResponse | null>(null);
+
+  // Ngày mong muốn nhận hàng (Ràng buộc Lead-time tối thiểu 24h - 48h theo quy chuẩn kho)
+  const minDeliveryDate = useMemo(() => getMinDeliveryDateString(), []);
+  const [desiredDeliveryDate, setDesiredDeliveryDate] = useState<string>(() => getMinDeliveryDateString());
 
   // Danh mục sản phẩm & tìm kiếm
   const [products, setProducts] = useState<OrderProductCatalogItem[]>([]);
@@ -378,6 +403,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
     const timer = setTimeout(() => {
       previewPortalOrder({
         deliveryAddressId: selectedDeliveryPointId ? Number(selectedDeliveryPointId) : null,
+        desiredDeliveryDate: desiredDeliveryDate || null,
         note: orderNote.trim() || null,
         lines: validLines.map((c) => ({
           productSku: c.sku,
@@ -400,7 +426,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
       alive = false;
       clearTimeout(timer);
     };
-  }, [cart, selectedDeliveryPointId, orderNote]);
+  }, [cart, selectedDeliveryPointId, orderNote, desiredDeliveryDate]);
 
   const cartGrossAmount = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
@@ -443,12 +469,28 @@ export const CustomerOrderPortalPage: React.FC = () => {
       return;
     }
 
+    // Kiểm tra ngày mong muốn nhận hàng & Ràng buộc Lead-time tối thiểu
+    if (!desiredDeliveryDate) {
+      showToast('Thiếu ngày nhận hàng', 'Vui lòng chọn ngày mong muốn nhận hàng', 'info');
+      return;
+    }
+    if (desiredDeliveryDate < minDeliveryDate) {
+      showToast(
+        'Thời gian nhận hàng quá gấp',
+        `Kho cần tối thiểu 24h-48h để điều phối và xếp lịch xe giao. Vui lòng chọn ngày từ ${formatDateVN(minDeliveryDate)} trở đi!`,
+        'info',
+        3500
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       // S4-10: POST /api/portal/orders – chỉ gửi SKU / ĐVT / số lượng; Backend tính giá theo bảng giá hiện hành,
       // kiểm tồn, hạn mức và luôn đưa đơn về trạng thái Chờ duyệt (AC3) để nhân viên phụ trách xác nhận.
       const submittedOrder = await placePortalOrder({
         deliveryAddressId: selectedDeliveryPointId ? Number(selectedDeliveryPointId) : null,
+        desiredDeliveryDate: desiredDeliveryDate || null,
         note: orderNote.trim() || null,
         lines: cart.map((c) => ({
           productSku: c.sku,
@@ -460,6 +502,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
       // Làm trống giỏ hàng & hiển thị kết quả
       setCart([]);
       setOrderNote('');
+      setDesiredDeliveryDate(getMinDeliveryDateString());
       setIsCartDrawerOpen(false);
       setSuccessOrder(submittedOrder);
       showToast(
@@ -1056,6 +1099,38 @@ export const CustomerOrderPortalPage: React.FC = () => {
                     )}
                   </div>
 
+                  {/* Ngày mong muốn nhận hàng (Ràng buộc Lead-time tối thiểu 24h - 48h) */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-700 uppercase mb-1 flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <Calendar size={13} className="text-[#F85606]" />
+                        <span>Ngày mong muốn nhận hàng <span className="text-rose-500">*</span></span>
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-normal">
+                        Tối thiểu từ {formatDateVN(minDeliveryDate)}
+                      </span>
+                    </label>
+                    <input
+                      type="date"
+                      min={minDeliveryDate}
+                      value={desiredDeliveryDate}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val && val < minDeliveryDate) {
+                          showToast('Thời gian nhận quá gấp', `Kho cần tối thiểu 24h-48h để điều phối. Vui lòng chọn ngày từ ${formatDateVN(minDeliveryDate)} trở đi!`, 'info', 3000);
+                          setDesiredDeliveryDate(minDeliveryDate);
+                        } else {
+                          setDesiredDeliveryDate(val);
+                        }
+                      }}
+                      className="w-full text-xs font-semibold border border-gray-200 rounded-xl p-2 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 text-gray-800"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                      <Clock size={11} className="shrink-0 text-orange-500" />
+                      <span>Quy định kho: Đặt trước 12h trưa giao ngày mai ($N+1$), sau 12h trưa giao ngày kia ($N+2$).</span>
+                    </p>
+                  </div>
+
                   {/* Ghi chú đơn */}
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 uppercase mb-1">
@@ -1224,6 +1299,12 @@ export const CustomerOrderPortalPage: React.FC = () => {
               <div className="flex justify-between">
                 <span>Số dòng hàng:</span>
                 <span className="font-bold text-gray-800">{successOrder.lines?.length || 0} SKU</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Ngày mong muốn nhận:</span>
+                <span className="font-bold text-gray-900 font-mono">
+                  {formatDateVN(desiredDeliveryDate) || 'Theo kế hoạch'}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Tổng tiền hàng:</span>

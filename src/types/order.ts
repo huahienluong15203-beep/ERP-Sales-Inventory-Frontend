@@ -388,6 +388,7 @@ export interface PendingOrderResponse {
   submittedByUsername: string;
   submittedAt: string;
   reasons: ApprovalReason[];
+  desiredDeliveryDate?: string | null;
 }
 
 /**
@@ -407,5 +408,6 @@ export interface OrderApprovalHistoryResponse {
 
 export interface OrderApprovalActionRequest {
   comment?: string;
+  confirmedDeliveryDate?: string | null;
 }
 
