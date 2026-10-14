@@ -24,6 +24,8 @@ import { LoginPage } from '../pages/auth/LoginPage';
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
 import { CustomerOrderPortalPage } from '../pages/portal/CustomerOrderPortalPage';
 import { GoodsReceiptManagementPage } from '../pages/inventory/GoodsReceiptManagementPage';
+import { GoodsReceiptCreatePage } from '../pages/inventory/GoodsReceiptCreatePage';
+import { GoodsReceiptDetailPage } from '../pages/inventory/GoodsReceiptDetailPage';
 import { StockTransferManagementPage } from '../pages/inventory/StockTransferManagementPage';
 import { StockLedgerPage } from '../pages/inventory/StockLedgerPage';
 import { StockTakeManagementPage } from '../pages/inventory/StockTakeManagementPage';
@@ -166,6 +168,26 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* S5-04: Lập phiếu nhập kho từ nhà cung cấp (Trang riêng) */}
+        <Route
+          path="/inventory/receipts/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <GoodsReceiptCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/goods-receipts/create"
+          element={<Navigate to="/inventory/receipts/create" replace />}
+        />
+
         {/* S5-04: Phiếu nhập kho từ nhà cung cấp (Kho & Kế toán) */}
         <Route
           path="/inventory/receipts"
@@ -179,6 +201,37 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <GoodsReceiptManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* S5-04: Chi tiết phiếu nhập kho trang riêng (có phân trang đầy đủ) */}
+        <Route
+          path="/inventory/receipts/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <GoodsReceiptDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/goods-receipts/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <GoodsReceiptDetailPage />
             </ProtectedRoute>
           }
         />
