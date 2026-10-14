@@ -38,6 +38,13 @@ export const DashboardPage: React.FC = () => {
     currentRole === 'ROLE_ADMIN' ||
     Boolean(user?.roles?.some((r) => r === 'ROLE_SALES_MANAGER' || r === 'ROLE_ADMIN'));
 
+  // Quyền khởi tạo đơn hàng mới: Chỉ Admin, Quản lý kinh doanh và Nhân viên kinh doanh
+  const canCreateOrder =
+    currentRole === 'ROLE_SALES_REP' ||
+    currentRole === 'ROLE_SALES_MANAGER' ||
+    currentRole === 'ROLE_ADMIN' ||
+    Boolean(user?.roles?.some((r) => r === 'ROLE_SALES_REP' || r === 'ROLE_SALES_MANAGER' || r === 'ROLE_ADMIN'));
+
 
   // State lưu trữ dữ liệu thật từ Backend
   const [productCount, setProductCount] = useState<number>(0);
@@ -241,7 +248,7 @@ export const DashboardPage: React.FC = () => {
                   totalAmount: Number(o.totalAmount || 0),
                   step,
                   percent,
-                  path: status === 'DRAFT' && o.id ? `/orders/create?draftId=${o.id}` : '/orders'
+                  path: status === 'DRAFT' && o.id && canCreateOrder ? `/orders/create?draftId=${o.id}` : '/orders'
                 };
               });
 
@@ -605,7 +612,7 @@ export const DashboardPage: React.FC = () => {
                 gap: '4px'
               }}
             >
-              <span>Xem / Tạo đơn hàng</span>
+              <span>{canCreateOrder ? 'Xem / Tạo đơn hàng' : 'Xem danh sách đơn hàng'}</span>
               <ChevronRight size={14} />
             </button>
           </div>
@@ -635,11 +642,13 @@ export const DashboardPage: React.FC = () => {
                 Chưa có đơn hàng nào trong hệ thống
               </h3>
               <p style={{ fontSize: '13px', color: '#6B7280', maxWidth: '420px', margin: '0 auto 18px' }}>
-                Hệ thống chưa ghi nhận đơn hàng phát sinh. Bạn có thể khởi tạo đơn hàng mới ngay bây giờ.
+                {canCreateOrder
+                  ? 'Hệ thống chưa ghi nhận đơn hàng phát sinh. Bạn có thể khởi tạo đơn hàng mới ngay bây giờ.'
+                  : 'Hệ thống chưa ghi nhận đơn hàng phát sinh trong kỳ hiện tại.'}
               </p>
               <button
                 type="button"
-                onClick={() => navigate('/orders/create')}
+                onClick={() => navigate(canCreateOrder ? '/orders/create' : '/orders')}
                 style={{
                   padding: '9px 18px',
                   borderRadius: '10px',
@@ -655,7 +664,7 @@ export const DashboardPage: React.FC = () => {
                 }}
               >
                 <ShoppingCart size={15} />
-                <span>Tạo đơn hàng mới</span>
+                <span>{canCreateOrder ? 'Tạo đơn hàng mới' : 'Xem danh sách đơn hàng'}</span>
               </button>
             </div>
           ) : (
