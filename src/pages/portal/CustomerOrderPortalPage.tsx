@@ -41,7 +41,7 @@ import {
   type PortalOrderResult,
   type PortalOrderLine
 } from '../../services/portalApi';
-import { OrderDetailModal } from '../../components/order/OrderDetailModal';
+import { CustomerOrderDetailView } from './CustomerOrderDetailView';
 import { CustomerReorderModal, type ReorderItemDraft } from '../../components/order/CustomerReorderModal';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { NumberInput } from '../../components/common/NumberInput';
@@ -124,11 +124,10 @@ export const CustomerOrderPortalPage: React.FC = () => {
   // Lỗi tải thông tin đại lý (vd: tài khoản chưa được gắn với đại lý nào)
   const [agencyError, setAgencyError] = useState<string | null>(null);
 
-  // Lịch sử đơn hàng của đại lý
+  // Lịch sử đơn hàng của đại lý & Xem chi tiết đơn hàng toàn trang
   const [ordersHistory, setOrdersHistory] = useState<OrderSummaryItem[]>([]);
   const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
-  const [selectedDetailOrderId, setSelectedDetailOrderId] = useState<number | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
+  const [viewingDetailOrderId, setViewingDetailOrderId] = useState<number | string | null>(null);
 
   // S5-02: Modal mua lại đơn cũ & UI cảnh báo
   const [reorderModalOrderId, setReorderModalOrderId] = useState<number | string | null>(null);
@@ -531,8 +530,29 @@ export const CustomerOrderPortalPage: React.FC = () => {
       cartTotalAmount={cartPayableAmount}
       onOpenCart={() => setIsCartDrawerOpen(true)}
       activeTab={activeTab}
-      onChangeTab={setActiveTab}
+      onChangeTab={(tab) => {
+        setViewingDetailOrderId(null);
+        setActiveTab(tab);
+      }}
     >
+      {/* ============================================================== */}
+      {/* TRANG RIÊNG CHI TIẾT ĐƠN HÀNG TO RỘNG (ẢNH 1) */}
+      {/* ============================================================== */}
+      {viewingDetailOrderId ? (
+        <CustomerOrderDetailView
+          orderId={viewingDetailOrderId}
+          onBack={() => {
+            setViewingDetailOrderId(null);
+            loadOrderHistory();
+          }}
+          onReorder={(id) => {
+            setReorderModalOrderId(id);
+            setIsReorderModalOpen(true);
+          }}
+          onOrderUpdated={loadOrderHistory}
+        />
+      ) : (
+        <>
       {/* ============================================================== */}
       {/* TAB 1: DANH MỤC SẢN PHẨM VÀ ĐẶT HÀNG (CATALOG & ORDERING) */}
       {/* ============================================================== */}
@@ -922,9 +942,14 @@ export const CustomerOrderPortalPage: React.FC = () => {
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono font-black text-sm text-[#F85606]">
+                      <button
+                        type="button"
+                        onClick={() => setViewingDetailOrderId(o.id)}
+                        className="font-mono font-black text-sm text-[#F85606] hover:underline cursor-pointer"
+                        title="Bấm để xem chi tiết đơn hàng"
+                      >
                         {o.code}
-                      </span>
+                      </button>
                       <span className="text-xs text-gray-400">•</span>
                       <span className="text-xs text-gray-500 flex items-center gap-1" title="Ngày đặt hàng">
                         <Clock size={13} />
@@ -940,14 +965,23 @@ export const CustomerOrderPortalPage: React.FC = () => {
                         </>
                       )}
                     </div>
+                    {/* Gom nhãn cảnh báo giao thiếu hàng và trạng thái đơn vào 1 badge duy nhất (Ảnh 2) */}
                     <div className="flex items-center gap-2">
-                      {o.hasShortage && (
-                        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1" title="Đơn hàng được ghi nhận có mặt hàng giao thiếu">
-                          <AlertTriangle size={12} className="text-amber-600" />
-                          <span>Giao thiếu hàng</span>
+                      {o.hasShortage ? (
+                        <span
+                          className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300 inline-flex items-center gap-1.5 shadow-2xs"
+                          title="Đơn hàng được ghi nhận có mặt hàng giao thiếu"
+                        >
+                          <AlertTriangle size={12} className="text-amber-600 shrink-0" />
+                          <span>
+                            {o.status === 'DELIVERED'
+                              ? 'Đã giao hàng (Thiếu hàng)'
+                              : `${STATUS_VI_TRANSLATIONS[o.status] || o.status} (Thiếu hàng)`}
+                          </span>
                         </span>
+                      ) : (
+                        renderStatusBadge(o.status)
                       )}
-                      {renderStatusBadge(o.status)}
                     </div>
                   </div>
 
@@ -969,7 +1003,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                         {formatCurrencyVND(o.totalAmount)}
                       </span>
                     </div>
-                    <div className="text-right flex items-center justify-end gap-1.5">
+                    <div className="text-right flex items-center justify-end gap-2">
                       {/* S5-02: Nút Mua lại đơn cũ - chỉ áp dụng khi đơn đã giao xong hoặc hoàn tất */}
                       {['DELIVERED', 'CLOSED', 'COMPLETED'].includes(o.status) && (
                         <button
@@ -978,7 +1012,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                             setReorderModalOrderId(o.id);
                             setIsReorderModalOpen(true);
                           }}
-                          className="px-3 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#F85606] border border-orange-200 font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer"
+                          className="px-3 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#F85606] border border-orange-200 font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
                           title="Đặt lại các mặt hàng trong đơn này"
                         >
                           <RotateCcw size={13} />
@@ -986,16 +1020,17 @@ export const CustomerOrderPortalPage: React.FC = () => {
                         </button>
                       )}
 
+                      {/* Phần chi tiết để con mắt riêng (Ảnh 2) */}
                       <button
                         type="button"
                         onClick={() => {
-                          setSelectedDetailOrderId(o.id);
-                          setIsDetailModalOpen(true);
+                          setViewingDetailOrderId(o.id);
                         }}
-                        className="px-3 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-xs inline-flex items-center gap-1 transition cursor-pointer"
+                        className="p-1.5 sm:p-2 rounded-xl border border-gray-200 bg-white hover:bg-orange-50 hover:border-orange-300 text-gray-600 hover:text-[#F85606] transition cursor-pointer shadow-2xs active:scale-95 flex items-center justify-center"
+                        title="Xem chi tiết đơn hàng"
+                        aria-label="Xem chi tiết đơn hàng"
                       >
-                        <Eye size={13} />
-                        <span>Chi tiết</span>
+                        <Eye size={16} />
                       </button>
                     </div>
                   </div>
@@ -1004,6 +1039,8 @@ export const CustomerOrderPortalPage: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+        </>
       )}
 
       {/* ============================================================== */}
@@ -1340,22 +1377,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL CHI TIẾT ĐƠN HÀNG */}
-      <OrderDetailModal
-        orderId={selectedDetailOrderId}
-        isOpen={isDetailModalOpen}
-        onCloneOrder={(id) => {
-          setIsDetailModalOpen(false);
-          setSelectedDetailOrderId(null);
-          setReorderModalOrderId(id);
-          setIsReorderModalOpen(true);
-        }}
-        onClose={() => {
-          setIsDetailModalOpen(false);
-          setSelectedDetailOrderId(null);
-        }}
-        onOrderUpdated={loadOrderHistory}
-      />
+
 
       {/* S5-02: MODAL MUA LẠI ĐƠN HÀNG CŨ & UI CẢNH BÁO MẶT HÀNG NGỪNG KINH DOANH */}
       <CustomerReorderModal
