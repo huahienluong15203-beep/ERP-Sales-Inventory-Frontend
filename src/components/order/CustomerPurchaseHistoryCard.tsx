@@ -24,7 +24,9 @@ import {
   Boxes,
   CheckCircle2,
   Search,
-  RefreshCw
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight
 } from '../common/Icons';
 
 interface CustomerPurchaseHistoryCardProps {
@@ -50,6 +52,16 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [isAddingAll, setIsAddingAll] = useState<boolean>(false);
+
+  // S4-04: Mặc định hiển thị khung 6 sản phẩm, bấm "Xem thêm" để mở rộng cuộn và phân trang (15-25 sp/trang)
+  const [isViewMore, setIsViewMore] = useState<boolean>(false);
+  const [pageSize, setPageSize] = useState<number>(15);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  // Reset trang về 1 khi đổi từ khoá tìm kiếm hoặc đổi đại lý
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchKeyword, selectedAgency?.id]);
 
   // S4-04 AC3: Kiểm tra quyền xem lịch sử mua hàng của nhân viên phụ trách
   const accessCheck = useMemo(() => {
@@ -111,6 +123,20 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
         (p.category && p.category.toLowerCase().includes(kw))
     );
   }, [activeHistoryData, searchKeyword]);
+
+  const INITIAL_PREVIEW_COUNT = 6;
+  const totalFiltered = filteredProducts.length;
+  const totalPages = Math.ceil(totalFiltered / pageSize) || 1;
+  const hasMoreThanInitial = totalFiltered > INITIAL_PREVIEW_COUNT;
+
+  // Sản phẩm hiển thị: mặc định 6sp (khung gọn), khi bấm "Xem thêm" thì phân trang theo pageSize (15, 20, 25)
+  const displayedProducts = useMemo(() => {
+    if (!isViewMore) {
+      return filteredProducts.slice(0, INITIAL_PREVIEW_COUNT);
+    }
+    const start = (currentPage - 1) * pageSize;
+    return filteredProducts.slice(start, start + pageSize);
+  }, [filteredProducts, isViewMore, currentPage, pageSize]);
 
   // Danh sách SKU đã có trong giỏ hàng hiện tại kèm số lượng
   const cartSkuMap = useMemo(() => {
@@ -243,7 +269,9 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                       <span>Các Mặt Hàng Thường Mua (3 Tháng Gần Nhất)</span>
                     </h3>
                     <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[10px] font-bold">
-                      {filteredProducts.length} sản phẩm
+                      {!isViewMore && hasMoreThanInitial
+                        ? `Đang hiện 6 / ${totalFiltered} sản phẩm`
+                        : `${totalFiltered} sản phẩm`}
                     </span>
                   </div>
 
@@ -267,119 +295,226 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                     <p className="text-xs font-medium">Không tìm thấy mặt hàng nào trong lịch sử phù hợp với từ khóa.</p>
                   </div>
                 ) : (
-                  <div className="max-h-[500px] overflow-y-auto pr-1.5 pb-1">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {filteredProducts.map((prod) => {
-                      const inCartQty = cartSkuMap.get(prod.sku);
-                      const isAlreadyInCart = inCartQty !== undefined && inCartQty > 0;
-                      const hasStock = (prod.availableInPreferredUnit ?? 10) > 0;
+                  <div className="space-y-3">
+                    {/* Danh sách thẻ sản phẩm: khi mở rộng thì có thanh cuộn max-h-[580px] */}
+                    <div className={isViewMore ? 'max-h-[580px] overflow-y-auto pr-1 pb-1' : ''}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {displayedProducts.map((prod) => {
+                          const inCartQty = cartSkuMap.get(prod.sku);
+                          const isAlreadyInCart = inCartQty !== undefined && inCartQty > 0;
+                          const hasStock = (prod.availableInPreferredUnit ?? 10) > 0;
 
-                      return (
-                        <div
-                          key={prod.sku}
-                          className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-3 ${isAlreadyInCart
-                              ? 'bg-orange-50/30 border-orange-200 shadow-xs'
-                              : 'bg-white border-gray-200/90 hover:border-orange-300 hover:shadow-xs'
-                            }`}
-                        >
-                          <div className="space-y-2">
-                            {/* Tiêu đề & Mã SKU */}
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <h4
-                                  className="text-xs font-bold text-gray-900 leading-snug line-clamp-2"
-                                  title={prod.name}
-                                >
-                                  {prod.name}
-                                </h4>
-                                <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-0.5">
-                                  <span className="font-mono font-semibold text-gray-700">{prod.sku}</span>
-                                  <span>•</span>
-                                  <span className="px-1.5 py-0.2 rounded bg-gray-100 text-gray-600 font-medium text-[10px]">
-                                    ĐVT: {prod.preferredUnit}
+                          return (
+                            <div
+                              key={prod.sku}
+                              className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-3 ${isAlreadyInCart
+                                  ? 'bg-orange-50/30 border-orange-200 shadow-xs'
+                                  : 'bg-white border-gray-200/90 hover:border-orange-300 hover:shadow-xs'
+                                }`}
+                            >
+                              <div className="space-y-2">
+                                {/* Tiêu đề & Mã SKU */}
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <h4
+                                      className="text-xs font-bold text-gray-900 leading-snug line-clamp-2"
+                                      title={prod.name}
+                                    >
+                                      {prod.name}
+                                    </h4>
+                                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-0.5">
+                                      <span className="font-mono font-semibold text-gray-700">{prod.sku}</span>
+                                      <span>•</span>
+                                      <span className="px-1.5 py-0.2 rounded bg-gray-100 text-gray-600 font-medium text-[10px]">
+                                        ĐVT: {prod.preferredUnit}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {isAlreadyInCart && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold shrink-0">
+                                      <CheckCircle2 size={11} />
+                                      <span>Trong đơn (x{inCartQty})</span>
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Khối số liệu thống kê 3 tháng & Số lượng bình quân (AC1) */}
+                                <div className="p-2.5 rounded-lg bg-gray-50 border border-gray-100 space-y-1.5 text-xs">
+                                  {/* Số lượng bình quân tháng & bình quân đơn */}
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[11px] text-gray-500">Bình quân tháng:</span>
+                                    <span className="font-bold text-[#F85606] text-xs px-1.5 py-0.2 rounded bg-orange-100/70">
+                                      ~{formatQuantity(prod.avgQuantityPerMonth)} {prod.preferredUnit} / tháng
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className="text-gray-500">Mỗi lần lấy:</span>
+                                    <span className="font-semibold text-gray-700">
+                                      ~{formatQuantity(prod.avgQuantityPerOrder)} {prod.preferredUnit} / đơn
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center justify-between text-[11px] pt-0.5 border-t border-gray-200/60">
+                                    <span className="text-gray-500">Tổng 3 tháng:</span>
+                                    <span className="font-medium text-gray-700">
+                                      {formatQuantity(prod.totalQuantity3M)} {prod.preferredUnit} ({prod.orderCount3M} đơn)
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className="text-gray-500">Đơn giá gần nhất:</span>
+                                    <span className="font-semibold text-gray-900">
+                                      {formatCurrencyVND(prod.lastUnitPrice)}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Tồn kho khả dụng hiện tại */}
+                                <div className="flex items-center justify-between text-[11px] px-1">
+                                  <span className="text-gray-500">Tồn kho khả dụng:</span>
+                                  <span
+                                    className={`font-bold ${!hasStock
+                                        ? 'text-rose-600'
+                                        : (prod.availableInPreferredUnit ?? 99) < 20
+                                          ? 'text-amber-600'
+                                          : 'text-emerald-700'
+                                      }`}
+                                  >
+                                    {!hasStock
+                                      ? 'Hết hàng'
+                                      : `Còn ~${formatQuantity(prod.availableInPreferredUnit || 0)} ${prod.preferredUnit}`}
                                   </span>
                                 </div>
                               </div>
 
-                              {isAlreadyInCart && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold shrink-0">
-                                  <CheckCircle2 size={11} />
-                                  <span>Trong đơn (x{inCartQty})</span>
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Khối số liệu thống kê 3 tháng & Số lượng bình quân (AC1) */}
-                            <div className="p-2.5 rounded-lg bg-gray-50 border border-gray-100 space-y-1.5 text-xs">
-                              {/* Số lượng bình quân tháng & bình quân đơn */}
-                              <div className="flex items-center justify-between">
-                                <span className="text-[11px] text-gray-500">Bình quân tháng:</span>
-                                <span className="font-bold text-[#F85606] text-xs px-1.5 py-0.2 rounded bg-orange-100/70">
-                                  ~{formatQuantity(prod.avgQuantityPerMonth)} {prod.preferredUnit} / tháng
-                                </span>
-                              </div>
-
-                              <div className="flex items-center justify-between text-[11px]">
-                                <span className="text-gray-500">Mỗi lần lấy:</span>
-                                <span className="font-semibold text-gray-700">
-                                  ~{formatQuantity(prod.avgQuantityPerOrder)} {prod.preferredUnit} / đơn
-                                </span>
-                              </div>
-
-                              <div className="flex items-center justify-between text-[11px] pt-0.5 border-t border-gray-200/60">
-                                <span className="text-gray-500">Tổng 3 tháng:</span>
-                                <span className="font-medium text-gray-700">
-                                  {formatQuantity(prod.totalQuantity3M)} {prod.preferredUnit} ({prod.orderCount3M} đơn)
-                                </span>
-                              </div>
-
-                              <div className="flex items-center justify-between text-[11px]">
-                                <span className="text-gray-500">Đơn giá gần nhất:</span>
-                                <span className="font-semibold text-gray-900">
-                                  {formatCurrencyVND(prod.lastUnitPrice)}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Tồn kho khả dụng hiện tại */}
-                            <div className="flex items-center justify-between text-[11px] px-1">
-                              <span className="text-gray-500">Tồn kho khả dụng:</span>
-                              <span
-                                className={`font-bold ${!hasStock
-                                    ? 'text-rose-600'
-                                    : (prod.availableInPreferredUnit ?? 99) < 20
-                                      ? 'text-amber-600'
-                                      : 'text-emerald-700'
+                              {/* Nút thêm vào đơn */}
+                              <button
+                                type="button"
+                                onClick={() => onQuickAddSingleProduct(prod)}
+                                className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${isAlreadyInCart
+                                    ? 'bg-orange-100 hover:bg-orange-200 text-[#F85606]'
+                                    : 'bg-gray-900 hover:bg-[#F85606] text-white shadow-xs'
                                   }`}
+                                title={`Thêm ${prod.name} (${prod.preferredUnit}) vào đơn`}
                               >
-                                {!hasStock
-                                  ? 'Hết hàng'
-                                  : `Còn ~${formatQuantity(prod.availableInPreferredUnit || 0)} ${prod.preferredUnit}`}
-                              </span>
+                                <Plus size={14} />
+                                <span>
+                                  {isAlreadyInCart
+                                    ? `Thêm tiếp (+${Math.max(1, Math.round(prod.avgQuantityPerOrder))} ${prod.preferredUnit})`
+                                    : `+ Gợi ý thêm (${Math.max(1, Math.round(prod.avgQuantityPerOrder))} ${prod.preferredUnit})`}
+                                </span>
+                              </button>
                             </div>
-                          </div>
+                          );
+                        })}
+                      </div>
+                    </div>
 
-                          {/* Nút thêm vào đơn */}
+                    {/* Nút Xem Thêm khi đang ở chế độ xem 6 sản phẩm */}
+                    {!isViewMore && hasMoreThanInitial && (
+                      <div className="pt-1 flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsViewMore(true);
+                            setCurrentPage(1);
+                          }}
+                          className="px-5 py-2.5 rounded-xl border border-orange-200 bg-orange-50/80 hover:bg-orange-100 text-[#F85606] text-xs font-bold flex items-center gap-2 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
+                          title="Mở rộng danh sách để cuộn xem thêm và phân trang"
+                        >
+                          <span>Xem thêm ({totalFiltered - INITIAL_PREVIEW_COUNT} sản phẩm còn lại)</span>
+                          <ChevronDown size={15} className="group-hover:translate-y-0.5 transition-transform" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Thanh Phân Trang & Nút Thu Gọn khi ĐÃ MỞ RỘNG XEM THÊM (Nút Thu Gọn căn giữa theo yêu cầu) */}
+                    {isViewMore && (
+                      <div className="pt-2.5 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 items-center gap-3 text-xs select-none">
+                        {/* Cột 1 (Trái): Thông tin vị trí hiển thị */}
+                        <div className="text-gray-500 text-[11px] text-left">
+                          Hiển thị <strong className="text-gray-800">{Math.min((currentPage - 1) * pageSize + 1, totalFiltered)} - {Math.min(currentPage * pageSize, totalFiltered)}</strong> trên <strong>{totalFiltered}</strong> sản phẩm
+                        </div>
+
+                        {/* Cột 2 (Giữa): Nút Thu gọn căn chính giữa */}
+                        <div className="flex justify-center">
                           <button
                             type="button"
-                            onClick={() => onQuickAddSingleProduct(prod)}
-                            className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${isAlreadyInCart
-                                ? 'bg-orange-100 hover:bg-orange-200 text-[#F85606]'
-                                : 'bg-gray-900 hover:bg-[#F85606] text-white shadow-xs'
-                              }`}
-                            title={`Thêm ${prod.name} (${prod.preferredUnit}) vào đơn`}
+                            onClick={() => {
+                              setIsViewMore(false);
+                              setCurrentPage(1);
+                            }}
+                            className="px-4 py-2 rounded-xl border border-orange-200 bg-orange-50/80 hover:bg-orange-100 text-[#F85606] text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-2xs hover:shadow-xs"
+                            title="Thu gọn danh sách về 6 sản phẩm ban đầu"
                           >
-                            <Plus size={14} />
-                            <span>
-                              {isAlreadyInCart
-                                ? `Thêm tiếp (+${Math.max(1, Math.round(prod.avgQuantityPerOrder))} ${prod.preferredUnit})`
-                                : `+ Gợi ý thêm (${Math.max(1, Math.round(prod.avgQuantityPerOrder))} ${prod.preferredUnit})`}
-                            </span>
+                            <ChevronUp size={14} />
+                            <span>Thu gọn (Hiển thị 6 sản phẩm)</span>
                           </button>
                         </div>
-                      );
-                    })}
-                    </div>
+
+                        {/* Cột 3 (Phải): Cụm điều khiển phân trang */}
+                        <div className="flex flex-wrap items-center justify-end gap-2.5 sm:gap-3">
+                          {/* Bộ chọn số lượng hiển thị (15, 20, 25 sp/trang) */}
+                          <div className="flex items-center gap-1.5 text-gray-600">
+                            <span className="text-[11px]">Mỗi trang:</span>
+                            <select
+                              value={pageSize}
+                              onChange={(e) => {
+                                setPageSize(Number(e.target.value));
+                                setCurrentPage(1);
+                              }}
+                              className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#F85606] shadow-2xs cursor-pointer"
+                            >
+                              <option value={15}>15 sản phẩm</option>
+                              <option value={20}>20 sản phẩm</option>
+                              <option value={25}>25 sản phẩm</option>
+                            </select>
+                          </div>
+
+                          {/* Nút phân trang */}
+                          {totalPages > 1 && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                disabled={currentPage <= 1}
+                                className="w-7 h-7 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-2xs"
+                                title="Trang trước"
+                              >
+                                <ChevronLeft size={14} />
+                              </button>
+
+                              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                                <button
+                                  key={p}
+                                  type="button"
+                                  onClick={() => setCurrentPage(p)}
+                                  className={`w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center transition cursor-pointer ${
+                                    currentPage === p
+                                      ? 'bg-[#F85606] text-white shadow-2xs'
+                                      : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {p}
+                                </button>
+                              ))}
+
+                              <button
+                                type="button"
+                                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                disabled={currentPage >= totalPages}
+                                className="w-7 h-7 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-2xs"
+                                title="Trang sau"
+                              >
+                                <ChevronRight size={14} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

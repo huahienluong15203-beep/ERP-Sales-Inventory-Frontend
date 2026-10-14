@@ -9,12 +9,20 @@ import {
   User,
   Phone,
   FileText,
-  BadgePercent
+  BadgePercent,
+  AlertTriangle
 } from 'lucide-react';
 import type { OrderBackendResponse } from '../../types/order';
 import { formatCurrencyVND, formatQuantity } from '../../services/orderService';
 import { useAuth } from '../../contexts/AuthContext';
 import { API_BASE_URL, authFetch } from '../../services/api';
+
+/** S4-08: Đơn chưa hoặc không còn hiệu lực: hiển thị dấu chìm và cảnh báo */
+const STAMPS: Record<string, string> = {
+  DRAFT: 'BẢN NHÁP',
+  CANCELLED: 'ĐÃ HUỶ',
+  REJECTED: 'BỊ TỪ CHỐI'
+};
 
 interface OrderPdfPreviewModalProps {
   isOpen: boolean;
@@ -156,6 +164,7 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
   };
 
   const lines = order.lines || [];
+  const stamp = order.status ? STAMPS[order.status] : null;
 
   // Render thẳng ra document.body: nếu nằm trong vùng nội dung trang (có hiệu ứng / transform), "fixed" bị tính
   // theo vùng đó nên thanh tiêu đề và menu trái đè lên cửa sổ. z-[10000] để nằm trên cả topbar và modal chi tiết đơn.
@@ -209,8 +218,20 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
         <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-gray-100/60 print:p-0 print:bg-white print:overflow-visible">
           <div
             ref={printContentRef}
-            className="max-w-[760px] mx-auto bg-white p-6 sm:p-10 rounded-xl shadow-xs border border-gray-200/80 print:border-none print:shadow-none print:p-0 print:max-w-none text-gray-900 space-y-6"
+            className="max-w-[760px] mx-auto bg-white p-6 sm:p-10 rounded-xl shadow-xs border border-gray-200/80 print:border-none print:shadow-none print:p-0 print:max-w-none text-gray-900 space-y-6 relative overflow-hidden"
           >
+            {/* S4-08: Dấu chìm watermark cho đơn nháp / đơn huỷ / bị từ chối */}
+            {stamp && (
+              <div
+                className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-10 overflow-hidden"
+                aria-hidden="true"
+              >
+                <span className="text-red-500/18 text-6xl sm:text-7xl md:text-8xl font-black tracking-widest uppercase transform -rotate-30 border-4 border-dashed border-red-500/20 px-8 py-3 rounded-2xl whitespace-nowrap">
+                  {stamp}
+                </span>
+              </div>
+            )}
+
             {/* 1. Header Phiếu: Thông tin Công ty & Mã Đơn / Barcode */}
             <div className="flex flex-col sm:flex-row items-start justify-between gap-4 border-b border-gray-300 pb-5">
               <div className="space-y-1">
@@ -233,6 +254,21 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* S4-08: Cảnh báo đơn chưa hoặc không còn hiệu lực */}
+            {stamp && (
+              <div className="p-3 bg-red-50 border-2 border-red-500/80 rounded-lg text-red-700 text-xs font-bold space-y-1 relative z-20">
+                <div className="flex items-center gap-1.5 text-red-800">
+                  <AlertTriangle size={15} className="text-red-600 shrink-0" />
+                  <span>Đơn {stamp.toLowerCase()} — không dùng làm chứng từ giao hàng</span>
+                </div>
+                {(order.cancelReason || order.lastApprovalComment) && (
+                  <div className="font-normal text-red-600 pl-5 text-[11px]">
+                    Lý do: <strong>{order.cancelReason || order.lastApprovalComment}</strong>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* 2. S4-08 AC1: Thông tin Đại lý & Điểm giao hàng */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs bg-gray-50/60 p-4 rounded-xl border border-gray-200">

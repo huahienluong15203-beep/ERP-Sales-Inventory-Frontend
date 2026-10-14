@@ -234,7 +234,9 @@ export const CustomerOrderPortalPage: React.FC = () => {
         page: 0,
         size: 30
       });
-      setOrdersHistory(res.content || []);
+      // Đại lý chỉ theo dõi các đơn hàng chính thức đã gửi (loại trừ các bản nháp DRAFT)
+      const submittedOrders = (res.content || []).filter((o) => o.status !== 'DRAFT');
+      setOrdersHistory(submittedOrders);
     } catch (err) {
       console.error('Lỗi tải lịch sử đơn hàng của đại lý:', err);
     } finally {

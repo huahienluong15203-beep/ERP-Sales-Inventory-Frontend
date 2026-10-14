@@ -33,7 +33,7 @@ const LIFECYCLE_STEPS: StepConfig[] = [
   {
     key: 'DRAFT',
     label: 'Nháp',
-    description: 'NVKD đang lên đơn',
+    description: 'Khởi tạo đơn hàng',
     icon: FileText
   },
   {
