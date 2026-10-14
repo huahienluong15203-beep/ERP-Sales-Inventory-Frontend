@@ -49,7 +49,7 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
     return transfer.lines.map((l) => ({
       lineId: l.id,
       transferQuantity: l.transferQuantity,
-      receivedQuantity: l.receivedQuantity !== undefined ? l.receivedQuantity : l.transferQuantity,
+      receivedQuantity: l.receivedQuantity != null ? Number(l.receivedQuantity) : l.transferQuantity,
       unit: l.unit,
       productName: l.productName,
       productSku: l.productSku,
@@ -64,7 +64,7 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
         transfer.lines.map((l) => ({
           lineId: l.id,
           transferQuantity: l.transferQuantity,
-          receivedQuantity: l.receivedQuantity !== undefined ? l.receivedQuantity : l.transferQuantity,
+          receivedQuantity: l.receivedQuantity != null ? Number(l.receivedQuantity) : l.transferQuantity,
           unit: l.unit,
           productName: l.productName,
           productSku: l.productSku,
@@ -80,7 +80,7 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
 
   const handleUpdateQuantity = (lineId: string, val: number) => {
     setReceiveLines((prev) =>
-      prev.map((item) => (item.lineId === lineId ? { ...item, receivedQuantity: Math.max(0, val) } : item))
+      prev.map((item) => (item.lineId === lineId ? { ...item, receivedQuantity: isNaN(val) ? 0 : Math.max(0, val) } : item))
     );
   };
 
@@ -216,7 +216,7 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {receiveLines.map((line) => {
-                  const diff = line.transferQuantity - line.receivedQuantity;
+                  const diff = line.transferQuantity - (Number(line.receivedQuantity) || 0);
                   const isDiff = diff !== 0;
 
                   return (
