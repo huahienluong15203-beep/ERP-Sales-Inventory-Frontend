@@ -20,6 +20,7 @@ import { fetchGoodsReceiptById, confirmGoodsReceipt } from '../../services/inven
 import { formatCurrencyVND, formatQuantity } from '../../services/orderService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useParams } from '../../routes/Router';
+import { getUserFullName } from '../../lib/userFormatters';
 
 export const GoodsReceiptDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -280,8 +281,8 @@ export const GoodsReceiptDetailPage: React.FC = () => {
           </div>
 
           <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-100 space-y-1">
-            <span className="text-gray-400 uppercase font-bold text-[10px] block">Người lập & Ngày tạo</span>
-            <div className="font-bold text-gray-900">{receipt.createdByUsername || 'Nhân viên kho'}</div>
+            <span className="text-gray-400 uppercase font-bold text-[10px] block">Người lập (Thủ kho)</span>
+            <div className="font-bold text-gray-900">{getUserFullName(receipt.createdByUsername)}</div>
             <div className="text-[11px] text-gray-500 font-mono">
               {receipt.createdAt ? new Date(receipt.createdAt).toLocaleString('vi-VN') : '---'}
             </div>
@@ -591,7 +592,7 @@ export const GoodsReceiptDetailPage: React.FC = () => {
               <strong>- Trạng thái phiếu:</strong>{' '}
               {receipt.status === 'CONFIRMED' ? 'Đã nhập kho & cộng tồn' : 'Phiếu nháp (chưa duyệt)'}
             </div>
-            <div><strong>- Người tạo phiếu:</strong> {receipt.createdByUsername || 'wh_staff'}</div>
+            <div><strong>- Người tạo phiếu (Thủ kho):</strong> {getUserFullName(receipt.createdByUsername)}</div>
           </div>
           {receipt.note && (
             <div><strong>- Ghi chú:</strong> {receipt.note}</div>
@@ -677,7 +678,7 @@ export const GoodsReceiptDetailPage: React.FC = () => {
               <p className="font-bold">Người nhận / Thủ kho</p>
               <p className="text-[10px] italic text-gray-600">(Ký, ghi rõ họ tên)</p>
               <div className="h-14"></div>
-              <p className="font-semibold text-gray-800">{receipt.createdByUsername || 'wh_staff'}</p>
+              <p className="font-semibold text-gray-800">{getUserFullName(receipt.createdByUsername)}</p>
             </div>
             <div>
               <p className="font-bold">Kế toán kho</p>

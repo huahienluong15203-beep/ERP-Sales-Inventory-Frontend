@@ -34,6 +34,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useParams } from '../../routes/Router';
 import { StockTakeReasonModal } from '../../components/stocktake/StockTakeReasonModal';
 import { formatQuantity } from '../../services/orderService';
+import { getUserFullName } from '../../lib/userFormatters';
 
 interface LocalLineState {
   id: number;
@@ -546,9 +547,9 @@ export const StockTakeDetailPage: React.FC = () => {
               <User size={16} />
             </div>
             <div className="min-w-0">
-              <span className="text-[10px] font-bold text-gray-400 uppercase block">Người lập phiếu</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase block">Người lập phiếu (Thủ kho)</span>
               <div className="font-bold text-gray-900 truncate">
-                {stockTake.createdByUsername || 'wh_staff'}
+                {getUserFullName(stockTake.createdByUsername)}
               </div>
             </div>
           </div>
@@ -934,7 +935,7 @@ export const StockTakeDetailPage: React.FC = () => {
         <div className="border border-black p-2.5 rounded text-[11px] mb-3 space-y-1">
           <div className="grid grid-cols-2 gap-x-4">
             <div><strong>- Địa điểm kiểm kê:</strong> {stockTake.warehouseName}</div>
-            <div><strong>- Người lập phiếu:</strong> {stockTake.createdByUsername || 'wh_staff'}</div>
+            <div><strong>- Người lập phiếu (Thủ kho):</strong> {getUserFullName(stockTake.createdByUsername)}</div>
             <div>
               <strong>- Phạm vi kiểm kê:</strong>{' '}
               {stockTake.categoryName ? `Nhóm ngành: ${stockTake.categoryName}` : 'Toàn bộ mặt hàng trong kho (Tổng thể)'}
@@ -1070,10 +1071,10 @@ export const StockTakeDetailPage: React.FC = () => {
           </div>
           <div className="grid grid-cols-4 text-center gap-2">
             <div>
-              <p className="font-bold">Người lập phiếu</p>
+              <p className="font-bold">Thủ kho / Người lập phiếu</p>
               <p className="text-[10px] italic text-gray-600">(Ký, ghi rõ họ tên)</p>
               <div className="h-14"></div>
-              <p className="font-semibold">{stockTake.createdByUsername || 'wh_staff'}</p>
+              <p className="font-semibold text-black">{getUserFullName(stockTake.createdByUsername)}</p>
             </div>
             <div>
               <p className="font-bold">Đại diện kiểm kê</p>
@@ -1088,11 +1089,13 @@ export const StockTakeDetailPage: React.FC = () => {
               <p className="font-semibold text-gray-400">..............................</p>
             </div>
             <div>
-              <p className="font-bold">Quản lý kho / Thủ kho</p>
+              <p className="font-bold">Quản lý kho / Trưởng kho</p>
               <p className="text-[10px] italic text-gray-600">(Ký, đóng dấu)</p>
               <div className="h-14"></div>
-              <p className="font-semibold">
-                {stockTake.closedByUsername || '..............................'}
+              <p className="font-semibold text-black">
+                {stockTake.closedByUsername
+                  ? getUserFullName(stockTake.closedByUsername)
+                  : '..............................'}
               </p>
             </div>
           </div>
