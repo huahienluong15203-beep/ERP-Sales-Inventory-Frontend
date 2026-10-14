@@ -960,15 +960,6 @@ export const StockTakeDetailPage: React.FC = () => {
           )}
         </div>
 
-        {/* Tóm tắt số liệu */}
-        <div className="flex justify-between items-center text-[11px] font-bold pb-1.5 px-1 border-b border-gray-400 mb-2">
-          <span>Tổng số SKU kiểm kê: {lines.length}</span>
-          <span>Khớp số sổ: {stats.match}</span>
-          <span>Lệch thừa (+): {stats.surplus}</span>
-          <span>Lệch thiếu (-): {stats.shortage}</span>
-          {stats.uncounted > 0 && <span>Chưa đếm: {stats.uncounted}</span>}
-        </div>
-
         {/* Bảng in toàn bộ mặt hàng không bị ngắt phân trang */}
         <table className="w-full border-collapse border-2 border-black text-[10px]">
           <thead>
