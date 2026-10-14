@@ -143,7 +143,7 @@ export const GoodsReceiptDetailPage: React.FC = () => {
   const isConfirmed = receipt.status === 'CONFIRMED';
 
   return (
-    <div className="space-y-6 antialiased max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">
+    <div className="space-y-6 antialiased max-w-7xl mx-auto pb-16 print:pb-0 print:m-0 print:max-w-none print:space-y-0 animate-in fade-in duration-200">
       {/* 1. THANH ĐIỀU HƯỚNG QUAY LẠI & BREADCRUMBS (ẨN KHI IN) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
         <div className="flex items-center gap-2">
@@ -599,9 +599,9 @@ export const GoodsReceiptDetailPage: React.FC = () => {
         </div>
 
         {/* Bảng in toàn bộ mặt hàng */}
-        <table className="w-full border-collapse border border-black text-[10px]">
+        <table className="w-full border-collapse border-2 border-black text-[10px]">
           <thead>
-            <tr className="bg-gray-100 border-b border-black text-center font-bold">
+            <tr className="bg-gray-100 border-b-2 border-black text-center font-bold">
               <th className="border border-black py-1 px-1.5 w-7">STT</th>
               <th className="border border-black py-1 px-2 w-24 text-left">Mã SKU</th>
               <th className="border border-black py-1 px-2 text-left">Tên sản phẩm - Quy cách</th>
@@ -615,7 +615,7 @@ export const GoodsReceiptDetailPage: React.FC = () => {
           </thead>
           <tbody>
             {receipt.lines.map((line, idx) => (
-              <tr key={line.id} className="border-b border-black/50 print-avoid-break">
+              <tr key={line.id} className="border-b border-black print-avoid-break">
                 <td className="border border-black py-1 px-1 text-center font-mono">{idx + 1}</td>
                 <td className="border border-black py-1 px-2 font-mono font-bold">{line.productSku}</td>
                 <td className="border border-black py-1 px-2 font-medium">{line.productName}</td>

@@ -360,7 +360,56 @@ table th {
    PRINT STYLES (Chuẩn hóa bản in chứng từ kho & kiểm kê)
    ========================================================================== */
 @media print {
-  /* Ẩn hoàn toàn header, sidebar hệ thống và các nút điều khiển web */
+  /* 1. Vô hiệu hóa animation & transition khi in để không bị kẹt viewport/stacking context */
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* 2. Giải phóng hoàn toàn html, body, root và layout khỏi flexbox / overflow-hidden */
+  html,
+  body {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 10pt !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+    position: static !important;
+  }
+
+  #root,
+  .erp-app-shell,
+  .erp-main-area,
+  .erp-page-content,
+  .erp-page-content > div {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    float: none !important;
+  }
+
+  /* 3. Ẩn hoàn toàn header, sidebar hệ thống và các nút điều khiển web */
   .erp-topbar,
   .erp-sidebar,
   .erp-hamburger-btn,
@@ -369,37 +418,24 @@ table th {
     display: none !important;
   }
 
-  .erp-main-area {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  body {
-    background: #ffffff !important;
-    color: #000000 !important;
-    font-size: 10pt !important;
-  }
-
-  /* Định dạng trang in A4 */
+  /* 4. Định dạng trang in A4 */
   @page {
     size: A4 portrait;
     margin: 10mm 8mm 12mm 8mm;
   }
 
-  /* Tránh ngắt trang giữa hàng bảng hoặc khối chữ ký */
-  tr, .print-avoid-break {
+  /* 5. Tránh ngắt trang giữa hàng bảng hoặc khối chữ ký */
+  tr,
+  .print-avoid-break {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
-  /* Chuẩn hóa viền bảng in không bao giờ bị đứt đoạn hoặc mất gạch chân đáy */
+  /* 6. Chuẩn hóa viền bảng in không bao giờ bị đứt đoạn hoặc mất gạch chân đáy */
   table {
     border-collapse: collapse !important;
     width: 100% !important;
     border: 1.5px solid #000000 !important;
-    border-bottom: 2px solid #000000 !important;
   }
 
   table th,
@@ -409,8 +445,6 @@ table th {
 
   table th {
     background-color: #f3f4f6 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
   }
 
   /* Footer tổng cộng chỉ xuất hiện 1 lần duy nhất ở cuối danh sách */
@@ -424,7 +458,5 @@ table th {
     border-top: 2px solid #000000 !important;
     border-bottom: 2px solid #000000 !important;
     background-color: #f3f4f6 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
   }
 }
