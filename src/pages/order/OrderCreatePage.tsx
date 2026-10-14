@@ -133,15 +133,32 @@ export const OrderCreatePage: React.FC = () => {
       );
     }
 
-    const active = getActiveDraft();
-    if (active && active.items && active.items.length > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCurrentDraftId(active.id);
-      setBackendDraftId(active.backendDraftId || null);
-      setExpectedDeliveryDate(active.expectedDeliveryDate || expectedDeliveryDate);
-      setOrderNote(active.note || '');
-      setItems(active.items || []);
-      restoreAgency(active.agencyId, active.agencyCode, active.agencyName, active.deliveryPointId);
+    const params = new URLSearchParams(window.location.search);
+    const draftIdParam = params.get('draftId');
+    if (draftIdParam && /^\d+$/.test(draftIdParam)) {
+      fetchBackendDraftById(Number(draftIdParam))
+        .then(async (full) => {
+          setBackendDraftId(full.backendDraftId || null);
+          setCurrentDraftId(full.id);
+          setExpectedDeliveryDate(full.expectedDeliveryDate || expectedDeliveryDate);
+          setOrderNote(full.note || '');
+          setItems(full.items || []);
+          await restoreAgency(full.agencyId, full.agencyCode, full.agencyName, full.deliveryPointId);
+        })
+        .catch((err) => {
+          console.warn('Lỗi tải đơn nháp từ URL:', err);
+        });
+    } else {
+      const active = getActiveDraft();
+      if (active && ((active.items && active.items.length > 0) || active.agencyId || active.backendDraftId)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setCurrentDraftId(active.id);
+        setBackendDraftId(active.backendDraftId || null);
+        setExpectedDeliveryDate(active.expectedDeliveryDate || expectedDeliveryDate);
+        setOrderNote(active.note || '');
+        setItems(active.items || []);
+        restoreAgency(active.agencyId, active.agencyCode, active.agencyName, active.deliveryPointId);
+      }
     }
     // Số đơn nháp trên máy chủ (hiện ở nút "Đơn Nháp")
     fetchBackendDrafts()

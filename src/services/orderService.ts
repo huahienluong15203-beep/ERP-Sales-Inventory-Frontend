@@ -799,7 +799,7 @@ export async function updateOrderStatus(
  */
 export async function fetchBackendDrafts(keyword?: string): Promise<OrderDraft[]> {
   const kw = keyword && keyword.trim() ? encodeURIComponent(keyword.trim()) : '';
-  const res = await callBackend(`${API_BASE_URL}/api/orders?status=DRAFT&size=50${kw ? `&keyword=${kw}` : ''}`);
+  const res = await callBackend(`${API_BASE_URL}/api/orders?status=DRAFT&size=200${kw ? `&keyword=${kw}` : ''}`);
   if (!res.ok) throw new Error(await readBackendError(res, 'Không tải được danh sách đơn nháp'));
   const data = await res.json();
   if (data && Array.isArray(data.content)) {
