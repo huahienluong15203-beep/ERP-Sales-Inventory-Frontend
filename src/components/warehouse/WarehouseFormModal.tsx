@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Building2,
   Save,
   RefreshCw,
-  Search,
   ChevronDown,
   Check,
   User
@@ -49,12 +49,20 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // S5-03: Tìm kiếm và lọc người phụ trách kho
+  // S5-03: Ô nhập trực tiếp kiêm chọn dropdown người phụ trách kho
+  const [inputValue, setInputValue] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'WAREHOUSE' | 'ADMIN' | 'OTHER'>('ALL');
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    width: number;
+  } | null>(null);
+
+  const inputContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownPanelRef = useRef<HTMLDivElement>(null);
 
   // Load danh sách nhân sự phụ trách
   const loadManagers = useCallback(async (keyword?: string) => {
@@ -79,7 +87,6 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
 
       setManagers((prev) => {
         if (!keyword) return list;
-        // Hợp nhất kết quả tìm kiếm với danh sách đã có (tránh mất người đang chọn)
         const map = new Map<number, ManagerOption>();
         prev.forEach((item) => map.set(item.id, item));
         list.forEach((item) => map.set(item.id, item));
@@ -97,30 +104,82 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
     loadManagers();
   }, [isOpen, loadManagers]);
 
-  // Debounce gọi server search khi keyword thay đổi (cho trường hợp hệ thống có nhiều user)
+  // Cập nhật vị trí hiển thị của portal dropdown
+  const updateDropdownPosition = useCallback(() => {
+    if (!inputContainerRef.current) return;
+    const rect = inputContainerRef.current.getBoundingClientRect();
+    const vh = window.innerHeight;
+    const spaceBelow = vh - rect.bottom - 10;
+    const openUp = spaceBelow < 220 && rect.top > spaceBelow;
+
+    setDropdownPosition({
+      top: openUp ? undefined : rect.bottom + 4,
+      bottom: openUp ? vh - rect.top + 4 : undefined,
+      left: rect.left,
+      width: rect.width
+    });
+  }, []);
+
+  const openDropdown = () => {
+    updateDropdownPosition();
+    setIsDropdownOpen(true);
+  };
+
+  // Thông tin nhân sự đang được gán
+  const selectedManager = useMemo(() => {
+    if (!managerId) return null;
+    return managers.find((m) => m.id === managerId) || null;
+  }, [managers, managerId]);
+
+  // Kiểm tra xem người dùng đang gõ tìm kiếm mới hay đang hiển thị tên người đã chọn
+  const isTypingSearch = useMemo(() => {
+    if (!selectedManager) return Boolean(inputValue.trim());
+    const selectedText = `${selectedManager.fullName} (@${selectedManager.username})`;
+    return inputValue.trim() !== selectedText;
+  }, [inputValue, selectedManager]);
+
+  const searchKeyword = isTypingSearch ? inputValue.trim().toLowerCase() : '';
+
+  // Debounce gọi server search khi keyword gõ thay đổi
   useEffect(() => {
-    if (!searchQuery.trim() || searchQuery.trim().length < 2) return;
+    if (!searchKeyword || searchKeyword.length < 2) return;
     const timer = setTimeout(() => {
-      loadManagers(searchQuery.trim());
+      loadManagers(searchKeyword);
     }, 350);
     return () => clearTimeout(timer);
-  }, [searchQuery, loadManagers]);
+  }, [searchKeyword, loadManagers]);
 
   // Đóng dropdown khi click ra ngoài
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        inputContainerRef.current &&
+        !inputContainerRef.current.contains(target) &&
+        dropdownPanelRef.current &&
+        !dropdownPanelRef.current.contains(target)
+      ) {
         setIsDropdownOpen(false);
       }
     };
+
+    const handleScrollOrResize = () => {
+      if (isDropdownOpen) {
+        updateDropdownPosition();
+      }
+    };
+
     if (isDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      setTimeout(() => searchInputRef.current?.focus(), 50);
+      window.addEventListener('resize', handleScrollOrResize);
+      window.addEventListener('scroll', handleScrollOrResize, true);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleScrollOrResize);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
     };
-  }, [isDropdownOpen]);
+  }, [isDropdownOpen, updateDropdownPosition]);
 
   // Trả về nhãn và màu sắc vai trò
   const getRoleBadge = (roles: string[] = []) => {
@@ -176,41 +235,64 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
         if (isWhOrAdmin) return false;
       }
 
-      // 2. Tìm kiếm theo từ khóa
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase().trim();
-      const matchName = m.fullName.toLowerCase().includes(q);
-      const matchUsername = m.username.toLowerCase().includes(q);
-      const matchEmail = m.email?.toLowerCase().includes(q) ?? false;
+      // 2. Tìm kiếm theo từ khóa đang gõ
+      if (!searchKeyword) return true;
+      const matchName = m.fullName.toLowerCase().includes(searchKeyword);
+      const matchUsername = m.username.toLowerCase().includes(searchKeyword);
+      const matchEmail = m.email?.toLowerCase().includes(searchKeyword) ?? false;
       return matchName || matchUsername || matchEmail;
     });
-  }, [managers, roleFilter, searchQuery]);
+  }, [managers, roleFilter, searchKeyword]);
 
-  // Thông tin nhân sự đang được gán
-  const selectedManager = useMemo(() => {
-    if (!managerId) return null;
-    return managers.find((m) => m.id === managerId) || null;
-  }, [managers, managerId]);
+  const handleSelectManager = (m: ManagerOption) => {
+    setManagerId(m.id);
+    setInputValue(`${m.fullName} (@${m.username})`);
+    setIsDropdownOpen(false);
+  };
+
+  const handleClearManager = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setManagerId(null);
+    setInputValue('');
+    setIsDropdownOpen(false);
+    inputRef.current?.focus();
+  };
 
   useEffect(() => {
     if (warehouseToEdit) {
       setCode(warehouseToEdit.code);
       setName(warehouseToEdit.name);
       setAddress(warehouseToEdit.address || '');
-      setManagerId(warehouseToEdit.manager ? warehouseToEdit.manager.id : null);
+      const mId = warehouseToEdit.manager ? warehouseToEdit.manager.id : null;
+      setManagerId(mId);
       setStatus(warehouseToEdit.status);
+      if (warehouseToEdit.manager) {
+        setInputValue(`${warehouseToEdit.manager.fullName} (@${warehouseToEdit.manager.username})`);
+      } else {
+        setInputValue('');
+      }
     } else {
       setCode('');
       setName('');
       setAddress('');
       setManagerId(null);
       setStatus('ACTIVE');
+      setInputValue('');
     }
     setErrorMsg('');
     setIsDropdownOpen(false);
-    setSearchQuery('');
     setRoleFilter('ALL');
   }, [warehouseToEdit, isOpen]);
+
+  // Đồng bộ lại text nếu danh sách managers được nạp sau
+  useEffect(() => {
+    if (managerId && managers.length > 0 && !isDropdownOpen) {
+      const found = managers.find((m) => m.id === managerId);
+      if (found) {
+        setInputValue(`${found.fullName} (@${found.username})`);
+      }
+    }
+  }, [managerId, managers, isDropdownOpen]);
 
   if (!isOpen) return null;
 
@@ -387,16 +469,16 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
             />
           </div>
 
-          {/* Quản lý kho phụ trách với bộ lọc và tìm kiếm */}
-          <div className="relative" ref={dropdownRef}>
+          {/* Quản lý kho phụ trách: Ô nhập trực tiếp kiêm chọn dropdown */}
+          <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-semibold text-gray-700">
                 Nhân sự phụ trách kho
               </label>
-              {selectedManager && (
+              {managerId && (
                 <button
                   type="button"
-                  onClick={() => setManagerId(null)}
+                  onClick={handleClearManager}
                   className="text-[11px] text-rose-500 hover:text-rose-700 font-medium transition cursor-pointer"
                 >
                   Gỡ bỏ người phụ trách
@@ -404,82 +486,104 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
               )}
             </div>
 
-            {/* Khung hiển thị nhân sự được chọn / Trigger mở dropdown */}
+            {/* Ô input chính: Cho phép nhập trực tiếp VÀ click chọn */}
             <div
-              onClick={() => setIsDropdownOpen((prev) => !prev)}
-              className={`w-full min-h-[42px] px-3 py-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+              ref={inputContainerRef}
+              className={`w-full min-h-[42px] px-3 rounded-xl border transition-all flex items-center gap-2 bg-white ${
                 isDropdownOpen
-                  ? 'border-[#F85606] ring-2 ring-orange-100 bg-white'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
+                  ? 'border-[#F85606] ring-2 ring-orange-100'
+                  : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              {selectedManager ? (
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-full bg-orange-100 text-[#F85606] font-bold text-xs flex items-center justify-center shrink-0">
-                    {selectedManager.fullName.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-bold text-gray-900 truncate">
-                      {selectedManager.fullName}
-                    </span>
-                    <span className="text-[11px] text-gray-400 font-mono">
-                      (@{selectedManager.username})
-                    </span>
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded border font-semibold ${
-                        getRoleBadge(selectedManager.roles).color
-                      }`}
-                    >
-                      {getRoleBadge(selectedManager.roles).label}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-gray-400 text-xs">
-                  <User size={15} />
-                  <span>-- Chưa gán người phụ trách --</span>
-                </div>
+              <User size={16} className={selectedManager ? 'text-[#F85606] shrink-0' : 'text-gray-400 shrink-0'} />
+
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputValue}
+                onFocus={openDropdown}
+                onClick={openDropdown}
+                onChange={(e) => {
+                  setInputValue(e.target.value);
+                  if (!isDropdownOpen) openDropdown();
+                }}
+                placeholder="Nhập tên, username hoặc bấm để chọn..."
+                className="flex-1 h-9 text-xs text-gray-900 bg-transparent outline-none placeholder:text-gray-400 font-medium"
+              />
+
+              {/* Badge vai trò nếu đã chọn một người */}
+              {selectedManager && !isTypingSearch && (
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded border font-semibold shrink-0 hidden sm:inline-block ${
+                    getRoleBadge(selectedManager.roles).color
+                  }`}
+                >
+                  {getRoleBadge(selectedManager.roles).label}
+                </span>
               )}
 
-              <ChevronDown
-                size={16}
-                className={`text-gray-400 transition-transform duration-200 shrink-0 ${
-                  isDropdownOpen ? 'rotate-180 text-[#F85606]' : ''
-                }`}
-              />
+              {/* Nút X xóa nhanh */}
+              {(inputValue || managerId) && (
+                <button
+                  type="button"
+                  onClick={handleClearManager}
+                  className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer shrink-0"
+                  title="Xóa lựa chọn"
+                >
+                  <X size={14} />
+                </button>
+              )}
+
+              {/* Mũi tên toggle mở/đóng */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (isDropdownOpen) {
+                    setIsDropdownOpen(false);
+                  } else {
+                    openDropdown();
+                    inputRef.current?.focus();
+                  }
+                }}
+                className="p-1 rounded-md text-gray-400 hover:text-gray-600 transition cursor-pointer shrink-0"
+              >
+                <ChevronDown
+                  size={16}
+                  className={`transition-transform duration-200 ${
+                    isDropdownOpen ? 'rotate-180 text-[#F85606]' : ''
+                  }`}
+                />
+              </button>
             </div>
 
-            {/* Menu Popover mở lên trên để không che các nút thao tác bên dưới */}
-            {isDropdownOpen && (
-              <div className="absolute left-0 right-0 bottom-full mb-1.5 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
-                {/* 1. Ô tìm kiếm */}
-                <div className="relative mb-2">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Tìm theo họ tên, username..."
-                    className="w-full h-9 pl-8 pr-7 text-xs rounded-xl border border-gray-200 bg-gray-50/70 focus:bg-white focus:outline-none focus:border-[#F85606] transition"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      <X size={13} />
-                    </button>
-                  )}
-                </div>
+            {loadingManagers && !isDropdownOpen && (
+              <span className="text-[10px] text-gray-400 mt-0.5 block">Đang tải danh sách nhân sự...</span>
+            )}
+          </div>
 
-                {/* 2. Thanh lọc theo vai trò (Role Filters) */}
-                <div className="flex items-center gap-1.5 mb-2 overflow-x-auto pb-1 no-scrollbar">
+          {/* Portal Dropdown Menu hiển thị nổi toàn cục (không bao giờ bị cắt hay che) */}
+          {isDropdownOpen &&
+            dropdownPosition &&
+            createPortal(
+              <div
+                ref={dropdownPanelRef}
+                style={{
+                  position: 'fixed',
+                  top: dropdownPosition.top,
+                  bottom: dropdownPosition.bottom,
+                  left: dropdownPosition.left,
+                  width: dropdownPosition.width,
+                  zIndex: 100002
+                }}
+                className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-2.5 animate-in fade-in-0 zoom-in-95 duration-150 text-xs"
+              >
+                {/* 1. Các chip lọc nhanh theo vai trò */}
+                <div className="flex items-center gap-1.5 mb-2 overflow-x-auto pb-1 no-scrollbar border-b border-gray-100 pt-0.5">
                   <button
                     type="button"
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setRoleFilter('ALL')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer shrink-0 ${
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition cursor-pointer shrink-0 ${
                       roleFilter === 'ALL'
                         ? 'bg-[#F85606] text-white shadow-xs'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -489,8 +593,9 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
                   </button>
                   <button
                     type="button"
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setRoleFilter('WAREHOUSE')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer shrink-0 ${
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition cursor-pointer shrink-0 ${
                       roleFilter === 'WAREHOUSE'
                         ? 'bg-[#F85606] text-white shadow-xs'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -500,8 +605,9 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
                   </button>
                   <button
                     type="button"
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setRoleFilter('ADMIN')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer shrink-0 ${
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition cursor-pointer shrink-0 ${
                       roleFilter === 'ADMIN'
                         ? 'bg-[#F85606] text-white shadow-xs'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -512,8 +618,9 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
                   {filterCounts.other > 0 && (
                     <button
                       type="button"
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => setRoleFilter('OTHER')}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer shrink-0 ${
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition cursor-pointer shrink-0 ${
                         roleFilter === 'OTHER'
                           ? 'bg-[#F85606] text-white shadow-xs'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -524,14 +631,12 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
                   )}
                 </div>
 
-                {/* 3. Danh sách người dùng cuộn mượt mà */}
-                <div className="max-h-52 overflow-y-auto space-y-1 divide-y divide-gray-50 pr-0.5">
+                {/* 2. Danh sách nhân sự cuộn mượt mà */}
+                <div className="max-h-56 overflow-y-auto space-y-0.5 divide-y divide-gray-50 pr-0.5">
                   {/* Tùy chọn bỏ gán */}
                   <div
-                    onClick={() => {
-                      setManagerId(null);
-                      setIsDropdownOpen(false);
-                    }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={handleClearManager}
                     className={`p-2 rounded-xl text-xs flex items-center justify-between cursor-pointer transition ${
                       managerId === null
                         ? 'bg-orange-50/70 text-[#F85606] font-bold'
@@ -553,11 +658,9 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
                     return (
                       <div
                         key={m.id}
-                        onClick={() => {
-                          setManagerId(m.id);
-                          setIsDropdownOpen(false);
-                        }}
-                        className={`p-2 rounded-xl text-xs flex items-center justify-between cursor-pointer transition pt-2 ${
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleSelectManager(m)}
+                        className={`p-2 rounded-xl text-xs flex items-center justify-between cursor-pointer transition pt-1.5 ${
                           isSelected
                             ? 'bg-orange-50/70 text-[#F85606]'
                             : 'hover:bg-gray-50 text-gray-800'
@@ -605,17 +708,13 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
 
                   {filteredManagers.length === 0 && (
                     <div className="py-6 text-center text-gray-400 text-xs">
-                      {loadingManagers ? 'Đang tìm kiếm...' : 'Không tìm thấy nhân sự phù hợp'}
+                      {loadingManagers ? 'Đang truy vấn...' : 'Không tìm thấy nhân sự phù hợp'}
                     </div>
                   )}
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
-
-            {loadingManagers && !isDropdownOpen && (
-              <span className="text-[10px] text-gray-400 mt-0.5 block">Đang tải danh sách nhân sự...</span>
-            )}
-          </div>
 
           {/* Buttons */}
           <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2.5">
