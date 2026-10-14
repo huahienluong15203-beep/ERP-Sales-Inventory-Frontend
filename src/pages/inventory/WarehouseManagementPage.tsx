@@ -11,10 +11,7 @@ import {
   User,
   CheckCircle2,
   AlertCircle,
-  Filter,
-  ChevronRight,
-  Boxes,
-  HelpCircle
+  ChevronRight
 } from 'lucide-react';
 import type { Warehouse, WarehouseLocation, LocationType } from '../../types/warehouse';
 import {
@@ -233,53 +230,35 @@ export const WarehouseManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 animate-fadeIn">
-      {/* 1. Header Trang */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400">
-              <Building2 size={26} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                Quản lý Kho & Vị trí lưu kho
-              </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                Theo dõi hệ thống kho hàng và sơ đồ phân khu, kệ hàng, tầng giá, ô chứa
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* 1. Header Trang & Nút thao tác chính */}
+      <div className="flex items-center justify-end gap-2.5">
+        <button
+          type="button"
+          onClick={() => {
+            loadWarehouses();
+            if (selectedWarehouse?.id) loadLocations(selectedWarehouse.id);
+          }}
+          disabled={loadingWarehouses || loadingLocations}
+          className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-sm transition-all"
+          title="Làm mới dữ liệu"
+        >
+          <RefreshCw size={16} className={loadingWarehouses || loadingLocations ? 'animate-spin' : ''} />
+          <span className="hidden sm:inline">Làm mới</span>
+        </button>
 
-        <div className="flex items-center gap-2.5">
+        {canManage && (
           <button
             type="button"
             onClick={() => {
-              loadWarehouses();
-              if (selectedWarehouse?.id) loadLocations(selectedWarehouse.id);
+              setWarehouseToEdit(null);
+              setIsWarehouseModalOpen(true);
             }}
-            disabled={loadingWarehouses || loadingLocations}
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-sm transition-all"
-            title="Làm mới dữ liệu"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold shadow-md shadow-orange-600/20 hover:shadow-orange-600/30 transition-all active:scale-[0.98]"
           >
-            <RefreshCw size={16} className={loadingWarehouses || loadingLocations ? 'animate-spin' : ''} />
-            <span className="hidden sm:inline">Làm mới</span>
+            <Plus size={18} />
+            <span>Thêm kho mới</span>
           </button>
-
-          {canManage && (
-            <button
-              type="button"
-              onClick={() => {
-                setWarehouseToEdit(null);
-                setIsWarehouseModalOpen(true);
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold shadow-md shadow-orange-600/20 hover:shadow-orange-600/30 transition-all active:scale-[0.98]"
-            >
-              <Plus size={18} />
-              <span>Thêm kho mới</span>
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* 2. Thẻ KPI Thống Kê Tổng Quan */}
@@ -481,10 +460,10 @@ export const WarehouseManagementPage: React.FC = () => {
                             <span className="truncate">{wh.address}</span>
                           </div>
                         )}
-                        {wh.managerName && (
+                        {(wh.manager?.fullName || wh.managerName) && (
                           <div className="flex items-center gap-1.5 truncate">
                             <User size={13} className="shrink-0 text-slate-400" />
-                            <span className="truncate">Quản lý: {wh.managerName}</span>
+                            <span className="truncate">Quản lý: {wh.manager?.fullName || wh.managerName}</span>
                           </div>
                         )}
                       </div>
@@ -536,9 +515,6 @@ export const WarehouseManagementPage: React.FC = () => {
                           {selectedWarehouse.status === 'ACTIVE' ? 'Hoạt động' : 'Tạm ngừng'}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        Sơ đồ phân bổ không gian lưu trữ: Phân khu &bull; Dãy kệ &bull; Tầng giá &bull; Ô chứa hàng
-                      </p>
                     </div>
 
                     {canManage && (

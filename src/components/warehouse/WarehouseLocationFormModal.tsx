@@ -146,7 +146,7 @@ export const WarehouseLocationFormModal: React.FC<WarehouseLocationFormModalProp
                 {isEdit ? 'Chỉnh sửa vị trí lưu kho' : 'Thêm mới vị trí lưu kho'}
               </h3>
               <p className="text-[11px] text-gray-500">
-                Kho: <strong className="text-gray-700">{warehouse.name}</strong> ({warehouse.code})
+                Kho: <strong className="text-gray-700">{warehouse.name}</strong>
               </p>
             </div>
           </div>
