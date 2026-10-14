@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft,
   ClipboardList,
@@ -8,13 +8,9 @@ import {
   AlertCircle,
   Search,
   Check,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Package,
   Loader2,
-  ArrowDown
+  X
 } from 'lucide-react';
 import type { WarehouseOption } from '../../types/inventory';
 import type { CategoryWithCount } from '../../services/categoryApi';
@@ -22,8 +18,8 @@ import { fetchCategories } from '../../services/categoryApi';
 import { createStockTake, fetchWarehousesList } from '../../services/stockTakeApi';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
-
-const CATEGORY_PAGE_SIZE = 8;
+import { Pagination } from '../../components/common/Pagination';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const StockTakeCreatePage: React.FC = () => {
   const navigate = useNavigate();
@@ -38,12 +34,11 @@ export const StockTakeCreatePage: React.FC = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | ''>('');
   const [note, setNote] = useState<string>('');
 
-  // Category search, pagination & infinite scroll
+  // Category search, level filter & pagination (Table view giống Danh mục NCC)
   const [catKeyword, setCatKeyword] = useState<string>('');
-  const [catPage, setCatPage] = useState<number>(1);
-  const [viewMode, setViewMode] = useState<'PAGE' | 'SCROLL'>('PAGE');
-  const [visibleScrollCount, setVisibleScrollCount] = useState<number>(8);
-  const scrollSentinelRef = useRef<HTMLDivElement | null>(null);
+  const [catLevelFilter, setCatLevelFilter] = useState<string>('ALL');
+  const [catPage, setCatPage] = useState<number>(0); // 0-indexed cho Pagination
+  const [catPageSize, setCatPageSize] = useState<number>(10);
 
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
@@ -79,51 +74,46 @@ export const StockTakeCreatePage: React.FC = () => {
     };
   }, []);
 
-  // Lọc danh mục nhóm hàng theo từ khóa
+  // Map tra cứu tên nhóm cha nhanh
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    categories.forEach((c) => {
+      map.set(String(c.id), c.name);
+    });
+    return map;
+  }, [categories]);
+
+  // Lọc danh mục nhóm hàng theo từ khóa và phân cấp
   const filteredCategories = useMemo(() => {
-    if (!catKeyword.trim()) return categories;
-    const kw = catKeyword.trim().toLowerCase();
-    return categories.filter(
-      (c) =>
-        c.name.toLowerCase().includes(kw) ||
-        (c.code && c.code.toLowerCase().includes(kw))
-    );
-  }, [categories, catKeyword]);
-
-  // Phân trang danh mục nhóm hàng
-  const totalCatPages = Math.ceil(filteredCategories.length / CATEGORY_PAGE_SIZE) || 1;
-
-  useEffect(() => {
-    setCatPage(1);
-    setVisibleScrollCount(8);
-  }, [catKeyword]);
-
-  // IntersectionObserver khi ở chế độ cuộn tải tiếp
-  useEffect(() => {
-    if (viewMode !== 'SCROLL') return;
-    const el = scrollSentinelRef.current;
-    if (!el) return;
-    if (visibleScrollCount >= filteredCategories.length) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleScrollCount((prev) => Math.min(prev + 8, filteredCategories.length));
-        }
-      },
-      { threshold: 0.1 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [viewMode, visibleScrollCount, filteredCategories.length]);
-
-  const displayedCategories = useMemo(() => {
-    if (viewMode === 'SCROLL') {
-      return filteredCategories.slice(0, visibleScrollCount);
+    let list = categories;
+    if (catKeyword.trim()) {
+      const kw = catKeyword.trim().toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.name.toLowerCase().includes(kw) ||
+          (c.code && c.code.toLowerCase().includes(kw))
+      );
     }
-    const start = (catPage - 1) * CATEGORY_PAGE_SIZE;
-    return filteredCategories.slice(start, start + CATEGORY_PAGE_SIZE);
-  }, [filteredCategories, viewMode, visibleScrollCount, catPage]);
+    if (catLevelFilter === 'LEVEL_1') {
+      list = list.filter((c) => c.level === 1 || !c.parentId);
+    } else if (catLevelFilter === 'LEVEL_2') {
+      list = list.filter((c) => c.level === 2 || Boolean(c.parentId));
+    }
+    return list;
+  }, [categories, catKeyword, catLevelFilter]);
+
+  // Phân trang danh mục nhóm hàng dạng bảng (Pagination 0-indexed)
+  const totalCatElements = filteredCategories.length;
+  const totalCatPages = Math.ceil(totalCatElements / catPageSize) || 1;
+
+  const paginatedCategories = useMemo(() => {
+    const start = catPage * catPageSize;
+    return filteredCategories.slice(start, start + catPageSize);
+  }, [filteredCategories, catPage, catPageSize]);
+
+  useEffect(() => {
+    setCatPage(0);
+  }, [catKeyword, catLevelFilter]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,7 +150,7 @@ export const StockTakeCreatePage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 antialiased max-w-5xl mx-auto pb-16 animate-in fade-in duration-200">
+    <div className="w-full min-w-0 space-y-5 antialiased pb-16 animate-in fade-in duration-200">
       {/* 1. THANH ĐIỀU HƯỚNG QUAY LẠI & BREADCRUMBS */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -226,7 +216,7 @@ export const StockTakeCreatePage: React.FC = () => {
             <span>1. Kho Kiểm Kê <span className="text-rose-500">*</span></span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {warehouses.map((w) => {
               const isSelected = Number(w.id) === Number(selectedWarehouseId);
               return (
@@ -263,7 +253,7 @@ export const StockTakeCreatePage: React.FC = () => {
           </div>
         </div>
 
-        {/* KHỐI 2: CHỌN PHẠM VI NHÓM HÀNG (CÓ PHÂN TRANG ĐẦY ĐỦ, CUỘN TẢI TIẾP, KHÔNG ĐỔ DANH SÁCH LÊN TRÊN) */}
+        {/* KHỐI 2: CHỌN PHẠM VI NHÓM HÀNG (DẠNG BẢNG DANH SÁCH GIỐNG DANH MỤC NHÀ CUNG CẤP) */}
         <div className="bg-white rounded-3xl p-5 sm:p-6 border border-gray-200 shadow-2xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-gray-100">
             <div className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wider">
@@ -271,54 +261,21 @@ export const StockTakeCreatePage: React.FC = () => {
               <span>2. Phạm Vi Nhóm Hàng Cần Kiểm Kê</span>
             </div>
 
-            <div className="flex items-center gap-3 flex-wrap">
-              {/* Chế độ xem: Phân trang hoặc Cuộn tải tiếp */}
-              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl border border-gray-200 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setViewMode('PAGE')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
-                    viewMode === 'PAGE'
-                      ? 'bg-white text-gray-900 shadow-2xs'
-                      : 'text-gray-500 hover:text-gray-900'
-                  }`}
-                >
-                  Phân trang
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode('SCROLL')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
-                    viewMode === 'SCROLL'
-                      ? 'bg-white text-gray-900 shadow-2xs'
-                      : 'text-gray-500 hover:text-gray-900'
-                  }`}
-                >
-                  Cuộn tải tiếp
-                </button>
-              </div>
-
-              {/* Trạng thái phân trang rõ ràng */}
-              <div className="text-xs text-gray-500 font-medium">
-                {viewMode === 'PAGE' ? (
-                  <>
-                    Đang hiển thị:{' '}
-                    <strong className="text-gray-900 font-mono">
-                      {filteredCategories.length === 0 ? 0 : (catPage - 1) * CATEGORY_PAGE_SIZE + 1} -{' '}
-                      {Math.min(catPage * CATEGORY_PAGE_SIZE, filteredCategories.length)}
-                    </strong>{' '}
-                    / <strong className="text-[#F85606] font-mono">{filteredCategories.length}</strong> nhóm
-                  </>
-                ) : (
-                  <>
-                    Đã tải:{' '}
-                    <strong className="text-gray-900 font-mono">
-                      {Math.min(visibleScrollCount, filteredCategories.length)}
-                    </strong>{' '}
-                    / <strong className="text-[#F85606] font-mono">{filteredCategories.length}</strong> nhóm
-                  </>
-                )}
-              </div>
+            <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+              <span>
+                Tổng cộng: <strong className="text-[#F85606] font-mono">{filteredCategories.length}</strong> nhóm hàng
+              </span>
+              {selectedCategoryId ? (
+                <span className="ml-2 px-2.5 py-0.5 rounded-full bg-orange-100 text-[#F85606] font-bold text-[11px] inline-flex items-center gap-1">
+                  <Check size={11} strokeWidth={3} />
+                  <span>Đang chọn: {categoryMap.get(String(selectedCategoryId)) || `ID #${selectedCategoryId}`}</span>
+                </span>
+              ) : (
+                <span className="ml-2 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px] inline-flex items-center gap-1">
+                  <Check size={11} strokeWidth={3} />
+                  <span>Kiểm kê toàn bộ kho</span>
+                </span>
+              )}
             </div>
           </div>
 
@@ -355,185 +312,209 @@ export const StockTakeCreatePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Tìm kiếm nhóm hàng cụ thể */}
+          {/* Chọn một nhóm hàng cụ thể dạng Bảng giống Danh mục Nhà cung cấp */}
           <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <span className="text-xs font-bold text-gray-700 uppercase">
-                Hoặc chọn một nhóm hàng cụ thể:
-              </span>
-              <div className="relative min-w-[240px]">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Tìm nhóm hàng theo tên, mã..."
-                  value={catKeyword}
-                  onChange={(e) => setCatKeyword(e.target.value)}
-                  className="w-full pl-8.5 pr-3 py-1.5 rounded-xl border border-gray-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20"
-                />
-              </div>
-            </div>
+            <span className="text-xs font-bold text-gray-700 uppercase block">
+              Hoặc chọn một nhóm hàng cụ thể:
+            </span>
 
-            {/* Danh sách nhóm hàng dạng Grid / Card mở to trên trang (không đổ ngược lên trên) */}
-            {loadingData ? (
-              <div className="py-8 text-center space-y-2">
-                <Loader2 size={24} className="animate-spin text-[#F85606] mx-auto" />
-                <p className="text-xs text-gray-400">Đang tải danh sách nhóm hàng...</p>
-              </div>
-            ) : filteredCategories.length === 0 ? (
-              <div className="py-8 text-center text-xs text-gray-400 border border-dashed border-gray-200 rounded-2xl">
-                Không tìm thấy nhóm hàng phù hợp với từ khóa &ldquo;{catKeyword}&rdquo;
-              </div>
-            ) : (
-              <div
-                className={
-                  viewMode === 'SCROLL'
-                    ? 'max-h-[380px] overflow-y-auto pr-1 space-y-3 custom-scrollbar'
-                    : 'space-y-3'
-                }
-              >
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                  {displayedCategories.map((c) => {
-                    const isSelected = Number(c.id) === Number(selectedCategoryId);
-                    return (
-                      <div
-                        key={c.id}
-                        onClick={() => setSelectedCategoryId(Number(c.id))}
-                        className={`p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between gap-2.5 ${
-                          isSelected
-                            ? 'border-[#F85606] bg-orange-50/60 shadow-xs ring-1 ring-[#F85606]'
-                            : 'border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50/20'
-                        }`}
-                      >
-                        <div className="space-y-0.5 min-w-0">
-                          {c.code && (
-                            <span className="font-mono text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.2 rounded border border-gray-200 inline-block">
-                              {c.code}
-                            </span>
-                          )}
-                          <h5 className="font-bold text-gray-900 text-xs truncate" title={c.name}>
-                            {c.name}
-                          </h5>
-                          <p className="text-[10px] text-gray-400 font-mono">
-                            {c.productCount ?? 0} SKU trực thuộc
-                          </p>
-                        </div>
-                        <div
-                          className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                            isSelected
-                              ? 'border-[#F85606] bg-[#F85606] text-white'
-                              : 'border-gray-300 bg-white'
-                          }`}
-                        >
-                          {isSelected && <Check size={10} strokeWidth={3} />}
-                        </div>
-                      </div>
-                    );
-                  })}
+            <div className="border border-gray-200 rounded-2xl sm:rounded-3xl bg-white shadow-2xs overflow-hidden">
+              {/* Thanh tìm kiếm & bộ lọc giống bảng Danh mục nhà cung cấp */}
+              <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white">
+                {/* Ô tìm kiếm */}
+                <div className="relative flex-1 min-w-[240px]">
+                  <Search
+                    size={16}
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                  <input
+                    type="text"
+                    value={catKeyword}
+                    onChange={(e) => setCatKeyword(e.target.value)}
+                    placeholder="Tìm theo mã, tên nhóm hàng..."
+                    aria-label="Tìm kiếm nhóm hàng"
+                    className="w-full pl-10 pr-8 py-2 text-xs rounded-xl border border-gray-200 bg-gray-50/50 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 focus:bg-white transition-all min-h-[38px]"
+                  />
+                  {catKeyword && (
+                    <button
+                      type="button"
+                      onClick={() => setCatKeyword('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
 
-                {/* Phần tử Sentinel cuộn tải tiếp (Infinite scroll) */}
-                {viewMode === 'SCROLL' && (
-                  <div className="pt-2">
-                    {visibleScrollCount < filteredCategories.length ? (
-                      <div
-                        ref={scrollSentinelRef}
-                        className="p-3 text-center rounded-xl bg-orange-50/50 border border-orange-100 text-xs text-gray-500 flex items-center justify-center gap-2"
-                      >
-                        <ArrowDown size={14} className="text-[#F85606] animate-bounce" />
-                        <span>
-                          Cuộn tiếp để tải thêm nhóm hàng (Đã hiển thị {visibleScrollCount}/
-                          {filteredCategories.length})
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setVisibleScrollCount((prev) =>
-                              Math.min(prev + 8, filteredCategories.length)
-                            )
-                          }
-                          className="ml-2 px-2 py-0.5 rounded-lg bg-white border border-orange-200 text-[#F85606] font-bold hover:bg-orange-50 transition"
-                        >
-                          Tải thêm +8
-                        </button>
-                      </div>
+                {/* Bộ lọc phân cấp & số dòng / trang */}
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="text-xs text-gray-500 hidden sm:inline">Phân cấp:</span>
+                  <SearchSelect
+                    value={catLevelFilter}
+                    onChange={(e) => setCatLevelFilter(e.target.value)}
+                    aria-label="Lọc theo phân cấp nhóm hàng"
+                    className="px-3 py-2 text-xs rounded-xl border border-gray-200 bg-white text-gray-700 focus:outline-none focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 cursor-pointer min-h-[38px]"
+                  >
+                    <option value="ALL">Tất cả phân cấp</option>
+                    <option value="LEVEL_1">Cấp 1 - Ngành hàng gốc</option>
+                    <option value="LEVEL_2">Cấp 2 - Nhóm hàng trực thuộc</option>
+                  </SearchSelect>
+
+                  <SearchSelect
+                    value={catPageSize}
+                    onChange={(e) => setCatPageSize(Number(e.target.value))}
+                    aria-label="Số dòng trên mỗi trang"
+                    className="px-3 py-2 text-xs rounded-xl border border-gray-200 bg-white text-gray-700 focus:outline-none focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 cursor-pointer min-h-[38px]"
+                  >
+                    <option value={10}>10 dòng / trang</option>
+                    <option value={20}>20 dòng / trang</option>
+                    <option value={50}>50 dòng / trang</option>
+                  </SearchSelect>
+                </div>
+              </div>
+
+              {/* Bảng danh sách nhóm hàng */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50 text-[11px] font-bold text-gray-600 uppercase tracking-wider">
+                      <th className="py-3 px-4 w-12 text-center">Chọn</th>
+                      <th className="py-3 px-4 whitespace-nowrap min-w-[140px]">Mã nhóm hàng</th>
+                      <th className="py-3 px-4 min-w-[220px]">Tên nhóm hàng</th>
+                      <th className="py-3 px-4 min-w-[170px]">Cấp bậc / Ngành cha</th>
+                      <th className="py-3 px-4 whitespace-nowrap">Số lượng SKU</th>
+                      <th className="py-3 px-4 sm:px-6 text-right whitespace-nowrap">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 text-xs">
+                    {loadingData ? (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-gray-400">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <Loader2 size={24} className="animate-spin text-[#F85606]" />
+                            <span className="text-gray-600 font-medium">Đang tải danh sách nhóm hàng...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : paginatedCategories.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-10 text-center text-gray-400">
+                          Không tìm thấy nhóm hàng phù hợp với từ khóa &ldquo;{catKeyword}&rdquo;
+                        </td>
+                      </tr>
                     ) : (
-                      <div className="p-2 text-center text-xs text-gray-400 italic">
-                        Đã tải toàn bộ {filteredCategories.length} nhóm hàng
-                      </div>
+                      paginatedCategories.map((c) => {
+                        const isSelected = Number(c.id) === Number(selectedCategoryId);
+                        const parentName = c.parentId ? categoryMap.get(String(c.parentId)) : null;
+
+                        return (
+                          <tr
+                            key={c.id}
+                            onClick={() => setSelectedCategoryId(Number(c.id))}
+                            className={`transition-colors cursor-pointer group ${
+                              isSelected
+                                ? 'bg-orange-50/80 font-medium'
+                                : 'hover:bg-gray-50/80 bg-white'
+                            }`}
+                          >
+                            {/* Cột 1: Radio Chọn */}
+                            <td className="py-3.5 px-4 text-center">
+                              <div
+                                className={`w-4 h-4 rounded-full border mx-auto flex items-center justify-center transition ${
+                                  isSelected
+                                    ? 'border-[#F85606] bg-[#F85606] text-white shadow-2xs'
+                                    : 'border-gray-300 bg-white group-hover:border-orange-400'
+                                }`}
+                              >
+                                {isSelected && <Check size={10} strokeWidth={3} />}
+                              </div>
+                            </td>
+
+                            {/* Cột 2: Mã nhóm */}
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              <span className="font-mono text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md border border-gray-200">
+                                {c.code || '—'}
+                              </span>
+                            </td>
+
+                            {/* Cột 3: Tên nhóm hàng */}
+                            <td className="py-3.5 px-4">
+                              <div className="space-y-0.5">
+                                <span className={`text-xs block ${isSelected ? 'text-[#F85606] font-bold' : 'text-gray-900 font-bold'}`}>
+                                  {c.name}
+                                </span>
+                                {c.description && (
+                                  <p className="text-[11px] text-gray-400 line-clamp-1">{c.description}</p>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Cột 4: Cấp bậc / Ngành cha */}
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              {parentName ? (
+                                <div className="flex items-center gap-1.5 text-gray-600">
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-bold">
+                                    Cấp 2
+                                  </span>
+                                  <span className="truncate max-w-[160px]" title={parentName}>
+                                    {parentName}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-bold">
+                                  Cấp 1 • Ngành hàng gốc
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Cột 5: Số SKU trực thuộc */}
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-700">
+                                <strong className="text-gray-900 font-mono">{c.productCount ?? 0}</strong> SKU
+                              </span>
+                            </td>
+
+                            {/* Cột 6: Thao tác / Trạng thái */}
+                            <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+                              {isSelected ? (
+                                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold bg-[#F85606] text-white shadow-2xs">
+                                  <Check size={12} strokeWidth={3} />
+                                  <span>Đang chọn</span>
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedCategoryId(Number(c.id));
+                                  }}
+                                  className="px-3 py-1 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 hover:text-[#F85606] hover:border-orange-300 hover:bg-orange-50 transition cursor-pointer"
+                                >
+                                  Chọn nhóm này
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
-                  </div>
-                )}
+                  </tbody>
+                </table>
               </div>
-            )}
 
-            {/* Phân trang đầy đủ cho danh sách nhóm hàng (khi ở chế độ Phân trang) */}
-            {viewMode === 'PAGE' && totalCatPages > 1 && (
-              <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-xs">
-                <span className="text-gray-500">
-                  Trang <strong className="text-gray-900">{catPage}</strong> /{' '}
-                  <strong className="text-gray-900">{totalCatPages}</strong>
-                </span>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setCatPage(1)}
-                    disabled={catPage === 1}
-                    className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-orange-50 hover:text-[#F85606] disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
-                    title="Trang đầu"
-                  >
-                    <ChevronsLeft size={13} />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setCatPage((p) => Math.max(1, p - 1))}
-                    disabled={catPage === 1}
-                    className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-orange-50 hover:text-[#F85606] disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
-                    title="Trang trước"
-                  >
-                    <ChevronLeft size={13} />
-                  </button>
-
-                  <div className="flex items-center gap-1 px-1">
-                    {Array.from({ length: totalCatPages }, (_, i) => i + 1).map((p) => (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => setCatPage(p)}
-                        className={`min-w-[26px] h-6.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                          catPage === p
-                            ? 'bg-[#F85606] text-white shadow-xs'
-                            : 'bg-white border border-gray-200 text-gray-700 hover:bg-orange-50 hover:text-[#F85606]'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setCatPage((p) => Math.min(totalCatPages, p + 1))}
-                    disabled={catPage === totalCatPages}
-                    className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-orange-50 hover:text-[#F85606] disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
-                    title="Trang sau"
-                  >
-                    <ChevronRight size={13} />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setCatPage(totalCatPages)}
-                    disabled={catPage === totalCatPages}
-                    className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-orange-50 hover:text-[#F85606] disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
-                    title="Trang cuối"
-                  >
-                    <ChevronsRight size={13} />
-                  </button>
-                </div>
-              </div>
-            )}
+              {/* Phân trang chuẩn giống Danh mục nhà cung cấp */}
+              {!loadingData && totalCatElements > 0 && (
+                <Pagination
+                  page={catPage}
+                  totalPages={totalCatPages}
+                  totalElements={totalCatElements}
+                  size={catPageSize}
+                  onPageChange={setCatPage}
+                  onSizeChange={setCatPageSize}
+                  itemLabel="nhóm hàng"
+                />
+              )}
+            </div>
           </div>
         </div>
 
