@@ -348,7 +348,7 @@ export async function receiveStockTransfer(payload: ReceiveTransferPayload): Pro
 
   const updatedLines = transfer.lines.map((line) => {
     const receivedItem = payload.receivedLines.find((r) => r.lineId === line.id);
-    const receivedQty = receivedItem !== undefined ? receivedItem.receivedQuantity : line.transferQuantity;
+    const receivedQty = (receivedItem != null && receivedItem.receivedQuantity != null) ? receivedItem.receivedQuantity : line.transferQuantity;
     const diff = line.transferQuantity - receivedQty;
     if (diff !== 0) {
       hasDiscrepancy = true;

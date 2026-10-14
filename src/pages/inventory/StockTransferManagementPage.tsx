@@ -498,13 +498,21 @@ export const StockTransferManagementPage: React.FC = () => {
                         {l.transferQuantity} {l.unit}
                       </td>
                       <td className="py-2 px-3 text-center font-bold text-emerald-700">
-                        {l.receivedQuantity !== undefined ? `${l.receivedQuantity} ${l.unit}` : '—'}
+                        {l.receivedQuantity != null ? (
+                          `${l.receivedQuantity} ${l.unit}`
+                        ) : (
+                          <span className="text-gray-400 font-normal italic">Chưa nhận (—)</span>
+                        )}
                       </td>
                       <td className="py-2 px-3 text-center">
-                        {l.differenceQuantity ? (
-                          <span className="text-rose-600 font-bold">-{l.differenceQuantity}</span>
+                        {l.receivedQuantity != null ? (
+                          l.differenceQuantity && Number(l.differenceQuantity) > 0 ? (
+                            <span className="text-rose-600 font-bold">-{l.differenceQuantity}</span>
+                          ) : (
+                            <span className="text-emerald-600 font-bold">0</span>
+                          )
                         ) : (
-                          <span className="text-gray-400">0</span>
+                          <span className="text-gray-400 font-normal">—</span>
                         )}
                       </td>
                       <td className="py-2 px-3 text-gray-600 italic">
