@@ -170,7 +170,7 @@ export const CustomerReorderModal: React.FC<CustomerReorderModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header Modal */}
         <div className="p-4 sm:p-5 border-b border-gray-200 flex items-center justify-between bg-orange-50/60">
           <div className="flex items-center gap-2.5">
@@ -216,30 +216,40 @@ export const CustomerReorderModal: React.FC<CustomerReorderModalProps> = ({
             <>
               {/* AC2: CẢNH BÁO MẶT HÀNG ĐÃ NGỪNG KINH DOANH ĐÃ BỊ TỰ ĐỘNG LOẠI BỎ */}
               {removedItems.length > 0 && (
-                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 space-y-2.5">
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 sm:p-5 space-y-3">
                   <div className="flex items-center gap-2 text-rose-800 font-bold text-xs sm:text-sm">
                     <ShieldAlert size={18} className="text-rose-600 shrink-0" />
                     <span>
                       Cảnh báo: Đã loại bỏ {removedItems.length} mặt hàng không đặt lại được
                     </span>
                   </div>
-                  <p className="text-[11px] text-rose-700">
+                  <p className="text-xs text-rose-700 leading-relaxed">
                     Các sản phẩm dưới đây trong đơn cũ hiện đã ngừng bán hoặc không còn trong bảng giá áp dụng, hệ thống đã tự động loại bỏ để tránh lỗi đơn:
                   </p>
-                  <div className="bg-white/80 rounded-xl border border-rose-200/80 divide-y divide-rose-100 text-xs">
+                  <div className="bg-white/90 rounded-xl border border-rose-200 divide-y divide-rose-100 text-xs shadow-2xs overflow-hidden">
                     {removedItems.map((item, idx) => (
-                      <div key={idx} className="p-2.5 flex items-center justify-between gap-2">
-                        <div>
-                          <span className="font-bold text-gray-900">{item.name}</span>
-                          <div className="flex items-center gap-2 text-[11px] text-gray-500 mt-0.5">
-                            <span className="font-mono text-gray-400">{item.sku}</span>
+                      <div
+                        key={idx}
+                        className="p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <span className="font-bold text-gray-900 text-xs sm:text-sm leading-snug break-words">
+                            {item.name}
+                          </span>
+                          <div className="flex items-center gap-2 text-[11px] text-gray-500 mt-1 flex-wrap">
+                            <span className="font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded font-semibold">
+                              {item.sku}
+                            </span>
                             <span>•</span>
-                            <span>Đã mua: {item.quantity} {item.unitName}</span>
+                            <span>Đã mua trước đây: <strong className="text-gray-700">{item.quantity} {item.unitName}</strong></span>
                           </div>
                         </div>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 shrink-0">
-                          {item.reason}
-                        </span>
+
+                        <div className="sm:max-w-sm md:max-w-md shrink-0 sm:text-right">
+                          <span className="inline-block px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-200/90 leading-relaxed text-left break-words">
+                            {item.reason}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>

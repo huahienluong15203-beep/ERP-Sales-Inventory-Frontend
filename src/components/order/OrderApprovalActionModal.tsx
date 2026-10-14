@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   CheckCircle2,
   XCircle,
@@ -7,7 +7,9 @@ import {
   FileText,
   X,
   Building2,
-  DollarSign
+  DollarSign,
+  Calendar,
+  Clock
 } from 'lucide-react';
 import type { ApprovalReason, PendingOrderResponse, OrderBackendResponse } from '../../types/order';
 import { approveOrder, rejectOrder, returnOrderForEdit, formatCurrencyVND } from '../../services/orderService';
@@ -23,6 +25,19 @@ interface OrderApprovalActionModalProps {
   onSuccess: () => void;
 }
 
+function formatDateVN(dateStr?: string | null): string | null {
+  if (!dateStr) return null;
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+  } catch {
+    return dateStr;
+  }
+}
+
 export const OrderApprovalActionModal: React.FC<OrderApprovalActionModalProps> = ({
   isOpen,
   order,
@@ -32,8 +47,33 @@ export const OrderApprovalActionModal: React.FC<OrderApprovalActionModalProps> =
 }) => {
   const { showToast } = useAuth();
   const [comment, setComment] = useState<string>('');
+  const [confirmedDeliveryDate, setConfirmedDeliveryDate] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const tomorrowStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+  }, []);
+
+  // Khởi tạo ngày giao xác nhận khi mở modal hoặc đổi đơn
+  useEffect(() => {
+    if (order?.desiredDeliveryDate) {
+      setConfirmedDeliveryDate(order.desiredDeliveryDate);
+    } else {
+      setConfirmedDeliveryDate(tomorrowStr);
+    }
+    setComment('');
+    setValidationError(null);
+  }, [order, tomorrowStr]);
+
+  // Kiểm tra ngày mong muốn nhận có quá gấp không (<= ngày mai, < 24-48h)
+  const isUrgentDelivery = useMemo(() => {
+    if (!order?.desiredDeliveryDate) return false;
+    return order.desiredDeliveryDate <= tomorrowStr;
+  }, [order?.desiredDeliveryDate, tomorrowStr]);
 
   if (!isOpen || !order) return null;
 
@@ -63,10 +103,10 @@ export const OrderApprovalActionModal: React.FC<OrderApprovalActionModalProps> =
     try {
       const targetId = order.id;
       if (isApprove) {
-        await approveOrder(targetId, comment);
+        await approveOrder(targetId, comment, confirmedDeliveryDate || undefined);
         showToast(
           'Duyệt đơn thành công',
-          `Đã phê duyệt đơn hàng [${order.code || targetId}]. Đơn hàng chuyển sang giữ chỗ kho để xuất hàng.`,
+          `Đã phê duyệt đơn hàng [${order.code || targetId}]. Ngày giao xác nhận: ${formatDateVN(confirmedDeliveryDate) || 'Theo kế hoạch'}. Đơn hàng chuyển sang giữ chỗ kho để xuất hàng.`,
           'success'
         );
       } else if (isReject) {
@@ -183,7 +223,59 @@ export const OrderApprovalActionModal: React.FC<OrderApprovalActionModalProps> =
                 <span className="font-semibold text-gray-700">{order.lineCount} dòng</span>
               </div>
             )}
+
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500 flex items-center gap-1">
+                <Calendar size={13} className="text-gray-400" />
+                <span>Ngày mong muốn nhận:</span>
+              </span>
+              <div className="flex items-center gap-1.5">
+                <strong className="text-gray-900 font-semibold font-mono">
+                  {order.desiredDeliveryDate ? formatDateVN(order.desiredDeliveryDate) : 'Chưa xếp lịch (—)'}
+                </strong>
+                {isUrgentDelivery && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                    Gấp &lt; 24h
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
+
+          {/* Cảnh báo ngày mong muốn nhận quá sát (khi duyệt đơn) */}
+          {isApprove && isUrgentDelivery && (
+            <div className="p-3 rounded-xl bg-amber-50/90 border border-amber-200 text-xs space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                <Clock size={14} className="text-amber-600 shrink-0" />
+                <span>Cảnh báo: Ngày nhận hàng của đại lý quá sát (&le; 24h)</span>
+              </div>
+              <p className="text-[11px] text-amber-800 leading-relaxed pl-5">
+                Kho có thể không kịp chuẩn bị hoặc xe chưa đến tuyến. Bạn có thể giữ nguyên để giao hỏa tốc hoặc điều chỉnh lại <strong>Ngày giao xác nhận</strong> bên dưới.
+              </p>
+            </div>
+          )}
+
+          {/* Ô xác nhận / điều chỉnh ngày giao hàng (Chỉ khi Duyệt đơn) */}
+          {isApprove && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-gray-700 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Calendar size={13} className="text-emerald-600" />
+                  <span>Ngày giao hàng xác nhận</span>
+                </span>
+                <span className="text-[10px] text-gray-400 font-normal">
+                  Kho và xe sẽ giao theo ngày này
+                </span>
+              </label>
+              <input
+                type="date"
+                min={todayStr}
+                value={confirmedDeliveryDate}
+                onChange={(e) => setConfirmedDeliveryDate(e.target.value)}
+                className="w-full p-2.5 text-xs rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none font-medium text-gray-800 bg-white"
+              />
+            </div>
+          )}
 
           {/* Danh sách lý do cần duyệt & Mức vi phạm (AC1) */}
           {reasons.length > 0 && (
