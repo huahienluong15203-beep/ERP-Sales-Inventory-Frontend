@@ -19,16 +19,16 @@ import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 export const SupplierManagementPage: React.FC = () => {
   const { currentRole, user, showToast } = useAuth();
 
-  // Quyền quản lý (ADMIN, Quản lý kho WH_MANAGER, Nhân viên kho WAREHOUSE)
+  // Quyền quản lý nhà cung cấp: Chỉ ADMIN và Quản lý kho (WH_MANAGER). Thủ kho (ROLE_WAREHOUSE) chỉ có quyền tra cứu/xem phục vụ nhập kho (S2-09 / S5-04)
   const canManage = useMemo(() => {
-    if (!currentRole) return true;
+    if (!currentRole) return false;
     const r = currentRole.toUpperCase();
-    if (r.includes('ADMIN') || r.includes('WH_MANAGER') || r.includes('WAREHOUSE')) {
+    if (r.includes('ADMIN') || r.includes('WH_MANAGER')) {
       return true;
     }
     return (user?.roles || []).some((userRole) => {
       const ur = String(userRole).toUpperCase();
-      return ur.includes('ADMIN') || ur.includes('WH_MANAGER') || ur.includes('WAREHOUSE');
+      return ur.includes('ADMIN') || ur.includes('WH_MANAGER');
     });
   }, [currentRole, user]);
 

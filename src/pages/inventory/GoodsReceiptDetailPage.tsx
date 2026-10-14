@@ -303,7 +303,9 @@ export const GoodsReceiptDetailPage: React.FC = () => {
           <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-100 space-y-1">
             <span className="text-gray-400 uppercase font-bold text-[10px] block">Trạng thái xác nhận</span>
             <div className="font-bold text-gray-900">
-              {receipt.confirmedByUsername ? `Duyệt bởi: ${receipt.confirmedByUsername}` : 'Chưa duyệt xác nhận'}
+              {receipt.confirmedByUsername
+                ? `Xác nhận bởi: ${getUserFullName(receipt.confirmedByUsername)}`
+                : 'Chưa duyệt xác nhận'}
             </div>
             {receipt.confirmedAt && (
               <div className="text-[11px] text-emerald-600 font-mono">
@@ -691,7 +693,13 @@ export const GoodsReceiptDetailPage: React.FC = () => {
               <p className="text-[10px] italic text-gray-600">(Ký, đóng dấu)</p>
               <div className="h-14"></div>
               <p className="font-semibold text-gray-800">
-                {receipt.confirmedByUsername || '..............................'}
+                {(() => {
+                  const approver = receipt.confirmedByUsername?.trim().toLowerCase();
+                  if (approver && (approver === 'wh_manager' || approver === 'admin')) {
+                    return getUserFullName(receipt.confirmedByUsername);
+                  }
+                  return '..............................';
+                })()}
               </p>
             </div>
           </div>
