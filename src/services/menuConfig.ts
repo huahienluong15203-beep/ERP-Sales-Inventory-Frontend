@@ -149,9 +149,9 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     title: 'Danh mục kho & vị trí',
     path: '/inventory/warehouses',
     group: 'Sản phẩm & Kho',
-    icon: 'Building2',
+    icon: 'Layers',
     epic: 'Sản phẩm & Tồn kho',
-    description: '',
+    description: 'Quản lý danh sách kho hàng, phân khu (Zone), kệ (Rack), tầng (Shelf) và ô chứa (Bin)',
     allowedRoles: [
       'ROLE_WAREHOUSE',
       'ROLE_WH_MANAGER',

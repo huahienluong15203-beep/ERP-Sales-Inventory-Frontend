@@ -324,7 +324,6 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             <div className="erp-page-title-box">
               <h1 className="erp-page-heading">{pageTitle}</h1>
               {location.pathname !== '/categories' &&
-                location.pathname !== '/inventory/warehouses' &&
                 Boolean(pageSubtitle) && (
                   <span className="erp-page-subheading">{pageSubtitle}</span>
                 )}
