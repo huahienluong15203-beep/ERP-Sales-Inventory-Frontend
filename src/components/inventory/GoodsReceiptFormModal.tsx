@@ -24,6 +24,7 @@ import { formatCurrencyVND, formatQuantity } from '../../services/orderService';
 import { useAuth } from '../../contexts/AuthContext';
 import { SearchSelect } from '../common/SearchSelect';
 import { NumberInput } from '../common/NumberInput';
+import { GoodsReceiptProductPickerModal } from './GoodsReceiptProductPickerModal';
 
 const FALLBACK_PRODUCTS: Product[] = [
   {
@@ -300,6 +301,43 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   const [lines, setLines] = useState<FormLineState[]>([]);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [formErrors, setFormErrors] = useState<string[]>([]);
+  const [isProductPickerOpen, setIsProductPickerOpen] = useState<boolean>(false);
+
+  const handleSelectProductFromPicker = (prod: Product) => {
+    const existingIndex = lines.findIndex((l) => l.productId === Number(prod.id));
+    if (existingIndex >= 0) {
+      setLines((prev) =>
+        prev.map((l, idx) =>
+          idx === existingIndex ? { ...l, quantity: l.quantity + 1 } : l
+        )
+      );
+      showToast('Đã tăng số lượng', `Sản phẩm [${prod.sku}] đã có trong phiếu, số lượng tăng thêm 1`, 'info', 2000);
+      return;
+    }
+
+    const availableUnits = getAvailableUnitsForProduct(prod);
+    const defaultUnit = availableUnits[0];
+
+    const newLine: FormLineState = {
+      id: `line-${Date.now()}-${Math.random()}`,
+      productId: Number(prod.id),
+      productSku: prod.sku,
+      productName: prod.name,
+      category: prod.category,
+      baseUnit: prod.baseUnit,
+      selectedUnit: defaultUnit.unitName,
+      conversionFactor: defaultUnit.conversionFactor,
+      quantity: 1,
+      unitPrice: Number(prod.costPrice || 0),
+      batchNumber: `LOT-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
+      expiredDate: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+      hasBatchManagement: true,
+      availableUnits
+    };
+
+    setLines((prev) => [...prev, newLine]);
+    showToast('Đã thêm sản phẩm', `Đã thêm [${prod.sku}] vào danh sách nhập kho`, 'success', 2000);
+  };
 
   // Tải danh mục sản phẩm từ backend với phân trang và tìm kiếm
   const fetchProductsPage = useCallback(
@@ -560,35 +598,6 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
   ]);
 
   if (!isOpen) return null;
-
-  // Thêm một dòng hàng mới
-  const handleAddNewLine = () => {
-    const prods = pagedProducts.length > 0 ? pagedProducts : FALLBACK_PRODUCTS;
-    if (prods.length === 0) return;
-    const defaultProd = prods[0];
-    productCacheRef.current.set(Number(defaultProd.id), defaultProd);
-    const availableUnits = getAvailableUnitsForProduct(defaultProd);
-    const firstUnit = availableUnits[0];
-
-    const newLine: FormLineState = {
-      id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      productId: Number(defaultProd.id),
-      productSku: defaultProd.sku,
-      productName: defaultProd.name,
-      category: defaultProd.category,
-      baseUnit: defaultProd.baseUnit,
-      selectedUnit: firstUnit.unitName,
-      conversionFactor: firstUnit.conversionFactor,
-      quantity: 1,
-      unitPrice: Number(defaultProd.costPrice || 0),
-      batchNumber: `LOT-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
-      expiredDate: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().slice(0, 10),
-      hasBatchManagement: true,
-      availableUnits
-    };
-
-    setLines((prev) => [...prev, newLine]);
-  };
 
   // Thay đổi sản phẩm của một dòng
   const handleChangeProduct = (lineIndex: number, newProductId: number) => {
@@ -948,11 +957,11 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
               </div>
               <button
                 type="button"
-                onClick={handleAddNewLine}
-                className="px-3 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                onClick={() => setIsProductPickerOpen(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer active:scale-95"
               >
-                <Plus size={14} />
-                <span>Thêm dòng hàng</span>
+                <Package size={14} />
+                <span>+ Danh sách sản phẩm</span>
               </button>
             </div>
 
@@ -970,9 +979,10 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                 <div className="hidden lg:grid lg:grid-cols-12 gap-2 bg-gray-50/90 p-3 text-[11px] font-bold text-gray-600 uppercase">
                   <div className="col-span-3">Mặt hàng / SKU</div>
                   <div className="col-span-2 text-center">ĐVT Nhập</div>
-                  <div className="col-span-2 text-center">Số lượng</div>
-                  <div className="col-span-2 text-center">Quy về Cơ sở</div>
-                  <div className="col-span-2">Số Lô & Hạn Dùng</div>
+                  <div className="col-span-1 text-center">Số lượng</div>
+                  <div className="col-span-1 text-center">Quy về Cơ sở</div>
+                  <div className="col-span-2">Số Lô</div>
+                  <div className="col-span-2">Hạn Dùng</div>
                   <div className="col-span-1 text-center">Xóa</div>
                 </div>
 
@@ -1027,9 +1037,10 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                       </div>
 
                       {/* Cột 3: Số lượng nhập (Hỗ trợ nhập tự do & nút +/- khi ở 0 lên 1) */}
-                      <div className="lg:col-span-2">
+                      {/* Cột 3: Số lượng nhập */}
+                      <div className="lg:col-span-1">
                         <span className="lg:hidden text-[10px] font-bold text-gray-400 uppercase block mb-1">
-                          Số lượng nhập
+                          Số lượng
                         </span>
                         <ReceiptLineQuantityInput
                           quantity={line.quantity}
@@ -1038,37 +1049,44 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
                       </div>
 
                       {/* Cột 4: Quy đổi về đơn vị cơ sở khi ghi sổ */}
-                      <div className="lg:col-span-2 text-center">
+                      <div className="lg:col-span-1 text-center">
                         <span className="lg:hidden text-[10px] font-bold text-gray-400 uppercase block mb-1">
                           Quy về Cơ sở
                         </span>
-                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl py-1.5 px-2 text-center">
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl py-1 px-1.5 text-center">
                           <span className="font-black text-xs font-mono text-emerald-700">
                             {formatQuantity(baseQty)}
                           </span>
-                          <span className="text-[10px] font-bold text-emerald-800 ml-1">
+                          <span className="text-[10px] font-bold text-emerald-800 ml-0.5">
                             {line.baseUnit}
                           </span>
                         </div>
                       </div>
 
-                      {/* Cột 5: Số lô & Hạn sử dụng */}
-                      <div className="lg:col-span-2 space-y-1">
+                      {/* Cột 5: Số lô riêng biệt */}
+                      <div className="lg:col-span-2">
                         <span className="lg:hidden text-[10px] font-bold text-gray-400 uppercase block mb-1">
-                          Số lô & Hạn dùng
+                          Số lô
                         </span>
                         <input
                           type="text"
-                          placeholder="Số lô: vd LOT-01"
+                          placeholder="Vd: LOT-01"
                           value={line.batchNumber}
                           onChange={(e) => handleUpdateLineField(idx, 'batchNumber', e.target.value)}
-                          className="w-full text-[11px] font-mono border border-gray-200 rounded-lg p-1 bg-white"
+                          className="w-full text-xs font-mono border border-gray-200 rounded-lg p-1.5 bg-white"
                         />
+                      </div>
+
+                      {/* Cột 6: Hạn sử dụng riêng biệt */}
+                      <div className="lg:col-span-2">
+                        <span className="lg:hidden text-[10px] font-bold text-gray-400 uppercase block mb-1">
+                          Hạn dùng
+                        </span>
                         <input
                           type="date"
                           value={line.expiredDate}
                           onChange={(e) => handleUpdateLineField(idx, 'expiredDate', e.target.value)}
-                          className="w-full text-[11px] border border-gray-200 rounded-lg p-1 bg-white"
+                          className="w-full text-xs border border-gray-200 rounded-lg p-1.5 bg-white"
                           title="Hạn sử dụng"
                         />
                       </div>
@@ -1170,6 +1188,14 @@ export const GoodsReceiptFormModal: React.FC<GoodsReceiptFormModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Modal Chọn Sản Phẩm */}
+      <GoodsReceiptProductPickerModal
+        isOpen={isProductPickerOpen}
+        onClose={() => setIsProductPickerOpen(false)}
+        onSelectProduct={handleSelectProductFromPicker}
+        addedProductIds={lines.map((l) => l.productId)}
+      />
     </div>,
     document.body
   );
