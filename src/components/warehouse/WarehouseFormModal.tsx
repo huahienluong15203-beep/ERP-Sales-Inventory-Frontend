@@ -113,7 +113,7 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
           name: cleanName,
           address: address.trim() || undefined,
           managerId: managerId || null,
-          status
+          status: 'ACTIVE'
         };
         const saved = await createWarehouse(payload);
         showToast('Tạo mới thành công', `Đã khởi tạo kho mới [${saved.code}] - ${saved.name}`, 'success');
@@ -172,48 +172,56 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
             </div>
           )}
 
-          {/* Mã kho & Trạng thái */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Mã định danh kho <span className="text-rose-500">*</span>
-              </label>
-              {isEdit ? (
+          {/* Mã kho & Trạng thái (Trạng thái chỉ hiển thị khi Chỉnh sửa, khi Tạo mới mặc định luôn là Đang hoạt động) */}
+          {isEdit ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Mã định danh kho <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={code}
                   disabled
                   className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 font-mono text-sm font-bold cursor-not-allowed"
                 />
-              ) : (
-                <input
-                  type="text"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="Ví dụ: WH-MB02, KHO-HN"
-                  className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 font-mono text-sm font-semibold focus:outline-none focus:border-[#F85606] focus:ring-1 focus:ring-[#F85606] transition"
-                  autoFocus
-                />
-              )}
+                <span className="text-[10px] text-gray-400 mt-0.5 block">
+                  Mã kho cố định không thể sửa
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Trạng thái hoạt động
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
+                  className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs font-semibold focus:outline-none focus:border-[#F85606] transition cursor-pointer"
+                >
+                  <option value="ACTIVE">Đang hoạt động</option>
+                  <option value="INACTIVE">Ngừng hoạt động</option>
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Mã định danh kho <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder="Ví dụ: WH-MB02, KHO-HN"
+                className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 font-mono text-sm font-semibold focus:outline-none focus:border-[#F85606] focus:ring-1 focus:ring-[#F85606] transition"
+                autoFocus
+              />
               <span className="text-[10px] text-gray-400 mt-0.5 block">
                 Chỉ gồm chữ in hoa, số và dấu gạch nối
               </span>
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Trạng thái hoạt động
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
-                className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs font-semibold focus:outline-none focus:border-[#F85606] transition cursor-pointer"
-              >
-                <option value="ACTIVE">Đang hoạt động</option>
-                <option value="INACTIVE">Ngừng hoạt động</option>
-              </select>
-            </div>
-          </div>
+          )}
 
           {/* Tên kho */}
           <div>

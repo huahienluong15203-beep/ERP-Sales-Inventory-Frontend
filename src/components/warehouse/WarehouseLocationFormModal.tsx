@@ -108,7 +108,7 @@ export const WarehouseLocationFormModal: React.FC<WarehouseLocationFormModalProp
           zone: zone.trim() || undefined,
           shelf: shelf.trim() || undefined,
           description: description.trim() || undefined,
-          status
+          status: 'ACTIVE'
         };
         const saved = await createWarehouseLocation(warehouse.id, payload);
         showToast('Tạo mới thành công', `Đã thêm vị trí [${saved.code}] vào kho ${warehouse.name}`, 'success');
@@ -190,45 +190,50 @@ export const WarehouseLocationFormModal: React.FC<WarehouseLocationFormModalProp
             </div>
           </div>
 
-          {/* Mã vị trí & Trạng thái */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Mã vị trí <span className="text-rose-500">*</span>
-              </label>
-              {isEdit ? (
+          {/* Mã vị trí & Trạng thái (Trạng thái chỉ hiển thị khi Chỉnh sửa, khi Tạo mới mặc định luôn là Đang sử dụng) */}
+          {isEdit ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Mã vị trí <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={code}
                   disabled
                   className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 font-mono text-sm font-bold cursor-not-allowed"
                 />
-              ) : (
-                <input
-                  type="text"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="Ví dụ: A-01-01, KHU-A"
-                  className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 font-mono text-sm font-semibold focus:outline-none focus:border-[#F85606] focus:ring-1 focus:ring-[#F85606] transition"
-                  autoFocus
-                />
-              )}
-            </div>
+              </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Trạng thái hoạt động
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
+                  className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs font-semibold focus:outline-none focus:border-[#F85606] transition cursor-pointer"
+                >
+                  <option value="ACTIVE">Đang sử dụng</option>
+                  <option value="INACTIVE">Tạm khóa / Ngừng dùng</option>
+                </select>
+              </div>
+            </div>
+          ) : (
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Trạng thái hoạt động
+                Mã vị trí <span className="text-rose-500">*</span>
               </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
-                className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs font-semibold focus:outline-none focus:border-[#F85606] transition cursor-pointer"
-              >
-                <option value="ACTIVE">Đang sử dụng</option>
-                <option value="INACTIVE">Tạm khóa / Ngừng dùng</option>
-              </select>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder="Ví dụ: A-01-01, KHU-A"
+                className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 font-mono text-sm font-semibold focus:outline-none focus:border-[#F85606] focus:ring-1 focus:ring-[#F85606] transition"
+                autoFocus
+              />
             </div>
-          </div>
+          )}
 
           {/* Tên vị trí */}
           <div>
