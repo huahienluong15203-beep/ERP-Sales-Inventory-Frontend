@@ -593,7 +593,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
         {/* Footer Actions */}
         <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            {activeOrder?.status === 'DRAFT' && (
+            {activeOrder?.status === 'DRAFT' && ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP'].includes(currentRole ?? '') && (
               <button
                 type="button"
                 onClick={() => {

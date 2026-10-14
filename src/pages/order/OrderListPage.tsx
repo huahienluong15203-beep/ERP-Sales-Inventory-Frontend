@@ -82,6 +82,32 @@ export const OrderListPage: React.FC = () => {
 
   const isSalesRep = currentRole === 'ROLE_SALES_REP' || Boolean(user?.roles?.includes('ROLE_SALES_REP'));
 
+  // Xác định vai trò Kho (Quản lý kho hoặc Thủ kho): không tạo đơn bán, chỉ xử lý đơn hàng thật
+  const isWarehouseRole = useMemo(() => {
+    const roles = user?.roles || [];
+    return (
+      currentRole === 'ROLE_WAREHOUSE' ||
+      currentRole === 'ROLE_WH_MANAGER' ||
+      roles.includes('ROLE_WAREHOUSE') ||
+      roles.includes('ROLE_WH_MANAGER')
+    );
+  }, [currentRole, user]);
+
+  // Tabs trạng thái theo vai trò: Kho chỉ quan tâm các đơn hàng thật cần xử lý, ẩn tab Đơn nháp
+  const activeStatusTabs = useMemo(() => {
+    if (isWarehouseRole) {
+      return [
+        { label: 'Tất cả đơn cần xử lý', value: '' },
+        { label: 'Chờ xuất kho (Đã duyệt)', value: 'APPROVED', badgeColor: 'bg-emerald-100 text-emerald-800' },
+        { label: 'Đang soạn hàng', value: 'PACKING', badgeColor: 'bg-blue-100 text-blue-800' },
+        { label: 'Đã xuất kho', value: 'DISPATCHED', badgeColor: 'bg-indigo-100 text-indigo-800' },
+        { label: 'Đã giao hàng', value: 'DELIVERED', badgeColor: 'bg-teal-100 text-teal-800' },
+        { label: 'Đã hủy', value: 'CANCELLED', badgeColor: 'bg-rose-100 text-rose-800' }
+      ];
+    }
+    return STATUS_TABS;
+  }, [isWarehouseRole]);
+
   // State danh mục hỗ trợ lọc
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [regions, setRegions] = useState<RegionOption[]>([]);
@@ -89,6 +115,13 @@ export const OrderListPage: React.FC = () => {
 
   // State bộ lọc (Filter Criteria)
   const [selectedStatusTab, setSelectedStatusTab] = useState<string>('');
+
+  // Nếu vai trò Kho mà vô tình đang chọn DRAFT thì tự động chuyển về tất cả đơn cần xử lý
+  useEffect(() => {
+    if (isWarehouseRole && selectedStatusTab === 'DRAFT') {
+      setSelectedStatusTab('');
+    }
+  }, [isWarehouseRole, selectedStatusTab]);
   const [selectedAgencyId, setSelectedAgencyId] = useState<string>('');
   const [selectedSalesRepId, setSelectedSalesRepId] = useState<string>('');
   const [selectedRegionId, setSelectedRegionId] = useState<string>('');
@@ -290,6 +323,20 @@ export const OrderListPage: React.FC = () => {
       'COMPLETED'
     ];
 
+    const WAREHOUSE_ALL_STATUSES = [
+      'APPROVED',
+      'PACKING',
+      'PICKING',
+      'PREPARING',
+      'DISPATCHED',
+      'DELIVERED',
+      'CLOSED',
+      'COMPLETED',
+      'CANCELLED',
+      'REJECTED',
+      'PENDING_APPROVAL'
+    ];
+
     const criteria: OrderFilterCriteria = {
       page,
       size: pageSize,
@@ -299,7 +346,11 @@ export const OrderListPage: React.FC = () => {
       regionId: selectedRegionId ? Number(selectedRegionId) : undefined,
       fromDate: fromDate || undefined,
       toDate: toDate || undefined,
-      statuses: selectedStatusTab ? selectedStatusTab.split(',') : undefined
+      statuses: selectedStatusTab
+        ? selectedStatusTab.split(',')
+        : isWarehouseRole
+        ? WAREHOUSE_ALL_STATUSES
+        : undefined
     };
 
     // Khi ở tab "Tất cả trạng thái", tính tổng tiền các đơn chính thức (loại trừ đơn nháp DRAFT, đơn hủy CANCELLED và đơn từ chối REJECTED)
@@ -475,14 +526,16 @@ export const OrderListPage: React.FC = () => {
           <span>Làm mới</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => navigate('/orders/create')}
-          className="px-3.5 py-1.5 bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-98 text-white text-xs font-bold rounded-lg shadow-sm shadow-orange-500/25 flex items-center gap-1.5 transition-all cursor-pointer h-9"
-        >
-          <Plus size={16} />
-          <span>Tạo đơn hàng mới</span>
-        </button>
+        {!isWarehouseRole && (
+          <button
+            type="button"
+            onClick={() => navigate('/orders/create')}
+            className="px-3.5 py-1.5 bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 active:scale-98 text-white text-xs font-bold rounded-lg shadow-sm shadow-orange-500/25 flex items-center gap-1.5 transition-all cursor-pointer h-9"
+          >
+            <Plus size={16} />
+            <span>Tạo đơn hàng mới</span>
+          </button>
+        )}
       </div>
 
       {/* 2. S4-07 AC2: KHỐI THẺ THỐNG KÊ KẾT QUẢ ĐANG LỌC (LIVE AGGREGATED TOTALS) */}
@@ -567,7 +620,7 @@ export const OrderListPage: React.FC = () => {
         {/* Hàng 1: Tabs Trạng thái nhanh */}
         <div className="flex items-center justify-between border-b border-gray-100 pb-3 flex-wrap gap-2">
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
-            {STATUS_TABS.map((tab) => {
+            {activeStatusTabs.map((tab) => {
               const isActive = selectedStatusTab === tab.value;
               return (
                 <button

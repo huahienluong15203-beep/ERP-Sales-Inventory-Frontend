@@ -217,6 +217,9 @@ export interface OrderBackendResponse {
   // S5-01: Cảnh báo giao thiếu hàng
   hasShortage?: boolean | null;
   shortageLineCount?: number | null;
+  // S4-06 & S4-08: Huỷ đơn / Từ chối duyệt
+  cancelReason?: string | null;
+  lastApprovalComment?: string | null;
 }
 
 export interface ProductOptionBackendResponse {

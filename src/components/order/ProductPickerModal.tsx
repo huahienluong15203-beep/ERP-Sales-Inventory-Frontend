@@ -17,7 +17,9 @@ import {
   Phone,
   Tag,
   BadgeDollarSign,
-  CreditCard
+  CreditCard,
+  ChevronLeft,
+  ChevronRight
 } from '../common/Icons';
 
 interface ProductPickerModalProps {
@@ -51,13 +53,63 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
 
   const servingWarehouse = getServingWarehouseInfo(agency);
 
-  // Phân trang: trang đã tải, còn trang sau không, tổng số sản phẩm khớp
+  // Phân trang 50 sản phẩm / trang
   const [page, setPage] = useState<number>(0);
-  const [hasMore, setHasMore] = useState<boolean>(false);
   const [totalElements, setTotalElements] = useState<number>(0);
-  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const totalPages = Math.ceil(totalElements / PAGE_SIZE) || 1;
+
+  // Ref container danh sách sản phẩm để cuộn lên đầu khi chuyển trang
+  const listContainerRef = useRef<HTMLDivElement>(null);
+
   // Mỗi lần đổi từ khoá / đại lý thì tăng số này để bỏ qua kết quả của lần tải cũ về muộn
   const requestIdRef = useRef(0);
+
+  // Chuyển trang (mỗi trang đúng 50 sản phẩm)
+  const goToPage = (targetPage: number) => {
+    if (targetPage < 0 || targetPage >= totalPages || loadingBackend || !agency?.id) return;
+    const requestId = ++requestIdRef.current;
+    setLoadingBackend(true);
+    fetchBackendProductOptionsPage(agency.id, keyword.trim(), targetPage, PAGE_SIZE, servingWarehouse)
+      .then((res) => {
+        if (requestId !== requestIdRef.current) return;
+        setProducts(res.items); // Thay thế 50 sản phẩm của trang được chọn
+        setPage(res.page);
+        setTotalElements(res.totalElements);
+        if (listContainerRef.current) {
+          listContainerRef.current.scrollTop = 0;
+        }
+      })
+      .catch((err: unknown) => {
+        if (requestId !== requestIdRef.current) return;
+        setLoadError(err instanceof Error ? err.message : 'Không tải được danh sách sản phẩm');
+      })
+      .finally(() => {
+        if (requestId === requestIdRef.current) setLoadingBackend(false);
+      });
+  };
+
+  // Tính toán các trang hiển thị trong thanh phân trang
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 0; i < totalPages; i++) pages.push(i);
+    } else {
+      pages.push(0);
+      if (page > 2) {
+        pages.push('ellipsis');
+      }
+      const start = Math.max(1, page - 1);
+      const end = Math.min(totalPages - 2, page + 1);
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      if (page < totalPages - 3) {
+        pages.push('ellipsis');
+      }
+      pages.push(totalPages - 1);
+    }
+    return pages;
+  };
 
   // Tự động tải trang đầu theo cấp đại lý ngay khi mở modal, và tải lại khi người dùng gõ từ khóa
   useEffect(() => {
@@ -69,14 +121,12 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
 
     if (!agency?.id || !agency?.priceList) {
       setProducts([]);
-      setHasMore(false);
       setTotalElements(0);
       setLoadingBackend(false);
       return;
     }
 
     setLoadingBackend(true);
-    setLoadingMore(false);
 
     // Nếu kw rỗng thì tải ngay không delay; nếu có gõ từ khóa thì debounce 120ms
     const delay = kw === '' ? 0 : 120;
@@ -86,13 +136,14 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
           if (requestId !== requestIdRef.current) return;
           setProducts(res.items);
           setPage(res.page);
-          setHasMore(res.hasMore);
           setTotalElements(res.totalElements);
+          if (listContainerRef.current) {
+            listContainerRef.current.scrollTop = 0;
+          }
         })
         .catch((err: unknown) => {
           if (requestId !== requestIdRef.current) return;
           setProducts([]);
-          setHasMore(false);
           setTotalElements(0);
           setLoadError(err instanceof Error ? err.message : 'Không tải được danh sách sản phẩm');
         })
@@ -106,38 +157,6 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, agency?.id, agency?.priceList, keyword, servingWarehouse.code]);
-
-  // Tải thêm trang tiếp theo (khi cuộn gần cuối danh sách hoặc bấm nút "Xem thêm")
-  const loadMore = () => {
-    if (!agency?.id || !hasMore || loadingMore || loadingBackend) return;
-    const requestId = requestIdRef.current;
-    setLoadingMore(true);
-    fetchBackendProductOptionsPage(agency.id, keyword.trim(), page + 1, PAGE_SIZE, servingWarehouse)
-      .then((res) => {
-        if (requestId !== requestIdRef.current) return;
-        setProducts((prev) => {
-          const seen = new Set(prev.map((p) => p.sku));
-          return [...prev, ...res.items.filter((p) => !seen.has(p.sku))];
-        });
-        setPage(res.page);
-        setHasMore(res.hasMore);
-        setTotalElements(res.totalElements);
-      })
-      .catch((err: unknown) => {
-        if (requestId !== requestIdRef.current) return;
-        setLoadError(err instanceof Error ? err.message : 'Không tải thêm được sản phẩm');
-      })
-      .finally(() => {
-        if (requestId === requestIdRef.current) setLoadingMore(false);
-      });
-  };
-
-  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 120) {
-      loadMore();
-    }
-  };
 
   // Reset từ khóa khi đóng mở modal
   useEffect(() => {
@@ -279,7 +298,7 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
               {loadingBackend
                 ? 'Đang tải danh mục sản phẩm...'
                 : products.length > 0
-                ? `Đang hiển thị ${products.length} / ${totalElements} sản phẩm theo bảng giá ${groupLabel}`
+                ? `Đang hiển thị ${totalElements === 0 ? 0 : page * PAGE_SIZE + 1} - ${Math.min((page + 1) * PAGE_SIZE, totalElements)} / ${totalElements} sản phẩm theo bảng giá ${groupLabel} (Trang ${page + 1}/${totalPages})`
                 : keyword
                 ? `Không có kết quả khớp với "${keyword}"`
                 : 'Chưa có sản phẩm'}
@@ -294,8 +313,8 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
 
         {/* Danh sách sản phẩm cuộn được */}
         <div
+          ref={listContainerRef}
           className="p-3 sm:p-4 overflow-y-auto divide-y divide-gray-100 space-y-2 flex-1"
-          onScroll={handleListScroll}
         >
           {agency && !agency.priceList ? (
             <div className="py-12 text-center text-amber-800 space-y-2">
@@ -528,37 +547,73 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
             })
           )}
 
-          {/* Tải thêm khi cuộn tới cuối; nút dự phòng khi danh sách chưa đủ dài để cuộn */}
-          {products.length > 0 && !loadError && (hasMore || loadingMore) && (
-            <div className="pt-3 pb-1 text-center">
-              {loadingMore ? (
-                <span className="text-[11px] text-gray-500">Đang tải thêm sản phẩm...</span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={loadMore}
-                  className="px-4 py-2 text-xs font-bold text-[#F85606] bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
-                >
-                  <Plus size={14} />
-                  <span>Xem thêm</span>
-                  <span className="text-[10px] text-orange-600 font-normal">
-                    (còn {totalElements - products.length} mặt hàng)
-                  </span>
-                </button>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Footer Modal */}
-        <div className="p-3 border-t border-gray-100 bg-gray-50/70 flex items-center justify-between">
-          <div className="text-xs text-gray-600">
+        {/* Footer Modal có phân trang 50 sản phẩm / trang */}
+        <div className="p-3 border-t border-gray-100 bg-gray-50/70 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+          <div className="text-xs text-gray-600 shrink-0">
             Đơn hiện có: <strong className="text-[#F85606] font-bold">{addedSkuList.length}</strong> món
           </div>
+
+          {/* Phân trang: 50 sản phẩm / trang */}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <button
+                type="button"
+                disabled={page <= 0 || loadingBackend}
+                onClick={() => goToPage(page - 1)}
+                className="h-8 px-2.5 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-medium hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+                title="Trang trước"
+              >
+                <ChevronLeft size={14} />
+                <span className="hidden sm:inline">Trước</span>
+              </button>
+
+              <div className="flex items-center gap-1">
+                {getPageNumbers().map((pNum, idx) => {
+                  if (pNum === 'ellipsis') {
+                    return (
+                      <span key={`ell-${idx}`} className="px-1 text-xs text-gray-400 select-none">
+                        ...
+                      </span>
+                    );
+                  }
+                  const isCurrent = pNum === page;
+                  return (
+                    <button
+                      key={pNum}
+                      type="button"
+                      disabled={loadingBackend}
+                      onClick={() => goToPage(pNum)}
+                      className={`min-w-8 h-8 px-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                        isCurrent
+                          ? 'bg-[#F85606] text-white shadow-xs'
+                          : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {pNum + 1}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                disabled={page >= totalPages - 1 || loadingBackend}
+                onClick={() => goToPage(page + 1)}
+                className="h-8 px-2.5 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-medium hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+                title="Trang sau"
+              >
+                <span className="hidden sm:inline">Sau</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-bold bg-gray-900 text-white hover:bg-black transition-colors"
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-gray-900 text-white hover:bg-black transition-colors shrink-0"
           >
             Đóng
           </button>

@@ -546,6 +546,7 @@ export interface ProductOptionPage {
   items: OrderProductCatalogItem[];
   page: number;
   totalElements: number;
+  totalPages?: number;
   hasMore: boolean;
 }
 
@@ -562,7 +563,7 @@ export async function fetchBackendProductOptionsPage(
 ): Promise<ProductOptionPage> {
   const kw = keyword.trim();
   if (!customerId || !/^\d+$/.test(String(customerId))) {
-    return { items: [], page: 0, totalElements: 0, hasMore: false };
+    return { items: [], page: 0, totalElements: 0, totalPages: 0, hasMore: false };
   }
   const params = new URLSearchParams({ customerId: String(customerId), page: String(page), size: String(size) });
   if (kw) params.set('keyword', kw);
@@ -581,6 +582,7 @@ export async function fetchBackendProductOptionsPage(
     items: content.map((item) => mapProductOption(item, servingWarehouse)),
     page: currentPage,
     totalElements: data.totalElements ?? content.length,
+    totalPages,
     hasMore: currentPage + 1 < totalPages,
   };
 }
