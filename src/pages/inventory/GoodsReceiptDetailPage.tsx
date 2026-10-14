@@ -144,8 +144,8 @@ export const GoodsReceiptDetailPage: React.FC = () => {
 
   return (
     <div className="space-y-6 antialiased max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">
-      {/* 1. THANH ĐIỀU HƯỚNG QUAY LẠI & BREADCRUMBS */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* 1. THANH ĐIỀU HƯỚNG QUAY LẠI & BREADCRUMBS (ẨN KHI IN) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -198,8 +198,8 @@ export const GoodsReceiptDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. HERO HEADER PHIẾU NHẬP KHO */}
-      <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 bg-gradient-to-r from-orange-50/60 via-amber-50/20 to-white">
+      {/* 2. HERO HEADER PHIẾU NHẬP KHO (ẨN KHI IN) */}
+      <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 bg-gradient-to-r from-orange-50/60 via-amber-50/20 to-white no-print">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-start sm:items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#F85606] to-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/25">
@@ -253,8 +253,8 @@ export const GoodsReceiptDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. KHỐI 1: THÔNG TIN CHỨNG TỪ, ĐỐI TÁC & VẬN CHUYỂN */}
-      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-gray-200 shadow-2xs space-y-4">
+      {/* 3. KHỐI 1: THÔNG TIN CHỨNG TỪ, ĐỐI TÁC & VẬN CHUYỂN (ẨN KHI IN) */}
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-gray-200 shadow-2xs space-y-4 no-print">
         <div className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-100">
           <Building2 size={16} className="text-[#F85606]" />
           <span>1. Thông Tin Nhà Cung Cấp & Giao Hàng</span>
@@ -318,8 +318,8 @@ export const GoodsReceiptDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. KHỐI 2: DANH SÁCH CHI TIẾT MẶT HÀNG NHẬP KHO (PHÂN TRANG ĐẦY ĐỦ) */}
-      <div className="bg-white rounded-3xl border border-gray-200 shadow-2xs overflow-hidden space-y-0">
+      {/* 4. KHỐI 2: DANH SÁCH CHI TIẾT MẶT HÀNG NHẬP KHO (PHÂN TRANG ĐẦY ĐỦ - ẨN KHI IN) */}
+      <div className="bg-white rounded-3xl border border-gray-200 shadow-2xs overflow-hidden space-y-0 no-print">
         <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-gray-50/90 to-white flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Package size={18} className="text-[#F85606]" />
@@ -551,6 +551,139 @@ export const GoodsReceiptDetailPage: React.FC = () => {
               <div className="text-sm sm:text-base font-black text-[#F85606] font-mono">
                 {formatCurrencyVND(receipt.totalAmount)}
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. BẢN IN PHIẾU NHẬP KHO CHUẨN KẾ TOÁN (CHỈ HIỆN KHI BẤM IN) */}
+      <div className="hidden print:block w-full bg-white text-black font-sans leading-normal">
+        {/* Header Quốc hiệu / Đơn vị */}
+        <div className="flex justify-between items-start pb-2 border-b border-black mb-3">
+          <div>
+            <p className="font-bold text-xs uppercase tracking-wider">CÔNG TY CỔ PHẦN THƯƠNG MẠI & PHÂN PHỐI ERP</p>
+            <p className="text-[11px] text-gray-700">Địa điểm nhập: {receipt.warehouseName} ({receipt.warehouseCode})</p>
+            <p className="text-[11px] text-gray-700">Nhà cung cấp: {receipt.supplierName} ({receipt.supplierCode})</p>
+          </div>
+          <div className="text-right">
+            <p className="font-mono text-xs font-bold">Mẫu số: 01-VT</p>
+            <p className="text-[10px] italic text-gray-600">(Ban hành theo TT 200/2014/TT-BTC)</p>
+            <p className="font-mono text-xs font-bold mt-0.5">Số phiếu: {receipt.code}</p>
+          </div>
+        </div>
+
+        {/* Tiêu đề chính giữa */}
+        <div className="text-center my-3">
+          <h1 className="text-base font-black uppercase tracking-wider">PHIẾU NHẬP KHO</h1>
+          <p className="text-[11px] italic text-gray-600 mt-0.5">
+            Ngày nhập hàng: {new Date(receipt.receiptDate).toLocaleDateString('vi-VN')}
+          </p>
+        </div>
+
+        {/* Khối thông tin chi tiết biên bản */}
+        <div className="border border-black p-2.5 rounded text-[11px] mb-3 space-y-1">
+          <div className="grid grid-cols-2 gap-x-4">
+            <div><strong>- Họ tên người giao:</strong> {receipt.driverName || 'Giao trực tiếp từ NCC'}</div>
+            <div><strong>- Số hóa đơn / chứng từ:</strong> {receipt.documentNumber || receipt.code}</div>
+            <div><strong>- Phương tiện vận chuyển:</strong> {receipt.vehiclePlate || '---'}</div>
+            <div><strong>- Nhập tại kho:</strong> {receipt.warehouseName}</div>
+            <div>
+              <strong>- Trạng thái phiếu:</strong>{' '}
+              {receipt.status === 'CONFIRMED' ? 'Đã nhập kho & cộng tồn' : 'Phiếu nháp (chưa duyệt)'}
+            </div>
+            <div><strong>- Người tạo phiếu:</strong> {receipt.createdByUsername || 'wh_staff'}</div>
+          </div>
+          {receipt.note && (
+            <div><strong>- Ghi chú:</strong> {receipt.note}</div>
+          )}
+        </div>
+
+        {/* Bảng in toàn bộ mặt hàng */}
+        <table className="w-full border-collapse border border-black text-[10px]">
+          <thead>
+            <tr className="bg-gray-100 border-b border-black text-center font-bold">
+              <th className="border border-black py-1 px-1.5 w-7">STT</th>
+              <th className="border border-black py-1 px-2 w-24 text-left">Mã SKU</th>
+              <th className="border border-black py-1 px-2 text-left">Tên sản phẩm - Quy cách</th>
+              <th className="border border-black py-1 px-1.5 w-14">ĐVT</th>
+              <th className="border border-black py-1 px-2 w-20">Số lô</th>
+              <th className="border border-black py-1 px-2 w-20">Hạn dùng</th>
+              <th className="border border-black py-1 px-2 w-16 text-right">Số lượng</th>
+              <th className="border border-black py-1 px-2 w-20 text-right">Đơn giá</th>
+              <th className="border border-black py-1 px-2 w-24 text-right">Thành tiền (VNĐ)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {receipt.lines.map((line, idx) => (
+              <tr key={line.id} className="border-b border-black/50 print-avoid-break">
+                <td className="border border-black py-1 px-1 text-center font-mono">{idx + 1}</td>
+                <td className="border border-black py-1 px-2 font-mono font-bold">{line.productSku}</td>
+                <td className="border border-black py-1 px-2 font-medium">{line.productName}</td>
+                <td className="border border-black py-1 px-1 text-center font-medium">
+                  {line.selectedUnit || line.baseUnit}
+                </td>
+                <td className="border border-black py-1 px-2 text-center font-mono">{line.batchNumber || '---'}</td>
+                <td className="border border-black py-1 px-2 text-center font-mono">
+                  {line.expiredDate ? new Date(line.expiredDate).toLocaleDateString('vi-VN') : '---'}
+                </td>
+                <td className="border border-black py-1 px-2 text-right font-mono font-bold">
+                  {formatQuantity(line.quantity)}
+                </td>
+                <td className="border border-black py-1 px-2 text-right font-mono">
+                  {formatCurrencyVND(line.unitPrice)}
+                </td>
+                <td className="border border-black py-1 px-2 text-right font-mono font-bold">
+                  {formatCurrencyVND(line.totalAmount ?? line.quantity * line.unitPrice)}
+                </td>
+              </tr>
+            ))}
+            {/* Hàng tổng cộng */}
+            <tr className="font-bold border-t-2 border-black bg-gray-50 print-avoid-break">
+              <td colSpan={6} className="border border-black py-1.5 px-3 text-right uppercase">
+                Tổng cộng giá trị hàng nhập:
+              </td>
+              <td className="border border-black py-1.5 px-2 text-right font-mono">
+                {formatQuantity(receipt.totalBaseQuantity)} đvcs
+              </td>
+              <td className="border border-black py-1.5 px-2 text-right"></td>
+              <td className="border border-black py-1.5 px-2 text-right font-mono text-xs">
+                {formatCurrencyVND(receipt.totalAmount)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Khối chữ ký xác nhận 4 bên */}
+        <div className="mt-6 pt-3 border-t border-gray-400 text-[11px] print-avoid-break">
+          <div className="text-right italic mb-3">
+            Ngày ...... tháng ...... năm 2026
+          </div>
+          <div className="grid grid-cols-4 text-center gap-2">
+            <div>
+              <p className="font-bold">Người giao hàng</p>
+              <p className="text-[10px] italic text-gray-600">(Ký, ghi rõ họ tên)</p>
+              <div className="h-14"></div>
+              <p className="font-semibold">{receipt.driverName || '..............................'}</p>
+            </div>
+            <div>
+              <p className="font-bold">Người nhận / Thủ kho</p>
+              <p className="text-[10px] italic text-gray-600">(Ký, ghi rõ họ tên)</p>
+              <div className="h-14"></div>
+              <p className="font-semibold text-gray-800">{receipt.createdByUsername || 'wh_staff'}</p>
+            </div>
+            <div>
+              <p className="font-bold">Kế toán kho</p>
+              <p className="text-[10px] italic text-gray-600">(Ký, ghi rõ họ tên)</p>
+              <div className="h-14"></div>
+              <p className="font-semibold text-gray-400">..............................</p>
+            </div>
+            <div>
+              <p className="font-bold">Giám đốc / Trưởng kho</p>
+              <p className="text-[10px] italic text-gray-600">(Ký, đóng dấu)</p>
+              <div className="h-14"></div>
+              <p className="font-semibold text-gray-800">
+                {receipt.confirmedByUsername || '..............................'}
+              </p>
             </div>
           </div>
         </div>

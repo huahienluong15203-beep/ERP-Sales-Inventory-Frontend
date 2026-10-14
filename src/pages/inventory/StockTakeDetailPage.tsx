@@ -17,7 +17,11 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ShieldCheck,
-  Check
+  Check,
+  Warehouse,
+  Layers,
+  FileText,
+  User
 } from 'lucide-react';
 import type { StockTake, StockTakeLine } from '../../types/stockTake';
 import {
@@ -342,8 +346,8 @@ export const StockTakeDetailPage: React.FC = () => {
 
   return (
     <div className="space-y-6 antialiased max-w-7xl mx-auto pb-24 animate-in fade-in duration-200">
-      {/* 1. THANH ĐIỀU HƯỚNG QUAY LẠI & BREADCRUMBS */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* 1. THANH ĐIỀU HƯỚNG QUAY LẠI & BREADCRUMBS (ẨN KHI IN) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -422,12 +426,13 @@ export const StockTakeDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. HERO HEADER PHIẾU KIỂM KÊ */}
-      <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 bg-gradient-to-r from-orange-50/60 via-amber-50/20 to-white">
+      {/* 2. KHỐI THÔNG TIN PHIẾU KIỂM KÊ (DUY NHẤT 1 CARD CÂN ĐỐI, GỌN GÀNG, KHÔNG LẶP LẠI, ẨN KHI IN) */}
+      <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 no-print space-y-4 bg-gradient-to-r from-orange-50/50 via-amber-50/15 to-white">
+        {/* Hàng 1: Tiêu đề + Mã phiếu + Badge trạng thái + Thống kê 4 ô */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#F85606] to-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/25">
-              <ClipboardList size={28} />
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-[#F85606] to-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/25">
+              <ClipboardList size={26} />
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2.5 flex-wrap">
@@ -452,86 +457,111 @@ export const StockTakeDetailPage: React.FC = () => {
                   </span>
                 )}
               </div>
-              <p className="text-xs sm:text-sm text-gray-500 font-medium">
-                Kho: <strong>{stockTake.warehouseName}</strong> • Phạm vi:{' '}
-                <strong>{stockTake.categoryName ? `Nhóm ${stockTake.categoryName}` : 'Toàn bộ kho'}</strong> • Ngày tạo:{' '}
-                {new Date(stockTake.createdAt).toLocaleDateString('vi-VN')}
+              <p className="text-xs text-gray-500 font-medium">
+                Thời điểm chốt số tồn sổ (Snapshot): <strong>{new Date(stockTake.createdAt).toLocaleString('vi-VN')}</strong>
               </p>
             </div>
           </div>
 
-          {/* Quick Metrics */}
-          <div className="flex items-center gap-2.5 flex-wrap pt-2 lg:pt-0 border-t lg:border-t-0 border-gray-100">
-            <div className="bg-white px-3.5 py-2 rounded-2xl border border-gray-200 text-right shadow-2xs min-w-[90px]">
+          {/* 4 Thẻ chỉ số kết quả kiểm đếm */}
+          <div className="flex items-center gap-2 flex-wrap pt-2 lg:pt-0 border-t lg:border-t-0 border-gray-100">
+            <div className="bg-white px-3.5 py-2 rounded-2xl border border-gray-200 text-center shadow-2xs min-w-[85px]">
               <span className="text-[10px] font-bold uppercase text-gray-400 block">Tổng số SKU</span>
               <span className="text-sm sm:text-base font-black text-gray-900 font-mono">
                 {lines.length}
               </span>
             </div>
-            <div className="bg-white px-3.5 py-2 rounded-2xl border border-gray-200 text-right shadow-2xs min-w-[90px]">
-              <span className="text-[10px] font-bold uppercase text-gray-400 block">Khớp sổ (0)</span>
-              <span className="text-sm sm:text-base font-black text-emerald-600 font-mono">
+            <div className="bg-emerald-50/70 px-3.5 py-2 rounded-2xl border border-emerald-200 text-center shadow-2xs min-w-[85px]">
+              <span className="text-[10px] font-bold uppercase text-emerald-700 block">Khớp sổ (0)</span>
+              <span className="text-sm sm:text-base font-black text-emerald-700 font-mono">
                 {stats.match}
               </span>
             </div>
-            <div className="bg-white px-3.5 py-2 rounded-2xl border border-gray-200 text-right shadow-2xs min-w-[90px]">
-              <span className="text-[10px] font-bold uppercase text-gray-400 block">Lệch thừa (+)</span>
-              <span className="text-sm sm:text-base font-black text-blue-600 font-mono">
-                {stats.surplus}
+            <div className="bg-blue-50/70 px-3.5 py-2 rounded-2xl border border-blue-200 text-center shadow-2xs min-w-[85px]">
+              <span className="text-[10px] font-bold uppercase text-blue-700 block">Lệch thừa (+)</span>
+              <span className="text-sm sm:text-base font-black text-blue-700 font-mono">
+                +{stats.surplus}
               </span>
             </div>
-            <div className="bg-white px-3.5 py-2 rounded-2xl border border-gray-200 text-right shadow-2xs min-w-[90px]">
-              <span className="text-[10px] font-bold uppercase text-gray-400 block">Lệch thiếu (-)</span>
-              <span className="text-sm sm:text-base font-black text-rose-600 font-mono">
-                {stats.shortage}
+            <div className="bg-rose-50/70 px-3.5 py-2 rounded-2xl border border-rose-200 text-center shadow-2xs min-w-[85px]">
+              <span className="text-[10px] font-bold uppercase text-rose-700 block">Lệch thiếu (-)</span>
+              <span className="text-sm sm:text-base font-black text-rose-700 font-mono">
+                -{stats.shortage}
               </span>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* 3. KHỐI THÔNG TIN CHUNG PHIẾU KIỂM KÊ */}
-      <div className="bg-white rounded-3xl p-5 border border-gray-200 shadow-2xs space-y-3">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div className="p-3 rounded-2xl bg-gray-50 border border-gray-100 space-y-0.5">
-            <span className="text-[10px] font-bold text-gray-400 uppercase">Kho kiểm kê</span>
-            <div className="font-bold text-gray-900">{stockTake.warehouseName}</div>
-          </div>
-          <div className="p-3 rounded-2xl bg-gray-50 border border-gray-100 space-y-0.5">
-            <span className="text-[10px] font-bold text-gray-400 uppercase">Phạm vi nhóm hàng</span>
-            <div className="font-bold text-gray-900">
-              {stockTake.categoryName || 'Toàn bộ mặt hàng trong kho'}
+        {/* Hàng 2: Chi tiết thông tin kho, phạm vi, người tạo, mục đích (tinh gọn, không lặp) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-gray-100 text-xs">
+          <div className="p-3 rounded-2xl bg-white border border-gray-100 shadow-2xs flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-orange-50 text-[#F85606] shrink-0">
+              <Warehouse size={16} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-gray-400 uppercase block">Kho kiểm kê</span>
+              <div className="font-bold text-gray-900 truncate" title={stockTake.warehouseName}>
+                {stockTake.warehouseName}
+              </div>
             </div>
           </div>
-          <div className="p-3 rounded-2xl bg-gray-50 border border-gray-100 space-y-0.5">
-            <span className="text-[10px] font-bold text-gray-400 uppercase">Người tạo phiếu</span>
-            <div className="font-bold text-gray-900">{stockTake.createdByUsername || 'wh_staff'}</div>
+
+          <div className="p-3 rounded-2xl bg-white border border-gray-100 shadow-2xs flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 shrink-0">
+              <Layers size={16} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-gray-400 uppercase block">Phạm vi nhóm hàng</span>
+              <div className="font-bold text-gray-900 truncate" title={stockTake.categoryName || 'Toàn bộ mặt hàng trong kho'}>
+                {stockTake.categoryName || 'Toàn bộ mặt hàng trong kho'}
+              </div>
+            </div>
           </div>
-          <div className="p-3 rounded-2xl bg-gray-50 border border-gray-100 space-y-0.5">
-            <span className="text-[10px] font-bold text-gray-400 uppercase">Ghi chú mục đích</span>
-            <div className="text-gray-700 italic truncate" title={stockTake.note || ''}>
-              {stockTake.note || '---'}
+
+          <div className="p-3 rounded-2xl bg-white border border-gray-100 shadow-2xs flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-blue-50 text-blue-600 shrink-0">
+              <User size={16} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-gray-400 uppercase block">Người lập phiếu</span>
+              <div className="font-bold text-gray-900 truncate">
+                {stockTake.createdByUsername || 'wh_staff'}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-white border border-gray-100 shadow-2xs flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-gray-100 text-gray-600 shrink-0">
+              <FileText size={16} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-gray-400 uppercase block">Mục đích kiểm kê</span>
+              <div className="text-gray-700 italic truncate" title={stockTake.note || '---'}>
+                {stockTake.note || '---'}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Thông tin chốt nếu đã hoàn tất */}
         {stockTake.status === 'CLOSED' && stockTake.closeReason && (
-          <div className="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200 text-xs text-emerald-900 space-y-1">
-            <div className="font-bold flex items-center gap-1.5">
-              <CheckCircle2 size={14} className="text-emerald-600" />
-              <span>
+          <div className="p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2.5">
+            <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">
                 Phiếu đã được chốt bởi <strong>{stockTake.closedByUsername}</strong> lúc{' '}
                 {stockTake.closedAt ? new Date(stockTake.closedAt).toLocaleString('vi-VN') : ''}
               </span>
+              <p className="text-emerald-800 italic mt-0.5">
+                Lý do điều chỉnh tồn kho: &ldquo;{stockTake.closeReason}&rdquo;
+              </p>
             </div>
-            <p className="text-emerald-800 italic pl-5">Lý do chốt kiểm kê: &ldquo;{stockTake.closeReason}&rdquo;</p>
           </div>
         )}
       </div>
 
-      {/* 4. KHỐI BẢNG MẶT HÀNG KIỂM KÊ (PHÂN TRANG ĐẦY ĐỦ, NHẬP SỐ ĐẾM CĂN GIỮA) */}
-      <div className="bg-white rounded-3xl border border-gray-200 shadow-2xs overflow-hidden space-y-0">
+      {/* 3. KHỐI BẢNG MẶT HÀNG KIỂM KÊ (PHÂN TRANG ĐẦY ĐỦ, NHẬP SỐ ĐẾM CĂN GIỮA - ẨN KHI IN) */}
+      <div className="bg-white rounded-3xl border border-gray-200 shadow-2xs overflow-hidden space-y-0 no-print">
         {/* Header bảng & Bộ lọc & Nút điền nhanh */}
         <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-gray-50/90 to-white flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -850,6 +880,154 @@ export const StockTakeDetailPage: React.FC = () => {
               </button>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* 4. BẢN IN CHỨNG TỪ BIÊN BẢN KIỂM KÊ KHO HÀNG CHUẨN KẾ TOÁN (CHỈ XUẤT HIỆN KHI BẤM IN) */}
+      <div className="hidden print:block w-full bg-white text-black font-sans leading-normal">
+        {/* Header Quốc hiệu / Đơn vị */}
+        <div className="flex justify-between items-start pb-2 border-b border-black mb-3">
+          <div>
+            <p className="font-bold text-xs uppercase tracking-wider">CÔNG TY CỔ PHẦN THƯƠNG MẠI & PHÂN PHỐI ERP</p>
+            <p className="text-[11px] text-gray-700">Bộ phận: Phòng Quản Lý Kho Vận & Chuỗi Cung Ứng</p>
+            <p className="text-[11px] text-gray-700">Kho kiểm kê: {stockTake.warehouseName}</p>
+          </div>
+          <div className="text-right">
+            <p className="font-mono text-xs font-bold">Mẫu số: 05-VT</p>
+            <p className="text-[10px] italic text-gray-600">(Ban hành theo TT 200/2014/TT-BTC)</p>
+            <p className="font-mono text-xs font-bold mt-0.5">Số phiếu: {stockTake.code}</p>
+          </div>
+        </div>
+
+        {/* Tiêu đề chính giữa */}
+        <div className="text-center my-3">
+          <h1 className="text-base font-black uppercase tracking-wider">BIÊN BẢN KIỂM KÊ KHO HÀNG HÓA</h1>
+          <p className="text-[11px] italic text-gray-600 mt-0.5">
+            Thời điểm chụp chốt tồn sổ (Snapshot): {new Date(stockTake.createdAt).toLocaleString('vi-VN')}
+          </p>
+        </div>
+
+        {/* Khối thông tin chi tiết biên bản */}
+        <div className="border border-black p-2.5 rounded text-[11px] mb-3 space-y-1">
+          <div className="grid grid-cols-2 gap-x-4">
+            <div><strong>- Địa điểm kiểm kê:</strong> {stockTake.warehouseName}</div>
+            <div><strong>- Người lập phiếu:</strong> {stockTake.createdByUsername || 'wh_staff'}</div>
+            <div>
+              <strong>- Phạm vi kiểm kê:</strong>{' '}
+              {stockTake.categoryName ? `Nhóm ngành: ${stockTake.categoryName}` : 'Toàn bộ mặt hàng trong kho (Tổng thể)'}
+            </div>
+            <div>
+              <strong>- Trạng thái phiếu:</strong>{' '}
+              {stockTake.status === 'CLOSED'
+                ? 'Đã chốt & ghi nhận điều chỉnh tồn kho'
+                : stockTake.status === 'CANCELLED'
+                ? 'Đã hủy phiếu'
+                : 'Đang thực hiện kiểm đếm thực tế (Nháp)'}
+            </div>
+          </div>
+          {stockTake.note && (
+            <div><strong>- Mục đích kiểm kê:</strong> {stockTake.note}</div>
+          )}
+          {stockTake.status === 'CLOSED' && stockTake.closeReason && (
+            <div>
+              <strong>- Lý do điều chỉnh sau chốt:</strong> {stockTake.closeReason} (Chốt bởi {stockTake.closedByUsername} lúc{' '}
+              {stockTake.closedAt ? new Date(stockTake.closedAt).toLocaleString('vi-VN') : ''})
+            </div>
+          )}
+        </div>
+
+        {/* Tóm tắt số liệu */}
+        <div className="flex justify-between items-center text-[11px] font-bold pb-1.5 px-1 border-b border-gray-400 mb-2">
+          <span>Tổng số SKU kiểm kê: {lines.length}</span>
+          <span>Khớp số sổ: {stats.match}</span>
+          <span>Lệch thừa (+): {stats.surplus}</span>
+          <span>Lệch thiếu (-): {stats.shortage}</span>
+          {stats.uncounted > 0 && <span>Chưa đếm: {stats.uncounted}</span>}
+        </div>
+
+        {/* Bảng in toàn bộ mặt hàng không bị ngắt phân trang */}
+        <table className="w-full border-collapse border border-black text-[10px]">
+          <thead>
+            <tr className="bg-gray-100 border-b border-black text-center font-bold">
+              <th className="border border-black py-1 px-1.5 w-7">STT</th>
+              <th className="border border-black py-1 px-2 w-24 text-left">Mã SKU</th>
+              <th className="border border-black py-1 px-2 text-left">Tên sản phẩm - Quy cách</th>
+              <th className="border border-black py-1 px-1.5 w-14">ĐVT</th>
+              <th className="border border-black py-1 px-2 w-20 text-right">Tồn sổ (HT)</th>
+              <th className="border border-black py-1 px-2 w-20 text-right">Thực tế đếm</th>
+              <th className="border border-black py-1 px-2 w-20 text-right">Chênh lệch</th>
+              <th className="border border-black py-1 px-2 w-32 text-left">Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((line, idx) => {
+              const diff = line.difference;
+              const hasDiff = diff !== null && diff !== 0;
+              return (
+                <tr key={line.id} className="border-b border-black/50 print-avoid-break">
+                  <td className="border border-black py-1 px-1 text-center font-mono">{idx + 1}</td>
+                  <td className="border border-black py-1 px-2 font-mono font-bold">{line.sku}</td>
+                  <td className="border border-black py-1 px-2 font-medium">{line.productName}</td>
+                  <td className="border border-black py-1 px-1 text-center">{line.baseUnit}</td>
+                  <td className="border border-black py-1 px-2 text-right font-mono">
+                    {formatQuantity(line.systemQuantity)}
+                  </td>
+                  <td className="border border-black py-1 px-2 text-right font-mono font-bold">
+                    {line.countedQuantity !== null && line.countedQuantity !== undefined
+                      ? formatQuantity(line.countedQuantity)
+                      : '.......'}
+                  </td>
+                  <td className="border border-black py-1 px-2 text-right font-mono font-bold">
+                    {diff === null
+                      ? '---'
+                      : diff === 0
+                      ? '0'
+                      : diff > 0
+                      ? `+${formatQuantity(diff)}`
+                      : formatQuantity(diff)}
+                  </td>
+                  <td className="border border-black py-1 px-2 text-[9px] italic">
+                    {line.note || (hasDiff ? (diff && diff > 0 ? 'Thừa hàng' : 'Thiếu hàng') : '')}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {/* Khối chữ ký xác nhận 4 bên */}
+        <div className="mt-6 pt-3 border-t border-gray-400 text-[11px] print-avoid-break">
+          <div className="text-right italic mb-3">
+            Ngày ...... tháng ...... năm 2026
+          </div>
+          <div className="grid grid-cols-4 text-center gap-2">
+            <div>
+              <p className="font-bold">Người lập phiếu</p>
+              <p className="text-[10px] italic text-gray-600">(Ký, ghi rõ họ tên)</p>
+              <div className="h-14"></div>
+              <p className="font-semibold">{stockTake.createdByUsername || 'wh_staff'}</p>
+            </div>
+            <div>
+              <p className="font-bold">Đại diện kiểm kê</p>
+              <p className="text-[10px] italic text-gray-600">(Ký, ghi rõ họ tên)</p>
+              <div className="h-14"></div>
+              <p className="font-semibold text-gray-400">..............................</p>
+            </div>
+            <div>
+              <p className="font-bold">Kế toán kho</p>
+              <p className="text-[10px] italic text-gray-600">(Ký, ghi rõ họ tên)</p>
+              <div className="h-14"></div>
+              <p className="font-semibold text-gray-400">..............................</p>
+            </div>
+            <div>
+              <p className="font-bold">Quản lý kho / Thủ kho</p>
+              <p className="text-[10px] italic text-gray-600">(Ký, đóng dấu)</p>
+              <div className="h-14"></div>
+              <p className="font-semibold">
+                {stockTake.closedByUsername || '..............................'}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 

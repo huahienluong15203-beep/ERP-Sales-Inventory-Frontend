@@ -355,3 +355,42 @@ table th {
     @apply font-sans;
   }
 }
+
+/* ==========================================================================
+   PRINT STYLES (Chuẩn hóa bản in chứng từ kho & kiểm kê)
+   ========================================================================== */
+@media print {
+  /* Ẩn hoàn toàn header, sidebar hệ thống và các nút điều khiển web */
+  .erp-topbar,
+  .erp-sidebar,
+  .erp-hamburger-btn,
+  .no-print,
+  #btn-mobile-menu-toggle {
+    display: none !important;
+  }
+
+  .erp-main-area {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 10pt !important;
+  }
+
+  /* Định dạng trang in A4 */
+  @page {
+    size: A4 portrait;
+    margin: 10mm 8mm 12mm 8mm;
+  }
+
+  /* Tránh ngắt trang giữa hàng bảng hoặc khối chữ ký */
+  tr, .print-avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
