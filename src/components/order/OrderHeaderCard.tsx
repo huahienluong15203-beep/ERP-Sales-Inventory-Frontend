@@ -127,6 +127,98 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
     );
   });
 
+  // Render danh sách dropdown chọn đại lý
+  const renderAgencyDropdown = () => (
+    <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-60 overflow-y-auto divide-y divide-gray-100 text-xs">
+      <div className="p-2 bg-gray-50 flex items-center justify-between border-b border-gray-100 sticky top-0 z-10">
+        <span className="text-[11px] text-gray-500 font-medium">
+          Tìm thấy {filteredAgencies.length} đại lý
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            setIsDropdownOpen(false);
+            setAgencySearchText('');
+          }}
+          className="text-gray-400 hover:text-gray-600 text-[11px] px-1.5 py-0.5 rounded hover:bg-gray-200"
+        >
+          ✕ Đóng
+        </button>
+      </div>
+
+      {filteredAgencies.length === 0 ? (
+        <div className="p-4 text-center text-gray-400">
+          Không tìm thấy đại lý phù hợp
+        </div>
+      ) : (
+        filteredAgencies.map((agency) => {
+          const isSuspended = agency.status === 'SUSPENDED';
+          const isLocked = agency.transactionLocked;
+          return (
+            <div
+              key={agency.id}
+              onClick={() => {
+                onSelectAgency(agency);
+                setIsDropdownOpen(false);
+                setAgencySearchText('');
+              }}
+              className={`p-2.5 hover:bg-orange-50/70 cursor-pointer transition flex items-center justify-between gap-2 ${
+                isSuspended ? 'bg-rose-50/40 hover:bg-rose-100/60' : isLocked ? 'bg-amber-50/30 hover:bg-amber-100/50' : ''
+              }`}
+            >
+              <div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-mono font-bold text-gray-700">
+                    {agency.code}
+                  </span>
+                  <strong className="text-gray-900 font-medium">
+                    {agency.name}
+                  </strong>
+                  {isSuspended && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-0.5">
+                      <AlertTriangle size={9} /> Ngừng giao dịch
+                    </span>
+                  )}
+                  {isLocked && !isSuspended && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-0.5">
+                      <Lock size={9} /> Bị khóa
+                    </span>
+                  )}
+                  {!isSuspended && !isLocked && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700">
+                      Đang giao dịch
+                    </span>
+                  )}
+                </div>
+                <div className="text-[10px] text-gray-400 flex items-center gap-2 mt-0.5">
+                  <span>{agency.customerGroupName}</span>
+                  <span>•</span>
+                  <span>{agency.regionName}</span>
+                  {!agency.priceList && (
+                    <>
+                      <span>•</span>
+                      <span className="text-amber-600 font-medium">Chưa có bảng giá</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="text-right text-[11px] shrink-0">
+                <span
+                  className={`font-mono block ${
+                    agency.totalDebt > 0 ? 'text-rose-600 font-semibold' : 'text-gray-600'
+                  }`}
+                >
+                  Nợ: {formatCurrencyVND(agency.totalDebt)}
+                </span>
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+
   return (
     <div className="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-4 sm:p-5 space-y-4">
       <div className="flex items-center justify-between pb-3 border-b border-gray-100">
@@ -178,47 +270,86 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
 
           {selectedAgency ? (
             <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-mono text-xs font-bold text-blue-700">
-                      {selectedAgency.code}
-                    </span>
-                    <strong className="text-xs text-gray-900">
-                      {selectedAgency.name}
-                    </strong>
-                    {selectedAgency.status === 'SUSPENDED' && (
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
-                        <AlertTriangle size={10} className="text-rose-600" /> Ngừng giao dịch
-                      </span>
-                    )}
-                    {selectedAgency.transactionLocked && (
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
-                        <Lock size={10} className="text-rose-600" /> Khóa giao dịch
-                      </span>
-                    )}
+              {isDropdownOpen ? (
+                <div className="relative">
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        autoFocus
+                        placeholder="🔍 Nhập mã, tên hoặc SĐT đại lý cần đổi..."
+                        value={agencySearchText}
+                        onChange={(e) => setAgencySearchText(e.target.value)}
+                        className="w-full h-9 px-3 text-xs rounded-xl border border-orange-400 bg-white focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 outline-none transition"
+                      />
+                      {agencySearchText && (
+                        <button
+                          type="button"
+                          onClick={() => setAgencySearchText('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        setAgencySearchText('');
+                      }}
+                      className="px-2.5 py-1.5 text-xs rounded-xl border border-gray-200 bg-white text-gray-600 hover:text-gray-900 hover:bg-gray-100 font-medium shrink-0 transition"
+                    >
+                      Hủy
+                    </button>
                   </div>
-                  <div className="text-[11px] text-gray-500 flex flex-wrap items-center gap-2 mt-0.5">
-                    <span>MST: {selectedAgency.taxCode}</span>
-                    {selectedAgency.phone && (
-                      <span className="flex items-center gap-0.5">
-                        <Phone size={10} /> {selectedAgency.phone}
-                      </span>
-                    )}
-                  </div>
-                </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsDropdownOpen(true);
-                    setAgencySearchText('');
-                  }}
-                  className="px-2.5 py-1 text-[11px] rounded-lg border border-gray-200 bg-white text-gray-600 hover:text-[#F85606] hover:border-orange-200 transition-colors font-medium shrink-0"
-                >
-                  Đổi đại lý
-                </button>
-              </div>
+                  {/* DROPDOWN CHỌN ĐẠI LÝ - NẰM NGAY TRÊN ĐẦU, DƯỚI Ô TÌM KIẾM */}
+                  {renderAgencyDropdown()}
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-mono text-xs font-bold text-blue-700">
+                        {selectedAgency.code}
+                      </span>
+                      <strong className="text-xs text-gray-900">
+                        {selectedAgency.name}
+                      </strong>
+                      {selectedAgency.status === 'SUSPENDED' && (
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                          <AlertTriangle size={10} className="text-rose-600" /> Ngừng giao dịch
+                        </span>
+                      )}
+                      {selectedAgency.transactionLocked && (
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                          <Lock size={10} className="text-rose-600" /> Khóa giao dịch
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-gray-500 flex flex-wrap items-center gap-2 mt-0.5">
+                      <span>MST: {selectedAgency.taxCode}</span>
+                      {selectedAgency.phone && (
+                        <span className="flex items-center gap-0.5">
+                          <Phone size={10} /> {selectedAgency.phone}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDropdownOpen(true);
+                      setAgencySearchText('');
+                    }}
+                    className="px-2.5 py-1 text-[11px] rounded-lg border border-gray-200 bg-white text-gray-600 hover:text-[#F85606] hover:border-orange-200 transition-colors font-medium shrink-0"
+                  >
+                    Đổi đại lý
+                  </button>
+                </div>
+              )}
 
               {/* Thông tin hạn mức, bảng giá tự động & kho phục vụ (S4-03 AC1) */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200/70 text-[11px]">
@@ -417,93 +548,7 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                 onFocus={() => setIsDropdownOpen(true)}
                 className="w-full h-10 px-3 text-xs rounded-xl border border-gray-200 focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 outline-none transition"
               />
-            </div>
-          )}
-
-          {/* DROPDOWN CHỌN ĐẠI LÝ */}
-          {isDropdownOpen && (
-            <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-60 overflow-y-auto divide-y divide-gray-100 text-xs">
-              <div className="p-2 bg-gray-50 flex items-center justify-between border-b border-gray-100">
-                <span className="text-[11px] text-gray-500 font-medium">
-                  Tìm thấy {filteredAgencies.length} đại lý
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsDropdownOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 text-[11px]"
-                >
-                  ✕ Đóng
-                </button>
-              </div>
-
-              {filteredAgencies.length === 0 ? (
-                <div className="p-4 text-center text-gray-400">
-                  Không tìm thấy đại lý phù hợp
-                </div>
-              ) : (
-                filteredAgencies.map((agency) => {
-                  const isSuspended = agency.status === 'SUSPENDED';
-                  const isLocked = agency.transactionLocked;
-                  return (
-                    <div
-                      key={agency.id}
-                      onClick={() => {
-                        onSelectAgency(agency);
-                        setIsDropdownOpen(false);
-                        setAgencySearchText('');
-                      }}
-                      className={`p-2.5 hover:bg-orange-50/70 cursor-pointer transition flex items-center justify-between gap-2 ${isSuspended ? 'bg-rose-50/40 hover:bg-rose-100/60' : isLocked ? 'bg-amber-50/30 hover:bg-amber-100/50' : ''
-                        }`}
-                    >
-                      <div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-mono font-bold text-gray-700">
-                            {agency.code}
-                          </span>
-                          <strong className="text-gray-900 font-medium">
-                            {agency.name}
-                          </strong>
-                          {isSuspended && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-0.5">
-                              <AlertTriangle size={9} /> Ngừng giao dịch
-                            </span>
-                          )}
-                          {isLocked && !isSuspended && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-0.5">
-                              <Lock size={9} /> Bị khóa
-                            </span>
-                          )}
-                          {!isSuspended && !isLocked && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700">
-                              Đang giao dịch
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-gray-400 flex items-center gap-2 mt-0.5">
-                          <span>{agency.customerGroupName}</span>
-                          <span>•</span>
-                          <span>{agency.regionName}</span>
-                          {!agency.priceList && (
-                            <>
-                              <span>•</span>
-                              <span className="text-amber-600 font-medium">Chưa có bảng giá</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="text-right text-[11px] shrink-0">
-                        <span
-                          className={`font-mono block ${agency.totalDebt > 0 ? 'text-rose-600 font-semibold' : 'text-gray-600'
-                            }`}
-                        >
-                          Nợ: {formatCurrencyVND(agency.totalDebt)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+              {isDropdownOpen && renderAgencyDropdown()}
             </div>
           )}
         </div>

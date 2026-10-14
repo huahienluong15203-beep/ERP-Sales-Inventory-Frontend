@@ -74,6 +74,15 @@ export const StockTakeDetailModal: React.FC<StockTakeDetailModalProps> = ({
     'ALL' | 'DIFF' | 'SURPLUS' | 'SHORTAGE' | 'MATCH' | 'UNCOUNTED'
   >('ALL');
 
+  // Phân trang danh sách mặt hàng kiểm kê (hỗ trợ mượt mà khi kho có hàng nghìn SKU)
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(50);
+
+  // Reset trang về 1 khi lọc hoặc tìm kiếm
+  useEffect(() => {
+    setPage(1);
+  }, [keyword, filterType]);
+
   // Reason Modal for Close / Cancel
   const [reasonModalMode, setReasonModalMode] = useState<'CLOSE' | 'CANCEL' | null>(null);
 
@@ -100,19 +109,37 @@ export const StockTakeDetailModal: React.FC<StockTakeDetailModalProps> = ({
       setLoading(true);
       const data = await fetchStockTakeDetail(id);
       setStockTake(data);
-      const mappedLines: LocalLineState[] = (data.lines || []).map((l: StockTakeLine) => ({
-        id: l.id,
-        productId: l.productId,
-        sku: l.sku,
-        productName: l.productName,
-        baseUnit: l.baseUnit,
-        systemQuantity: Number(l.systemQuantity),
-        countedQuantity: l.countedQuantity !== null && l.countedQuantity !== undefined ? Number(l.countedQuantity) : null,
-        difference: l.difference !== null && l.difference !== undefined ? Number(l.difference) : null,
-        note: l.note || ''
-      }));
+      let hasDefaulted = false;
+      const mappedLines: LocalLineState[] = (data.lines || []).map((l: StockTakeLine) => {
+        const sysQty = Number(l.systemQuantity);
+        const hasSaved = l.countedQuantity !== null && l.countedQuantity !== undefined;
+        // Tự động đối chiếu hệ thống: hiển thị số thực đếm = tồn sổ mặc định (chênh lệch = 0), vẫn cho sửa tay bình thường
+        const counted = hasSaved ? Number(l.countedQuantity) : sysQty;
+        const diff = hasSaved && l.difference !== null && l.difference !== undefined
+          ? Number(l.difference)
+          : Number((counted - sysQty).toFixed(4));
+        if (!hasSaved) {
+          hasDefaulted = true;
+        }
+
+        return {
+          id: l.id,
+          productId: l.productId,
+          sku: l.sku,
+          productName: l.productName,
+          baseUnit: l.baseUnit,
+          systemQuantity: sysQty,
+          countedQuantity: counted,
+          difference: diff,
+          note: l.note || ''
+        };
+      });
       setLines(mappedLines);
-      setIsDirty(false);
+      if (hasDefaulted && data.status === 'DRAFT') {
+        setIsDirty(true);
+      } else {
+        setIsDirty(false);
+      }
     } catch (err: unknown) {
       showToast('Lỗi', err instanceof Error ? err.message : 'Không thể tải chi tiết phiếu kiểm kê', 'error');
     } finally {
@@ -267,6 +294,13 @@ export const StockTakeDetailModal: React.FC<StockTakeDetailModalProps> = ({
       return true;
     });
   }, [lines, keyword, filterType]);
+
+  // Phân trang cho các dòng hiển thị
+  const totalPages = Math.ceil(filteredLines.length / pageSize) || 1;
+  const pagedLines = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredLines.slice(start, start + pageSize);
+  }, [filteredLines, page, pageSize]);
 
   // Live KPI metrics computed from local lines
   const localMetrics = useMemo(() => {
@@ -596,7 +630,7 @@ export const StockTakeDetailModal: React.FC<StockTakeDetailModalProps> = ({
                     <th className="py-2.5 px-3 w-28 text-right bg-slate-50/50 dark:bg-slate-800/30">
                       Tồn sổ (Snapshot)
                     </th>
-                    <th className="py-2.5 px-3 w-36 text-right">
+                    <th className="py-2.5 px-3 w-36 text-center">
                       Số thực đếm <span className="text-rose-500">*</span>
                     </th>
                     <th className="py-2.5 px-3 w-32 text-center">Chênh lệch (AC2)</th>
@@ -611,9 +645,10 @@ export const StockTakeDetailModal: React.FC<StockTakeDetailModalProps> = ({
                       </td>
                     </tr>
                   ) : (
-                    filteredLines.map((line, idx) => {
+                    pagedLines.map((line, idx) => {
                       const isCounted = line.countedQuantity !== null && line.countedQuantity !== undefined;
                       const diff = line.difference;
+                      const stt = (page - 1) * pageSize + idx + 1;
 
                       return (
                         <tr
@@ -627,7 +662,7 @@ export const StockTakeDetailModal: React.FC<StockTakeDetailModalProps> = ({
                           }`}
                         >
                           <td className="py-2 px-2 text-center text-slate-400 text-[11px]">
-                            {idx + 1}
+                            {stt}
                           </td>
                           <td className="py-2 px-3">
                             <span className="font-mono font-semibold text-slate-900 dark:text-slate-100 block">
@@ -645,7 +680,7 @@ export const StockTakeDetailModal: React.FC<StockTakeDetailModalProps> = ({
                           <td className="py-2 px-3 text-right font-mono font-semibold text-slate-700 dark:text-slate-300 bg-slate-50/50 dark:bg-slate-800/30">
                             {line.systemQuantity.toLocaleString('vi-VN')}
                           </td>
-                          <td className="py-2 px-3 text-right">
+                          <td className="py-2 px-3 text-center">
                             {canEditCounts ? (
                               <input
                                 type="number"
@@ -654,7 +689,7 @@ export const StockTakeDetailModal: React.FC<StockTakeDetailModalProps> = ({
                                 value={line.countedQuantity !== null && line.countedQuantity !== undefined ? line.countedQuantity : ''}
                                 onChange={(e) => handleCountChange(line.id, e.target.value)}
                                 placeholder="Nhập số..."
-                                className={`w-28 px-2 py-1 text-right text-xs font-mono font-bold rounded-lg border focus:outline-none focus:ring-2 transition ${
+                                className={`w-28 px-2 py-1 mx-auto block text-center text-xs font-mono font-bold rounded-lg border focus:outline-none focus:ring-2 transition ${
                                   !isCounted
                                     ? 'border-dashed border-slate-300 dark:border-slate-700 bg-amber-50/30 dark:bg-amber-950/20 focus:ring-primary-500'
                                     : diff === 0
@@ -665,7 +700,7 @@ export const StockTakeDetailModal: React.FC<StockTakeDetailModalProps> = ({
                                 }`}
                               />
                             ) : (
-                              <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                              <span className="font-mono font-bold text-slate-800 dark:text-slate-200 block text-center">
                                 {isCounted ? line.countedQuantity?.toLocaleString('vi-VN') : '--'}
                               </span>
                             )}
@@ -710,6 +745,55 @@ export const StockTakeDetailModal: React.FC<StockTakeDetailModalProps> = ({
                 </tbody>
               </table>
             </div>
+
+            {/* Thanh phân trang danh sách mặt hàng */}
+            {filteredLines.length > pageSize && (
+              <div className="py-2.5 px-6 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-850 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div className="text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                  <span>
+                    Hiển thị <strong>{(page - 1) * pageSize + 1}</strong> - <strong>{Math.min(page * pageSize, filteredLines.length)}</strong> trên tổng số <strong>{filteredLines.length}</strong> mặt hàng
+                  </span>
+                  <span>•</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs"
+                  >
+                    <option value={20}>20 dòng / trang</option>
+                    <option value={50}>50 dòng / trang</option>
+                    <option value={100}>100 dòng / trang</option>
+                    <option value={200}>200 dòng / trang</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={page === 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+                  >
+                    Trước
+                  </button>
+
+                  <span className="px-2.5 py-1 font-bold text-primary-600 dark:text-primary-400">
+                    Trang {page} / {totalPages}
+                  </span>
+
+                  <button
+                    type="button"
+                    disabled={page === totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Bottom Actions Bar */}
             <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-wrap items-center justify-between gap-3">

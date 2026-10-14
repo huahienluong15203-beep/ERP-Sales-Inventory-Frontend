@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Trash2, X, RefreshCw } from '../common/Icons';
 
 interface WarehouseDeleteConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => Promise<void> | void;
+  onConfirm: (reason: string) => Promise<void> | void;
   title: string;
   targetName: string;
   targetCode?: string;
@@ -22,7 +22,23 @@ export const WarehouseDeleteConfirmModal: React.FC<WarehouseDeleteConfirmModalPr
   isWarehouse = false,
   isLoading = false
 }) => {
+  const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setReason('');
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const isReasonValid = reason.trim().length > 0;
+
+  const handleConfirm = () => {
+    if (isReasonValid && !isLoading) {
+      onConfirm(reason.trim());
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
@@ -66,6 +82,30 @@ export const WarehouseDeleteConfirmModal: React.FC<WarehouseDeleteConfirmModalPr
             <div className="font-semibold text-slate-800 dark:text-slate-100">{targetName}</div>
           </div>
 
+          {/* Nhập lý do xóa (Bắt buộc) */}
+          <div className="space-y-1.5 pt-1">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Lý do xóa <span className="text-rose-500">*</span>
+            </label>
+            <textarea
+              rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={isWarehouse ? 'Nhập lý do xóa kho hàng (bắt buộc)...' : 'Nhập lý do xóa vị trí lưu trữ (bắt buộc)...'}
+              disabled={isLoading}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 resize-none transition"
+            />
+            {!isReasonValid ? (
+              <span className="text-[11px] text-rose-500 block">
+                * Bắt buộc nhập lý do để tiếp tục thao tác.
+              </span>
+            ) : (
+              <span className="text-[11px] text-slate-400 block text-right">
+                {reason.trim().length} ký tự
+              </span>
+            )}
+          </div>
+
           {isWarehouse ? (
             <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-300 space-y-1">
               <span className="font-semibold block">Lưu ý an toàn dữ liệu:</span>
@@ -92,9 +132,9 @@ export const WarehouseDeleteConfirmModal: React.FC<WarehouseDeleteConfirmModalPr
           </button>
           <button
             type="button"
-            onClick={onConfirm}
-            disabled={isLoading}
-            className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 transition-colors flex items-center gap-2 shadow-sm shadow-rose-600/30"
+            onClick={handleConfirm}
+            disabled={isLoading || !isReasonValid}
+            className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2 shadow-sm shadow-rose-600/30"
           >
             {isLoading ? (
               <>

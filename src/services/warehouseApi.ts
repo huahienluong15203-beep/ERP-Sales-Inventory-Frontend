@@ -80,9 +80,13 @@ export async function updateWarehouse(id: number, payload: WarehouseUpdatePayloa
   return await res.json();
 }
 
-export async function deleteWarehouse(id: number): Promise<void> {
-  const res = await authFetch(`${WAREHOUSE_BASE}/${id}`, {
-    method: 'DELETE'
+export async function deleteWarehouse(id: number, reason: string): Promise<void> {
+  const res = await authFetch(`${WAREHOUSE_BASE}/${id}?reason=${encodeURIComponent(reason)}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ reason })
   });
   if (!res.ok) {
     throw new Error(await parseErrorMessage(res, 'Không thể xóa kho hàng.'));
@@ -135,8 +139,9 @@ export async function updateWarehouseLocation(
   return await res.json();
 }
 
-export async function deleteWarehouseLocation(warehouseId: number, locationId: number): Promise<void> {
-  const res = await authFetch(`${WAREHOUSE_BASE}/${warehouseId}/locations/${locationId}`, {
+export async function deleteWarehouseLocation(warehouseId: number, locationId: number, reason?: string): Promise<void> {
+  const url = `${WAREHOUSE_BASE}/${warehouseId}/locations/${locationId}${reason ? `?reason=${encodeURIComponent(reason)}` : ''}`;
+  const res = await authFetch(url, {
     method: 'DELETE'
   });
   if (!res.ok) {
