@@ -739,10 +739,10 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
             </div>
             <ul className="list-disc list-inside text-[11px] text-blue-800/90 space-y-1 pl-1">
               <li>
-                <b>1. Lập phiếu chuyển:</b> Nhân viên kho lập phiếu chuyển -> phiếu ở trạng thái <b>Chờ QL duyệt xuất</b> (chưa trừ kho xuất).
+                <b>1. Lập phiếu chuyển:</b> Nhân viên kho lập phiếu chuyển → phiếu ở trạng thái <b>Chờ QL duyệt xuất</b> (chưa trừ kho xuất).
               </li>
               <li>
-                <b>2. Quản lý kho xác nhận phiếu:</b> Quản lý kho phê duyệt -> Hệ thống trừ tồn kho xuất và ghi nhận <b>Đang đi đường</b>.
+                <b>2. Quản lý kho xác nhận phiếu:</b> Quản lý kho phê duyệt → Hệ thống trừ tồn kho xuất và ghi nhận <b>Đang đi đường</b>.
               </li>
               <li>
                 <b>3. Kho đến kiểm tra & nhận đủ:</b> Thủ kho đến tiếp nhận hàng, kiểm tra thực tế và <b>xác nhận nhận đủ</b> để kết thúc 1 quy trình.
