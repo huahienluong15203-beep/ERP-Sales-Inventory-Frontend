@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Product, ProductStatus } from '../../types/product';
 import {
   productService,
-  PRODUCT_CATEGORIES,
   canManageCostPrice,
   formatCurrencyVND
 } from '../../services/productService';
@@ -13,7 +12,7 @@ import { useNavigate } from '../../routes/Router';
 import { useUrlPaging } from '../../hooks/useUrlParams';
 import { useServerSearch } from '../../hooks/useServerSearch';
 import { Pagination } from '../../components/common/Pagination';
-import { fetchCategories } from '../../services/categoryApi';
+import { fetchCategories, type CategoryWithCount } from '../../services/categoryApi';
 import { ProductUnitConversionModal } from './components/ProductUnitConversionModal';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { RowActionMenu } from '../../components/common/RowActionMenu';
@@ -29,7 +28,7 @@ export const ProductManagementPage: React.FC = () => {
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, categoryCount: 0 });
-  const [categoryOptions, setCategoryOptions] = useState<string[]>([...PRODUCT_CATEGORIES]);
+  const [categories, setCategories] = useState<CategoryWithCount[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -87,19 +86,67 @@ export const ProductManagementPage: React.FC = () => {
   // Số liệu thẻ đầu trang (đếm trên toàn bộ sản phẩm) + danh sách nhóm hàng cho ô lọc
   const loadStats = useCallback(async () => {
     try {
-      const [s, categories] = await Promise.all([
+      const [s, catList] = await Promise.all([
         productService.getStats(),
         fetchCategories().catch(() => [])
       ]);
-      const names = Array.from(
-        new Set([...PRODUCT_CATEGORIES, ...categories.map((c) => c.name)].filter(Boolean))
-      );
-      setCategoryOptions(names);
-      setStats({ ...s, categoryCount: categories.length || PRODUCT_CATEGORIES.length });
+      setCategories(catList || []);
+      setStats({ ...s, categoryCount: catList?.length || 0 });
     } catch {
       // Lỗi đã báo ở loadProducts
     }
   }, []);
+
+  // Sắp xếp nhóm hàng theo phân cấp cây DFS trực quan cho combobox lọc
+  const hierarchicalCategoryOptions = useMemo(() => {
+    if (!categories.length) return [];
+    const map = new Map<string | null, CategoryWithCount[]>();
+    for (const c of categories) {
+      const pid = c.parentId ?? null;
+      if (!map.has(pid)) map.set(pid, []);
+      map.get(pid)!.push(c);
+    }
+    const result: { value: string; label: string; level: number; productCount: number }[] = [];
+    const traverse = (parentId: string | null, depth: number) => {
+      const list = map.get(parentId) || [];
+      list.sort((a, b) => a.code.localeCompare(b.code));
+      for (const item of list) {
+        let prefix = '';
+        if (depth === 2) prefix = '└─ ';
+        else if (depth === 3) prefix = '└── ';
+        else if (depth > 3) prefix = `${'──'.repeat(depth - 1)} `;
+
+        const badge = item.level === 1 ? '[Ngành]' : item.level === 2 ? '[Nhóm]' : '';
+        const countText = item.productCount > 0 ? ` (${item.productCount} SP)` : '';
+        result.push({
+          value: item.name,
+          label: `${prefix}${badge} ${item.name}${countText}`.trim(),
+          level: item.level,
+          productCount: item.productCount,
+        });
+        traverse(item.id, depth + 1);
+      }
+    };
+    traverse(null, 1);
+    return result;
+  }, [categories]);
+
+  // Map tra cứu nhóm cha cho từng nhóm hàng để hiển thị đầy đủ trong bảng
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, { parentName?: string }>();
+    for (const c of categories) {
+      let parentName: string | undefined;
+      if (c.parentId) {
+        const parent = categories.find((p) => p.id === c.parentId);
+        if (parent) {
+          parentName = parent.name;
+        }
+      }
+      map.set(c.name.toLowerCase(), { parentName });
+      map.set(c.id, { parentName });
+    }
+    return map;
+  }, [categories]);
 
   useEffect(() => {
     loadProducts();
@@ -257,16 +304,16 @@ export const ProductManagementPage: React.FC = () => {
           />
         </div>
 
-        <div className="w-full sm:w-52">
+        <div className="w-full sm:w-64">
           <SearchSelect
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[38px]"
           >
-            <option value="ALL">Tất cả nhóm hàng</option>
-            {categoryOptions.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            <option value="ALL">Tất cả nhóm hàng ({categories.length})</option>
+            {hierarchicalCategoryOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
           </SearchSelect>
@@ -372,8 +419,15 @@ export const ProductManagementPage: React.FC = () => {
                       </td>
 
                       {/* 4. Nhóm hàng */}
-                      <td className="py-3 px-4 text-gray-600 whitespace-nowrap">
-                        {p.category}
+                      <td className="py-3 px-4 text-gray-700 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-gray-900 text-xs">{p.category}</span>
+                          {categoryMap.get(p.category.toLowerCase())?.parentName && (
+                            <span className="text-[10px] text-gray-400">
+                              {categoryMap.get(p.category.toLowerCase())?.parentName}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* 5. ĐVT cơ sở */}
