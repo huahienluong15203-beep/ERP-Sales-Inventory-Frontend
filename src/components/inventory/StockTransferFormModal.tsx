@@ -8,13 +8,16 @@ import {
   AlertTriangle,
   Package,
   Truck,
-  Layers
+  Layers,
+  Loader2
 } from 'lucide-react';
 import type { StockTransfer, CreateStockTransferPayload } from '../../types/stockTransfer';
-import { SYSTEM_WAREHOUSES } from '../../types/inventory';
+import { SYSTEM_WAREHOUSES, type WarehouseOption } from '../../types/inventory';
 import { productService } from '../../services/productService';
 import type { Product } from '../../types/product';
 import { createStockTransfer } from '../../services/stockTransferApi';
+import { fetchMinStockConfigs } from '../../services/stockAlertApi';
+import { fetchStockLedgerWarehouses } from '../../services/stockLedgerApi';
 import { useAuth } from '../../contexts/AuthContext';
 import { SearchSelect } from '../common/SearchSelect';
 import { NumberInput } from '../common/NumberInput';
@@ -52,6 +55,9 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
 }) => {
   const { user, showToast } = useAuth();
 
+  // Danh sách kho hệ thống
+  const [warehouses, setWarehouses] = useState<WarehouseOption[]>(SYSTEM_WAREHOUSES);
+
   // Danh mục sản phẩm hệ thống
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
@@ -69,10 +75,37 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
   const [transporterName, setTransporterName] = useState<string>('');
   const [generalNote, setGeneralNote] = useState<string>('');
 
+  // Tồn kho khả dụng thực tế của kho nguồn (theo từng productId)
+  const [stockMap, setStockMap] = useState<Record<number, number>>({});
+  const [loadingStock, setLoadingStock] = useState<boolean>(false);
+
   // Danh sách dòng sản phẩm điều chuyển (AC1)
   const [lines, setLines] = useState<TransferLineDraft[]>([]);
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Tải danh mục kho thực tế khi mở modal
+  useEffect(() => {
+    if (!isOpen) return;
+
+    fetchStockLedgerWarehouses()
+      .then((data) => {
+        if (data && data.length > 0) {
+          setWarehouses(
+            data.map((w) => ({
+              id: w.id,
+              code: w.code,
+              name: w.name,
+              address: w.address,
+              status: w.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn('Lỗi tải danh sách kho từ backend, dùng fallback:', err);
+      });
+  }, [isOpen]);
 
   // Tải danh mục sản phẩm khi mở modal
   useEffect(() => {
@@ -80,7 +113,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
 
     setLoadingProducts(true);
     productService
-      .getProducts({ size: 50, status: 'ACTIVE' })
+      .getProducts({ size: 100, status: 'ACTIVE' })
       .then((res) => {
         setProducts(res.products);
         setLoadingProducts(false);
@@ -98,15 +131,65 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
     setGeneralNote('');
   }, [isOpen]);
 
+  // Tải tồn kho khả dụng thực tế của kho xuất (sourceWarehouseCode)
+  useEffect(() => {
+    if (!isOpen || !sourceWarehouseCode) return;
+
+    let isMounted = true;
+    setLoadingStock(true);
+
+    fetchMinStockConfigs({ warehouseCode: sourceWarehouseCode })
+      .then((configs) => {
+        if (!isMounted) return;
+        const map: Record<number, number> = {};
+        (configs || []).forEach((c) => {
+          if (c.productId != null) {
+            map[Number(c.productId)] = Number(c.availableStock ?? 0);
+          }
+        });
+        setStockMap(map);
+        setLoadingStock(false);
+
+        // Tự động cập nhật tồn khả dụng cho các dòng đã thêm theo kho xuất mới
+        setLines((prev) =>
+          prev.map((line) => {
+            const avail = map[line.productId] ?? 0;
+            return {
+              ...line,
+              sourceAvailableStock: avail
+            };
+          })
+        );
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.error('Lỗi tải tồn kho khả dụng kho đi:', err);
+        setLoadingStock(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, sourceWarehouseCode]);
+
   if (!isOpen) return null;
+
+  // Xử lý đổi kho nguồn
+  const handleSourceWarehouseChange = (newCode: string) => {
+    setSourceWarehouseCode(newCode);
+    if (destWarehouseCode === newCode) {
+      const other = warehouses.find((w) => w.code !== newCode);
+      if (other) {
+        setDestWarehouseCode(other.code);
+      }
+    }
+  };
 
   // Thêm dòng hàng hóa mới
   const handleAddLine = () => {
     if (products.length === 0) return;
     const defaultP = products[0];
-
-    // Mock tồn khả dụng giả định từ 50 - 500 theo sản phẩm
-    const mockStock = Math.floor(Math.random() * 200) + 50;
+    const availStock = stockMap[Number(defaultP.id)] ?? 0;
 
     const newLine: TransferLineDraft = {
       id: `draft-line-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -115,8 +198,8 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
       productName: defaultP.name,
       category: defaultP.category,
       unit: defaultP.baseUnit || 'Thùng',
-      sourceAvailableStock: mockStock,
-      transferQuantity: 10,
+      sourceAvailableStock: availStock,
+      transferQuantity: availStock > 0 ? Math.min(10, availStock) : 10,
       batchNumber: `LOT-TRF-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
       expiredDate: new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().slice(0, 10)
     };
@@ -129,7 +212,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
     const p = products.find((item) => Number(item.id) === newProductId);
     if (!p) return;
 
-    const mockStock = Math.floor(Math.random() * 200) + 50;
+    const availStock = stockMap[newProductId] ?? 0;
 
     setLines((prev) => {
       const next = [...prev];
@@ -140,8 +223,11 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
         productName: p.name,
         category: p.category,
         unit: p.baseUnit || 'Thùng',
-        sourceAvailableStock: mockStock,
-        transferQuantity: Math.min(next[lineIndex].transferQuantity, mockStock)
+        sourceAvailableStock: availStock,
+        transferQuantity:
+          next[lineIndex].transferQuantity > availStock && availStock > 0
+            ? availStock
+            : next[lineIndex].transferQuantity
       };
       return next;
     });
@@ -325,12 +411,12 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                 </label>
                 <SearchSelect
                   value={sourceWarehouseCode}
-                  onChange={(e) => setSourceWarehouseCode(e.target.value)}
+                  onChange={(e) => handleSourceWarehouseChange(e.target.value)}
                   className="w-full text-xs font-bold border border-gray-300 rounded-xl p-2.5 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 >
-                  {SYSTEM_WAREHOUSES.map((wh) => (
+                  {warehouses.map((wh) => (
                     <option key={wh.code} value={wh.code}>
-                      [{wh.code}] {wh.name} ({wh.address})
+                      [{wh.code}] {wh.name} {wh.address ? `(${wh.address})` : ''}
                     </option>
                   ))}
                 </SearchSelect>
@@ -351,9 +437,9 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                   onChange={(e) => setDestWarehouseCode(e.target.value)}
                   className="w-full text-xs font-bold border border-gray-300 rounded-xl p-2.5 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 >
-                  {SYSTEM_WAREHOUSES.map((wh) => (
+                  {warehouses.map((wh) => (
                     <option key={wh.code} value={wh.code}>
-                      [{wh.code}] {wh.name} ({wh.address})
+                      [{wh.code}] {wh.name} {wh.address ? `(${wh.address})` : ''}
                     </option>
                   ))}
                 </SearchSelect>
@@ -465,7 +551,12 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                       <tr>
                         <th className="py-2.5 px-3 w-12 text-center">STT</th>
                         <th className="py-2.5 px-3 min-w-[200px]">Mặt hàng / SKU</th>
-                        <th className="py-2.5 px-3 w-28 text-center">Tồn khả dụng kho đi</th>
+                        <th className="py-2.5 px-3 w-36 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Tồn khả dụng kho đi</span>
+                            {loadingStock && <Loader2 size={12} className="animate-spin text-blue-500" />}
+                          </div>
+                        </th>
                         <th className="py-2.5 px-3 w-32 text-center">Số lượng chuyển</th>
                         <th className="py-2.5 px-3 w-24 text-center">Đơn vị</th>
                         <th className="py-2.5 px-3 w-36">Số lô điều chuyển</th>
@@ -490,11 +581,18 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
                                 onChange={(e) => handleChangeProduct(idx, Number(e.target.value))}
                                 className="w-full text-xs font-bold border border-gray-200 rounded-lg p-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                               >
-                                {products.map((p) => (
-                                  <option key={p.id} value={p.id}>
-                                    [{p.sku}] {p.name}
-                                  </option>
-                                ))}
+                                {products.map((p) => {
+                                  const pStock = stockMap[Number(p.id)];
+                                  const stockInfo =
+                                    pStock !== undefined
+                                      ? ` [Tồn: ${pStock.toLocaleString('vi-VN')} ${p.baseUnit || ''}]`
+                                      : '';
+                                  return (
+                                    <option key={p.id} value={p.id}>
+                                      [{p.sku}] {p.name}{stockInfo}
+                                    </option>
+                                  );
+                                })}
                               </SearchSelect>
                               <div className="text-[10px] text-gray-400 mt-0.5">
                                 Nhóm: {line.category || 'Mặc định'}
@@ -503,9 +601,20 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
 
                             {/* Tồn khả dụng tại kho đi */}
                             <td className="py-2.5 px-3 text-center">
-                              <span className="font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full text-[11px]">
-                                {line.sourceAvailableStock.toLocaleString('vi-VN')} {line.unit}
-                              </span>
+                              {loadingStock ? (
+                                <span className="text-[11px] text-gray-400 italic inline-flex items-center gap-1">
+                                  <Loader2 size={11} className="animate-spin text-blue-500" />
+                                  <span>Đang tải...</span>
+                                </span>
+                              ) : line.sourceAvailableStock <= 0 ? (
+                                <span className="font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full text-[11px]">
+                                  0 {line.unit} (Hết hàng)
+                                </span>
+                              ) : (
+                                <span className="font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full text-[11px]">
+                                  {line.sourceAvailableStock.toLocaleString('vi-VN')} {line.unit}
+                                </span>
+                              )}
                             </td>
 
                             {/* Số lượng chuyển */}
