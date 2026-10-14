@@ -637,10 +637,13 @@ export const GoodsReceiptDetailPage: React.FC = () => {
                 </td>
               </tr>
             ))}
-            {/* Hàng tổng cộng */}
-            <tr className="font-bold border-t-2 border-black bg-gray-50 print-avoid-break">
+          </tbody>
+
+          {/* Hàng tổng cộng chốt phiếu nhập kho */}
+          <tfoot className="print-avoid-break bg-gray-50 font-bold border-t-2 border-b-2 border-black">
+            <tr className="font-bold border-t-2 border-b-2 border-black">
               <td colSpan={6} className="border border-black py-1.5 px-3 text-right uppercase">
-                Tổng cộng giá trị hàng nhập:
+                Tổng cộng ({receipt.lines.length} mặt hàng):
               </td>
               <td className="border border-black py-1.5 px-2 text-right font-mono">
                 {formatQuantity(receipt.totalBaseQuantity)} đvcs
@@ -650,8 +653,13 @@ export const GoodsReceiptDetailPage: React.FC = () => {
                 {formatCurrencyVND(receipt.totalAmount)}
               </td>
             </tr>
-          </tbody>
+          </tfoot>
         </table>
+
+        {/* Gạch kết thúc danh sách hàng nhập (chốt danh mục chứng từ) */}
+        <div className="w-full my-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-black border-y-2 border-black py-1 print-avoid-break">
+          ═══ HẾT DANH SÁCH HÀNG NHẬP (TỔNG CỘNG: {receipt.lines.length} MẶT HÀNG) ═══
+        </div>
 
         {/* Khối chữ ký xác nhận 4 bên */}
         <div className="mt-6 pt-3 border-t border-gray-400 text-[11px] print-avoid-break">

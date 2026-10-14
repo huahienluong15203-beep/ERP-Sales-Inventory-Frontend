@@ -393,4 +393,38 @@ table th {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
+
+  /* Chuẩn hóa viền bảng in không bao giờ bị đứt đoạn hoặc mất gạch chân đáy */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    border: 1.5px solid #000000 !important;
+    border-bottom: 2px solid #000000 !important;
+  }
+
+  table th,
+  table td {
+    border: 1px solid #000000 !important;
+  }
+
+  table th {
+    background-color: #f3f4f6 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Footer tổng cộng chỉ xuất hiện 1 lần duy nhất ở cuối danh sách */
+  table tfoot {
+    display: table-row-group !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  table tfoot tr {
+    border-top: 2px solid #000000 !important;
+    border-bottom: 2px solid #000000 !important;
+    background-color: #f3f4f6 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }

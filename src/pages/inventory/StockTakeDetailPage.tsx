@@ -298,6 +298,29 @@ export const StockTakeDetailPage: React.FC = () => {
     return { diff, surplus, shortage, match, uncounted };
   }, [lines]);
 
+  // Tổng hợp dữ liệu phục vụ in ấn biên bản kiểm kê
+  const printTotals = useMemo(() => {
+    let totalSystemQty = 0;
+    let totalCountedQty = 0;
+    let totalDiffQty = 0;
+
+    lines.forEach((l) => {
+      totalSystemQty += l.systemQuantity || 0;
+      if (l.countedQuantity !== null && l.countedQuantity !== undefined) {
+        totalCountedQty += l.countedQuantity;
+      }
+      if (l.difference !== null && l.difference !== undefined) {
+        totalDiffQty += l.difference;
+      }
+    });
+
+    return {
+      totalSystemQty: Number(totalSystemQty.toFixed(4)),
+      totalCountedQty: Number(totalCountedQty.toFixed(4)),
+      totalDiffQty: Number(totalDiffQty.toFixed(4)),
+    };
+  }, [lines]);
+
   // Phân trang
   const totalLines = filteredLines.length;
   const totalPages = Math.ceil(totalLines / pageSize) || 1;
@@ -993,7 +1016,52 @@ export const StockTakeDetailPage: React.FC = () => {
               );
             })}
           </tbody>
+
+          {/* Hàng tổng cộng chốt sổ kiểm kê */}
+          <tfoot className="print-avoid-break bg-gray-100 font-bold border-t-2 border-b-2 border-black">
+            <tr className="border-t-2 border-b-2 border-black font-bold">
+              <td colSpan={4} className="border border-black py-1.5 px-3 text-right uppercase font-bold text-[10px]">
+                Tổng cộng ({lines.length} mặt hàng):
+              </td>
+              <td className="border border-black py-1.5 px-2 text-right font-mono font-bold">
+                {formatQuantity(printTotals.totalSystemQty)}
+              </td>
+              <td className="border border-black py-1.5 px-2 text-right font-mono font-bold">
+                {formatQuantity(printTotals.totalCountedQty)}
+              </td>
+              <td className="border border-black py-1.5 px-2 text-right font-mono font-bold">
+                {printTotals.totalDiffQty === 0
+                  ? '0'
+                  : printTotals.totalDiffQty > 0
+                  ? `+${formatQuantity(printTotals.totalDiffQty)}`
+                  : formatQuantity(printTotals.totalDiffQty)}
+              </td>
+              <td className="border border-black py-1.5 px-2 text-[9px] font-semibold">
+                {stats.diff > 0
+                  ? `Lệch ${stats.diff} SKU`
+                  : 'Khớp 100%'}
+              </td>
+            </tr>
+          </tfoot>
         </table>
+
+        {/* Gạch kết thúc danh sách kiểm kê (chốt sổ, không ghi thêm mặt hàng) */}
+        <div className="w-full my-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-black border-y-2 border-black py-1 print-avoid-break">
+          ═══ HẾT DANH SÁCH KIỂM KÊ (TỔNG CỘNG: {lines.length} MẶT HÀNG) ═══
+        </div>
+
+        {/* Dòng ghi chú chốt biên bản */}
+        <div className="text-[10px] italic text-gray-800 mb-3 flex flex-wrap justify-between gap-1 print-avoid-break">
+          <span>* Biên bản kết thúc kiểm kê lúc ..... giờ ..... cùng ngày với tổng số {lines.length} khoản mục hàng hóa.</span>
+          <span>
+            Tình trạng:{' '}
+            <strong>
+              {stats.diff === 0
+                ? 'Toàn bộ số lượng khớp với sổ sách (0 chênh lệch)'
+                : `Có ${stats.diff} mặt hàng phát hiện chênh lệch (tổng lệch: ${printTotals.totalDiffQty > 0 ? `+${formatQuantity(printTotals.totalDiffQty)}` : formatQuantity(printTotals.totalDiffQty)})`}
+            </strong>
+          </span>
+        </div>
 
         {/* Khối chữ ký xác nhận 4 bên */}
         <div className="mt-6 pt-3 border-t border-gray-400 text-[11px] print-avoid-break">
