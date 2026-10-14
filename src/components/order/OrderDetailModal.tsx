@@ -65,6 +65,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
     currentRole === 'ROLE_WAREHOUSE' ||
     Boolean(user?.roles?.some((r) => ['ROLE_ADMIN', 'ROLE_WH_MANAGER', 'ROLE_WAREHOUSE'].includes(r)));
 
+  const canCreateOrder =
+    currentRole === 'ROLE_SALES_REP' ||
+    currentRole === 'ROLE_SALES_MANAGER' ||
+    currentRole === 'ROLE_ADMIN' ||
+    Boolean(user?.roles?.some((r) => ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN'].includes(r)));
+
   const handleUpdateStatus = async (targetStatus: string, actionLabel: string) => {
     if (!order?.id) return;
     try {
@@ -724,7 +730,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
               </button>
             )}
 
-            {activeOrder && activeOrder.id != null && (
+            {activeOrder && activeOrder.id != null && canCreateOrder && (
               <button
                 type="button"
                 onClick={() => {

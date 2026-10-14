@@ -101,6 +101,17 @@ export const OrderListPage: React.FC = () => {
     );
   }, [currentRole, user]);
 
+  // Quyền khởi tạo / sao chép đơn hàng: Chỉ Admin, Quản lý kinh doanh và Nhân viên kinh doanh
+  const canCreateOrder = useMemo(() => {
+    const roles = user?.roles || [];
+    return (
+      currentRole === 'ROLE_SALES_REP' ||
+      currentRole === 'ROLE_SALES_MANAGER' ||
+      currentRole === 'ROLE_ADMIN' ||
+      roles.some((r) => r === 'ROLE_SALES_REP' || r === 'ROLE_SALES_MANAGER' || r === 'ROLE_ADMIN')
+    );
+  }, [user, currentRole]);
+
   // Tabs trạng thái theo vai trò: Kho chỉ quan tâm các đơn hàng thật cần xử lý, ẩn tab Đơn nháp
   const activeStatusTabs = useMemo(() => {
     if (isWarehouseRole) {
@@ -1042,12 +1053,9 @@ export const OrderListPage: React.FC = () => {
                     <td className="py-3 px-4">
                       <button
                         type="button"
-                        onClick={() => {
-                          setSelectedOrderId(o.id);
-                          setIsDetailModalOpen(true);
-                        }}
+                        onClick={() => navigate(`/orders/${o.id}`)}
                         className="font-mono font-bold text-[#F85606] hover:underline cursor-pointer"
-                        title="Xem chi tiết đơn"
+                        title="Xem chi tiết đơn hàng"
                       >
                         {o.code}
                       </button>
@@ -1103,10 +1111,7 @@ export const OrderListPage: React.FC = () => {
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => {
-                            setSelectedOrderId(o.id);
-                            setIsDetailModalOpen(true);
-                          }}
+                          onClick={() => navigate(`/orders/${o.id}`)}
                           className="p-1.5 rounded-lg text-gray-500 hover:text-[#F85606] hover:bg-orange-50 transition cursor-pointer"
                           title="Xem chi tiết đơn hàng"
                         >
@@ -1120,13 +1125,14 @@ export const OrderListPage: React.FC = () => {
                               label: 'Chỉnh sửa đơn nháp',
                               icon: <Edit size={14} />,
                               onClick: () => navigate(`/orders/create?draftId=${o.id}`),
-                              hidden: o.status !== 'DRAFT',
+                              hidden: o.status !== 'DRAFT' || !canCreateOrder,
                             },
                             {
                               label: 'Sao chép thành đơn mới',
                               icon: <Copy size={14} />,
                               onClick: () => handleCloneOrder(o.id),
                               disabled: cloningOrderId === o.id,
+                              hidden: !canCreateOrder,
                             },
                             {
                               label: 'In / Xuất PDF',
