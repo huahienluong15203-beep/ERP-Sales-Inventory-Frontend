@@ -190,36 +190,25 @@ export const WarehouseLocationFormModal: React.FC<WarehouseLocationFormModalProp
             </div>
           </div>
 
-          {/* Mã vị trí & Trạng thái */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Mã vị trí <span className="text-rose-500">*</span>
-              </label>
-              {isEdit ? (
+          {/* Mã vị trí & Trạng thái (Trạng thái chỉ hiển thị khi Chỉnh sửa, khi Tạo mới mặc định luôn là Đang sử dụng) */}
+          {isEdit ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Mã vị trí <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={code}
                   disabled
                   className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 font-mono text-sm font-bold cursor-not-allowed"
                 />
-              ) : (
-                <input
-                  type="text"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="Ví dụ: A-01-01, KHU-A"
-                  className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 font-mono text-sm font-semibold focus:outline-none focus:border-[#F85606] focus:ring-1 focus:ring-[#F85606] transition"
-                  autoFocus
-                />
-              )}
-            </div>
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Trạng thái hoạt động
-              </label>
-              {isEdit ? (
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Trạng thái hoạt động
+                </label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
@@ -228,22 +217,23 @@ export const WarehouseLocationFormModal: React.FC<WarehouseLocationFormModalProp
                   <option value="ACTIVE">Đang sử dụng</option>
                   <option value="INACTIVE">Tạm khóa / Ngừng dùng</option>
                 </select>
-              ) : (
-                <div
-                  className="w-full h-10 px-3 rounded-xl border border-emerald-200 bg-emerald-50/60 text-emerald-700 text-xs font-semibold flex items-center justify-between cursor-not-allowed select-none"
-                  title="Vị trí mới tạo luôn mặc định ở trạng thái Đang sử dụng"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                    <span>Đang sử dụng</span>
-                  </span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-medium">
-                    Mặc định
-                  </span>
-                </div>
-              )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Mã vị trí <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder="Ví dụ: A-01-01, KHU-A"
+                className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 font-mono text-sm font-semibold focus:outline-none focus:border-[#F85606] focus:ring-1 focus:ring-[#F85606] transition"
+                autoFocus
+              />
+            </div>
+          )}
 
           {/* Tên vị trí */}
           <div>
