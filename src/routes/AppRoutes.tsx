@@ -37,6 +37,7 @@ import { StockTakeManagementPage } from '../pages/inventory/StockTakeManagementP
 import { StockTakeCreatePage } from '../pages/inventory/StockTakeCreatePage';
 import { StockTakeDetailPage } from '../pages/inventory/StockTakeDetailPage';
 import { WarehouseManagementPage } from '../pages/inventory/WarehouseManagementPage';
+import { SalesTargetManagementPage } from '../pages/kpi/SalesTargetManagementPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -555,6 +556,22 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <OrderListPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Chỉ tiêu doanh số (KPI) & Tiến độ */}
+        <Route
+          path="/kpi/targets"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <SalesTargetManagementPage />
             </ProtectedRoute>
           }
         />

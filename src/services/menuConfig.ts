@@ -63,6 +63,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Chỉ tiêu doanh số (KPI)',
+    path: '/kpi/targets',
+    group: 'Bán hàng',
+    icon: 'TrendingUp',
+    epic: 'Bán hàng & Doanh số',
+    description: 'Cấu hình chỉ tiêu doanh số tháng cho nhân viên, khu vực và thanh tiến độ thực tế',
+    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_SALES_REP', 'ROLE_ADMIN']
+  },
+
+  {
     title: 'Danh mục sản phẩm',
     path: '/products',
     group: 'Sản phẩm & Kho',
