@@ -21,6 +21,7 @@ import { StockTransferFormModal } from '../../components/inventory/StockTransfer
 import { StockTransferReceiveModal } from '../../components/inventory/StockTransferReceiveModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { SearchSelect } from '../../components/common/SearchSelect';
+import { useLocation } from '../../routes/Router';
 
 /**
  * S5-07 (Nguyễn Văn Minh): Phân hệ Quản lý Phiếu Chuyển Kho Nội Bộ
@@ -32,6 +33,7 @@ import { SearchSelect } from '../../components/common/SearchSelect';
  */
 export const StockTransferManagementPage: React.FC = () => {
   const { showToast, currentRole, user } = useAuth();
+  const location = useLocation();
 
   // Mục 12 (góp ý GV): chặn ở cả FE và BE - chỉ NV kho, QL kho, Admin được lập / xuất / nhận phiếu chuyển;
   // Kế toán chỉ xem.
@@ -68,6 +70,19 @@ export const StockTransferManagementPage: React.FC = () => {
         keyword
       });
       setTransfers(data);
+
+      // Nếu có query param id hoặc code thì tự mở chi tiết
+      const params = new URLSearchParams(location.search);
+      const targetId = params.get('id');
+      const targetCode = params.get('code');
+      if (targetId || targetCode) {
+        const found = data.find(
+          (t) => (targetId && String(t.id) === targetId) || (targetCode && t.code.toUpperCase() === targetCode.toUpperCase())
+        );
+        if (found) {
+          setSelectedTransferDetail(found);
+        }
+      }
     } catch (err) {
       console.error('Lỗi tải danh sách phiếu chuyển kho:', err);
       showToast('Lỗi tải dữ liệu', 'Không thể kết nối đến máy chủ', 'error');

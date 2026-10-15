@@ -492,10 +492,16 @@ export const ProductManagementPage: React.FC = () => {
                             </button>
                           )}
 
-                          {/* Thao tác phụ (đơn vị quy đổi, ngừng / mở kinh doanh) gom vào menu "⋯" */}
+                          {/* Thao tác phụ (đơn vị quy đổi, xem thẻ kho, ngừng / mở kinh doanh) gom vào menu "⋯" */}
                           <RowActionMenu
                             className="p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors cursor-pointer"
                             items={[
+                              {
+                                label: 'Xem thẻ kho',
+                                icon: <Icons.BookOpenCheck size={14} />,
+                                title: 'Xem lịch sử nhập xuất biến động thẻ kho của SKU này (S6-02)',
+                                onClick: () => navigate(`/inventory/stock-card?sku=${encodeURIComponent(p.sku)}&productId=${p.id}`),
+                              },
                               {
                                 label: 'Đơn vị tính quy đổi',
                                 icon: <Icons.Scale size={14} />,

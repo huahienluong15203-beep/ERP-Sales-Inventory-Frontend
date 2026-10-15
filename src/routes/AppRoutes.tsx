@@ -29,6 +29,7 @@ import { GoodsReceiptCreatePage } from '../pages/inventory/GoodsReceiptCreatePag
 import { GoodsReceiptDetailPage } from '../pages/inventory/GoodsReceiptDetailPage';
 import { StockTransferManagementPage } from '../pages/inventory/StockTransferManagementPage';
 import { StockLedgerPage } from '../pages/inventory/StockLedgerPage';
+import { StockCardPage } from '../pages/inventory/StockCardPage';
 import { StockTakeManagementPage } from '../pages/inventory/StockTakeManagementPage';
 import { StockTakeCreatePage } from '../pages/inventory/StockTakeCreatePage';
 import { StockTakeDetailPage } from '../pages/inventory/StockTakeDetailPage';
@@ -276,6 +277,28 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/inventory/stock-ledger"
           element={<Navigate to="/inventory/ledger" replace />}
+        />
+
+        {/* S6-02: Thẻ kho chi tiết (Kho, Quản lý kho, Admin, Kế toán, QL kinh doanh) */}
+        <Route
+          path="/inventory/stock-card"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <StockCardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/card"
+          element={<Navigate to="/inventory/stock-card" replace />}
         />
 
         {/* S5-08: Kiểm kê kho & ghi nhận chênh lệch */}
