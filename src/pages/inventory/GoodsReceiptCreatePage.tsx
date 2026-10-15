@@ -220,6 +220,9 @@ export const GoodsReceiptCreatePage: React.FC = () => {
   const [catalogKeyword, setCatalogKeyword] = useState<string>('');
   const [catalogCategory, setCatalogCategory] = useState<string>('ALL');
 
+  // Tick chọn nhanh sản phẩm trong danh mục (từng sản phẩm hoặc tick all)
+  const [selectedCatalogProductIds, setSelectedCatalogProductIds] = useState<Set<number>>(new Set());
+
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -414,6 +417,107 @@ export const GoodsReceiptCreatePage: React.FC = () => {
     showToast('Đã thêm sản phẩm', `Đã thêm [${prod.sku}] vào phiếu nhập kho`, 'success', 2000);
   };
 
+  // Tick chọn nhanh từng sản phẩm hoặc tick all trong danh mục nhập kho
+  const toggleSelectCatalogProduct = (id: number) => {
+    setSelectedCatalogProductIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const allCatalogSelected =
+    catalogProducts.length > 0 &&
+    catalogProducts.every((p) => selectedCatalogProductIds.has(Number(p.id)));
+
+  const toggleSelectAllCatalog = () => {
+    if (allCatalogSelected) {
+      setSelectedCatalogProductIds((prev) => {
+        const next = new Set(prev);
+        catalogProducts.forEach((p) => next.delete(Number(p.id)));
+        return next;
+      });
+    } else {
+      setSelectedCatalogProductIds((prev) => {
+        const next = new Set(prev);
+        catalogProducts.forEach((p) => next.add(Number(p.id)));
+        return next;
+      });
+    }
+  };
+
+  const clearCatalogSelection = () => {
+    setSelectedCatalogProductIds(new Set());
+  };
+
+  // Thêm đồng loạt các sản phẩm đã tick chọn vào phiếu nhập kho
+  const handleAddSelectedProductsToReceipt = () => {
+    if (selectedCatalogProductIds.size === 0) return;
+
+    const selectedProds = catalogProducts.filter((p) =>
+      selectedCatalogProductIds.has(Number(p.id))
+    );
+
+    if (selectedProds.length === 0) return;
+
+    let addedCount = 0;
+    let updatedCount = 0;
+
+    setLines((prev) => {
+      const newLines = [...prev];
+
+      selectedProds.forEach((prod) => {
+        const existingIndex = newLines.findIndex(
+          (l) => l.productId === Number(prod.id)
+        );
+
+        if (existingIndex >= 0) {
+          newLines[existingIndex] = {
+            ...newLines[existingIndex],
+            quantity: newLines[existingIndex].quantity + 1
+          };
+          updatedCount++;
+        } else {
+          const availableUnits = getAvailableUnitsForProduct(prod);
+          const defaultUnit = availableUnits[0];
+
+          newLines.push({
+            id: `line-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            productId: Number(prod.id),
+            productSku: prod.sku,
+            productName: prod.name,
+            category: prod.category,
+            baseUnit: prod.baseUnit,
+            selectedUnit: defaultUnit.unitName,
+            conversionFactor: defaultUnit.conversionFactor,
+            quantity: 1,
+            unitPrice: Number(prod.costPrice || 0),
+            batchNumber: `LOT-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
+            expiredDate: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+            hasBatchManagement: true,
+            availableUnits
+          });
+          addedCount++;
+        }
+      });
+
+      return newLines;
+    });
+
+    setSelectedCatalogProductIds(new Set());
+
+    showToast(
+      'Thêm sản phẩm thành công',
+      `Đã thêm ${addedCount} sản phẩm mới và cập nhật ${updatedCount} sản phẩm đã có vào phiếu`,
+      'success',
+      3000
+    );
+  };
+
   const handleUpdateLineField = (
     index: number,
     field: keyof FormLineState,
@@ -567,7 +671,7 @@ export const GoodsReceiptCreatePage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 antialiased max-w-7xl mx-auto pb-24 animate-in fade-in duration-200">
+    <div className="w-full min-w-0 space-y-6 antialiased pb-24 animate-in fade-in duration-200">
       {/* 1. THANH ĐIỀU HƯỚNG QUAY LẠI & BREADCRUMBS */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -998,11 +1102,10 @@ export const GoodsReceiptCreatePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setCatalogCategory('ALL')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-                  catalogCategory === 'ALL'
-                    ? 'bg-[#F85606] text-white shadow-xs'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                }`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${catalogCategory === 'ALL'
+                  ? 'bg-[#F85606] text-white shadow-xs'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                  }`}
               >
                 Tất cả ngành hàng
               </button>
@@ -1011,17 +1114,46 @@ export const GoodsReceiptCreatePage: React.FC = () => {
                   key={cat}
                   type="button"
                   onClick={() => setCatalogCategory(cat)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-                    catalogCategory === cat
-                      ? 'bg-[#F85606] text-white shadow-xs'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${catalogCategory === cat
+                    ? 'bg-[#F85606] text-white shadow-xs'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                    }`}
                 >
                   {cat}
                 </button>
               ))}
             </div>
           </div>
+
+          {/* Thanh tác vụ khi tick chọn nhiều sản phẩm */}
+          {selectedCatalogProductIds.size > 0 && (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 p-3 bg-orange-50 border border-orange-200 rounded-2xl animate-in fade-in slide-in-from-top-1 duration-200 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-lg bg-[#F85606] text-white text-xs font-black flex items-center justify-center shadow-xs">
+                  {selectedCatalogProductIds.size}
+                </span>
+                <span className="text-xs font-bold text-gray-800">
+                  Đã tick chọn <strong className="text-[#F85606] font-mono">{selectedCatalogProductIds.size}</strong> sản phẩm
+                </span>
+                <span className="text-gray-300">•</span>
+                <button
+                  type="button"
+                  onClick={clearCatalogSelection}
+                  className="text-xs text-gray-500 hover:text-gray-800 underline cursor-pointer"
+                >
+                  Bỏ chọn tất cả
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddSelectedProductsToReceipt}
+                className="px-4 py-2 bg-gradient-to-r from-[#F85606] to-orange-500 hover:from-orange-600 hover:to-orange-600 text-white rounded-xl text-xs font-bold shadow-sm shadow-orange-500/20 flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+              >
+                <Plus size={15} />
+                <span>Thêm {selectedCatalogProductIds.size} sản phẩm đã chọn vào phiếu</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Thanh tiến trình tải sản phẩm */}
@@ -1051,7 +1183,16 @@ export const GoodsReceiptCreatePage: React.FC = () => {
             <table className="w-full text-xs text-left">
               <thead className="bg-gray-50/90 font-bold text-gray-700 border-b border-gray-200">
                 <tr>
-                  <th className="py-3 px-3 text-center w-12">#</th>
+                  <th className="py-3 px-3 text-center w-10">
+                    <input
+                      type="checkbox"
+                      checked={allCatalogSelected}
+                      onChange={toggleSelectAllCatalog}
+                      className="w-4 h-4 rounded text-[#F85606] accent-[#F85606] cursor-pointer"
+                      title={allCatalogSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả sản phẩm đang hiển thị'}
+                    />
+                  </th>
+                  <th className="py-3 px-2 text-center w-10">#</th>
                   <th className="py-3 px-3 min-w-[140px]">Mã SKU</th>
                   <th className="py-3 px-3 min-w-[280px]">Tên sản phẩm</th>
                   <th className="py-3 px-3 min-w-[150px]">Ngành hàng</th>
@@ -1062,14 +1203,26 @@ export const GoodsReceiptCreatePage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {catalogProducts.map((prod, idx) => {
+                  const isSelected = selectedCatalogProductIds.has(Number(prod.id));
                   const selectedInfo = productQuantityMap.get(Number(prod.id));
 
                   return (
                     <tr
                       key={prod.id}
-                      className={`hover:bg-orange-50/30 transition-colors ${selectedInfo ? 'bg-orange-50/15' : ''}`}
+                      className={`hover:bg-orange-50/30 transition-colors ${
+                        isSelected ? 'bg-orange-50/40' : selectedInfo ? 'bg-orange-50/15' : ''
+                      }`}
                     >
-                      <td className="py-3 px-3 text-center text-gray-400 font-mono text-[11px]">
+                      <td className="py-3 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectCatalogProduct(Number(prod.id))}
+                          className="w-4 h-4 rounded text-[#F85606] accent-[#F85606] cursor-pointer"
+                          title={`Tick chọn ${prod.name}`}
+                        />
+                      </td>
+                      <td className="py-3 px-2 text-center text-gray-400 font-mono text-[11px]">
                         {idx + 1}
                       </td>
                       <td className="py-3 px-3">
@@ -1117,7 +1270,7 @@ export const GoodsReceiptCreatePage: React.FC = () => {
                             className="px-3.5 py-1.5 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer active:scale-95"
                           >
                             <Plus size={14} />
-                            <span>+ Thêm vào phiếu</span>
+                            <span>Thêm vào phiếu</span>
                           </button>
                         )}
                       </td>
@@ -1148,11 +1301,6 @@ export const GoodsReceiptCreatePage: React.FC = () => {
               >
                 Hoặc bấm vào đây để tải thêm 30 sản phẩm tiếp theo
               </button>
-            </div>
-          ) : catalogProducts.length > 0 ? (
-            <div className="py-2 text-gray-500 font-medium flex items-center justify-center gap-1.5">
-              <Check size={14} className="text-emerald-600" />
-              <span>Đã hiển thị toàn bộ <strong>{catalogTotalElements}</strong> sản phẩm kinh doanh ({catalogTotalPages} trang)</span>
             </div>
           ) : null}
         </div>

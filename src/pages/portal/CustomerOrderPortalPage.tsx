@@ -22,7 +22,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  Filter
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
@@ -30,7 +31,7 @@ import { CustomerPortalLayout } from '../../layouts/CustomerPortalLayout';
 import type { Agency, DeliveryPoint, CreditStatusResponse } from '../../types/agency';
 import type { OrderSummaryItem } from '../../types/order';
 import type { OrderProductCatalogItem } from '../../services/orderService';
-import { formatCurrencyVND, formatQuantity, fetchOrders } from '../../services/orderService';
+import { formatCurrencyVND, formatQuantity } from '../../services/orderService';
 import {
   fetchPortalMe,
   fetchPortalProducts,
@@ -38,6 +39,7 @@ import {
   fetchPortalDeliveryPoints,
   previewPortalOrder,
   placePortalOrder,
+  fetchPortalOrders,
   type PortalOrderResult,
   type PortalOrderLine
 } from '../../services/portalApi';
@@ -57,6 +59,17 @@ interface CartItem {
   quantity: number;
   availableUnits: Array<{ unitName: string; conversionFactor: number }>;
 }
+
+const HISTORY_STATUS_TABS = [
+  { id: 'ALL', label: 'Tất cả' },
+  { id: 'PENDING_APPROVAL', label: 'Chờ duyệt' },
+  { id: 'APPROVED', label: 'Đã duyệt' },
+  { id: 'PICKING', label: 'Đang soạn hàng' },
+  { id: 'DISPATCHED', label: 'Đã xuất kho' },
+  { id: 'DELIVERED', label: 'Đã giao hàng' },
+  { id: 'CLOSED', label: 'Hoàn tất' },
+  { id: 'CANCELLED', label: 'Đã hủy' }
+];
 
 function getMinDeliveryDateString(): string {
   const now = new Date();
@@ -128,6 +141,22 @@ export const CustomerOrderPortalPage: React.FC = () => {
   const [ordersHistory, setOrdersHistory] = useState<OrderSummaryItem[]>([]);
   const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
   const [viewingDetailOrderId, setViewingDetailOrderId] = useState<number | string | null>(null);
+
+  // Bộ lọc lịch sử đơn hàng đại lý (S4-10 / S5-01: Lọc FE + BE tối ưu tốc độ tải)
+  const [historyKeyword, setHistoryKeyword] = useState<string>('');
+  const [debouncedHistoryKeyword, setDebouncedHistoryKeyword] = useState<string>('');
+  const [historyStatus, setHistoryStatus] = useState<string>('ALL');
+  const [historyFromDate, setHistoryFromDate] = useState<string>('');
+  const [historyToDate, setHistoryToDate] = useState<string>('');
+
+  // Phân trang lịch sử đơn hàng (0-indexed cho Backend)
+  const [historyPage, setHistoryPage] = useState<number>(0);
+  const [historyPageSize, setHistoryPageSize] = useState<number>(10);
+  const [historyTotalElements, setHistoryTotalElements] = useState<number>(0);
+  const [historyTotalPages, setHistoryTotalPages] = useState<number>(1);
+
+  // Tick chọn nhanh sản phẩm trong danh mục để thêm nhanh vào giỏ hàng
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
 
   // S5-02: Modal mua lại đơn cũ & UI cảnh báo
   const [reorderModalOrderId, setReorderModalOrderId] = useState<number | string | null>(null);
@@ -248,31 +277,168 @@ export const CustomerOrderPortalPage: React.FC = () => {
     }
   }, [agency?.id, loadProducts]);
 
-  // 3. TẢI LỊCH SỬ ĐƠN HÀNG CỦA ĐẠI LÝ (Tab History)
+  // Debounce tìm kiếm từ khóa mã đơn hàng
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedHistoryKeyword(historyKeyword);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [historyKeyword]);
+
+  const handleHistoryStatusChange = (status: string) => {
+    setHistoryStatus(status);
+    setHistoryPage(0);
+  };
+
+  const handleHistoryKeywordChange = (keyword: string) => {
+    setHistoryKeyword(keyword);
+    setHistoryPage(0);
+  };
+
+  const handleHistoryFromDateChange = (date: string) => {
+    setHistoryFromDate(date);
+    setHistoryPage(0);
+  };
+
+  const handleHistoryToDateChange = (date: string) => {
+    setHistoryToDate(date);
+    setHistoryPage(0);
+  };
+
+  // Kiểm tra tính hợp lệ của khoảng ngày
+  const historyDateError = useMemo(() => {
+    if (historyFromDate && historyToDate) {
+      const d1 = new Date(historyFromDate);
+      const d2 = new Date(historyToDate);
+      if (d1 > d2) {
+        return 'Từ ngày không được lớn hơn đến ngày';
+      }
+    }
+    return null;
+  }, [historyFromDate, historyToDate]);
+
+  // 3. TẢI LỊCH SỬ ĐƠN HÀNG CỦA ĐẠI LÝ (Tab History) - Lọc cả FE & BE để tối ưu tốc độ load
   const loadOrderHistory = useCallback(async () => {
     if (!agency?.id) return;
+    if (historyDateError) return;
     setLoadingHistory(true);
     try {
-      const res = await fetchOrders({
-        customerId: String(agency.id),
-        page: 0,
-        size: 30
+      const res = await fetchPortalOrders({
+        status: historyStatus !== 'ALL' ? historyStatus : undefined,
+        keyword: debouncedHistoryKeyword.trim() || undefined,
+        fromDate: historyFromDate || undefined,
+        toDate: historyToDate || undefined,
+        page: historyPage,
+        size: historyPageSize
       });
-      // Đại lý chỉ theo dõi các đơn hàng chính thức đã gửi (loại trừ các bản nháp DRAFT)
-      const submittedOrders = (res.content || []).filter((o) => o.status !== 'DRAFT');
-      setOrdersHistory(submittedOrders);
+      setOrdersHistory(res.content || []);
+      setHistoryTotalElements(res.totalElements ?? (res.content || []).length);
+      setHistoryTotalPages(Math.max(1, res.totalPages ?? 1));
     } catch (err) {
       console.error('Lỗi tải lịch sử đơn hàng của đại lý:', err);
+      showToast(
+        'Lỗi tải đơn hàng',
+        err instanceof Error ? err.message : 'Không tải được lịch sử đơn hàng của đại lý',
+        'error'
+      );
     } finally {
       setLoadingHistory(false);
     }
-  }, [agency?.id]);
+  }, [
+    agency?.id,
+    historyStatus,
+    debouncedHistoryKeyword,
+    historyFromDate,
+    historyToDate,
+    historyPage,
+    historyPageSize,
+    historyDateError,
+    showToast
+  ]);
 
   useEffect(() => {
     if (activeTab === 'history' && agency?.id) {
       loadOrderHistory();
     }
   }, [activeTab, agency?.id, loadOrderHistory]);
+
+
+
+  const handleQuickDateFilter = (preset: 'today' | '7days' | '30days' | 'thisMonth' | 'all') => {
+    setHistoryPage(0);
+    const today = new Date();
+    const toStr = today.toISOString().split('T')[0];
+
+    if (preset === 'all') {
+      setHistoryFromDate('');
+      setHistoryToDate('');
+      return;
+    }
+
+    if (preset === 'today') {
+      setHistoryFromDate(toStr);
+      setHistoryToDate(toStr);
+      return;
+    }
+
+    if (preset === '7days') {
+      const from = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      setHistoryFromDate(from.toISOString().split('T')[0]);
+      setHistoryToDate(toStr);
+      return;
+    }
+
+    if (preset === '30days') {
+      const from = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      setHistoryFromDate(from.toISOString().split('T')[0]);
+      setHistoryToDate(toStr);
+      return;
+    }
+
+    if (preset === 'thisMonth') {
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      setHistoryFromDate(`${year}-${month}-01`);
+      setHistoryToDate(toStr);
+      return;
+    }
+  };
+
+  const hasActiveHistoryFilters = Boolean(
+    historyKeyword ||
+    historyStatus !== 'ALL' ||
+    historyFromDate ||
+    historyToDate
+  );
+
+  const handleResetHistoryFilters = () => {
+    setHistoryKeyword('');
+    setDebouncedHistoryKeyword('');
+    setHistoryStatus('ALL');
+    setHistoryFromDate('');
+    setHistoryToDate('');
+    setHistoryPage(0);
+  };
+
+  // Tính các số trang hiển thị của lịch sử đơn hàng
+  const historyPageNumbers = useMemo(() => {
+    const total = historyTotalPages;
+    const current = historyPage + 1;
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    const pages: (number | string)[] = [];
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+  }, [historyPage, historyTotalPages]);
 
   // Danh mục nhóm hàng độc nhất để làm bộ lọc
   const categoryList = useMemo(() => {
@@ -336,6 +502,86 @@ export const CustomerOrderPortalPage: React.FC = () => {
     pages.push(totalPages);
     return pages;
   }, [safeCurrentPage, totalPages]);
+
+  // Thao tác tick chọn nhanh sản phẩm trong danh mục đặt hàng
+  const toggleSelectProduct = (id: string) => {
+    setSelectedProductIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allProductsOnPageSelected = useMemo(() => {
+    return (
+      paginatedProducts.length > 0 &&
+      paginatedProducts.every((p) => selectedProductIds.has(p.id))
+    );
+  }, [paginatedProducts, selectedProductIds]);
+
+  const toggleSelectAllProductsOnPage = () => {
+    setSelectedProductIds((prev) => {
+      const next = new Set(prev);
+      if (allProductsOnPageSelected) {
+        paginatedProducts.forEach((p) => next.delete(p.id));
+      } else {
+        paginatedProducts.forEach((p) => next.add(p.id));
+      }
+      return next;
+    });
+  };
+
+  const clearSelectedProducts = () => {
+    setSelectedProductIds(new Set());
+  };
+
+  // Thêm nhanh tất cả các sản phẩm đã tick chọn vào giỏ hàng
+  const handleAddSelectedProductsToCart = () => {
+    if (selectedProductIds.size === 0) return;
+
+    const prodsToAdd = products.filter((p) => selectedProductIds.has(p.id));
+    if (prodsToAdd.length === 0) return;
+
+    setCart((prev) => {
+      const next = [...prev];
+      prodsToAdd.forEach((p) => {
+        const defaultUnit = p.availableUnits[0]?.unitName || p.baseUnit;
+        const factor = p.availableUnits[0]?.conversionFactor || 1;
+        const unitPrice = p.basePrice * factor;
+
+        const existingIdx = next.findIndex(
+          (c) => c.productId === p.id && c.selectedUnit === defaultUnit
+        );
+        if (existingIdx >= 0) {
+          next[existingIdx] = {
+            ...next[existingIdx],
+            quantity: next[existingIdx].quantity + 1
+          };
+        } else {
+          next.push({
+            productId: p.id,
+            sku: p.sku,
+            name: p.name,
+            selectedUnit: defaultUnit,
+            conversionFactor: factor,
+            unitPrice: unitPrice,
+            quantity: 1,
+            availableUnits: p.availableUnits
+          });
+        }
+      });
+      return next;
+    });
+
+    setSelectedProductIds(new Set());
+    showToast(
+      'Đã thêm vào giỏ hàng',
+      `Đã thêm ${prodsToAdd.length} sản phẩm đã chọn vào giỏ hàng!`,
+      'success',
+      3000
+    );
+  };
 
   // THAO TÁC GIỎ HÀNG
   const handleAddToCart = (product: OrderProductCatalogItem, unitName?: string, qtyToAdd: number = 1) => {
@@ -753,6 +999,50 @@ export const CustomerOrderPortalPage: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
+              {/* THANH TICK NHANH SẢN PHẨM ĐỂ THÊM NHANH */}
+              {paginatedProducts.length > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-200 px-3.5 py-2.5 flex items-center justify-between gap-3 flex-wrap shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={allProductsOnPageSelected}
+                        onChange={toggleSelectAllProductsOnPage}
+                        className="w-4 h-4 rounded text-[#F85606] accent-[#F85606] cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-gray-700">
+                        Chọn tất cả ({paginatedProducts.length} sản phẩm trên trang này)
+                      </span>
+                    </label>
+                    {selectedProductIds.size > 0 && (
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-orange-100 text-[#F85606] border border-orange-200">
+                        Đã tick: {selectedProductIds.size} sản phẩm
+                      </span>
+                    )}
+                  </div>
+
+                  {selectedProductIds.size > 0 && (
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={clearSelectedProducts}
+                        className="text-xs text-gray-500 hover:text-gray-800 font-semibold cursor-pointer underline mr-1"
+                      >
+                        Bỏ chọn tất cả
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAddSelectedProductsToCart}
+                        className="px-3.5 py-1.5 rounded-xl bg-[#F85606] hover:bg-orange-600 active:scale-95 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer"
+                      >
+                        <ShoppingCart size={14} />
+                        <span>Thêm {selectedProductIds.size} sản phẩm vào giỏ</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {paginatedProducts.map((p) => {
                   // Kiểm tra xem sản phẩm này đã có trong giỏ chưa
@@ -764,50 +1054,46 @@ export const CustomerOrderPortalPage: React.FC = () => {
                       key={p.id}
                       product={p}
                       inCartCount={totalInCartQty}
+                      isSelected={selectedProductIds.has(p.id)}
+                      onToggleSelect={toggleSelectProduct}
                       onAddToCart={handleAddToCart}
                     />
                   );
                 })}
               </div>
 
-              {/* THANH PHÂN TRANG DANH MỤC SẢN PHẨM (30-50 SẢN PHẨM/TRANG) */}
-              <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
-                {/* Thông tin số lượng & Chọn cỡ trang */}
-                <div className="flex flex-wrap items-center gap-2.5 text-xs text-gray-600">
-                  <span>
-                    Hiển thị{' '}
-                    <strong className="text-gray-900 font-bold font-mono">
-                      {totalItems === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1}
-                    </strong>
-                    {' - '}
-                    <strong className="text-gray-900 font-bold font-mono">
-                      {Math.min(safeCurrentPage * pageSize, totalItems)}
-                    </strong>
-                    {' trên tổng số '}
-                    <strong className="text-[#F85606] font-bold font-mono">{totalItems}</strong> sản phẩm
-                  </span>
+              {/* THANH PHÂN TRANG DANH MỤC SẢN PHẨM (ĐỒNG BỘ KIỂU ẢNH 2) */}
+              <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-2xs">
+                <div className="text-gray-500">
+                  Hiển thị{' '}
+                  <strong className="text-gray-800 font-mono">
+                    {totalItems === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1}
+                  </strong>{' '}
+                  -{' '}
+                  <strong className="text-gray-800 font-mono">
+                    {Math.min(safeCurrentPage * pageSize, totalItems)}
+                  </strong>{' '}
+                  trên tổng số <strong className="text-[#F85606] font-mono">{totalItems}</strong> sản phẩm
+                </div>
 
-                  <span className="text-gray-300 hidden sm:inline">|</span>
-
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-gray-500 text-[11px]">Hiển thị:</span>
-                    <SearchSelect
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 text-gray-500">
+                    <span>Hiển thị:</span>
+                    <select
                       value={pageSize}
                       onChange={(e) => {
                         setPageSize(Number(e.target.value));
                         setCurrentPage(1);
                       }}
-                      className="border border-gray-200 rounded-lg px-2 py-1 text-xs font-semibold bg-gray-50 text-gray-700 focus:bg-white focus:border-[#F85606] outline-none cursor-pointer"
+                      className="border border-gray-200 rounded-lg px-2 py-1 bg-white font-semibold text-gray-700 focus:outline-none focus:border-[#F85606] cursor-pointer"
                     >
-                      <option value={30}>30 / trang</option>
-                      <option value={40}>40 / trang</option>
-                      <option value={50}>50 / trang</option>
-                    </SearchSelect>
+                      <option value={10}>10 sản phẩm/trang</option>
+                      <option value={20}>20 sản phẩm/trang</option>
+                      <option value={30}>30 sản phẩm/trang</option>
+                      <option value={50}>50 sản phẩm/trang</option>
+                    </select>
                   </div>
-                </div>
 
-                {/* Các nút chuyển trang */}
-                {totalPages > 1 && (
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
@@ -815,7 +1101,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                         setCurrentPage(1);
                         window.scrollTo({ top: 380, behavior: 'smooth' });
                       }}
-                      disabled={safeCurrentPage === 1}
+                      disabled={safeCurrentPage <= 1}
                       className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
                       title="Trang đầu"
                     >
@@ -827,38 +1113,36 @@ export const CustomerOrderPortalPage: React.FC = () => {
                         setCurrentPage((p) => Math.max(1, p - 1));
                         window.scrollTo({ top: 380, behavior: 'smooth' });
                       }}
-                      disabled={safeCurrentPage === 1}
+                      disabled={safeCurrentPage <= 1}
                       className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
                       title="Trang trước"
                     >
                       <ChevronLeft size={15} />
                     </button>
 
-                    <div className="flex items-center gap-1 mx-1">
-                      {pageNumbers.map((p, idx) =>
-                        typeof p === 'number' ? (
-                          <button
-                            key={p}
-                            type="button"
-                            onClick={() => {
-                              setCurrentPage(p);
-                              window.scrollTo({ top: 380, behavior: 'smooth' });
-                            }}
-                            className={`min-w-8 h-8 px-2 rounded-lg text-xs font-bold transition cursor-pointer font-mono ${
-                              safeCurrentPage === p
-                                ? 'bg-[#F85606] text-white shadow-xs'
-                                : 'text-gray-700 hover:bg-gray-100 border border-transparent'
-                            }`}
-                          >
-                            {p}
-                          </button>
-                        ) : (
-                          <span key={`ellipsis-${idx}`} className="px-1 text-gray-400 text-xs font-bold">
-                            ...
-                          </span>
-                        )
-                      )}
-                    </div>
+                    {pageNumbers.map((p, idx) =>
+                      typeof p === 'number' ? (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => {
+                            setCurrentPage(p);
+                            window.scrollTo({ top: 380, behavior: 'smooth' });
+                          }}
+                          className={`w-7 h-7 rounded-lg text-xs font-bold transition cursor-pointer font-mono ${
+                            safeCurrentPage === p
+                              ? 'bg-[#F85606] text-white shadow-xs'
+                              : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      ) : (
+                        <span key={`ellipsis-${idx}`} className="w-5 text-center text-gray-400 font-bold">
+                          {p}
+                        </span>
+                      )
+                    )}
 
                     <button
                       type="button"
@@ -866,7 +1150,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                         setCurrentPage((p) => Math.min(totalPages, p + 1));
                         window.scrollTo({ top: 380, behavior: 'smooth' });
                       }}
-                      disabled={safeCurrentPage === totalPages}
+                      disabled={safeCurrentPage >= totalPages}
                       className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
                       title="Trang sau"
                     >
@@ -878,14 +1162,14 @@ export const CustomerOrderPortalPage: React.FC = () => {
                         setCurrentPage(totalPages);
                         window.scrollTo({ top: 380, behavior: 'smooth' });
                       }}
-                      disabled={safeCurrentPage === totalPages}
+                      disabled={safeCurrentPage >= totalPages}
                       className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
                       title="Trang cuối"
                     >
                       <ChevronsRight size={15} />
                     </button>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           )}
@@ -897,21 +1181,166 @@ export const CustomerOrderPortalPage: React.FC = () => {
       {/* ============================================================== */}
       {agency && activeTab === 'history' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base sm:text-lg font-black text-gray-900">
-              Đơn Hàng Đã Gửi Của Đại Lý
-            </h2>
-            <button
-              type="button"
-              onClick={loadOrderHistory}
-              disabled={loadingHistory}
-              className="px-3 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
-            >
-              <RefreshCw size={14} />
-              <span>Làm mới</span>
-            </button>
+          {/* TIÊU ĐỀ & NÚT THAO TÁC TRÊN CÙNG */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-black text-gray-900">
+                  Đơn Hàng Đã Gửi Của Đại Lý
+                </h2>
+                <span className="text-xs font-bold text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">
+                  {historyTotalElements} đơn
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Theo dõi tiến độ duyệt, xuất kho và lịch sử các đơn hàng đã đặt
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {hasActiveHistoryFilters && (
+                <button
+                  type="button"
+                  onClick={handleResetHistoryFilters}
+                  className="px-3 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-600 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                  title="Xóa tất cả bộ lọc tìm kiếm"
+                >
+                  <X size={14} />
+                  <span>Đặt lại lọc</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={loadOrderHistory}
+                disabled={loadingHistory}
+                className="px-3 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+              >
+                <RefreshCw size={14} className={loadingHistory ? 'animate-spin text-[#F85606]' : ''} />
+                <span>Làm mới</span>
+              </button>
+            </div>
           </div>
 
+          {/* BỘ LỌC TỐC ĐỘ CAO (LỌC TRẠNG THÁI + TỪ KHÓA + KHOẢNG NGÀY) */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 shadow-2xs space-y-3">
+            {/* Lọc nhanh theo trạng thái */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              {HISTORY_STATUS_TABS.map((tab) => {
+                const isActive = historyStatus === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => handleHistoryStatusChange(tab.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
+                      isActive
+                        ? 'bg-[#F85606] text-white shadow-xs'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Hàng tìm kiếm từ khóa và khoảng ngày */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5 pt-1 border-t border-gray-100">
+              {/* Tìm mã đơn */}
+              <div className="relative flex-1 min-w-[200px]">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={historyKeyword}
+                  onChange={(e) => handleHistoryKeywordChange(e.target.value)}
+                  placeholder="Tìm theo mã đơn hàng (vd: DH2610...)..."
+                  className="w-full pl-8 pr-7 py-1.5 rounded-xl border border-gray-200 text-xs bg-white focus:outline-none focus:border-[#F85606] transition"
+                />
+                {historyKeyword && (
+                  <button
+                    type="button"
+                    onClick={() => handleHistoryKeywordChange('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+
+              {/* Chọn ngày từ - đến */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1 text-xs text-gray-600">
+                  <Calendar size={13} className="text-gray-400" />
+                  <span className="text-[11px] text-gray-400">Từ:</span>
+                  <input
+                    type="date"
+                    value={historyFromDate}
+                    onChange={(e) => handleHistoryFromDateChange(e.target.value)}
+                    className="text-xs text-gray-700 bg-transparent focus:outline-none cursor-pointer"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1 text-xs text-gray-600">
+                  <Calendar size={13} className="text-gray-400" />
+                  <span className="text-[11px] text-gray-400">Đến:</span>
+                  <input
+                    type="date"
+                    value={historyToDate}
+                    onChange={(e) => handleHistoryToDateChange(e.target.value)}
+                    className="text-xs text-gray-700 bg-transparent focus:outline-none cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Phím tắt chọn ngày nhanh */}
+              <div className="flex items-center gap-1 text-[11px] flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleQuickDateFilter('today')}
+                  className="px-2 py-1 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-600 font-semibold cursor-pointer"
+                >
+                  Hôm nay
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDateFilter('7days')}
+                  className="px-2 py-1 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-600 font-semibold cursor-pointer"
+                >
+                  7 ngày
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDateFilter('30days')}
+                  className="px-2 py-1 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-600 font-semibold cursor-pointer"
+                >
+                  30 ngày
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDateFilter('thisMonth')}
+                  className="px-2 py-1 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-600 font-semibold cursor-pointer"
+                >
+                  Tháng này
+                </button>
+                {(historyFromDate || historyToDate) && (
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDateFilter('all')}
+                    className="px-2 py-1 rounded-lg bg-orange-100 hover:bg-orange-200 text-[#F85606] font-bold cursor-pointer"
+                  >
+                    Xóa ngày
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {historyDateError && (
+              <div className="text-xs text-rose-600 font-medium flex items-center gap-1 pt-1">
+                <AlertTriangle size={13} />
+                <span>{historyDateError}</span>
+              </div>
+            )}
+          </div>
+
+          {/* DANH SÁCH ĐƠN HÀNG */}
           {loadingHistory ? (
             <div className="py-20 text-center text-gray-500">
               <RefreshCw size={28} className="animate-spin text-[#F85606] mx-auto mb-2" />
@@ -920,18 +1349,35 @@ export const CustomerOrderPortalPage: React.FC = () => {
           ) : ordersHistory.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center text-gray-400 space-y-2">
               <Clock size={36} className="mx-auto text-gray-300" />
-              <p className="text-sm font-bold text-gray-700">Chưa có đơn hàng nào</p>
-              <p className="text-xs text-gray-500">
-                Hãy quay lại danh mục sản phẩm và gửi đơn đặt hàng đầu tiên của bạn!
+              <p className="text-sm font-bold text-gray-700">
+                {hasActiveHistoryFilters
+                  ? 'Không tìm thấy đơn hàng nào phù hợp với bộ lọc'
+                  : 'Chưa có đơn hàng nào'}
               </p>
-              <button
-                type="button"
-                onClick={() => setActiveTab('catalog')}
-                className="mt-3 px-4 py-2 rounded-xl bg-[#F85606] text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-md shadow-orange-500/20 cursor-pointer"
-              >
-                <Sparkles size={14} />
-                <span>Đặt hàng ngay</span>
-              </button>
+              <p className="text-xs text-gray-500">
+                {hasActiveHistoryFilters
+                  ? 'Vui lòng thử thay đổi từ khóa hoặc điều kiện lọc ngày / trạng thái.'
+                  : 'Hãy quay lại danh mục sản phẩm và gửi đơn đặt hàng đầu tiên của bạn!'}
+              </p>
+              {hasActiveHistoryFilters ? (
+                <button
+                  type="button"
+                  onClick={handleResetHistoryFilters}
+                  className="mt-3 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <X size={14} />
+                  <span>Xóa bộ lọc</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('catalog')}
+                  className="mt-3 px-4 py-2 rounded-xl bg-[#F85606] text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-md shadow-orange-500/20 cursor-pointer"
+                >
+                  <Sparkles size={14} />
+                  <span>Đặt hàng ngay</span>
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -941,7 +1387,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                   className="bg-white rounded-2xl border border-gray-200 p-4 shadow-2xs hover:border-orange-200 transition space-y-3"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2.5 flex-wrap">
                       <button
                         type="button"
                         onClick={() => setViewingDetailOrderId(o.id)}
@@ -965,7 +1411,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                         </>
                       )}
                     </div>
-                    {/* Gom nhãn cảnh báo giao thiếu hàng và trạng thái đơn vào 1 badge duy nhất (Ảnh 2) */}
+                    {/* Gom nhãn cảnh báo giao thiếu hàng và trạng thái đơn vào 1 badge duy nhất */}
                     <div className="flex items-center gap-2">
                       {o.hasShortage ? (
                         <span
@@ -1020,7 +1466,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                         </button>
                       )}
 
-                      {/* Phần chi tiết để con mắt riêng (Ảnh 2) */}
+                      {/* Chi tiết đơn */}
                       <button
                         type="button"
                         onClick={() => {
@@ -1036,6 +1482,118 @@ export const CustomerOrderPortalPage: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* PHÂN TRANG DANH SÁCH ĐƠN HÀNG ĐÃ ĐẶT */}
+          {!loadingHistory && historyTotalElements > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-2xs">
+              <div className="text-gray-500">
+                Hiển thị{' '}
+                <strong className="text-gray-800">
+                  {historyTotalElements === 0 ? 0 : historyPage * historyPageSize + 1}
+                </strong>{' '}
+                -{' '}
+                <strong className="text-gray-800">
+                  {Math.min((historyPage + 1) * historyPageSize, historyTotalElements)}
+                </strong>{' '}
+                trên tổng số <strong className="text-[#F85606]">{historyTotalElements}</strong> đơn hàng
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 text-gray-500">
+                  <span>Hiển thị:</span>
+                  <select
+                    value={historyPageSize}
+                    onChange={(e) => {
+                      setHistoryPageSize(Number(e.target.value));
+                      setHistoryPage(0);
+                    }}
+                    className="border border-gray-200 rounded-lg px-2 py-1 bg-white font-semibold text-gray-700 focus:outline-none focus:border-[#F85606] cursor-pointer"
+                  >
+                    <option value={10}>10 đơn/trang</option>
+                    <option value={20}>20 đơn/trang</option>
+                    <option value={30}>30 đơn/trang</option>
+                    <option value={50}>50 đơn/trang</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHistoryPage(0);
+                      window.scrollTo({ top: 380, behavior: 'smooth' });
+                    }}
+                    disabled={historyPage === 0}
+                    className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                    title="Trang đầu"
+                  >
+                    <ChevronsLeft size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHistoryPage((p) => Math.max(0, p - 1));
+                      window.scrollTo({ top: 380, behavior: 'smooth' });
+                    }}
+                    disabled={historyPage === 0}
+                    className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                    title="Trang trước"
+                  >
+                    <ChevronLeft size={15} />
+                  </button>
+
+                  {historyPageNumbers.map((p, idx) =>
+                    typeof p === 'number' ? (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setHistoryPage(p - 1);
+                          window.scrollTo({ top: 380, behavior: 'smooth' });
+                        }}
+                        className={`w-7 h-7 rounded-lg text-xs font-bold transition cursor-pointer ${
+                          historyPage === p - 1
+                            ? 'bg-[#F85606] text-white shadow-xs'
+                            : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ) : (
+                      <span key={idx} className="w-5 text-center text-gray-400">
+                        {p}
+                      </span>
+                    )
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHistoryPage((p) => Math.min(historyTotalPages - 1, p + 1));
+                      window.scrollTo({ top: 380, behavior: 'smooth' });
+                    }}
+                    disabled={historyPage >= historyTotalPages - 1}
+                    className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                    title="Trang sau"
+                  >
+                    <ChevronRight size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHistoryPage(historyTotalPages - 1);
+                      window.scrollTo({ top: 380, behavior: 'smooth' });
+                    }}
+                    disabled={historyPage >= historyTotalPages - 1}
+                    className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                    title="Trang cuối"
+                  >
+                    <ChevronsRight size={15} />
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -1400,10 +1958,18 @@ export const CustomerOrderPortalPage: React.FC = () => {
 interface ProductCardProps {
   product: OrderProductCatalogItem;
   inCartCount: number;
+  isSelected?: boolean;
+  onToggleSelect?: (productId: string) => void;
   onAddToCart: (product: OrderProductCatalogItem, unitName?: string, qty?: number) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, inCartCount, onAddToCart }) => {
+const ProductCard: React.FC<ProductCardProps> = ({
+  product,
+  inCartCount,
+  isSelected = false,
+  onToggleSelect,
+  onAddToCart
+}) => {
   const [selectedUnitName, setSelectedUnitName] = useState<string>(() => {
     return product.availableUnits[0]?.unitName || product.baseUnit;
   });
@@ -1458,13 +2024,31 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, inCartCount, onAddTo
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-2xs hover:shadow-md hover:border-orange-300 transition flex flex-col justify-between space-y-3 group">
+    <div
+      className={`rounded-2xl border p-4 shadow-2xs hover:shadow-md transition flex flex-col justify-between space-y-3 group ${
+        isSelected
+          ? 'border-orange-400 bg-orange-50/25 ring-2 ring-orange-200'
+          : 'bg-white border-gray-200 hover:border-orange-300'
+      }`}
+    >
       <div>
-        {/* Header thẻ: SKU & Tồn kho */}
+        {/* Header thẻ: Checkbox tick chọn, SKU & Tồn kho */}
         <div className="flex items-center justify-between text-[11px] mb-1.5">
-          <span className="font-mono font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
-            {product.sku}
-          </span>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={(e) => {
+                e.stopPropagation();
+                onToggleSelect?.(product.id);
+              }}
+              className="w-4 h-4 rounded text-[#F85606] accent-[#F85606] cursor-pointer"
+              title={`Tick chọn ${product.name} để thêm nhanh`}
+            />
+            <span className="font-mono font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
+              {product.sku}
+            </span>
+          </div>
           <span
             className={`font-semibold px-2 py-0.5 rounded-full text-[10px] ${(product.availableStock ?? 0) > 0
                 ? 'bg-emerald-50 text-emerald-700'

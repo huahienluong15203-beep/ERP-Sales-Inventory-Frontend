@@ -6,6 +6,7 @@
 import { authFetch, API_BASE_URL } from './api';
 import type { Agency, CreditStatusResponse, CustomerGroupId, DeliveryPoint } from '../types/agency';
 import type { OrderProductCatalogItem } from './orderService';
+import type { OrderPageResponse } from '../types/order';
 
 const PORTAL_URL = `${API_BASE_URL}/api/portal`;
 
@@ -332,3 +333,34 @@ export async function previewPortalReorder(orderId: number | string, lineIds: nu
     preview: data?.preview ? mapOrder(data.preview) : null
   };
 }
+
+export interface PortalOrderFilterCriteria {
+  status?: string;
+  statuses?: string[];
+  fromDate?: string;
+  toDate?: string;
+  keyword?: string;
+  page?: number;
+  size?: number;
+}
+
+/**
+ * Tải lịch sử đơn của đại lý có bộ lọc và phân trang từ Backend GET /api/portal/orders
+ * Lọc phía server để tối ưu tốc độ tải và băng thông mạng.
+ */
+export async function fetchPortalOrders(criteria: PortalOrderFilterCriteria = {}): Promise<OrderPageResponse> {
+  const query = new URLSearchParams();
+  if (criteria.statuses && criteria.statuses.length > 0) {
+    query.set('status', criteria.statuses.join(','));
+  } else if (criteria.status && criteria.status !== 'ALL') {
+    query.set('status', criteria.status);
+  }
+  if (criteria.fromDate) query.set('fromDate', criteria.fromDate);
+  if (criteria.toDate) query.set('toDate', criteria.toDate);
+  if (criteria.keyword && criteria.keyword.trim()) query.set('keyword', criteria.keyword.trim());
+  query.set('page', String(criteria.page ?? 0));
+  query.set('size', String(criteria.size ?? 10));
+
+  return portalJson<OrderPageResponse>(`/orders?${query.toString()}`, 'Không tải được lịch sử đơn hàng của đại lý');
+}
+
