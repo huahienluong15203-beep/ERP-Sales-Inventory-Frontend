@@ -86,7 +86,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
   // Tải danh sách sản phẩm thật ban đầu khi mở modal
   useEffect(() => {
     productService
-      .searchProductOptions('', 50)
+      .searchProductOptions('', 500)
       .then((prods) => {
         setProductOptions(prods);
       })
@@ -103,7 +103,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
     const timer = setTimeout(async () => {
       setIsSearchingProduct(true);
       try {
-        const results = await productService.searchProductOptions(trimmed, 30);
+        const results = await productService.searchProductOptions(trimmed, 200);
         setProductOptions((prev) => {
           const map = new Map<number, ProductOptionItem>();
           results.forEach((p) => map.set(p.id, p));
@@ -136,7 +136,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
   // Lọc tức thì phía Frontend (FE) trên tập sản phẩm đã nạp
   const filteredProducts = useMemo(() => {
     const q = productSearchInput.trim().toLowerCase();
-    if (!q) return productOptions.slice(0, 30);
+    if (!q) return productOptions.slice(0, 100);
     return productOptions
       .filter((p) => {
         const matchSku = p.sku.toLowerCase().includes(q);
@@ -144,7 +144,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
         const matchCat = p.category ? p.category.toLowerCase().includes(q) : false;
         return matchSku || matchName || matchCat;
       })
-      .slice(0, 30);
+      .slice(0, 150);
   }, [productOptions, productSearchInput]);
 
   const handleAddRealProduct = (prod: ProductOptionItem) => {

@@ -409,10 +409,14 @@ table th {
     float: none !important;
   }
 
-  /* 3. Ẩn hoàn toàn header, sidebar hệ thống và các nút điều khiển web */
+  /* 3. Ẩn hoàn toàn header, sidebar hệ thống, thông báo toast và các nút điều khiển web */
   .erp-topbar,
   .erp-sidebar,
   .erp-hamburger-btn,
+  .erp-login-toast,
+  [role="status"],
+  [role="alert"],
+  .toast,
   .no-print,
   #btn-mobile-menu-toggle {
     display: none !important;

@@ -500,11 +500,10 @@ export const GoodsReceiptDetailPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setCurrentPage(p)}
-                        className={`min-w-[28px] h-7 rounded-lg text-xs font-bold transition cursor-pointer ${
-                          currentPage === p
+                        className={`min-w-[28px] h-7 rounded-lg text-xs font-bold transition cursor-pointer ${currentPage === p
                             ? 'bg-[#F85606] text-white shadow-xs'
                             : 'bg-white border border-gray-200 text-gray-700 hover:bg-orange-50 hover:text-[#F85606]'
-                        }`}
+                          }`}
                       >
                         {p}
                       </button>
@@ -661,7 +660,7 @@ export const GoodsReceiptDetailPage: React.FC = () => {
 
         {/* Gạch kết thúc danh sách hàng nhập (chốt danh mục chứng từ) */}
         <div className="w-full my-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-black border-y-2 border-black py-1 print-avoid-break">
-          ═══ HẾT DANH SÁCH HÀNG NHẬP (TỔNG CỘNG: {receipt.lines.length} MẶT HÀNG) ═══
+          ═══ DANH SÁCH HÀNG NHẬP (TỔNG CỘNG: {receipt.lines.length} MẶT HÀNG) ═══
         </div>
 
         {/* Khối chữ ký xác nhận 4 bên */}

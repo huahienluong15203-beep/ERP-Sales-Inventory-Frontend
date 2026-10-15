@@ -9,7 +9,8 @@ import {
   Clock,
   Layers,
   RefreshCw,
-  PackageCheck
+  PackageCheck,
+  Eye
 } from 'lucide-react';
 import type { StockTransfer, StockTransferStatus } from '../../types/stockTransfer';
 import { SYSTEM_WAREHOUSES } from '../../types/inventory';
@@ -17,11 +18,11 @@ import {
   fetchStockTransfers,
   dispatchStockTransfer
 } from '../../services/stockTransferApi';
-import { StockTransferFormModal } from '../../components/inventory/StockTransferFormModal';
 import { StockTransferReceiveModal } from '../../components/inventory/StockTransferReceiveModal';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate, useLocation } from '../../routes/Router';
 import { SearchSelect } from '../../components/common/SearchSelect';
-import { useLocation } from '../../routes/Router';
+import { RowActionMenu } from '../../components/common/RowActionMenu';
 
 /**
  * S5-07 (Nguyễn Văn Minh): Phân hệ Quản lý Phiếu Chuyển Kho Nội Bộ
@@ -32,6 +33,7 @@ import { useLocation } from '../../routes/Router';
  * - AC4: Chênh lệch khi nhận phải nhập lý do
  */
 export const StockTransferManagementPage: React.FC = () => {
+  const navigate = useNavigate();
   const { showToast, currentRole, user } = useAuth();
   const location = useLocation();
 
@@ -55,9 +57,7 @@ export const StockTransferManagementPage: React.FC = () => {
   const [keyword, setKeyword] = useState<string>('');
 
   // Modals state
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [selectedTransferForReceive, setSelectedTransferForReceive] = useState<StockTransfer | null>(null);
-  const [selectedTransferDetail, setSelectedTransferDetail] = useState<StockTransfer | null>(null);
 
   // Tải danh sách phiếu chuyển
   const loadTransfers = async () => {
@@ -71,16 +71,18 @@ export const StockTransferManagementPage: React.FC = () => {
       });
       setTransfers(data);
 
-      // Nếu có query param id hoặc code thì tự mở chi tiết
+      // Nếu có query param id hoặc code thì tự chuyển hướng sang trang chi tiết
       const params = new URLSearchParams(location.search);
       const targetId = params.get('id');
       const targetCode = params.get('code');
-      if (targetId || targetCode) {
+      if (targetId) {
+        navigate(`/inventory/transfers/${targetId}`, { replace: true });
+      } else if (targetCode) {
         const found = data.find(
-          (t) => (targetId && String(t.id) === targetId) || (targetCode && t.code.toUpperCase() === targetCode.toUpperCase())
+          (t) => t.code.toUpperCase() === targetCode.toUpperCase()
         );
         if (found) {
-          setSelectedTransferDetail(found);
+          navigate(`/inventory/transfers/${found.id}`, { replace: true });
         }
       }
     } catch (err) {
@@ -185,7 +187,7 @@ export const StockTransferManagementPage: React.FC = () => {
         {canEditInventory && (
           <button
             type="button"
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={() => navigate('/inventory/transfers/create')}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm hover:shadow cursor-pointer h-9"
           >
             <Plus size={16} />
@@ -337,8 +339,11 @@ export const StockTransferManagementPage: React.FC = () => {
                   return (
                     <tr key={item.id} className="hover:bg-gray-50/70 transition">
                       {/* Mã phiếu */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-mono font-black text-blue-700">{item.code}</div>
+                      <td
+                        className="py-3.5 px-4 cursor-pointer"
+                        onClick={() => navigate(`/inventory/transfers/${item.id}`)}
+                      >
+                        <div className="font-mono font-black text-blue-700 hover:underline">{item.code}</div>
                         <div className="text-[10px] text-gray-400">Người tạo: {item.createdBy}</div>
                       </td>
 
@@ -384,46 +389,42 @@ export const StockTransferManagementPage: React.FC = () => {
                       {/* Thao tác */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* Nút Xem chi tiết */}
+                          {/* Nút Xem chi tiết (Chỉ icon con mắt) */}
                           <button
                             type="button"
-                            onClick={() => setSelectedTransferDetail(item)}
-                            className="px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:text-blue-600 bg-gray-50 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                            onClick={() => navigate(`/inventory/transfers/${item.id}`)}
+                            title="Xem chi tiết phiếu chuyển kho"
+                            className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer"
                           >
-                            Chi tiết
+                            <Eye size={15} />
                           </button>
 
-                          {/* Nút Xuất kho nếu đang DRAFT: Chỉ Quản lý kho / Admin mới được duyệt xuất kho */}
-                          {item.status === 'DRAFT' && canEditInventory && (
-                            isManagerOrAdmin ? (
-                              <button
-                                type="button"
-                                onClick={() => handleDispatch(item)}
-                                className="px-2.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
-                                title="Quản lý kho xác nhận phiếu & xuất kho bắt đầu vận chuyển"
-                              >
-                                <CheckCircle2 size={13} />
-                                <span>Duyệt & Xuất kho</span>
-                              </button>
-                            ) : (
-                              <span className="text-[11px] font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-200">
-                                Chờ QL duyệt
-                              </span>
-                            )
-                          )}
-
-                          {/* Nút Kho đến nhận hàng nếu IN_TRANSIT */}
-                          {item.status === 'IN_TRANSIT' && canEditInventory && (
-                            <button
-                              type="button"
-                              onClick={() => setSelectedTransferForReceive(item)}
-                              className="px-2.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
-                              title="Kho đến kiểm tra thực tế & xác nhận nhận đủ để kết thúc quy trình"
-                            >
-                              <PackageCheck size={13} />
-                              <span>Kiểm tra & Nhận</span>
-                            </button>
-                          )}
+                          {/* Menu dấu 3 chấm "⋯" tích hợp Duyệt & Xuất kho, Kiểm tra & Nhận */}
+                          <RowActionMenu
+                            title="Thao tác phiếu chuyển kho"
+                            items={[
+                              {
+                                label: 'Duyệt & Xuất kho',
+                                icon: <CheckCircle2 size={14} className="text-blue-600" />,
+                                title: 'Quản lý kho duyệt phiếu & xuất kho bắt đầu vận chuyển',
+                                onClick: () => handleDispatch(item),
+                                hidden: item.status !== 'DRAFT' || !canEditInventory || !isManagerOrAdmin
+                              },
+                              {
+                                label: 'Kiểm tra & Nhận hàng',
+                                icon: <PackageCheck size={14} className="text-emerald-600" />,
+                                title: 'Kho đến kiểm tra thực tế & xác nhận nhận đủ',
+                                onClick: () => setSelectedTransferForReceive(item),
+                                hidden: item.status !== 'IN_TRANSIT' || !canEditInventory
+                              },
+                              {
+                                label: 'Xem chi tiết',
+                                icon: <Eye size={14} className="text-gray-500" />,
+                                title: 'Xem chi tiết chứng từ chuyển kho',
+                                onClick: () => navigate(`/inventory/transfers/${item.id}`)
+                              }
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>
@@ -435,16 +436,7 @@ export const StockTransferManagementPage: React.FC = () => {
         )}
       </div>
 
-      {/* MODAL 1: FORM LẬP PHIẾU CHUYỂN KHO (AC1) */}
-      <StockTransferFormModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={(newTransfer) => {
-          setTransfers((prev) => [newTransfer, ...prev]);
-        }}
-      />
-
-      {/* MODAL 2: KHO ĐẾN NHẬN HÀNG (AC3, AC4) */}
+      {/* MODAL: KHO ĐẾN NHẬN HÀNG (AC3, AC4) */}
       <StockTransferReceiveModal
         isOpen={Boolean(selectedTransferForReceive)}
         transfer={selectedTransferForReceive}
@@ -453,119 +445,6 @@ export const StockTransferManagementPage: React.FC = () => {
           setTransfers((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
         }}
       />
-
-      {/* MODAL 3: XEM CHI TIẾT PHIẾU CHUYỂN KHO */}
-      {selectedTransferDetail && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-3xl w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div>
-                <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
-                  <span>Phiếu Chuyển Kho [{selectedTransferDetail.code}]</span>
-                  {renderStatusBadge(selectedTransferDetail.status)}
-                </h3>
-                <p className="text-xs text-gray-500">
-                  Lập bởi: {selectedTransferDetail.createdBy} lúc {selectedTransferDetail.createdAt.slice(0, 10)}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedTransferDetail(null)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-xs bg-gray-50 p-3 rounded-2xl">
-              <div>
-                <span className="text-gray-500">Kho xuất:</span>{' '}
-                <b>{selectedTransferDetail.sourceWarehouseName}</b>
-              </div>
-              <div>
-                <span className="text-gray-500">Kho nhận:</span>{' '}
-                <b>{selectedTransferDetail.destWarehouseName}</b>
-              </div>
-              <div>
-                <span className="text-gray-500">Xe vận chuyển:</span>{' '}
-                <b className="font-mono">{selectedTransferDetail.vehiclePlate || '—'}</b>
-              </div>
-              <div>
-                <span className="text-gray-500">Tài xế:</span>{' '}
-                <b>{selectedTransferDetail.transporterName || '—'}</b>
-              </div>
-            </div>
-
-            {selectedTransferDetail.discrepancyGeneralReason && (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-1">
-                <div className="font-bold flex items-center gap-1.5">
-                  <AlertTriangle size={14} className="text-amber-600" />
-                  <span>Biên bản giải trình chênh lệch khi nhận:</span>
-                </div>
-                <p>{selectedTransferDetail.discrepancyGeneralReason}</p>
-              </div>
-            )}
-
-            <div className="border border-gray-200 rounded-2xl overflow-hidden">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-gray-100 font-bold uppercase text-[11px]">
-                  <tr>
-                    <th className="py-2 px-3">Mặt hàng</th>
-                    <th className="py-2 px-3 text-center">SL chuyển</th>
-                    <th className="py-2 px-3 text-center">SL nhận</th>
-                    <th className="py-2 px-3 text-center">Chênh lệch</th>
-                    <th className="py-2 px-3">Lý do</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {selectedTransferDetail.lines.map((l) => (
-                    <tr key={l.id}>
-                      <td className="py-2 px-3">
-                        <div className="font-bold">{l.productName}</div>
-                        <div className="text-[10px] text-gray-400 font-mono">{l.productSku}</div>
-                      </td>
-                      <td className="py-2 px-3 text-center font-bold">
-                        {l.transferQuantity} {l.unit}
-                      </td>
-                      <td className="py-2 px-3 text-center font-bold text-emerald-700">
-                        {l.receivedQuantity != null ? (
-                          `${l.receivedQuantity} ${l.unit}`
-                        ) : (
-                          <span className="text-gray-400 font-normal italic">Chưa nhận (—)</span>
-                        )}
-                      </td>
-                      <td className="py-2 px-3 text-center">
-                        {l.receivedQuantity != null ? (
-                          l.differenceQuantity && Number(l.differenceQuantity) > 0 ? (
-                            <span className="text-rose-600 font-bold">-{l.differenceQuantity}</span>
-                          ) : (
-                            <span className="text-emerald-600 font-bold">0</span>
-                          )
-                        ) : (
-                          <span className="text-gray-400 font-normal">—</span>
-                        )}
-                      </td>
-                      <td className="py-2 px-3 text-gray-600 italic">
-                        {l.discrepancyReason || '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <button
-                type="button"
-                onClick={() => setSelectedTransferDetail(null)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-300"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
