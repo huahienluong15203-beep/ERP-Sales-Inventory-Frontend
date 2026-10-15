@@ -6,8 +6,10 @@ import {
   Search,
   RefreshCw,
   Layers,
-  X
+  X,
+  Download
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import type {
   StockLedgerRow,
   StockLedgerSummary,
@@ -21,14 +23,14 @@ import {
 } from '../../services/stockLedgerApi';
 import { fetchCategories } from '../../services/categoryApi';
 import { Pagination } from '../common/Pagination';
+import { SearchSelect } from '../common/SearchSelect';
 
 /**
- * S5-05: Sổ tồn kho 3 cột theo từng SKU và từng kho
- * Acceptance Criteria:
+ * Sổ tồn kho 3 cột theo từng SKU và từng kho
  * - Ba cột tách bạch: tồn thực tế, tồn đang giữ chỗ, tồn khả dụng
  * - Lọc theo kho, nhóm hàng, trạng thái tồn
  * - Tìm nhanh theo mã hoặc tên sản phẩm
- * - Trả lời ngay được câu hỏi mặt hàng này còn bao nhiêu bán được
+ * - Xuất Excel đúng theo bộ lọc đang áp dụng
  */
 export const StockLedgerThreeColumnsTab: React.FC = () => {
 
@@ -40,7 +42,7 @@ export const StockLedgerThreeColumnsTab: React.FC = () => {
   const [warehouses, setWarehouses] = useState<WarehouseOptionResponse[]>([]);
   const [categories, setCategories] = useState<CategoryWithCount[]>([]);
 
-  // Bộ lọc (S5-05)
+  // Bộ lọc sổ tồn kho 3 cột
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('ALL');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('ALL');
   const [stockStatus, setStockStatus] = useState<string>('ALL');
@@ -128,6 +130,53 @@ export const StockLedgerThreeColumnsTab: React.FC = () => {
     setPage(0);
   };
 
+  const [exporting, setExporting] = useState<boolean>(false);
+
+  // Xuất Excel tồn kho theo bộ lọc đang áp dụng, giữ nguyên 3 cột tồn
+  const handleExportExcel = async () => {
+    try {
+      setExporting(true);
+      const sortParam = `${sortField},${sortDir}`;
+      const data = await fetchStockLedger({
+        warehouseId: selectedWarehouseId,
+        categoryId: selectedCategoryId,
+        stockStatus,
+        keyword,
+        sort: sortParam,
+        page: 0,
+        size: 5000
+      });
+
+      const exportRows = (data.content && data.content.length > 0 ? data.content : rows).map((r, idx) => ({
+        'STT': idx + 1,
+        'Mã SKU': r.sku,
+        'Tên sản phẩm': r.productName,
+        'Nhóm hàng': r.categoryName || 'Chưa phân nhóm',
+        'Kho lưu trữ': r.warehouseName,
+        'Đơn vị tính': r.baseUnit || 'Đơn vị',
+        'Tồn thực tế': r.physicalStock,
+        'Đang giữ chỗ': r.reservedStock,
+        'Tồn khả dụng': r.availableStock,
+        'Trạng thái': r.availableStock <= 0 ? 'Hết hàng' : r.reservedStock > 0 && r.availableStock === 0 ? 'Đã giữ hết' : 'Còn hàng'
+      }));
+
+      // Tên file theo AC: Tên tệp chứa mã kho và ngày xuất
+      const selectedWh = warehouses.find((w) => String(w.id) === String(selectedWarehouseId));
+      const whCode = selectedWh ? (selectedWh.code || `KHO_${selectedWarehouseId}`).toUpperCase() : 'TAT_CA';
+      const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const fileName = `Bao_cao_ton_kho_${whCode}_${todayStr}.xlsx`;
+
+      const ws = XLSX.utils.json_to_sheet(exportRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'So_ton_kho_3_cot');
+      XLSX.writeFile(wb, fileName);
+    } catch (err: unknown) {
+      console.error('Lỗi xuất Excel tồn kho:', err);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const toggleSort = (field: string) => {
     if (sortField === field) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -142,6 +191,17 @@ export const StockLedgerThreeColumnsTab: React.FC = () => {
     <div className="space-y-3.5 antialiased">
       {/* Tiêu đề trang & Nút thao tác chính (Tinh gọn chuẩn như Danh mục nhà cung cấp) */}
       <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={handleExportExcel}
+          disabled={exporting || loading}
+          title="Tải tệp Excel báo cáo tồn kho theo đúng bộ lọc hiện tại"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition cursor-pointer shadow-2xs h-9 disabled:opacity-50"
+        >
+          <Download size={14} className={exporting ? 'animate-bounce' : ''} />
+          <span>{exporting ? 'Đang xuất Excel...' : 'Tải Excel tồn kho'}</span>
+        </button>
+
         <button
           type="button"
           onClick={() => loadData()}
@@ -248,12 +308,13 @@ export const StockLedgerThreeColumnsTab: React.FC = () => {
 
         {/* Bộ lọc dropdown */}
         <div className="flex flex-wrap items-center gap-2">
-          <select
+          <SearchSelect
             value={selectedWarehouseId}
             onChange={(e) => {
               setSelectedWarehouseId(e.target.value);
               setPage(0);
             }}
+            searchPlaceholder="Gõ để tìm kho hàng..."
             className="px-3 py-2 text-xs rounded-xl border border-gray-200 bg-white text-gray-700 focus:outline-none focus:border-[#F85606] cursor-pointer min-h-[38px]"
           >
             <option value="ALL">Tất cả kho hàng</option>
@@ -262,14 +323,15 @@ export const StockLedgerThreeColumnsTab: React.FC = () => {
                 {w.name}
               </option>
             ))}
-          </select>
+          </SearchSelect>
 
-          <select
+          <SearchSelect
             value={selectedCategoryId}
             onChange={(e) => {
               setSelectedCategoryId(e.target.value);
               setPage(0);
             }}
+            searchPlaceholder="Gõ để tìm nhóm hàng..."
             className="px-3 py-2 text-xs rounded-xl border border-gray-200 bg-white text-gray-700 focus:outline-none focus:border-[#F85606] cursor-pointer min-h-[38px]"
           >
             <option value="ALL">Tất cả nhóm hàng</option>
@@ -278,7 +340,7 @@ export const StockLedgerThreeColumnsTab: React.FC = () => {
                 {c.name}
               </option>
             ))}
-          </select>
+          </SearchSelect>
 
           <select
             value={stockStatus}
