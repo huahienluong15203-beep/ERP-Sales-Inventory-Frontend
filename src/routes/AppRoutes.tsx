@@ -39,6 +39,7 @@ import { StockTakeCreatePage } from '../pages/inventory/StockTakeCreatePage';
 import { StockTakeDetailPage } from '../pages/inventory/StockTakeDetailPage';
 import { WarehouseManagementPage } from '../pages/inventory/WarehouseManagementPage';
 import { DebtAdjustmentPage } from '../pages/payment/DebtAdjustmentPage';
+import { ProductLotManagementPage } from '../pages/inventory/ProductLotManagementPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -440,6 +441,24 @@ export const AppRoutes: React.FC = () => {
           }
         />
         <Route path="/warehouses" element={<Navigate to="/inventory/warehouses" replace />} />
+
+        {/* Theo dõi lô & hạn sử dụng, cảnh báo cận date */}
+        <Route
+          path="/inventory/lots"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <ProductLotManagementPage />
+            </ProtectedRoute>
+          }
+        />
 
         <Route path="/inventory" element={<Navigate to="/inventory/receipts" replace />} />
 
