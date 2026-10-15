@@ -27,6 +27,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from '../../routes/Router';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { NumberInput } from '../../components/common/NumberInput';
+import { Pagination } from '../../components/common/Pagination';
 
 interface FormLineState {
   id: string;
@@ -180,7 +181,7 @@ const ReceiptLineQuantityInput: React.FC<ReceiptLineQuantityInputProps> = ({
   );
 };
 
-const CATALOG_PAGE_SIZE = 30;
+const DEFAULT_CATALOG_PAGE_SIZE = 10;
 
 export const GoodsReceiptCreatePage: React.FC = () => {
   const navigate = useNavigate();
@@ -210,20 +211,19 @@ export const GoodsReceiptCreatePage: React.FC = () => {
   const [generalNote, setGeneralNote] = useState<string>('');
   const [lines, setLines] = useState<FormLineState[]>([]);
 
-  // Danh mục sản phẩm mở rộng toàn trang (ban đầu 30 sản phẩm, cuộn xuống tự động load tiếp)
+  // Danh mục sản phẩm mở rộng toàn trang (phân trang chuẩn có chọn số trang & số dòng/trang)
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
   const [catalogPage, setCatalogPage] = useState<number>(0);
+  const [catalogPageSize, setCatalogPageSize] = useState<number>(DEFAULT_CATALOG_PAGE_SIZE);
   const [catalogTotalPages, setCatalogTotalPages] = useState<number>(1);
   const [catalogTotalElements, setCatalogTotalElements] = useState<number>(0);
   const [loadingCatalog, setLoadingCatalog] = useState<boolean>(false);
-  const [loadingMoreCatalog, setLoadingMoreCatalog] = useState<boolean>(false);
   const [catalogKeyword, setCatalogKeyword] = useState<string>('');
   const [catalogCategory, setCatalogCategory] = useState<string>('ALL');
 
   // Tick chọn nhanh sản phẩm trong danh mục (từng sản phẩm hoặc tick all)
   const [selectedCatalogProductIds, setSelectedCatalogProductIds] = useState<Set<number>>(new Set());
 
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Trạng thái lưu
@@ -257,31 +257,21 @@ export const GoodsReceiptCreatePage: React.FC = () => {
     };
   }, []);
 
-  // Tải danh mục sản phẩm từ server theo phân trang 30 sản phẩm / trang
+  // Tải danh mục sản phẩm từ server theo phân trang
   const fetchCatalog = useCallback(
-    async (page: number, keyword: string, category: string, isAppend = false) => {
-      if (isAppend) {
-        setLoadingMoreCatalog(true);
-      } else {
-        setLoadingCatalog(true);
-      }
+    async (page: number, size: number, keyword: string, category: string) => {
+      setLoadingCatalog(true);
 
       try {
         const res = await productService.getProducts({
           page,
-          size: CATALOG_PAGE_SIZE,
+          size,
           keyword: keyword.trim() || undefined,
           category: category !== 'ALL' ? category : undefined,
           status: 'ACTIVE'
         });
 
-        setCatalogProducts((prev) => {
-          if (!isAppend) return res.products;
-          const existingIds = new Set(prev.map((p) => p.id));
-          const newUnique = res.products.filter((p) => !existingIds.has(p.id));
-          return [...prev, ...newUnique];
-        });
-
+        setCatalogProducts(res.products || []);
         setCatalogPage(page);
         setCatalogTotalPages(res.totalPages || 1);
         setCatalogTotalElements(res.totalElements || 0);
@@ -289,47 +279,39 @@ export const GoodsReceiptCreatePage: React.FC = () => {
         console.error('Lỗi tải danh mục sản phẩm nhập kho:', err);
       } finally {
         setLoadingCatalog(false);
-        setLoadingMoreCatalog(false);
       }
     },
     []
   );
 
-  // Tải 30 sản phẩm đầu tiên khi vào trang hoặc khi đổi danh mục
+  // Tải sản phẩm khi vào trang hoặc khi đổi danh mục
   useEffect(() => {
-    fetchCatalog(0, catalogKeyword, catalogCategory, false);
+    setCatalogPage(0);
+    fetchCatalog(0, catalogPageSize, catalogKeyword, catalogCategory);
   }, [catalogCategory]);
 
   // Tìm kiếm theo từ khóa có debounce
   const handleKeywordChange = (kw: string) => {
     setCatalogKeyword(kw);
+    setCatalogPage(0);
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      fetchCatalog(0, kw, catalogCategory, false);
+      fetchCatalog(0, catalogPageSize, kw, catalogCategory);
     }, 350);
   };
 
-  // Tự động load tiếp khi người dùng cuộn chuột xuống đáy danh mục
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-    if (loadingCatalog || loadingMoreCatalog) return;
-    if (catalogPage + 1 >= catalogTotalPages) return;
+  // Chuyển trang
+  const handleCatalogPageChange = (newPage: number) => {
+    setCatalogPage(newPage);
+    fetchCatalog(newPage, catalogPageSize, catalogKeyword, catalogCategory);
+  };
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !loadingMoreCatalog && catalogPage + 1 < catalogTotalPages) {
-          fetchCatalog(catalogPage + 1, catalogKeyword, catalogCategory, true);
-        }
-      },
-      { threshold: 0.1, rootMargin: '300px' }
-    );
-
-    observer.observe(sentinel);
-    return () => {
-      observer.disconnect();
-    };
-  }, [loadingCatalog, loadingMoreCatalog, catalogPage, catalogTotalPages, catalogKeyword, catalogCategory, fetchCatalog]);
+  // Chọn số dòng / sản phẩm mỗi trang
+  const handleCatalogSizeChange = (newSize: number) => {
+    setCatalogPageSize(newSize);
+    setCatalogPage(0);
+    fetchCatalog(0, newSize, catalogKeyword, catalogCategory);
+  };
 
   // Xử lý param SKU ban đầu nếu có (từ cảnh báo định mức tồn)
   useEffect(() => {
@@ -1056,7 +1038,7 @@ export const GoodsReceiptCreatePage: React.FC = () => {
                 </h2>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Bấm nút <strong className="text-[#F85606]">+ Thêm vào phiếu</strong> để đưa sản phẩm vào danh sách dòng hàng. Tự động tải tiếp 30 sản phẩm khi cuộn chuột xuống dưới.
+                Bấm nút <strong className="text-[#F85606]">+ Thêm vào phiếu</strong> để đưa sản phẩm vào danh sách dòng hàng. Chọn số trang hoặc số dòng/trang bên dưới để duyệt toàn bộ danh mục.
               </p>
             </div>
 
@@ -1064,11 +1046,17 @@ export const GoodsReceiptCreatePage: React.FC = () => {
             <div className="flex items-center gap-2 self-start md:self-auto">
               <div className="px-3.5 py-1.5 rounded-xl bg-orange-50 border border-orange-200 text-orange-900 font-bold text-xs flex items-center gap-2 shadow-2xs">
                 <span>
-                  Đang hiển thị: <strong className="text-[#F85606] font-mono">{catalogProducts.length}</strong> / <strong className="font-mono">{catalogTotalElements}</strong> sản phẩm
+                  Đang hiển thị:{' '}
+                  <strong className="text-[#F85606] font-mono">
+                    {catalogTotalElements === 0 ? 0 : catalogPage * catalogPageSize + 1}–{Math.min((catalogPage + 1) * catalogPageSize, catalogTotalElements)}
+                  </strong>{' '}
+                  /{' '}
+                  <strong className="font-mono">{catalogTotalElements}</strong> sản phẩm
                 </span>
                 <span className="text-orange-300">•</span>
                 <span>
-                  Trang <strong className="font-mono">{catalogTotalPages > 0 ? catalogPage + 1 : 0}</strong> / <strong className="font-mono">{catalogTotalPages}</strong>
+                  Trang <strong className="font-mono">{catalogTotalPages > 0 ? catalogPage + 1 : 0}</strong> /{' '}
+                  <strong className="font-mono">{catalogTotalPages}</strong>
                 </span>
               </div>
             </div>
@@ -1167,10 +1155,10 @@ export const GoodsReceiptCreatePage: React.FC = () => {
         </div>
 
         {/* Bảng Danh Sách Sản Phẩm Mở Rộng Toàn Trang */}
-        {loadingCatalog && catalogProducts.length === 0 ? (
+        {loadingCatalog ? (
           <div className="py-16 text-center space-y-3">
             <Loader2 size={32} className="animate-spin text-[#F85606] mx-auto" />
-            <p className="text-xs text-gray-500 font-semibold">Đang tải danh mục sản phẩm (30 sản phẩm ban đầu)...</p>
+            <p className="text-xs text-gray-500 font-semibold">Đang tải danh mục sản phẩm...</p>
           </div>
         ) : catalogProducts.length === 0 ? (
           <div className="py-16 text-center space-y-2">
@@ -1223,7 +1211,7 @@ export const GoodsReceiptCreatePage: React.FC = () => {
                         />
                       </td>
                       <td className="py-3 px-2 text-center text-gray-400 font-mono text-[11px]">
-                        {idx + 1}
+                        {catalogPage * catalogPageSize + idx + 1}
                       </td>
                       <td className="py-3 px-3">
                         <span className="font-mono text-xs font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded-lg border border-gray-200">
@@ -1282,28 +1270,18 @@ export const GoodsReceiptCreatePage: React.FC = () => {
           </div>
         )}
 
-        {/* Phân trang & Cuộn tải tiếp (Infinite Scroll Sentinel & Indicator) */}
-        <div className="p-4 bg-gray-50/70 border-t border-gray-100 text-center text-xs">
-          {loadingMoreCatalog ? (
-            <div className="flex items-center justify-center gap-2 text-orange-600 font-bold py-2">
-              <Loader2 size={16} className="animate-spin" />
-              <span>Đang tải thêm 30 sản phẩm tiếp theo...</span>
-            </div>
-          ) : catalogPage + 1 < catalogTotalPages ? (
-            <div ref={sentinelRef} className="py-2 space-y-2">
-              <p className="text-gray-500 font-medium">
-                Cuộn chuột xuống dưới để tự động tải tiếp 30 sản phẩm tiếp theo (Đang hiển thị {catalogProducts.length} / {catalogTotalElements})
-              </p>
-              <button
-                type="button"
-                onClick={() => fetchCatalog(catalogPage + 1, catalogKeyword, catalogCategory, true)}
-                className="px-4 py-2 rounded-xl bg-white border border-orange-200 hover:bg-orange-50 text-[#F85606] font-bold shadow-2xs transition cursor-pointer"
-              >
-                Hoặc bấm vào đây để tải thêm 30 sản phẩm tiếp theo
-              </button>
-            </div>
-          ) : null}
-        </div>
+        {/* Phân trang chuẩn theo quy tắc dự án: Nút chọn trang 1, 2, ... và chọn số dòng/trang */}
+        {!loadingCatalog && catalogTotalElements > 0 && (
+          <Pagination
+            page={catalogPage}
+            totalPages={catalogTotalPages}
+            totalElements={catalogTotalElements}
+            size={catalogPageSize}
+            onPageChange={handleCatalogPageChange}
+            onSizeChange={handleCatalogSizeChange}
+            itemLabel="sản phẩm"
+          />
+        )}
       </div>
 
       {/* 6. FOOTER ACTIONS DƯỚI CÙNG */}
