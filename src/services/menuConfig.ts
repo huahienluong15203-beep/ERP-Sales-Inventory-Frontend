@@ -136,6 +136,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Thẻ kho chi tiết',
+    path: '/inventory/stock-card',
+    group: 'Sản phẩm & Kho',
+    icon: 'BookOpenCheck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Theo dõi toàn bộ phát sinh nhập, xuất, chuyển kho, điều chỉnh theo thứ tự thời gian',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER']
+  },
+
+  {
     title: 'Kiểm kê kho',
     path: '/inventory/stocktakes',
     group: 'Sản phẩm & Kho',
