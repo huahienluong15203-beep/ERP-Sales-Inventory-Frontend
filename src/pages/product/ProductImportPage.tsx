@@ -359,13 +359,23 @@ export const ProductImportPage: React.FC = () => {
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleDownloadTemplate}
-              className="rounded-xl bg-[#F85606] hover:bg-[#E04D05] px-4 py-2.5 font-bold text-white shrink-0 min-h-[44px]"
-            >
-              ↓ Tải tệp mẫu (.xlsx)
-            </button>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                className="rounded-xl border border-orange-300 bg-white hover:bg-orange-50 px-3.5 py-2.5 font-bold text-[#F85606] text-xs sm:text-sm shrink-0 min-h-[44px] transition-all cursor-pointer shadow-2xs"
+              >
+                ↓ Tải tệp mẫu trống (.xlsx)
+              </button>
+              <a
+                href="/Mau_Nhap_5000_SanPham_ERP.xlsx"
+                download="Mau_Nhap_5000_SanPham_ERP.xlsx"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#F85606] hover:bg-[#E04D05] px-4 py-2.5 font-bold text-white text-xs sm:text-sm shrink-0 min-h-[44px] shadow-xs hover:shadow transition-all"
+              >
+                <Icons.FileSpreadsheet size={16} />
+                <span>Tải dữ liệu mẫu 5.000 sản phẩm (.xlsx)</span>
+              </a>
+            </div>
           </div>
 
           <div

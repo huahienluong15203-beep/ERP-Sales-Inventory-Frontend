@@ -20,7 +20,7 @@ import {
 } from '../../services/stockTransferApi';
 import { StockTransferReceiveModal } from '../../components/inventory/StockTransferReceiveModal';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from '../../routes/Router';
+import { useNavigate, useLocation } from '../../routes/Router';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { RowActionMenu } from '../../components/common/RowActionMenu';
 
@@ -35,6 +35,7 @@ import { RowActionMenu } from '../../components/common/RowActionMenu';
 export const StockTransferManagementPage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast, currentRole, user } = useAuth();
+  const location = useLocation();
 
   // Mục 12 (góp ý GV): chặn ở cả FE và BE - chỉ NV kho, QL kho, Admin được lập / xuất / nhận phiếu chuyển;
   // Kế toán chỉ xem.
@@ -69,6 +70,21 @@ export const StockTransferManagementPage: React.FC = () => {
         keyword
       });
       setTransfers(data);
+
+      // Nếu có query param id hoặc code thì tự chuyển hướng sang trang chi tiết
+      const params = new URLSearchParams(location.search);
+      const targetId = params.get('id');
+      const targetCode = params.get('code');
+      if (targetId) {
+        navigate(`/inventory/transfers/${targetId}`, { replace: true });
+      } else if (targetCode) {
+        const found = data.find(
+          (t) => t.code.toUpperCase() === targetCode.toUpperCase()
+        );
+        if (found) {
+          navigate(`/inventory/transfers/${found.id}`, { replace: true });
+        }
+      }
     } catch (err) {
       console.error('Lỗi tải danh sách phiếu chuyển kho:', err);
       showToast('Lỗi tải dữ liệu', 'Không thể kết nối đến máy chủ', 'error');
