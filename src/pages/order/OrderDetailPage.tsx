@@ -44,6 +44,7 @@ import { OrderApprovalActionModal, type ApprovalActionType } from '../../compone
 import { OrderLifecycleTimeline } from '../../components/order/OrderLifecycleTimeline';
 import { OrderCancelModal } from '../../components/order/OrderCancelModal';
 import { OrderPdfPreviewModal } from '../../components/order/OrderPdfPreviewModal';
+import { AgencyDeliveryTimeline } from '../../components/portal/AgencyDeliveryTimeline';
 import { getUserFullName } from '../../lib/userFormatters';
 
 export const OrderDetailPage: React.FC = () => {
@@ -544,6 +545,12 @@ export const OrderDetailPage: React.FC = () => {
         approvalHistory={approvalHistory}
         createdAt={order.createdAt}
         desiredDeliveryDate={order.desiredDeliveryDate || undefined}
+      />
+
+      {/* TIMELINE TRẠNG THÁI GIAO HÀNG & THỰC GIAO TỪNG DÒNG */}
+      <AgencyDeliveryTimeline
+        order={order}
+        approvalHistory={approvalHistory}
       />
 
       {/* 4. CẢNH BÁO PHÊ DUYỆT NGOẠI LỆ HOẶC GIAO THIẾU HÀNG */}

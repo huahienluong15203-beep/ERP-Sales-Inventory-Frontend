@@ -63,6 +63,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Duyệt giảm trừ công nợ',
+    path: '/payments/adjustments',
+    group: 'Bán hàng',
+    icon: 'FileCheck',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: 'Duyệt chứng từ giảm trừ công nợ khi trả hàng theo đúng giá bán hoá đơn gốc',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+  },
+
+  {
     title: 'Danh mục sản phẩm',
     path: '/products',
     group: 'Sản phẩm & Kho',
@@ -136,6 +146,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Thẻ kho chi tiết',
+    path: '/inventory/stock-card',
+    group: 'Sản phẩm & Kho',
+    icon: 'BookOpenCheck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Theo dõi toàn bộ phát sinh nhập, xuất, chuyển kho, điều chỉnh theo thứ tự thời gian',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER']
+  },
+
+  {
     title: 'Kiểm kê kho',
     path: '/inventory/stocktakes',
     group: 'Sản phẩm & Kho',
@@ -152,6 +172,22 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     icon: 'Layers',
     epic: 'Sản phẩm & Tồn kho',
     description: 'Quản lý danh sách kho hàng, phân khu (Zone), kệ (Rack), tầng (Shelf) và ô chứa (Bin)',
+    allowedRoles: [
+      'ROLE_WAREHOUSE',
+      'ROLE_WH_MANAGER',
+      'ROLE_ADMIN',
+      'ROLE_ACCOUNTANT',
+      'ROLE_SALES_MANAGER'
+    ]
+  },
+
+  {
+    title: 'Quản lý lô hàng',
+    path: '/inventory/lots',
+    group: 'Sản phẩm & Kho',
+    icon: 'Boxes',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Theo dõi lô sản xuất, hạn sử dụng, cảnh báo cận date và quy tắc xuất FEFO',
     allowedRoles: [
       'ROLE_WAREHOUSE',
       'ROLE_WH_MANAGER',

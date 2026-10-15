@@ -33,10 +33,13 @@ import { StockTransferCreatePage } from '../pages/inventory/StockTransferCreateP
 import { TransferProductPickerPage } from '../pages/inventory/TransferProductPickerPage';
 import { StockTransferDetailPage } from '../pages/inventory/StockTransferDetailPage';
 import { StockLedgerPage } from '../pages/inventory/StockLedgerPage';
+import { StockCardPage } from '../pages/inventory/StockCardPage';
 import { StockTakeManagementPage } from '../pages/inventory/StockTakeManagementPage';
 import { StockTakeCreatePage } from '../pages/inventory/StockTakeCreatePage';
 import { StockTakeDetailPage } from '../pages/inventory/StockTakeDetailPage';
 import { WarehouseManagementPage } from '../pages/inventory/WarehouseManagementPage';
+import { DebtAdjustmentPage } from '../pages/payment/DebtAdjustmentPage';
+import { ProductLotManagementPage } from '../pages/inventory/ProductLotManagementPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -63,16 +66,16 @@ export const AppRoutes: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // 2b. S4-10: Cổng đại lý đặt hàng (B2B Customer Portal)
-  // Khách hàng/đại lý (ROLE_CUSTOMER) không dùng giao diện Dashboard nội bộ, luôn vào thẳng cổng đặt hàng
+  // Cổng đại lý đặt hàng & Quản lý công nợ (B2B Customer Portal)
+  // Khách hàng/đại lý (ROLE_CUSTOMER) không dùng giao diện Dashboard nội bộ, luôn vào thẳng cổng đặt hàng & công nợ
   if (currentRole === 'ROLE_CUSTOMER') {
-    if (pathname !== '/portal') {
+    if (pathname !== '/portal' && pathname !== '/portal/debt') {
       return <Navigate to="/portal" replace />;
     }
     return <CustomerOrderPortalPage />;
   }
 
-  if (pathname === '/portal') {
+  if (pathname === '/portal' || pathname === '/portal/debt') {
     return <CustomerOrderPortalPage />;
   }
 
@@ -331,6 +334,28 @@ export const AppRoutes: React.FC = () => {
           element={<Navigate to="/inventory/ledger" replace />}
         />
 
+        {/* S6-02: Thẻ kho chi tiết (Kho, Quản lý kho, Admin, Kế toán, QL kinh doanh) */}
+        <Route
+          path="/inventory/stock-card"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <StockCardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/card"
+          element={<Navigate to="/inventory/stock-card" replace />}
+        />
+
         {/* S5-08: Kiểm kê kho & ghi nhận chênh lệch */}
         <Route
           path="/inventory/stocktakes"
@@ -416,6 +441,24 @@ export const AppRoutes: React.FC = () => {
           }
         />
         <Route path="/warehouses" element={<Navigate to="/inventory/warehouses" replace />} />
+
+        {/* Theo dõi lô & hạn sử dụng, cảnh báo cận date */}
+        <Route
+          path="/inventory/lots"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <ProductLotManagementPage />
+            </ProtectedRoute>
+          }
+        />
 
         <Route path="/inventory" element={<Navigate to="/inventory/receipts" replace />} />
 
@@ -555,6 +598,22 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <OrderListPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Chứng từ giảm trừ công nợ khi trả hàng */}
+        <Route
+          path="/payments/adjustments"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <DebtAdjustmentPage />
             </ProtectedRoute>
           }
         />

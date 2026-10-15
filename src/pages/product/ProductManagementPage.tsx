@@ -16,11 +16,14 @@ import { fetchCategories, type CategoryWithCount } from '../../services/category
 import { ProductUnitConversionModal } from './components/ProductUnitConversionModal';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { RowActionMenu } from '../../components/common/RowActionMenu';
+import { toggleProductBatchManagement } from '../../services/productLotApi';
 
 export const ProductManagementPage: React.FC = () => {
   const { currentRole } = useAuth();
   const canSeeCost = canManageCostPrice(currentRole);
   const canManageProducts = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER';
+  const canToggleBatch =
+    currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_WH_MANAGER' || currentRole === 'ROLE_SALES_MANAGER';
 
   const navigate = useNavigate();
 
@@ -191,6 +194,24 @@ export const ProductManagementPage: React.FC = () => {
     if (res.success) reloadAll();
   };
 
+  const handleToggleBatch = async (product: Product) => {
+    const nextValue = !product.hasBatchManagement;
+    try {
+      await toggleProductBatchManagement(product.id, nextValue);
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, hasBatchManagement: nextValue } : p))
+      );
+      showToast(
+        nextValue
+          ? `Đã bật theo dõi lô & HSD cho sản phẩm ${product.sku}`
+          : `Đã tắt theo dõi lô & HSD cho sản phẩm ${product.sku}`,
+        'success'
+      );
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Không thể thay đổi cấu hình quản lý lô', 'error');
+    }
+  };
+
   return (
     <div className="w-full min-w-0 space-y-3.5">
       {/* Toast thông báo */}
@@ -348,6 +369,7 @@ export const ProductManagementPage: React.FC = () => {
                 <th className="py-3.5 px-4 w-44 whitespace-nowrap">Nhóm hàng</th>
                 <th className="py-3.5 px-4 w-28 text-center whitespace-nowrap">ĐVT cơ sở</th>
                 <th className="py-3.5 px-4 w-44 whitespace-nowrap">Quy cách đóng gói</th>
+                <th className="py-3.5 px-4 w-36 text-center whitespace-nowrap">Theo dõi lô & HSD</th>
                 <th className="py-3.5 px-4 w-36 text-right whitespace-nowrap">Giá vốn</th>
                 <th className="py-3.5 px-4 w-36 text-center whitespace-nowrap">Trạng thái</th>
                 <th className="py-3.5 px-4 w-28 text-center whitespace-nowrap">Thao tác</th>
@@ -356,13 +378,13 @@ export const ProductManagementPage: React.FC = () => {
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-gray-400 text-sm">
+                  <td colSpan={10} className="text-center py-12 text-gray-400 text-sm">
                     Đang tải dữ liệu sản phẩm...
                   </td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-14 text-gray-500">
+                  <td colSpan={10} className="text-center py-14 text-gray-500">
                     <div className="flex flex-col items-center gap-2">
                       <Icons.Package size={36} className="text-gray-300" />
                       <span className="text-sm font-medium">Không tìm thấy sản phẩm nào phù hợp</span>
@@ -448,6 +470,43 @@ export const ProductManagementPage: React.FC = () => {
                         {p.packagingSpec}
                       </td>
 
+                      {/* Theo dõi lô & HSD */}
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        {canToggleBatch ? (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleBatch(p)}
+                            title={
+                              p.hasBatchManagement
+                                ? 'Nhấp để tắt theo dõi lô & HSD cho SKU này'
+                                : 'Nhấp để bật theo dõi lô & HSD cho SKU này'
+                            }
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
+                              p.hasBatchManagement
+                                ? 'bg-orange-100 text-orange-900 border border-orange-300 shadow-2xs hover:bg-orange-200'
+                                : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'
+                            }`}
+                          >
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                p.hasBatchManagement ? 'bg-[#F85606]' : 'bg-gray-400'
+                              }`}
+                            />
+                            <span>{p.hasBatchManagement ? 'Theo dõi lô' : 'Tắt'}</span>
+                          </button>
+                        ) : (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${
+                              p.hasBatchManagement
+                                ? 'bg-orange-50 text-orange-700 border border-orange-200'
+                                : 'text-gray-400'
+                            }`}
+                          >
+                            {p.hasBatchManagement ? 'Theo dõi lô' : '—'}
+                          </span>
+                        )}
+                      </td>
+
                       {/* 7. GIÁ VỐN (Bảo mật RBAC) */}
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         {canSeeCost ? (
@@ -492,10 +551,16 @@ export const ProductManagementPage: React.FC = () => {
                             </button>
                           )}
 
-                          {/* Thao tác phụ (đơn vị quy đổi, ngừng / mở kinh doanh) gom vào menu "⋯" */}
+                          {/* Thao tác phụ (đơn vị quy đổi, xem thẻ kho, ngừng / mở kinh doanh) gom vào menu "⋯" */}
                           <RowActionMenu
                             className="p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors cursor-pointer"
                             items={[
+                              {
+                                label: 'Xem thẻ kho',
+                                icon: <Icons.BookOpenCheck size={14} />,
+                                title: 'Xem lịch sử nhập xuất biến động thẻ kho của SKU này (S6-02)',
+                                onClick: () => navigate(`/inventory/stock-card?sku=${encodeURIComponent(p.sku)}&productId=${p.id}`),
+                              },
                               {
                                 label: 'Đơn vị tính quy đổi',
                                 icon: <Icons.Scale size={14} />,
