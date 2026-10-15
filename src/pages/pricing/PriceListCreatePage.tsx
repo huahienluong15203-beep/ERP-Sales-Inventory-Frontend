@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft,
-  Package,
   Plus,
   Trash2,
   Search,
@@ -11,7 +10,12 @@ import {
   Sliders,
   Tag,
   X,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ChevronDown,
+  ChevronUp,
+  Layers,
+  CheckCircle2,
+  Check
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useParams, useLocation } from '../../routes/Router';
@@ -29,8 +33,10 @@ import {
 } from '../../services/pricingApi';
 import { productService } from '../../services/productService';
 import type { ProductOptionItem } from '../../services/productService';
+import { fetchCategories, type CategoryWithCount } from '../../services/categoryApi';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { NumberInput } from '../../components/common/NumberInput';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 interface EditablePriceItem {
   id?: number;
@@ -72,14 +78,33 @@ export const PriceListCreatePage: React.FC = () => {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Danh mục sản phẩm nạp từ Backend (đầy đủ, không giới hạn 30)
-  const [productOptions, setProductOptions] = useState<ProductOptionItem[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState<boolean>(false);
-  const [productSearchInput, setProductSearchInput] = useState<string>('');
-  const [isSearchingProduct, setIsSearchingProduct] = useState<boolean>(false);
-  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState<boolean>(false);
+  // Danh sách nhóm hàng đầy đủ từ backend
+  const [categories, setCategories] = useState<CategoryWithCount[]>([]);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('ALL');
-  const searchDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Danh mục sản phẩm đang kinh doanh theo nhóm hàng đã lọc (100% sản phẩm, không bị giới hạn 100)
+  const [categoryProducts, setCategoryProducts] = useState<ProductOptionItem[]>([]);
+  const [totalActiveInSystem, setTotalActiveInSystem] = useState<number>(0);
+  const [loadingCategoryProducts, setLoadingCategoryProducts] = useState<boolean>(false);
+  const [categorySearchQuery, setCategorySearchQuery] = useState<string>('');
+  const [categoryPage, setCategoryPage] = useState<number>(0);
+  const categoryPageSize = 8;
+  const [isCategorySelectorOpen, setIsCategorySelectorOpen] = useState<boolean>(true);
+
+  // Tập hợp các SKU được tick chọn (checkbox) để thêm nhiều sản phẩm cùng lúc
+  const [selectedToAddSkus, setSelectedToAddSkus] = useState<Set<string>>(new Set());
+
+  // Modal xác nhận xóa tùy chỉnh (loại bỏ hoàn toàn confirm() mặc định của trình duyệt)
+  const [deleteModalState, setDeleteModalState] = useState<{
+    open: boolean;
+    type: 'single' | 'all';
+    targetIndex?: number;
+    targetSku?: string;
+    targetName?: string;
+  }>({
+    open: false,
+    type: 'all'
+  });
 
   // Bộ điều chỉnh giá hàng loạt
   const [showBulkModal, setShowBulkModal] = useState<boolean>(false);
@@ -132,108 +157,170 @@ export const PriceListCreatePage: React.FC = () => {
     }
   }, [isEdit, urlId, location.search]);
 
-  // 2. Nạp danh mục sản phẩm từ hệ thống (lên tới 1000 sản phẩm, không bị cắt 30)
+  // 2. Nạp toàn bộ danh mục nhóm hàng từ backend
   useEffect(() => {
-    setLoadingProducts(true);
-    productService
-      .searchProductOptions('', 1000)
-      .then((prods) => {
-        setProductOptions(prods);
+    fetchCategories()
+      .then((cats) => {
+        setCategories(cats);
       })
       .catch((err) => {
-        console.error('Lỗi khi nạp danh mục sản phẩm:', err);
-      })
-      .finally(() => {
-        setLoadingProducts(false);
+        console.error('Lỗi khi nạp danh mục nhóm hàng:', err);
       });
   }, []);
 
-  // 3. Tìm kiếm sản phẩm phía BE khi người dùng gõ từ khóa
+  // 3. Nạp toàn bộ sản phẩm đang kinh doanh theo nhóm hàng đã chọn (hỗ trợ phân trang song song nạp đủ 100% SKU)
   useEffect(() => {
-    const trimmed = productSearchInput.trim();
-    if (!trimmed) return;
+    let isCancelled = false;
+    setLoadingCategoryProducts(true);
+    setSelectedToAddSkus(new Set());
+    setCategoryPage(0);
 
-    const timer = setTimeout(async () => {
-      setIsSearchingProduct(true);
-      try {
-        const results = await productService.searchProductOptions(trimmed, 300);
-        setProductOptions((prev) => {
-          const map = new Map<number, ProductOptionItem>();
-          results.forEach((p) => map.set(p.id, p));
-          prev.forEach((p) => {
-            if (!map.has(p.id)) map.set(p.id, p);
-          });
-          return Array.from(map.values());
-        });
-      } catch (err) {
-        console.error('Lỗi tìm kiếm sản phẩm phía BE:', err);
-      } finally {
-        setIsSearchingProduct(false);
-      }
-    }, 250);
+    productService
+      .fetchAllActiveProducts(selectedCategoryFilter)
+      .then(({ products, totalElements }) => {
+        if (!isCancelled) {
+          setCategoryProducts(products);
+          if (selectedCategoryFilter === 'ALL') {
+            setTotalActiveInSystem(totalElements);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('Lỗi khi nạp danh sách sản phẩm theo nhóm:', err);
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setLoadingCategoryProducts(false);
+        }
+      });
 
-    return () => clearTimeout(timer);
-  }, [productSearchInput]);
-
-  // Đóng dropdown tìm kiếm khi click ra ngoài
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchDropdownRef.current && !searchDropdownRef.current.contains(event.target as Node)) {
-        setIsProductDropdownOpen(false);
-      }
+    return () => {
+      isCancelled = true;
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [selectedCategoryFilter]);
 
-  // Lấy danh sách nhóm hàng duy nhất để lọc
-  const availableCategories = useMemo(() => {
-    const set = new Set<string>();
-    productOptions.forEach((p) => {
-      if (p.category) set.add(p.category);
+  // Tính giá bán và giá sàn đề xuất theo cấp đại lý đã chọn
+  const calculateDefaultPrices = (prod: ProductOptionItem, group: CustomerGroupType) => {
+    if (!prod.costPrice || Number(prod.costPrice) <= 0) {
+      return { price: '100000', floorPrice: '90000' };
+    }
+    const cost = Number(prod.costPrice);
+    let margin = 0.20;
+    let floorMargin = 0.05;
+
+    if (group === 'DEALER_LEVEL_1') {
+      margin = 0.15; // Đại lý cấp 1: Lãi 15%, Sàn +5%
+      floorMargin = 0.05;
+    } else if (group === 'DEALER_LEVEL_2') {
+      margin = 0.20; // Đại lý cấp 2: Lãi 20%, Sàn +8%
+      floorMargin = 0.08;
+    } else if (group === 'RETAIL') {
+      margin = 0.35; // Khách lẻ: Lãi 35%, Sàn +15%
+      floorMargin = 0.15;
+    }
+
+    const price = Math.round((cost * (1 + margin)) / 1000) * 1000;
+    const floor = Math.round((cost * (1 + floorMargin)) / 1000) * 1000;
+
+    return {
+      price: Math.max(1000, price).toString(),
+      floorPrice: Math.max(500, floor).toString()
+    };
+  };
+
+  // Tập hợp các SKU đã có trong bảng giá để đối chiếu nhanh
+  const existingSkuSet = useMemo(() => {
+    return new Set(items.map((it) => it.productSku.toUpperCase()));
+  }, [items]);
+
+  // Lọc sản phẩm trong nhóm hàng theo từ khóa tìm kiếm
+  const filteredCategoryProducts = useMemo(() => {
+    const q = categorySearchQuery.trim().toLowerCase();
+    if (!q) return categoryProducts;
+    return categoryProducts.filter(
+      (p) =>
+        p.sku.toLowerCase().includes(q) ||
+        p.name.toLowerCase().includes(q) ||
+        (p.category && p.category.toLowerCase().includes(q)) ||
+        (p.packaging && p.packaging.toLowerCase().includes(q))
+    );
+  }, [categoryProducts, categorySearchQuery]);
+
+  // Danh sách sản phẩm chưa thêm trong nhóm hàng
+  const unaddedCategoryProducts = useMemo(() => {
+    return filteredCategoryProducts.filter((p) => !existingSkuSet.has(p.sku.toUpperCase()));
+  }, [filteredCategoryProducts, existingSkuSet]);
+
+  // Phân trang cho bảng sản phẩm thuộc nhóm hàng
+  const totalCategoryPages = Math.max(1, Math.ceil(filteredCategoryProducts.length / categoryPageSize));
+  const currentCategoryPage = Math.min(categoryPage, totalCategoryPages - 1);
+  const pagedCategoryProducts = useMemo(() => {
+    const start = currentCategoryPage * categoryPageSize;
+    return filteredCategoryProducts.slice(start, start + categoryPageSize);
+  }, [filteredCategoryProducts, currentCategoryPage, categoryPageSize]);
+
+  // Kiểm tra xem tất cả các sản phẩm chưa thêm trên trang hiện tại đã được tick hay chưa
+  const isCurrentPageAllSelected = useMemo(() => {
+    const unaddedOnPage = pagedCategoryProducts.filter((p) => !existingSkuSet.has(p.sku.toUpperCase()));
+    if (unaddedOnPage.length === 0) return false;
+    return unaddedOnPage.every((p) => selectedToAddSkus.has(p.sku.toUpperCase()));
+  }, [pagedCategoryProducts, existingSkuSet, selectedToAddSkus]);
+
+  // Toggle tick chọn tất cả sản phẩm chưa thêm trên trang hiện tại
+  const handleToggleSelectAllPage = () => {
+    const unaddedOnPage = pagedCategoryProducts.filter((p) => !existingSkuSet.has(p.sku.toUpperCase()));
+    if (unaddedOnPage.length === 0) return;
+
+    setSelectedToAddSkus((prev) => {
+      const next = new Set(prev);
+      if (isCurrentPageAllSelected) {
+        unaddedOnPage.forEach((p) => next.delete(p.sku.toUpperCase()));
+      } else {
+        unaddedOnPage.forEach((p) => next.add(p.sku.toUpperCase()));
+      }
+      return next;
     });
-    return Array.from(set).sort();
-  }, [productOptions]);
+  };
 
-  // Lọc sản phẩm tìm kiếm (FE + BE), hiển thị danh sách linh hoạt
-  const filteredProductOptions = useMemo(() => {
-    const q = productSearchInput.trim().toLowerCase();
-    let list = productOptions;
+  // Toggle chọn 1 sản phẩm
+  const handleToggleSelectProduct = (sku: string) => {
+    const skuUpper = sku.toUpperCase();
+    if (existingSkuSet.has(skuUpper)) return;
+    setSelectedToAddSkus((prev) => {
+      const next = new Set(prev);
+      if (next.has(skuUpper)) {
+        next.delete(skuUpper);
+      } else {
+        next.add(skuUpper);
+      }
+      return next;
+    });
+  };
 
-    if (selectedCategoryFilter !== 'ALL') {
-      list = list.filter((p) => p.category === selectedCategoryFilter);
-    }
+  // Chọn tất cả sản phẩm chưa thêm trong toàn bộ nhóm hàng đang lọc
+  const handleSelectAllUnaddedInGroup = () => {
+    setSelectedToAddSkus((prev) => {
+      const next = new Set(prev);
+      unaddedCategoryProducts.forEach((p) => next.add(p.sku.toUpperCase()));
+      return next;
+    });
+  };
 
-    if (q) {
-      list = list.filter(
-        (p) =>
-          p.sku.toLowerCase().includes(q) ||
-          p.name.toLowerCase().includes(q) ||
-          (p.category && p.category.toLowerCase().includes(q))
-      );
-    }
+  // Bỏ chọn tất cả
+  const handleClearSelectedToAdd = () => {
+    setSelectedToAddSkus(new Set());
+  };
 
-    return list;
-  }, [productOptions, productSearchInput, selectedCategoryFilter]);
-
-  // Thêm 1 sản phẩm vào danh sách định giá
-  const handleAddProduct = (prod: ProductOptionItem) => {
+  // THAO TÁC 1: Thêm lẻ 1 sản phẩm vào bảng giá
+  const handleAddSingleProduct = (prod: ProductOptionItem) => {
     if (!prod) return;
-    const existing = items.find((i) => i.productSku.toUpperCase() === prod.sku.toUpperCase());
-    if (existing) {
+    const skuUpper = prod.sku.toUpperCase();
+    if (existingSkuSet.has(skuUpper)) {
       showToast?.('Sản phẩm đã tồn tại', `Mã ${prod.sku} đã có trong bảng giá!`, 'info');
       return;
     }
 
-    // Tính giá bán và giá sàn đề xuất theo giá vốn
-    let defaultPrice = 100000;
-    let defaultFloor = 90000;
-    if (prod.costPrice && Number(prod.costPrice) > 0) {
-      const cost = Number(prod.costPrice);
-      defaultPrice = Math.round(cost * 1.2);
-      defaultFloor = Math.round(cost * 1.05);
-    }
-
+    const { price, floorPrice } = calculateDefaultPrices(prod, customerGroup);
     setItems((prev) => [
       {
         productSku: prod.sku,
@@ -241,40 +328,76 @@ export const PriceListCreatePage: React.FC = () => {
         category: prod.category,
         baseUnit: prod.baseUnit,
         costPrice: prod.costPrice ? Number(prod.costPrice) : undefined,
-        price: defaultPrice.toString(),
-        floorPrice: defaultFloor.toString()
+        price,
+        floorPrice
       },
       ...prev
     ]);
+
+    setSelectedToAddSkus((prev) => {
+      const next = new Set(prev);
+      next.delete(skuUpper);
+      return next;
+    });
+
     setItemPage(0);
-    setProductSearchInput('');
-    setIsProductDropdownOpen(false);
+    showToast?.('Đã thêm sản phẩm', `Đã thêm sản phẩm [${prod.sku}] vào bảng giá!`, 'success');
   };
 
-  // Thêm toàn bộ sản phẩm đang hiển thị trong bộ lọc
-  const handleAddAllFilteredProducts = () => {
+  // THAO TÁC 2: Thêm nhiều sản phẩm đã tick chọn vào bảng giá
+  const handleAddSelectedProducts = () => {
+    if (selectedToAddSkus.size === 0) return;
     const newItems: EditablePriceItem[] = [];
-    const existingSkus = new Set(items.map((it) => it.productSku.toUpperCase()));
+    const addedSkus = new Set<string>();
 
-    filteredProductOptions.forEach((prod) => {
-      if (!existingSkus.has(prod.sku.toUpperCase())) {
-        let defaultPrice = 100000;
-        let defaultFloor = 90000;
-        if (prod.costPrice && Number(prod.costPrice) > 0) {
-          const cost = Number(prod.costPrice);
-          defaultPrice = Math.round(cost * 1.2);
-          defaultFloor = Math.round(cost * 1.05);
-        }
+    categoryProducts.forEach((prod) => {
+      const skuUpper = prod.sku.toUpperCase();
+      if (selectedToAddSkus.has(skuUpper) && !existingSkuSet.has(skuUpper)) {
+        const { price, floorPrice } = calculateDefaultPrices(prod, customerGroup);
         newItems.push({
           productSku: prod.sku,
           productName: prod.name,
           category: prod.category,
           baseUnit: prod.baseUnit,
           costPrice: prod.costPrice ? Number(prod.costPrice) : undefined,
-          price: defaultPrice.toString(),
-          floorPrice: defaultFloor.toString()
+          price,
+          floorPrice
         });
-        existingSkus.add(prod.sku.toUpperCase());
+        addedSkus.add(skuUpper);
+      }
+    });
+
+    if (newItems.length === 0) {
+      showToast?.('Thông báo', 'Các sản phẩm đã chọn đều đã có trong bảng giá.', 'info');
+      setSelectedToAddSkus(new Set());
+      return;
+    }
+
+    setItems((prev) => [...newItems, ...prev]);
+    setSelectedToAddSkus(new Set());
+    setItemPage(0);
+    showToast?.('Thành công', `Đã thêm ${newItems.length} sản phẩm đã chọn vào bảng giá!`, 'success');
+  };
+
+  // THAO TÁC 3: Thêm tất cả sản phẩm trong nhóm hàng
+  const handleAddAllCategoryProducts = () => {
+    const newItems: EditablePriceItem[] = [];
+    const trackingSkus = new Set(existingSkuSet);
+
+    filteredCategoryProducts.forEach((prod) => {
+      const skuUpper = prod.sku.toUpperCase();
+      if (!trackingSkus.has(skuUpper)) {
+        const { price, floorPrice } = calculateDefaultPrices(prod, customerGroup);
+        newItems.push({
+          productSku: prod.sku,
+          productName: prod.name,
+          category: prod.category,
+          baseUnit: prod.baseUnit,
+          costPrice: prod.costPrice ? Number(prod.costPrice) : undefined,
+          price,
+          floorPrice
+        });
+        trackingSkus.add(skuUpper);
       }
     });
 
@@ -284,21 +407,44 @@ export const PriceListCreatePage: React.FC = () => {
     }
 
     setItems((prev) => [...newItems, ...prev]);
-    showToast?.('Thành công', `Đã thêm ${newItems.length} sản phẩm vào bảng giá!`, 'success');
+    setSelectedToAddSkus(new Set());
+    setItemPage(0);
+
+    const groupLabel =
+      selectedCategoryFilter === 'ALL'
+        ? 'Tất cả ngành hàng'
+        : `Nhóm "${selectedCategoryFilter}"`;
+
+    showToast?.(
+      'Thành công',
+      `Đã thêm tất cả ${newItems.length} sản phẩm thuộc ${groupLabel} vào bảng giá!`,
+      'success'
+    );
   };
 
-  // Cập nhật giá bán hoặc giá sàn
+  // Xóa có popup xác nhận tùy chỉnh (không dùng confirm mặc định)
+  const handleConfirmDelete = () => {
+    if (deleteModalState.type === 'all') {
+      const count = items.length;
+      setItems([]);
+      setItemPage(0);
+      setDeleteModalState({ open: false, type: 'all' });
+      showToast?.('Đã xóa', `Đã xóa toàn bộ ${count} sản phẩm khỏi bảng giá!`, 'info');
+    } else if (deleteModalState.type === 'single' && deleteModalState.targetIndex !== undefined) {
+      const sku = deleteModalState.targetSku;
+      setItems((prev) => prev.filter((_, i) => i !== deleteModalState.targetIndex));
+      setDeleteModalState({ open: false, type: 'single' });
+      showToast?.('Đã xóa', `Đã xóa sản phẩm [${sku}] khỏi bảng giá!`, 'info');
+    }
+  };
+
+  // Cập nhật giá bán hoặc giá sàn từng dòng
   const handleUpdateItem = (index: number, field: 'price' | 'floorPrice', value: string) => {
     setItems((prev) => {
       const clone = [...prev];
       clone[index] = { ...clone[index], [field]: value };
       return clone;
     });
-  };
-
-  // Xóa 1 dòng giá
-  const handleRemoveItem = (index: number) => {
-    setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Áp dụng điều chỉnh giá hàng loạt
@@ -588,14 +734,27 @@ export const PriceListCreatePage: React.FC = () => {
             />
           </div>
 
-          {/* Nhóm khách hàng */}
+          {/* Nhóm khách hàng (Cấp đại lý) */}
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
-              Nhóm khách hàng áp dụng <span className="text-rose-500">*</span>
+            <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
+              <span>
+                Nhóm khách hàng áp dụng <span className="text-rose-500">*</span>
+              </span>
+              <span className="text-[10px] text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded-full">
+                Cấp đại lý
+              </span>
             </label>
             <SearchSelect
               value={customerGroup}
-              onChange={(e) => setCustomerGroup(e.target.value as CustomerGroupType)}
+              onChange={(e) => {
+                const newGroup = e.target.value as CustomerGroupType;
+                setCustomerGroup(newGroup);
+                showToast?.(
+                  'Đã cập nhật cấp đại lý',
+                  `Áp dụng mức định giá cho ${CUSTOMER_GROUPS[newGroup]?.label}`,
+                  'info'
+                );
+              }}
               className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-medium text-gray-800 focus:outline-none focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 cursor-pointer"
             >
               {Object.values(CUSTOMER_GROUPS).map((group) => (
@@ -693,10 +852,10 @@ export const PriceListCreatePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  if (confirm('Bạn có chắc chắn muốn xóa tất cả sản phẩm khỏi bảng giá?')) {
-                    setItems([]);
-                    setItemPage(0);
-                  }
+                  setDeleteModalState({
+                    open: true,
+                    type: 'all'
+                  });
                 }}
                 className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
               >
@@ -707,162 +866,312 @@ export const PriceListCreatePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Thanh tìm kiếm & chọn sản phẩm (Toàn bộ danh mục hệ thống, không cắt 30) */}
-        <div className="bg-orange-50/40 p-4 rounded-2xl border border-orange-100 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-              <Package size={15} className="text-[#F85606]" />
-              Tìm kiếm & thêm sản phẩm từ hệ thống:
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">Lọc theo nhóm:</span>
+        {/* ========================================================================= */}
+        {/* BỘ LỌC THEO NHÓM HÀNG & CÔNG CỤ THÊM SẢN PHẨM (1, NHIỀU HOẶC TẤT CẢ) */}
+        {/* ========================================================================= */}
+        <div className="bg-orange-50/50 p-4 sm:p-5 rounded-3xl border border-orange-200 space-y-3.5">
+          {/* Header công cụ: Lọc nhóm hàng, Tìm kiếm & Nút tác vụ thêm */}
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                <Layers size={16} className="text-[#F85606]" />
+                Lọc theo nhóm hàng:
+              </span>
               <SearchSelect
                 value={selectedCategoryFilter}
                 onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                className="px-2.5 py-1 text-xs bg-white border border-gray-200 rounded-lg text-gray-700"
+                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-xl font-medium text-gray-800 shadow-2xs min-w-[280px] max-w-full"
               >
-                <option value="ALL">Tất cả ngành hàng ({productOptions.length} SKU)</option>
-                {availableCategories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
+                <option value="ALL">
+                  🌟 Tất cả ngành hàng ({totalActiveInSystem || categoryProducts.length} SKU đang kinh doanh)
+                </option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.name}>
+                    {cat.level === 1 ? `📦 ${cat.name}` : cat.level === 2 ? `  └─ 📂 ${cat.name}` : `    └─ 🏷️ ${cat.name}`} {cat.productCount > 0 ? `(${cat.productCount} SKU)` : ''}
                   </option>
                 ))}
               </SearchSelect>
             </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-            {/* Ô tìm kiếm có dropdown */}
-            <div ref={searchDropdownRef} className="relative flex-1 min-w-[280px]">
-              <div className="relative">
+            {/* Ô tìm kiếm trong nhóm hàng */}
+            <div className="flex items-center gap-2 flex-1 max-w-md">
+              <div className="relative w-full">
                 <input
                   type="text"
-                  value={productSearchInput}
+                  value={categorySearchQuery}
                   onChange={(e) => {
-                    setProductSearchInput(e.target.value);
-                    setIsProductDropdownOpen(true);
+                    setCategorySearchQuery(e.target.value);
+                    setCategoryPage(0);
                   }}
-                  onFocus={() => setIsProductDropdownOpen(true)}
-                  placeholder="🔍 Nhập mã SKU, tên sản phẩm hoặc ngành hàng để tìm kiếm..."
-                  className="w-full text-xs px-3.5 py-2.5 pl-9 bg-white border border-gray-300 rounded-xl text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all shadow-2xs"
+                  placeholder="🔍 Tìm nhanh SKU, tên sản phẩm trong nhóm..."
+                  className="w-full text-xs px-3.5 py-2 pl-9 bg-white border border-gray-300 rounded-xl text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all shadow-2xs"
                 />
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                  <Search size={15} />
+                  <Search size={14} />
                 </span>
-                {productSearchInput && (
+                {categorySearchQuery && (
                   <button
                     type="button"
-                    onClick={() => setProductSearchInput('')}
+                    onClick={() => {
+                      setCategorySearchQuery('');
+                      setCategoryPage(0);
+                    }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                   >
                     <X size={14} />
                   </button>
                 )}
               </div>
+            </div>
 
-              {/* Danh sách dropdown kết quả tìm kiếm */}
-              {isProductDropdownOpen && (
-                <div className="absolute left-0 right-0 mt-1.5 max-h-72 overflow-y-auto bg-white border border-gray-200 rounded-2xl shadow-2xl z-50 divide-y divide-gray-100 animate-in fade-in zoom-in-95">
-                  <div className="p-2.5 bg-gray-50/90 text-[11px] font-bold text-gray-600 flex justify-between items-center sticky top-0 backdrop-blur-sm border-b border-gray-100">
-                    <span>
-                      Kết quả tìm kiếm: <strong>{filteredProductOptions.length}</strong> sản phẩm trong hệ thống
-                    </span>
+            {/* Các nút thêm sản phẩm: Thêm các sản phẩm đã chọn, Thêm tất cả, Thu gọn/Mở rộng */}
+            <div className="flex items-center gap-2 flex-wrap shrink-0">
+              {/* Nút thêm các sản phẩm đã chọn (Checkbox) */}
+              {selectedToAddSkus.size > 0 && (
+                <button
+                  type="button"
+                  onClick={handleAddSelectedProducts}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-emerald-600/20 cursor-pointer animate-in fade-in"
+                >
+                  <CheckCircle2 size={15} />
+                  <span>Thêm {selectedToAddSkus.size} SP đã chọn</span>
+                </button>
+              )}
+
+              {/* Nút thêm tất cả sản phẩm trong nhóm hàng */}
+              <button
+                type="button"
+                onClick={handleAddAllCategoryProducts}
+                disabled={loadingCategoryProducts || unaddedCategoryProducts.length === 0}
+                className="px-3.5 py-2 bg-[#F85606] hover:bg-[#E04D05] text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                title={`Thêm toàn bộ ${unaddedCategoryProducts.length} sản phẩm chưa có trong bảng giá`}
+              >
+                <FileSpreadsheet size={15} />
+                <span>
+                  Thêm tất cả ({unaddedCategoryProducts.length} SKU)
+                </span>
+              </button>
+
+              {/* Nút thu gọn / mở rộng danh mục chọn */}
+              <button
+                type="button"
+                onClick={() => setIsCategorySelectorOpen((prev) => !prev)}
+                className="p-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl text-xs transition cursor-pointer"
+                title={isCategorySelectorOpen ? 'Thu gọn danh mục chọn' : 'Mở rộng danh mục chọn'}
+              >
+                {isCategorySelectorOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Bảng chọn sản phẩm khả dụng trong nhóm hàng */}
+          {isCategorySelectorOpen && (
+            <div className="bg-white rounded-2xl border border-orange-200/80 shadow-2xs overflow-hidden">
+              {/* Thanh phụ: Thống kê & Chọn tất cả */}
+              <div className="px-4 py-2.5 bg-orange-50/70 border-b border-orange-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="font-bold text-gray-700">
+                    Sản phẩm trong nhóm: <strong>{filteredCategoryProducts.length}</strong> SKU
+                  </span>
+                  <span className="text-gray-300">•</span>
+                  <span className="text-emerald-700 font-semibold">
+                    Chưa thêm: <strong>{unaddedCategoryProducts.length}</strong>
+                  </span>
+                  <span className="text-gray-300">•</span>
+                  <span className="text-gray-500">
+                    Đã có trong bảng giá: <strong>{filteredCategoryProducts.length - unaddedCategoryProducts.length}</strong>
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {unaddedCategoryProducts.length > 0 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleSelectAllUnaddedInGroup}
+                        className="px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-orange-50 hover:text-orange-600 text-[11px] font-bold transition cursor-pointer"
+                      >
+                        Chọn tất cả ({unaddedCategoryProducts.length})
+                      </button>
+                      {selectedToAddSkus.size > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleClearSelectedToAdd}
+                          className="px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-gray-100 text-[11px] font-medium transition cursor-pointer"
+                        >
+                          Bỏ chọn
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {loadingCategoryProducts ? (
+                <div className="p-8 text-center text-xs text-gray-500 flex items-center justify-center gap-2">
+                  <RefreshCw size={16} className="animate-spin text-[#F85606]" />
+                  <span>Đang tải danh sách sản phẩm thuộc nhóm hàng...</span>
+                </div>
+              ) : filteredCategoryProducts.length === 0 ? (
+                <div className="p-8 text-center text-xs text-gray-400">
+                  Không tìm thấy sản phẩm nào đang kinh doanh khớp với từ khóa tìm kiếm.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-gray-50/80 border-b border-gray-200 text-[11px] font-bold text-gray-600 uppercase tracking-wider">
+                        <th className="py-2.5 px-3 w-10 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isCurrentPageAllSelected}
+                            onChange={handleToggleSelectAllPage}
+                            disabled={pagedCategoryProducts.every((p) => existingSkuSet.has(p.sku.toUpperCase()))}
+                            className="rounded border-gray-300 text-[#F85606] focus:ring-orange-500 cursor-pointer disabled:opacity-30"
+                            title="Chọn tất cả sản phẩm chưa thêm trên trang này"
+                          />
+                        </th>
+                        <th className="py-2.5 px-2 w-12 text-center text-gray-400">STT</th>
+                        <th className="py-2.5 px-3 w-36">Mã SKU</th>
+                        <th className="py-2.5 px-3">Tên sản phẩm & Quy cách</th>
+                        <th className="py-2.5 px-3 w-32">Nhóm hàng</th>
+                        <th className="py-2.5 px-2 w-20 text-center">ĐVT</th>
+                        {isSalesManagerOrAdmin && (
+                          <th className="py-2.5 px-3 w-28 text-right">Giá vốn</th>
+                        )}
+                        <th className="py-2.5 px-3 w-32 text-right text-orange-600 font-bold">
+                          Giá bán gợi ý
+                        </th>
+                        <th className="py-2.5 px-3 w-28 text-center">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {pagedCategoryProducts.map((prod, idx) => {
+                        const isAdded = existingSkuSet.has(prod.sku.toUpperCase());
+                        const isSelected = selectedToAddSkus.has(prod.sku.toUpperCase());
+                        const { price: suggestedPrice } = calculateDefaultPrices(prod, customerGroup);
+
+                        return (
+                          <tr
+                            key={prod.id || prod.sku}
+                            onClick={() => {
+                              if (!isAdded) handleToggleSelectProduct(prod.sku);
+                            }}
+                            className={`transition-colors cursor-pointer ${
+                              isAdded
+                                ? 'bg-gray-50/60 opacity-65 cursor-default'
+                                : isSelected
+                                ? 'bg-orange-50/70'
+                                : 'hover:bg-orange-50/30'
+                            }`}
+                          >
+                            {/* Checkbox chọn */}
+                            <td className="py-2.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={isAdded}
+                                onChange={() => handleToggleSelectProduct(prod.sku)}
+                                className="rounded border-gray-300 text-[#F85606] focus:ring-orange-500 cursor-pointer disabled:opacity-30"
+                              />
+                            </td>
+
+                            {/* STT */}
+                            <td className="py-2.5 px-2 text-center text-gray-400 font-mono text-[11px]">
+                              {currentCategoryPage * categoryPageSize + idx + 1}
+                            </td>
+
+                            {/* SKU */}
+                            <td className="py-2.5 px-3 font-mono font-bold text-gray-900">
+                              <span className="px-2 py-0.5 rounded bg-gray-100 border border-gray-200 text-xs">
+                                {prod.sku}
+                              </span>
+                            </td>
+
+                            {/* Tên sản phẩm */}
+                            <td className="py-2.5 px-3">
+                              <div className="font-bold text-gray-900">{prod.name}</div>
+                              {prod.packaging && (
+                                <div className="text-[11px] text-gray-400 mt-0.5">{prod.packaging}</div>
+                              )}
+                            </td>
+
+                            {/* Nhóm hàng */}
+                            <td className="py-2.5 px-3">
+                              <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-semibold truncate inline-block max-w-[120px]">
+                                {prod.category || 'Chưa phân loại'}
+                              </span>
+                            </td>
+
+                            {/* ĐVT */}
+                            <td className="py-2.5 px-2 text-center font-medium text-gray-600">
+                              {prod.baseUnit || '—'}
+                            </td>
+
+                            {/* Giá vốn */}
+                            {isSalesManagerOrAdmin && (
+                              <td className="py-2.5 px-3 text-right font-mono text-gray-500">
+                                {prod.costPrice ? `${Number(prod.costPrice).toLocaleString('vi-VN')} đ` : '—'}
+                              </td>
+                            )}
+
+                            {/* Giá bán gợi ý */}
+                            <td className="py-2.5 px-3 text-right font-mono font-bold text-orange-600">
+                              {Number(suggestedPrice).toLocaleString('vi-VN')} đ
+                            </td>
+
+                            {/* Thao tác thêm 1 sản phẩm */}
+                            <td className="py-2.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                              {isAdded ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
+                                  <Check size={12} /> Đã thêm
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddSingleProduct(prod)}
+                                  className="text-xs text-white font-bold px-3 py-1 bg-[#F85606] hover:bg-[#E04D05] rounded-lg inline-flex items-center gap-1 shadow-2xs transition active:scale-95 cursor-pointer"
+                                >
+                                  <Plus size={13} /> Thêm
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Phân trang danh mục sản phẩm chọn */}
+              {totalCategoryPages > 1 && (
+                <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
+                  <div>
+                    Trang <strong>{currentCategoryPage + 1}</strong> / <strong>{totalCategoryPages}</strong> (Tổng {filteredCategoryProducts.length} SKU)
+                  </div>
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() => setIsProductDropdownOpen(false)}
-                      className="text-gray-400 hover:text-gray-600 p-0.5"
+                      disabled={currentCategoryPage === 0}
+                      onClick={() => setCategoryPage((p) => Math.max(0, p - 1))}
+                      className="px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 disabled:opacity-40 cursor-pointer font-bold text-[11px]"
                     >
-                      ✕
+                      Trước
+                    </button>
+                    <button
+                      type="button"
+                      disabled={currentCategoryPage >= totalCategoryPages - 1}
+                      onClick={() => setCategoryPage((p) => Math.min(totalCategoryPages - 1, p + 1))}
+                      className="px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 disabled:opacity-40 cursor-pointer font-bold text-[11px]"
+                    >
+                      Sau
                     </button>
                   </div>
-
-                  {loadingProducts || isSearchingProduct ? (
-                    <div className="p-6 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
-                      <RefreshCw size={14} className="animate-spin text-[#F85606]" />
-                      <span>Đang tìm kiếm sản phẩm...</span>
-                    </div>
-                  ) : filteredProductOptions.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-gray-400">
-                      Không tìm thấy sản phẩm nào khớp với từ khóa & bộ lọc.
-                    </div>
-                  ) : (
-                    filteredProductOptions.map((p) => {
-                      const isAdded = items.some(
-                        (it) => it.productSku.toUpperCase() === p.sku.toUpperCase()
-                      );
-                      return (
-                        <div
-                          key={p.id}
-                          onClick={() => {
-                            if (!isAdded) handleAddProduct(p);
-                          }}
-                          className={`w-full px-3.5 py-2.5 flex items-center justify-between gap-3 transition-colors cursor-pointer ${
-                            isAdded
-                              ? 'bg-gray-50/80 opacity-60 cursor-not-allowed'
-                              : 'hover:bg-orange-50/80'
-                          }`}
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-800 border border-gray-200">
-                                {p.sku}
-                              </span>
-                              <span className="font-bold text-xs text-gray-900 truncate">
-                                {p.name}
-                              </span>
-                            </div>
-                            <div className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-2 flex-wrap">
-                              {p.category && (
-                                <span className="px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 text-[10px] font-semibold">
-                                  {p.category}
-                                </span>
-                              )}
-                              {p.baseUnit && <span>ĐVT: <b>{p.baseUnit}</b></span>}
-                              {p.packaging && <span>• {p.packaging}</span>}
-                              {p.costPrice && isSalesManagerOrAdmin && (
-                                <span className="text-gray-400">
-                                  • Giá vốn: {Number(p.costPrice).toLocaleString('vi-VN')} đ
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="shrink-0">
-                            {isAdded ? (
-                              <span className="text-[11px] text-gray-400 font-semibold px-2.5 py-1 bg-gray-100 rounded-lg">
-                                Đã thêm
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleAddProduct(p);
-                                }}
-                                className="text-xs text-white font-bold px-3 py-1 bg-[#F85606] hover:bg-orange-600 rounded-lg flex items-center gap-1 shadow-2xs transition"
-                              >
-                                <Plus size={13} /> Thêm
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
                 </div>
               )}
             </div>
-
-            {/* Nút thêm nhanh tất cả sản phẩm đang lọc */}
-            <button
-              type="button"
-              onClick={handleAddAllFilteredProducts}
-              className="px-4 py-2.5 bg-white border border-orange-200 hover:bg-orange-50 text-[#F85606] rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shrink-0 shadow-2xs cursor-pointer"
-            >
-              <FileSpreadsheet size={15} />
-              <span>Thêm tất cả ({filteredProductOptions.length} SKU)</span>
-            </button>
-          </div>
+          )}
         </div>
 
         {/* Thanh lọc tìm kiếm trên các dòng đã thêm */}
@@ -889,7 +1198,7 @@ export const PriceListCreatePage: React.FC = () => {
                     setItemSearch('');
                     setItemPage(0);
                   }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                 >
                   <X size={13} />
                 </button>
@@ -934,7 +1243,7 @@ export const PriceListCreatePage: React.FC = () => {
                       <Tag size={32} className="text-gray-300 stroke-1" />
                       <p className="font-semibold text-gray-600">Chưa có sản phẩm nào trong bảng giá này.</p>
                       <p className="text-[11px] text-gray-400">
-                        Hãy sử dụng ô tìm kiếm phía trên để thêm sản phẩm thật hoặc bấm "Thêm tất cả".
+                        Hãy sử dụng công cụ lọc nhóm hàng phía trên để thêm 1, nhiều hoặc tất cả sản phẩm vào bảng giá.
                       </p>
                     </div>
                   </td>
@@ -1043,11 +1352,19 @@ export const PriceListCreatePage: React.FC = () => {
                         </span>
                       </td>
 
-                      {/* Xóa dòng */}
+                      {/* Xóa dòng (Mở modal xác nhận) */}
                       <td className="py-3 px-3 text-center">
                         <button
                           type="button"
-                          onClick={() => handleRemoveItem(originalIndex)}
+                          onClick={() => {
+                            setDeleteModalState({
+                              open: true,
+                              type: 'single',
+                              targetIndex: originalIndex,
+                              targetSku: item.productSku,
+                              targetName: item.productName
+                            });
+                          }}
                           title="Xóa mặt hàng khỏi bảng giá"
                           className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
                         >
@@ -1120,6 +1437,54 @@ export const PriceListCreatePage: React.FC = () => {
         </div>
       </div>
 
+      {/* ========================================================================= */}
+      {/* MODAL: XÁC NHẬN XÓA (TÙY CHỈNH THAY THẾ WINDOW.CONFIRM) */}
+      {/* ========================================================================= */}
+      <ConfirmModal
+        open={deleteModalState.open}
+        title={
+          deleteModalState.type === 'all'
+            ? 'Xác nhận xóa tất cả sản phẩm'
+            : 'Xác nhận xóa sản phẩm khỏi bảng giá'
+        }
+        message={
+          deleteModalState.type === 'all' ? (
+            <div className="space-y-1.5">
+              <p className="font-bold text-gray-900">
+                Bạn có chắc chắn muốn xóa toàn bộ{' '}
+                <span className="text-rose-600 font-black">{items.length}</span> sản phẩm khỏi bảng giá?
+              </p>
+              <p className="text-[11px] text-gray-500 leading-relaxed">
+                Thao tác này sẽ xóa trắng danh sách sản phẩm đã thêm trong bảng giá này. Bạn vẫn có thể thêm lại sản phẩm bất cứ lúc nào trước khi lưu.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="font-medium text-gray-700">
+                Bạn có chắc chắn muốn xóa sản phẩm sau khỏi bảng giá định giá?
+              </p>
+              <div className="p-3 bg-rose-50/80 border border-rose-200 rounded-xl">
+                <div className="font-mono font-bold text-rose-700 text-xs">
+                  {deleteModalState.targetSku}
+                </div>
+                <div className="text-xs text-gray-900 font-bold mt-0.5">
+                  {deleteModalState.targetName}
+                </div>
+              </div>
+            </div>
+          )
+        }
+        confirmLabel={
+          deleteModalState.type === 'all'
+            ? `Xóa tất cả (${items.length} sản phẩm)`
+            : 'Xác nhận xóa'
+        }
+        cancelLabel="Hủy bỏ"
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteModalState((prev) => ({ ...prev, open: false }))}
+      />
+
       {/* MODAL: ĐIỀU CHỈNH GIÁ HÀNG LOẠT */}
       {showBulkModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs animate-in fade-in">
@@ -1137,7 +1502,7 @@ export const PriceListCreatePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowBulkModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 cursor-pointer"
               >
                 ✕
               </button>
@@ -1190,14 +1555,14 @@ export const PriceListCreatePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowBulkModal(false)}
-                className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-50 cursor-pointer"
               >
                 Hủy
               </button>
               <button
                 type="button"
                 onClick={handleApplyBulkAdjust}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-xs"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
               >
                 Áp dụng ngay
               </button>
