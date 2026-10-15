@@ -8,7 +8,8 @@ import {
   TrendingDown,
   Edit2,
   Check,
-  X
+  X,
+  BookOpenCheck
 } from 'lucide-react';
 import type { MinStockThresholdConfig } from '../../types/stockAlert';
 import { SYSTEM_WAREHOUSES } from '../../types/inventory';
@@ -18,7 +19,7 @@ import {
   updateMinStockThreshold
 } from '../../services/stockAlertApi';
 import { fetchCategories, buildHierarchicalCategoryOptions, type CategoryWithCount } from '../../services/categoryApi';
-import { useLocation } from '../../routes/Router';
+import { useLocation, useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { NumberInput } from '../../components/common/NumberInput';
@@ -30,6 +31,7 @@ import { Pagination } from '../../components/common/Pagination';
  */
 export const StockLedgerPage: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { showToast, currentRole, user } = useAuth();
 
   // Quyền khai báo / sửa định mức tồn tối thiểu:
@@ -464,6 +466,19 @@ export const StockLedgerPage: React.FC = () => {
             >
               Lọc
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const whParam = selectedWarehouse !== 'ALL' ? `?warehouseCode=${encodeURIComponent(selectedWarehouse)}` : '';
+                navigate(`/inventory/stock-card${whParam}`);
+              }}
+              className="px-3.5 py-2.5 bg-orange-50 hover:bg-orange-100 text-[#F85606] border border-orange-200/80 font-bold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-2xs active:scale-95"
+              title="Mở màn hình Thẻ kho chi tiết (S6-02)"
+            >
+              <BookOpenCheck size={14} />
+              <span>Thẻ kho chi tiết</span>
+            </button>
           </div>
         </form>
       </div>
@@ -496,15 +511,16 @@ export const StockLedgerPage: React.FC = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs table-fixed">
-              {/* Định nghĩa kích thước cố định cho 7 cột tách bạch */}
+              {/* Định nghĩa kích thước cố định cho 8 cột tách bạch */}
               <colgroup>
-                <col className="w-[24%]" />
-                <col className="w-[17%]" />
+                <col className="w-[22%]" />
+                <col className="w-[15%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
                 <col className="w-[11%]" />
-                <col className="w-[11%]" />
-                <col className="w-[11%]" />
-                <col className="w-[13%]" />
-                <col className="w-[13%]" />
+                <col className="w-[12%]" />
+                <col className="w-[10%]" />
               </colgroup>
               <thead className="bg-gray-50 text-gray-700 font-bold uppercase text-[11px] border-b border-gray-200">
                 <tr>
@@ -515,6 +531,7 @@ export const StockLedgerPage: React.FC = () => {
                   <th className="py-3 px-2 text-center">Tồn Khả Dụng</th>
                   <th className="py-3 px-2 text-center">Tồn Tối Thiểu</th>
                   <th className="py-3 px-2 text-center">Trạng Thái Tồn</th>
+                  <th className="py-3 px-2 text-center">Thao Tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -664,6 +681,24 @@ export const StockLedgerPage: React.FC = () => {
                             <span>Đạt định mức</span>
                           </span>
                         )}
+                      </td>
+
+                      {/* 7. Nút xem Thẻ kho chi tiết của SKU này */}
+                      <td className="py-3 px-2 text-center overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const whParam = item.warehouseCode ? `&warehouseCode=${encodeURIComponent(item.warehouseCode)}` : '';
+                            const skuParam = item.productSku ? `&sku=${encodeURIComponent(item.productSku)}` : '';
+                            const prodIdParam = item.productId ? `&productId=${item.productId}` : '';
+                            navigate(`/inventory/stock-card?${whParam}${skuParam}${prodIdParam}`);
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#F85606] font-bold text-[11px] border border-orange-200/80 transition cursor-pointer shadow-2xs"
+                          title={`Xem thẻ kho chi tiết của SKU [${item.productSku}] tại ${item.warehouseName}`}
+                        >
+                          <BookOpenCheck size={12} />
+                          <span>Thẻ kho</span>
+                        </button>
                       </td>
                     </tr>
                   );
