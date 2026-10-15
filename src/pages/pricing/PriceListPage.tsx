@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from '../../routes/Router';
 import type { PriceList, CustomerGroupType } from '../../types/pricing';
 import {
   fetchPriceLists,
@@ -20,6 +21,7 @@ import { DeletePriceListModal } from '../../components/pricing/DeletePriceListMo
 import { Icons } from '../../components/common/Icons';
 
 export const PriceListPage: React.FC = () => {
+  const navigate = useNavigate();
   const { currentRole, user, showToast } = useAuth();
 
   // Kiểm tra quyền hạn theo quy định RBAC S2-10
@@ -120,8 +122,7 @@ export const PriceListPage: React.FC = () => {
   };
 
   const handleOpenCreate = () => {
-    setEditingItem(null);
-    setFormModalOpen(true);
+    navigate('/pricing/create');
   };
 
   const handleOpenEdit = (item: PriceList) => {
@@ -129,8 +130,7 @@ export const PriceListPage: React.FC = () => {
       alert('Bảng giá đã phát sinh đơn hàng nên không thể sửa. Vui lòng tạo phiên bản mới.');
       return;
     }
-    setEditingItem(item);
-    setFormModalOpen(true);
+    navigate(`/pricing/${item.id}/edit`);
   };
 
   const handleOpenClone = (item: PriceList) => {

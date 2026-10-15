@@ -11,6 +11,7 @@ import { AgencyManagementPage } from '../pages/customer/AgencyManagementPage';
 import { ProductManagementPage } from '../pages/product/ProductManagementPage';
 import { ProductImportPage } from '../pages/product/ProductImportPage';
 import { PriceListPage } from '../pages/pricing/PriceListPage';
+import { PriceListCreatePage } from '../pages/pricing/PriceListCreatePage';
 import { VolumeDiscountPage } from '../pages/pricing/VolumeDiscountPage';
 import { CategoryManagementPage } from '../pages/category/CategoryManagementPage';
 import { OrderCreatePage } from '../pages/order/OrderCreatePage';
@@ -28,6 +29,9 @@ import { GoodsReceiptManagementPage } from '../pages/inventory/GoodsReceiptManag
 import { GoodsReceiptCreatePage } from '../pages/inventory/GoodsReceiptCreatePage';
 import { GoodsReceiptDetailPage } from '../pages/inventory/GoodsReceiptDetailPage';
 import { StockTransferManagementPage } from '../pages/inventory/StockTransferManagementPage';
+import { StockTransferCreatePage } from '../pages/inventory/StockTransferCreatePage';
+import { TransferProductPickerPage } from '../pages/inventory/TransferProductPickerPage';
+import { StockTransferDetailPage } from '../pages/inventory/StockTransferDetailPage';
 import { StockLedgerPage } from '../pages/inventory/StockLedgerPage';
 import { StockTakeManagementPage } from '../pages/inventory/StockTakeManagementPage';
 import { StockTakeCreatePage } from '../pages/inventory/StockTakeCreatePage';
@@ -239,6 +243,38 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* S5-07: Lập phiếu chuyển kho nội bộ (Trang riêng) */}
+        <Route
+          path="/inventory/transfers/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <StockTransferCreatePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S5-07: Chọn sản phẩm điều chuyển kho (Trang riêng toàn màn hình) */}
+        <Route
+          path="/inventory/transfers/create/products"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <TransferProductPickerPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* S5-07: Phiếu chuyển kho nội bộ (Kho & Quản lý kho) */}
         <Route
           path="/inventory/transfers"
@@ -252,6 +288,23 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <StockTransferManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S5-07: Chi tiết phiếu chuyển kho nội bộ (Trang riêng) */}
+        <Route
+          path="/inventory/transfers/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockTransferDetailPage />
             </ProtectedRoute>
           }
         />
@@ -365,6 +418,40 @@ export const AppRoutes: React.FC = () => {
         <Route path="/warehouses" element={<Navigate to="/inventory/warehouses" replace />} />
 
         <Route path="/inventory" element={<Navigate to="/inventory/receipts" replace />} />
+
+        {/* S2-10: Trang riêng Khai báo / Chỉnh sửa Bảng giá sản phẩm */}
+        <Route
+          path="/pricing/create"
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_SALES_MANAGER']}>
+              <PriceListCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/price-lists/create"
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_SALES_MANAGER']}>
+              <PriceListCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pricing/:id/edit"
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_SALES_MANAGER']}>
+              <PriceListCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/price-lists/:id/edit"
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_SALES_MANAGER']}>
+              <PriceListCreatePage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Quản lý bảng giá sản phẩm (S2-10 / SCRUM-55 / EP-02) */}
         <Route

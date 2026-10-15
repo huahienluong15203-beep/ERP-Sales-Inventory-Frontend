@@ -201,7 +201,7 @@ export const productService = {
   /**
    * Tra cứu nhanh sản phẩm cho combobox / dropdown (hỗ trợ tìm kiếm cả FE lẫn BE, tới 5.000+ sản phẩm).
    */
-  async searchProductOptions(keyword: string = '', limit: number = 30): Promise<ProductOptionItem[]> {
+  async searchProductOptions(keyword: string = '', limit: number = 500): Promise<ProductOptionItem[]> {
     const query = new URLSearchParams();
     if (keyword.trim()) query.set('keyword', keyword.trim());
     query.set('limit', String(limit));
