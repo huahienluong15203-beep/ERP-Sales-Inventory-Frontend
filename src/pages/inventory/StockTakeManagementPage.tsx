@@ -16,6 +16,7 @@ import type { WarehouseOption } from '../../types/inventory';
 import { fetchStockTakes, fetchWarehousesList } from '../../services/stockTakeApi';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
+import { RowActionMenu } from '../../components/common/RowActionMenu';
 
 /**
  * S5-08: Trang Quản Lý Kiểm Kê Kho & Ghi Nhận Chênh Lệch
@@ -398,9 +399,9 @@ export const StockTakeManagementPage: React.FC = () => {
                       </td>
 
                       {/* Trạng thái */}
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${
                             st.status === 'CLOSED'
                               ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
                               : st.status === 'CANCELLED'
@@ -424,14 +425,37 @@ export const StockTakeManagementPage: React.FC = () => {
                         className="py-3 px-4 text-center"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/inventory/stocktakes/${st.id}`)}
-                          className="px-3 py-1.5 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-950/50 rounded-xl transition inline-flex items-center gap-1 border border-primary-200 dark:border-primary-800 cursor-pointer"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          {st.status === 'DRAFT' ? 'Đếm / Chốt' : 'Chi tiết'}
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          {/* Nút Xem chi tiết (Chỉ icon con mắt) */}
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/inventory/stocktakes/${st.id}`)}
+                            title="Xem chi tiết phiếu kiểm kê"
+                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+
+                          {/* Menu 3 chấm "⋯" */}
+                          <RowActionMenu
+                            title="Thao tác phiếu kiểm kê"
+                            items={[
+                              {
+                                label: 'Đếm & Nhập số lượng',
+                                icon: <ClipboardList className="w-3.5 h-3.5 text-primary-600" />,
+                                title: 'Tiến hành đếm và ghi nhận số lượng thực tế',
+                                onClick: () => navigate(`/inventory/stocktakes/${st.id}`),
+                                hidden: st.status !== 'DRAFT'
+                              },
+                              {
+                                label: 'Xem chi tiết',
+                                icon: <Eye className="w-3.5 h-3.5 text-slate-500" />,
+                                title: 'Xem chi tiết phiếu kiểm kê',
+                                onClick: () => navigate(`/inventory/stocktakes/${st.id}`)
+                              }
+                            ]}
+                          />
+                        </div>
                       </td>
                     </tr>
                   );

@@ -415,11 +415,10 @@ export const StockTakeDetailPage: React.FC = () => {
               type="button"
               disabled={savingCounts}
               onClick={handleSaveCounts}
-              className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 shadow-md transition cursor-pointer active:scale-95 ${
-                isDirty
+              className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 shadow-md transition cursor-pointer active:scale-95 ${isDirty
                   ? 'bg-[#F85606] hover:bg-orange-600 text-white shadow-orange-500/20'
                   : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
-              }`}
+                }`}
             >
               <Save size={15} />
               <span>{isDirty ? 'Lưu số đếm (*)' : 'Đã lưu số đếm'}</span>
@@ -639,66 +638,60 @@ export const StockTakeDetailPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setFilterType('ALL')}
-            className={`px-3 py-1 rounded-xl font-bold transition whitespace-nowrap cursor-pointer ${
-              filterType === 'ALL'
+            className={`px-3 py-1 rounded-xl font-bold transition whitespace-nowrap cursor-pointer ${filterType === 'ALL'
                 ? 'bg-gray-900 text-white shadow-2xs'
                 : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'
-            }`}
+              }`}
           >
             Tất cả ({lines.length})
           </button>
           <button
             type="button"
             onClick={() => setFilterType('DIFF')}
-            className={`px-3 py-1 rounded-xl font-bold transition whitespace-nowrap cursor-pointer ${
-              filterType === 'DIFF'
+            className={`px-3 py-1 rounded-xl font-bold transition whitespace-nowrap cursor-pointer ${filterType === 'DIFF'
                 ? 'bg-[#F85606] text-white shadow-2xs'
                 : 'bg-white border border-orange-200 text-[#F85606] hover:bg-orange-50'
-            }`}
+              }`}
           >
             Có chênh lệch ({stats.diff})
           </button>
           <button
             type="button"
             onClick={() => setFilterType('SURPLUS')}
-            className={`px-3 py-1 rounded-xl font-bold transition whitespace-nowrap cursor-pointer ${
-              filterType === 'SURPLUS'
+            className={`px-3 py-1 rounded-xl font-bold transition whitespace-nowrap cursor-pointer ${filterType === 'SURPLUS'
                 ? 'bg-blue-600 text-white shadow-2xs'
                 : 'bg-white border border-blue-200 text-blue-600 hover:bg-blue-50'
-            }`}
+              }`}
           >
             Lệch thừa (+) ({stats.surplus})
           </button>
           <button
             type="button"
             onClick={() => setFilterType('SHORTAGE')}
-            className={`px-3 py-1 rounded-xl font-bold transition whitespace-nowrap cursor-pointer ${
-              filterType === 'SHORTAGE'
+            className={`px-3 py-1 rounded-xl font-bold transition whitespace-nowrap cursor-pointer ${filterType === 'SHORTAGE'
                 ? 'bg-rose-600 text-white shadow-2xs'
                 : 'bg-white border border-rose-200 text-rose-600 hover:bg-rose-50'
-            }`}
+              }`}
           >
             Lệch thiếu (-) ({stats.shortage})
           </button>
           <button
             type="button"
             onClick={() => setFilterType('MATCH')}
-            className={`px-3 py-1 rounded-xl font-bold transition whitespace-nowrap cursor-pointer ${
-              filterType === 'MATCH'
+            className={`px-3 py-1 rounded-xl font-bold transition whitespace-nowrap cursor-pointer ${filterType === 'MATCH'
                 ? 'bg-emerald-600 text-white shadow-2xs'
                 : 'bg-white border border-emerald-200 text-emerald-600 hover:bg-emerald-50'
-            }`}
+              }`}
           >
             Khớp sổ ({stats.match})
           </button>
           <button
             type="button"
             onClick={() => setFilterType('UNCOUNTED')}
-            className={`px-3 py-1 rounded-xl font-bold transition whitespace-nowrap cursor-pointer ${
-              filterType === 'UNCOUNTED'
+            className={`px-3 py-1 rounded-xl font-bold transition whitespace-nowrap cursor-pointer ${filterType === 'UNCOUNTED'
                 ? 'bg-amber-600 text-white shadow-2xs'
                 : 'bg-white border border-amber-200 text-amber-600 hover:bg-amber-50'
-            }`}
+              }`}
           >
             Chưa đếm ({stats.uncounted})
           </button>
@@ -734,9 +727,8 @@ export const StockTakeDetailPage: React.FC = () => {
                   return (
                     <tr
                       key={line.id}
-                      className={`hover:bg-orange-50/20 transition-colors ${
-                        hasDiff ? (isSurplus ? 'bg-blue-50/15' : 'bg-rose-50/15') : ''
-                      }`}
+                      className={`hover:bg-orange-50/20 transition-colors ${hasDiff ? (isSurplus ? 'bg-blue-50/15' : 'bg-rose-50/15') : ''
+                        }`}
                     >
                       <td className="py-3 px-3 text-center text-gray-400 font-mono text-[11px]">
                         {lineIdx}
@@ -871,11 +863,10 @@ export const StockTakeDetailPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setPage(p)}
-                        className={`min-w-[28px] h-7 rounded-lg text-xs font-bold transition cursor-pointer ${
-                          page === p
+                        className={`min-w-[28px] h-7 rounded-lg text-xs font-bold transition cursor-pointer ${page === p
                             ? 'bg-[#F85606] text-white shadow-xs'
                             : 'bg-white border border-gray-200 text-gray-700 hover:bg-orange-50 hover:text-[#F85606]'
-                        }`}
+                          }`}
                       >
                         {p}
                       </button>
@@ -945,8 +936,8 @@ export const StockTakeDetailPage: React.FC = () => {
               {stockTake.status === 'CLOSED'
                 ? 'Đã chốt & ghi nhận điều chỉnh tồn kho'
                 : stockTake.status === 'CANCELLED'
-                ? 'Đã hủy phiếu'
-                : 'Đang thực hiện kiểm đếm thực tế (Nháp)'}
+                  ? 'Đã hủy phiếu'
+                  : 'Đang thực hiện kiểm đếm thực tế (Nháp)'}
             </div>
           </div>
           {stockTake.note && (
@@ -996,10 +987,10 @@ export const StockTakeDetailPage: React.FC = () => {
                     {diff === null
                       ? '---'
                       : diff === 0
-                      ? '0'
-                      : diff > 0
-                      ? `+${formatQuantity(diff)}`
-                      : formatQuantity(diff)}
+                        ? '0'
+                        : diff > 0
+                          ? `+${formatQuantity(diff)}`
+                          : formatQuantity(diff)}
                   </td>
                   <td className="border border-black py-1 px-2 text-[9px] italic">
                     {line.note || (hasDiff ? (diff && diff > 0 ? 'Thừa hàng' : 'Thiếu hàng') : '')}
@@ -1025,8 +1016,8 @@ export const StockTakeDetailPage: React.FC = () => {
                 {printTotals.totalDiffQty === 0
                   ? '0'
                   : printTotals.totalDiffQty > 0
-                  ? `+${formatQuantity(printTotals.totalDiffQty)}`
-                  : formatQuantity(printTotals.totalDiffQty)}
+                    ? `+${formatQuantity(printTotals.totalDiffQty)}`
+                    : formatQuantity(printTotals.totalDiffQty)}
               </td>
               <td className="border border-black py-1.5 px-2 text-[9px] font-semibold">
                 {stats.diff > 0
@@ -1039,7 +1030,7 @@ export const StockTakeDetailPage: React.FC = () => {
 
         {/* Gạch kết thúc danh sách kiểm kê (chốt sổ, không ghi thêm mặt hàng) */}
         <div className="w-full my-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-black border-y-2 border-black py-1 print-avoid-break">
-          ═══ HẾT DANH SÁCH KIỂM KÊ (TỔNG CỘNG: {lines.length} MẶT HÀNG) ═══
+          ═══ DANH SÁCH KIỂM KÊ (TỔNG CỘNG: {lines.length} MẶT HÀNG) ═══
         </div>
 
         {/* Dòng ghi chú chốt biên bản */}

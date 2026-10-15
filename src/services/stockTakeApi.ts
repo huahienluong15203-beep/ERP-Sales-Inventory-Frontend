@@ -165,10 +165,60 @@ export async function cancelStockTake(id: number | string, reason: string): Prom
   return await res.json();
 }
 
+export interface StockTakeCategoryOption {
+  id: number;
+  code: string;
+  name: string;
+  level: number;
+  parentId?: number | null;
+  parentName?: string | null;
+  description?: string;
+  skuCount: number;
+}
+
 /**
- * Lấy danh sách kho hàng từ backend (có fallback sang SYSTEM_WAREHOUSES)
+ * Lấy danh sách nhóm hàng thực tế có tồn trong kho kèm số lượng SKU (S5-08)
+ */
+export async function fetchStockTakeCategoriesByWarehouse(
+  warehouseId: number | string
+): Promise<StockTakeCategoryOption[]> {
+  try {
+    const res = await authFetch(`${BASE_URL}/warehouses/${warehouseId}/categories`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn(`Lỗi lấy danh mục nhóm hàng kho #${warehouseId}:`, err);
+  }
+  return [];
+}
+
+/**
+ * Lấy danh sách kho hàng hợp lệ được phân công cho nhân viên kho (có fallback sang SYSTEM_WAREHOUSES)
  */
 export async function fetchWarehousesList(): Promise<WarehouseOption[]> {
+  try {
+    // Ưu tiên gọi API kiểm tra quyền kho của nhân sự kho
+    const res = await authFetch(`${API_BASE_URL}/api/inventory/warehouses?status=ACTIVE`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return data.map((w: any) => ({
+          id: w.id,
+          code: w.code,
+          name: w.name,
+          address: w.address,
+          status: w.status || 'ACTIVE'
+        }));
+      }
+    }
+  } catch {
+    // fallback
+  }
+
   try {
     const res = await authFetch(`${API_BASE_URL}/api/warehouses?status=ACTIVE`);
     if (res.ok) {

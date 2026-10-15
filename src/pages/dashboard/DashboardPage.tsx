@@ -98,7 +98,9 @@ export const DashboardPage: React.FC = () => {
           currentRole === 'ROLE_SALES_MANAGER' ||
           currentRole === 'ROLE_ACCOUNTANT' ||
           currentRole === 'ROLE_SALES_REP' ||
-          Boolean(user?.roles?.some((r) => ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_ACCOUNTANT', 'ROLE_SALES_REP'].includes(r)));
+          currentRole === 'ROLE_WAREHOUSE' ||
+          currentRole === 'ROLE_WH_MANAGER' ||
+          Boolean(user?.roles?.some((r) => ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_ACCOUNTANT', 'ROLE_SALES_REP', 'ROLE_WAREHOUSE', 'ROLE_WH_MANAGER'].includes(r)));
 
         if (canViewOrders) {
           try {

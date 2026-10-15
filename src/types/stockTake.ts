@@ -52,6 +52,7 @@ export interface StockTakeFilterParams {
 export interface StockTakeCreatePayload {
   warehouseId: number;
   categoryId?: number | null;
+  categoryIds?: number[] | null;
   note?: string;
 }
 

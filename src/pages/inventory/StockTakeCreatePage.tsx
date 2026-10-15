@@ -13,25 +13,42 @@ import {
   X
 } from 'lucide-react';
 import type { WarehouseOption } from '../../types/inventory';
-import type { CategoryWithCount } from '../../services/categoryApi';
 import { fetchCategories } from '../../services/categoryApi';
-import { createStockTake, fetchWarehousesList } from '../../services/stockTakeApi';
+import {
+  createStockTake,
+  fetchWarehousesList,
+  fetchStockTakeCategoriesByWarehouse
+} from '../../services/stockTakeApi';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
 import { Pagination } from '../../components/common/Pagination';
 import { SearchSelect } from '../../components/common/SearchSelect';
+
+export interface StockTakeCategoryItem {
+  id: number | string;
+  code: string;
+  name: string;
+  level: number;
+  parentId?: number | string | null;
+  parentName?: string | null;
+  description?: string;
+  skuCount?: number;
+  productCount?: number;
+}
 
 export const StockTakeCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useAuth();
 
   const [warehouses, setWarehouses] = useState<WarehouseOption[]>([]);
-  const [categories, setCategories] = useState<CategoryWithCount[]>([]);
+  const [categories, setCategories] = useState<StockTakeCategoryItem[]>([]);
   const [loadingData, setLoadingData] = useState<boolean>(true);
+  const [loadingCategories, setLoadingCategories] = useState<boolean>(false);
 
   // Form inputs
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | ''>('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | ''>('');
+  // Multi-select danh sách nhóm hàng cần kiểm kê
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [note, setNote] = useState<string>('');
 
   // Category search, level filter & pagination (Table view giống Danh mục NCC)
@@ -43,26 +60,22 @@ export const StockTakeCreatePage: React.FC = () => {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
 
-  // Load danh sách kho và danh mục nhóm hàng
+  // 1. Tải danh sách kho được phân công cho nhân viên kho
   useEffect(() => {
     let alive = true;
     setLoadingData(true);
-    Promise.all([
-      fetchWarehousesList(),
-      fetchCategories().catch(() => [])
-    ])
-      .then(([whList, catList]) => {
+    fetchWarehousesList()
+      .then((whList) => {
         if (!alive) return;
         setWarehouses(whList);
         if (whList.length > 0) {
           setSelectedWarehouseId(Number(whList[0].id));
         }
-        setCategories(catList);
       })
       .catch((err) => {
         if (alive) {
-          console.error('Lỗi nạp dữ liệu kiểm kê:', err);
-          setErrorMsg('Không thể tải danh sách kho hoặc nhóm hàng.');
+          console.error('Lỗi nạp danh sách kho kiểm kê:', err);
+          setErrorMsg('Không thể tải danh sách kho kiểm kê.');
         }
       })
       .finally(() => {
@@ -73,6 +86,44 @@ export const StockTakeCreatePage: React.FC = () => {
       alive = false;
     };
   }, []);
+
+  // 2. Khi kho kiểm kê thay đổi -> Tự động nạp danh sách nhóm hàng thực tế có tồn trong kho đó
+  useEffect(() => {
+    if (!selectedWarehouseId) {
+      setCategories([]);
+      setSelectedCategoryIds([]);
+      return;
+    }
+
+    let alive = true;
+    setLoadingCategories(true);
+    setSelectedCategoryIds([]); // Reset lựa chọn nhóm hàng khi đổi kho
+
+    fetchStockTakeCategoriesByWarehouse(selectedWarehouseId)
+      .then((whCats) => {
+        if (!alive) return;
+        if (whCats && whCats.length > 0) {
+          setCategories(whCats);
+        } else {
+          // Fallback sang toàn bộ danh mục nếu kho chưa có dữ liệu tồn
+          fetchCategories()
+            .then((allCats) => {
+              if (alive) setCategories(allCats);
+            })
+            .catch(() => {});
+        }
+      })
+      .catch((err) => {
+        if (alive) console.warn('Lỗi tải nhóm hàng theo kho:', err);
+      })
+      .finally(() => {
+        if (alive) setLoadingCategories(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [selectedWarehouseId]);
 
   // Map tra cứu tên nhóm cha nhanh
   const categoryMap = useMemo(() => {
@@ -115,6 +166,28 @@ export const StockTakeCreatePage: React.FC = () => {
     setCatPage(0);
   }, [catKeyword, catLevelFilter]);
 
+  // Multi-select helpers
+  const toggleCategory = (rawCatId: number | string) => {
+    const catId = Number(rawCatId);
+    setSelectedCategoryIds((prev) =>
+      prev.includes(catId) ? prev.filter((id) => id !== catId) : [...prev, catId]
+    );
+  };
+
+  const isAllCurrentPageSelected = useMemo(() => {
+    if (paginatedCategories.length === 0) return false;
+    return paginatedCategories.every((c) => selectedCategoryIds.includes(Number(c.id)));
+  }, [paginatedCategories, selectedCategoryIds]);
+
+  const toggleSelectAllCurrentPage = () => {
+    const pageIds = paginatedCategories.map((c) => Number(c.id));
+    if (isAllCurrentPageSelected) {
+      setSelectedCategoryIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+    } else {
+      setSelectedCategoryIds((prev) => Array.from(new Set([...prev, ...pageIds])));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedWarehouseId) {
@@ -128,7 +201,8 @@ export const StockTakeCreatePage: React.FC = () => {
       setErrorMsg('');
       const created = await createStockTake({
         warehouseId: Number(selectedWarehouseId),
-        categoryId: selectedCategoryId ? Number(selectedCategoryId) : null,
+        categoryId: selectedCategoryIds.length === 1 ? selectedCategoryIds[0] : null,
+        categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : null,
         note: note.trim() || undefined
       });
 
@@ -253,7 +327,7 @@ export const StockTakeCreatePage: React.FC = () => {
           </div>
         </div>
 
-        {/* KHỐI 2: CHỌN PHẠM VI NHÓM HÀNG (DẠNG BẢNG DANH SÁCH GIỐNG DANH MỤC NHÀ CUNG CẤP) */}
+        {/* KHỐI 2: CHỌN PHẠM VI NHÓM HÀNG (MULTI-SELECT HOẶC TOÀN BỘ KHO) */}
         <div className="bg-white rounded-3xl p-5 sm:p-6 border border-gray-200 shadow-2xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-gray-100">
             <div className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wider">
@@ -263,17 +337,26 @@ export const StockTakeCreatePage: React.FC = () => {
 
             <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
               <span>
-                Tổng cộng: <strong className="text-[#F85606] font-mono">{filteredCategories.length}</strong> nhóm hàng
+                Tổng cộng: <strong className="text-[#F85606] font-mono">{filteredCategories.length}</strong> nhóm hàng trong kho
               </span>
-              {selectedCategoryId ? (
-                <span className="ml-2 px-2.5 py-0.5 rounded-full bg-orange-100 text-[#F85606] font-bold text-[11px] inline-flex items-center gap-1">
-                  <Check size={11} strokeWidth={3} />
-                  <span>Đang chọn: {categoryMap.get(String(selectedCategoryId)) || `ID #${selectedCategoryId}`}</span>
-                </span>
+              {selectedCategoryIds.length > 0 ? (
+                <div className="flex items-center gap-1.5 ml-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-orange-100 text-[#F85606] font-bold text-[11px] inline-flex items-center gap-1">
+                    <Check size={11} strokeWidth={3} />
+                    <span>Đang chọn {selectedCategoryIds.length} nhóm hàng</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategoryIds([])}
+                    className="text-[11px] text-gray-400 hover:text-rose-600 underline cursor-pointer ml-1"
+                  >
+                    Bỏ chọn
+                  </button>
+                </div>
               ) : (
                 <span className="ml-2 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px] inline-flex items-center gap-1">
                   <Check size={11} strokeWidth={3} />
-                  <span>Kiểm kê toàn bộ kho</span>
+                  <span>Kiểm kê toàn bộ kho ({filteredCategories.length} nhóm)</span>
                 </span>
               )}
             </div>
@@ -281,9 +364,9 @@ export const StockTakeCreatePage: React.FC = () => {
 
           {/* Ô chọn nhanh: Toàn bộ mặt hàng trong kho */}
           <div
-            onClick={() => setSelectedCategoryId('')}
+            onClick={() => setSelectedCategoryIds([])}
             className={`p-4 rounded-2xl border transition cursor-pointer flex items-center justify-between gap-3 ${
-              selectedCategoryId === ''
+              selectedCategoryIds.length === 0
                 ? 'border-emerald-600 bg-emerald-50/60 shadow-xs'
                 : 'border-gray-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/20'
             }`}
@@ -303,23 +386,34 @@ export const StockTakeCreatePage: React.FC = () => {
             </div>
             <div
               className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
-                selectedCategoryId === ''
+                selectedCategoryIds.length === 0
                   ? 'border-emerald-600 bg-emerald-600 text-white'
                   : 'border-gray-300 bg-white'
               }`}
             >
-              {selectedCategoryId === '' && <Check size={12} strokeWidth={3} />}
+              {selectedCategoryIds.length === 0 && <Check size={12} strokeWidth={3} />}
             </div>
           </div>
 
-          {/* Chọn một nhóm hàng cụ thể dạng Bảng giống Danh mục Nhà cung cấp */}
+          {/* Chọn nhiều nhóm hàng cụ thể dạng Bảng */}
           <div className="space-y-3 pt-2">
-            <span className="text-xs font-bold text-gray-700 uppercase block">
-              Hoặc chọn một nhóm hàng cụ thể:
-            </span>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="text-xs font-bold text-gray-700 uppercase block">
+                Hoặc tick chọn một hay nhiều nhóm hàng cụ thể (Multi-select):
+              </span>
+              {filteredCategories.length > 0 && (
+                <button
+                  type="button"
+                  onClick={toggleSelectAllCurrentPage}
+                  className="text-xs text-[#F85606] font-bold hover:underline cursor-pointer"
+                >
+                  {isAllCurrentPageSelected ? 'Bỏ chọn toàn bộ trang này' : 'Chọn tất cả nhóm hàng trang này'}
+                </button>
+              )}
+            </div>
 
             <div className="border border-gray-200 rounded-2xl sm:rounded-3xl bg-white shadow-2xs overflow-hidden">
-              {/* Thanh tìm kiếm & bộ lọc giống bảng Danh mục nhà cung cấp */}
+              {/* Thanh tìm kiếm & bộ lọc */}
               <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white">
                 {/* Ô tìm kiếm */}
                 <div className="relative flex-1 min-w-[240px]">
@@ -378,56 +472,73 @@ export const StockTakeCreatePage: React.FC = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50 text-[11px] font-bold text-gray-600 uppercase tracking-wider">
-                      <th className="py-3 px-4 w-12 text-center">Chọn</th>
+                      <th className="py-3 px-4 w-12 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isAllCurrentPageSelected}
+                          disabled={paginatedCategories.length === 0}
+                          onChange={toggleSelectAllCurrentPage}
+                          className="w-4 h-4 rounded text-[#F85606] accent-[#F85606] cursor-pointer"
+                          title={isAllCurrentPageSelected ? 'Bỏ chọn toàn bộ trang này' : 'Tick chọn tất cả nhóm hàng trang này'}
+                        />
+                      </th>
                       <th className="py-3 px-4 whitespace-nowrap min-w-[140px]">Mã nhóm hàng</th>
                       <th className="py-3 px-4 min-w-[220px]">Tên nhóm hàng</th>
                       <th className="py-3 px-4 min-w-[170px]">Cấp bậc / Ngành cha</th>
-                      <th className="py-3 px-4 whitespace-nowrap">Số lượng SKU</th>
+                      <th className="py-3 px-4 whitespace-nowrap">Số lượng SKU trong kho</th>
                       <th className="py-3 px-4 sm:px-6 text-right whitespace-nowrap">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-xs">
-                    {loadingData ? (
+                    {loadingData || loadingCategories ? (
                       <tr>
                         <td colSpan={6} className="py-12 text-center text-gray-400">
                           <div className="flex flex-col items-center justify-center gap-2">
                             <Loader2 size={24} className="animate-spin text-[#F85606]" />
-                            <span className="text-gray-600 font-medium">Đang tải danh sách nhóm hàng...</span>
+                            <span className="text-gray-600 font-medium">Đang tải danh sách nhóm hàng có trong kho...</span>
                           </div>
                         </td>
                       </tr>
                     ) : paginatedCategories.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="py-10 text-center text-gray-400">
-                          Không tìm thấy nhóm hàng phù hợp với từ khóa &ldquo;{catKeyword}&rdquo;
+                          {catKeyword
+                            ? `Không tìm thấy nhóm hàng phù hợp với từ khóa "${catKeyword}"`
+                            : 'Kho này hiện chưa có nhóm hàng nào có tồn kho.'}
                         </td>
                       </tr>
                     ) : (
                       paginatedCategories.map((c) => {
-                        const isSelected = Number(c.id) === Number(selectedCategoryId);
+                        const catId = Number(c.id);
+                        const isSelected = selectedCategoryIds.includes(catId);
                         const parentName = c.parentId ? categoryMap.get(String(c.parentId)) : null;
+                        const skuCount = (c as any).skuCount ?? (c as any).productCount ?? 0;
 
                         return (
                           <tr
                             key={c.id}
-                            onClick={() => setSelectedCategoryId(Number(c.id))}
+                            onClick={() => toggleCategory(catId)}
                             className={`transition-colors cursor-pointer group ${
                               isSelected
                                 ? 'bg-orange-50/80 font-medium'
                                 : 'hover:bg-gray-50/80 bg-white'
                             }`}
                           >
-                            {/* Cột 1: Radio Chọn */}
-                            <td className="py-3.5 px-4 text-center">
-                              <div
-                                className={`w-4 h-4 rounded-full border mx-auto flex items-center justify-center transition ${
-                                  isSelected
-                                    ? 'border-[#F85606] bg-[#F85606] text-white shadow-2xs'
-                                    : 'border-gray-300 bg-white group-hover:border-orange-400'
-                                }`}
-                              >
-                                {isSelected && <Check size={10} strokeWidth={3} />}
-                              </div>
+                            {/* Cột 1: Checkbox Chọn */}
+                            <td
+                              className="py-3.5 px-4 text-center cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleCategory(catId);
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={() => toggleCategory(catId)}
+                                className="w-4 h-4 rounded text-[#F85606] accent-[#F85606] cursor-pointer"
+                              />
                             </td>
 
                             {/* Cột 2: Mã nhóm */}
@@ -467,26 +578,39 @@ export const StockTakeCreatePage: React.FC = () => {
                               )}
                             </td>
 
-                            {/* Cột 5: Số SKU trực thuộc */}
+                            {/* Cột 5: Số SKU trực thuộc kho */}
                             <td className="py-3.5 px-4 whitespace-nowrap">
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-700">
-                                <strong className="text-gray-900 font-mono">{c.productCount ?? 0}</strong> SKU
+                              <span
+                                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                                  skuCount > 0
+                                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                    : 'bg-gray-100 text-gray-500'
+                                }`}
+                              >
+                                <strong className="font-mono">{skuCount}</strong> SKU
                               </span>
                             </td>
 
                             {/* Cột 6: Thao tác / Trạng thái */}
                             <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
                               {isSelected ? (
-                                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold bg-[#F85606] text-white shadow-2xs">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleCategory(catId);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold bg-[#F85606] text-white shadow-2xs hover:bg-[#e04d05] transition cursor-pointer"
+                                >
                                   <Check size={12} strokeWidth={3} />
                                   <span>Đang chọn</span>
-                                </span>
+                                </button>
                               ) : (
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setSelectedCategoryId(Number(c.id));
+                                    toggleCategory(catId);
                                   }}
                                   className="px-3 py-1 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 hover:text-[#F85606] hover:border-orange-300 hover:bg-orange-50 transition cursor-pointer"
                                 >
