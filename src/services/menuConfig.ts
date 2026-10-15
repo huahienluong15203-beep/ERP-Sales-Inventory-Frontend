@@ -63,6 +63,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Thu tiền theo tuyến',
+    path: '/payments/collections',
+    group: 'Bán hàng',
+    icon: 'Receipt',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: 'Nhân viên kinh doanh thu tiền mặt theo tuyến và lập bảng đối chiếu nộp quỹ',
+    allowedRoles: ['ROLE_SALES_REP', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+  },
+
+  {
     title: 'Danh mục sản phẩm',
     path: '/products',
     group: 'Sản phẩm & Kho',

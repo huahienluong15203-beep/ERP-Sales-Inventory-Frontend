@@ -37,6 +37,7 @@ import { StockTakeManagementPage } from '../pages/inventory/StockTakeManagementP
 import { StockTakeCreatePage } from '../pages/inventory/StockTakeCreatePage';
 import { StockTakeDetailPage } from '../pages/inventory/StockTakeDetailPage';
 import { WarehouseManagementPage } from '../pages/inventory/WarehouseManagementPage';
+import { RouteCashCollectionPage } from '../pages/payment/RouteCashCollectionPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -557,6 +558,27 @@ export const AppRoutes: React.FC = () => {
               <OrderListPage />
             </ProtectedRoute>
           }
+        />
+
+        {/* Thu tiền theo tuyến & Bảng đối chiếu nộp quỹ */}
+        <Route
+          path="/payments/collections"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_REP',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <RouteCashCollectionPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/payments"
+          element={<Navigate to="/payments/collections" replace />}
         />
 
         {/* Hồ sơ cá nhân (Mọi vai trò đều xem được) */}
