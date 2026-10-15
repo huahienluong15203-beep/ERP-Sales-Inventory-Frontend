@@ -13,7 +13,8 @@ import {
   Search,
   X,
   Loader2,
-  ArrowUp
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import type { GoodsReceiptFormPayload } from '../../types/inventory';
 import { SYSTEM_WAREHOUSES } from '../../types/inventory';
@@ -541,6 +542,25 @@ export const GoodsReceiptCreatePage: React.FC = () => {
     return lines.reduce((sum, l) => sum + (l.quantity || 0) * (l.conversionFactor || 1) * (l.unitPrice || 0), 0);
   }, [lines]);
 
+  // Tự động cuộn mượt xuống bảng danh mục sản phẩm bên dưới
+  const scrollToProductCatalog = () => {
+    const el = document.getElementById('product-catalog-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.classList.add('ring-2', 'ring-orange-400', 'ring-offset-2', 'transition-all', 'duration-500');
+      setTimeout(() => {
+        el.classList.remove('ring-2', 'ring-orange-400', 'ring-offset-2');
+      }, 1200);
+
+      const searchInput = document.getElementById('catalog-search-input') as HTMLInputElement | null;
+      if (searchInput) {
+        setTimeout(() => {
+          searchInput.focus();
+        }, 400);
+      }
+    }
+  };
+
   // Kiểm tra hợp lệ trước khi lưu
   const validateForm = (): boolean => {
     const errors: string[] = [];
@@ -871,10 +891,24 @@ export const GoodsReceiptCreatePage: React.FC = () => {
             </div>
             <p className="text-sm font-bold text-gray-800">Chưa có sản phẩm nào trong phiếu nhập</p>
             <p className="text-xs text-gray-500 max-w-lg mx-auto leading-relaxed">
-              Vui lòng xem <strong>Danh mục sản phẩm bên dưới</strong> và bấm nút{' '}
-              <span className="font-bold text-[#F85606] bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200">
-                + Thêm vào phiếu
-              </span>{' '}
+              Vui lòng xem{' '}
+              <button
+                type="button"
+                onClick={scrollToProductCatalog}
+                className="font-bold text-gray-700 hover:text-[#F85606] underline decoration-dashed decoration-orange-300 underline-offset-4 cursor-pointer transition-colors"
+              >
+                Danh mục sản phẩm bên dưới
+              </button>{' '}
+              và bấm nút{' '}
+              <button
+                type="button"
+                onClick={scrollToProductCatalog}
+                className="inline-flex items-center gap-1 font-bold text-[#F85606] bg-orange-100/70 hover:bg-orange-200/80 px-2 py-0.5 rounded-md border border-orange-300 hover:border-[#F85606] cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-2xs group align-baseline"
+                title="Bấm để cuộn nhanh xuống danh mục sản phẩm"
+              >
+                <span>+ Thêm vào phiếu</span>
+                <ArrowDown size={12} className="text-[#F85606] inline transition-transform group-hover:translate-y-0.5 animate-bounce" />
+              </button>{' '}
               để đưa các mặt hàng vào phiếu nhập kho.
             </p>
           </div>
@@ -1067,6 +1101,7 @@ export const GoodsReceiptCreatePage: React.FC = () => {
             <div className="relative">
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
+                id="catalog-search-input"
                 type="text"
                 placeholder="Tìm kiếm nhanh theo mã SKU, tên sản phẩm..."
                 value={catalogKeyword}
