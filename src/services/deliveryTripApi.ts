@@ -300,33 +300,84 @@ function saveStoredDispatchedOrders(orders: DeliveryTripStop[]): void {
 /**
  * 1. Lấy danh sách phiếu xuất / đơn hàng đã xuất kho (DISPATCHED) sẵn sàng gom chuyến
  */
-export async function fetchDispatchedOrdersForRouting(warehouseId?: number): Promise<DeliveryTripStop[]> {
+export async function fetchDispatchedOrdersForRouting(_warehouseId?: number): Promise<DeliveryTripStop[]> {
   try {
-    const url = warehouseId
-      ? `${API_BASE_URL}/orders?status=DISPATCHED&warehouseId=${warehouseId}&size=100`
-      : `${API_BASE_URL}/orders?status=DISPATCHED&size=100`;
+    const url = `${API_BASE_URL}/api/orders?status=DISPATCHED&size=100`;
     const res = await authFetch(url);
     if (res.ok) {
       const data = await res.json();
       const rawList = Array.isArray(data) ? data : data.content;
       if (Array.isArray(rawList) && rawList.length > 0) {
-        return rawList.map((o: any, idx: number) => ({
-          orderId: o.id,
-          orderCode: o.orderCode || o.code || `SO-202610-${o.id}`,
-          customerId: o.customerId || (o.customer ? o.customer.id : null),
-          customerCode: o.customerCode || (o.customer ? o.customer.code : ''),
-          customerName: o.customerName || (o.customer ? o.customer.name : 'Khách hàng'),
-          deliveryAddress: o.deliveryAddress || (o.customer ? o.customer.address : 'Tại địa chỉ khách hàng'),
-          receiverName: o.receiverName || o.contactPerson || o.customerName || 'Người nhận hàng',
-          receiverPhone: o.receiverPhone || o.phone || '0988.xxx.xxx',
-          district: extractDistrict(o.deliveryAddress || (o.customer ? o.customer.address : '')),
-          province: 'Hà Nội',
-          status: o.status || 'DISPATCHED',
-          totalAmount: Number(o.totalAmount || 0),
-          valueOnRoad: Number(o.totalAmount || 0),
-          stockReturned: false,
-          stopSequence: idx + 1
-        }));
+        // Lấy danh sách các đơn đã nằm trên chuyến giao hàng để loại trừ
+        const assignedOrderIds = new Set<number>();
+        try {
+          const tripsRes = await authFetch(`${API_BASE_URL}/api/delivery-trips`);
+          if (tripsRes.ok) {
+            const tripsData = await tripsRes.json();
+            if (Array.isArray(tripsData)) {
+              await Promise.all(
+                tripsData.map(async (t: any) => {
+                  try {
+                    const dtRes = await authFetch(`${API_BASE_URL}/api/delivery-trips/${t.id}`);
+                    if (dtRes.ok) {
+                      const dt = await dtRes.json();
+                      if (Array.isArray(dt.stops)) {
+                        dt.stops.forEach((s: any) => assignedOrderIds.add(s.orderId));
+                      }
+                    }
+                  } catch (e) {
+                    // Bỏ qua lỗi lẻ của từng chuyến
+                  }
+                })
+              );
+            }
+          }
+        } catch (e) {
+          console.warn('Lỗi kiểm tra đơn đã nằm trên chuyến:', e);
+        }
+
+        // Chỉ giữ lại những đơn chưa nằm trên chuyến xe nào
+        const unassignedOrders = rawList.filter((o: any) => !assignedOrderIds.has(o.id));
+
+        const stops = await Promise.all(
+          unassignedOrders.map(async (o: any, idx: number) => {
+            let addr = '';
+            let rName = o.customerName || 'Người nhận hàng';
+            let rPhone = '0988.xxx.xxx';
+            try {
+              const dRes = await authFetch(`${API_BASE_URL}/api/orders/${o.id}`);
+              if (dRes.ok) {
+                const detail = await dRes.json();
+                if (detail.deliveryAddress) {
+                  addr = detail.deliveryAddress.address || '';
+                  rName = detail.deliveryAddress.receiverName || rName;
+                  rPhone = detail.deliveryAddress.receiverPhone || rPhone;
+                }
+              }
+            } catch (e) {
+              console.warn('Lỗi lấy địa chỉ đơn hàng #', o.id, e);
+            }
+
+            return {
+              orderId: o.id,
+              orderCode: o.orderCode || o.code || `SO-202610-${o.id}`,
+              customerId: o.customerId || (o.customer ? o.customer.id : null),
+              customerCode: o.customerCode || (o.customer ? o.customer.code : ''),
+              customerName: o.customerName || (o.customer ? o.customer.name : 'Khách hàng'),
+              deliveryAddress: addr || 'Tại địa chỉ khách hàng',
+              receiverName: rName,
+              receiverPhone: rPhone,
+              district: extractDistrict(addr),
+              province: 'Hà Nội',
+              status: o.status || 'DISPATCHED',
+              totalAmount: Number(o.totalAmount || 0),
+              valueOnRoad: Number(o.totalAmount || 0),
+              stockReturned: false,
+              stopSequence: idx + 1
+            };
+          })
+        );
+        return stops;
       }
     }
   } catch (err) {
@@ -351,23 +402,35 @@ export async function fetchDeliveryTrips(params?: {
   status?: string;
   warehouseId?: number;
 }): Promise<DeliveryTrip[]> {
+  let backendTrips: DeliveryTrip[] = [];
+  let backendSuccess = false;
   try {
     const query = new URLSearchParams();
     if (params?.status && params.status !== 'ALL') query.set('status', params.status);
     if (params?.warehouseId) query.set('warehouseId', String(params.warehouseId));
 
-    const res = await authFetch(`${API_BASE_URL}/delivery-trips?${query.toString()}`);
+    const res = await authFetch(`${API_BASE_URL}/api/delivery-trips?${query.toString()}`);
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
-        return data;
+        backendTrips = data;
+        backendSuccess = true;
       }
     }
   } catch (err) {
     console.warn('Backend fetch delivery trips failed, using local trips:', err);
   }
 
-  let trips = getStoredTrips();
+  const localTrips = getStoredTrips();
+  const combined = [...backendTrips];
+  localTrips.forEach((lt) => {
+    if (!combined.some((bt) => bt.id === lt.id || bt.code === lt.code)) {
+      combined.push(lt);
+    }
+  });
+
+  let trips = backendSuccess && combined.length > 0 ? combined : (backendSuccess ? backendTrips : localTrips);
+
   if (params?.status && params.status !== 'ALL') {
     trips = trips.filter((t) => t.status === params.status);
   }
@@ -398,7 +461,7 @@ export async function fetchDeliveryTrips(params?: {
  */
 export async function fetchInTransitSummary(): Promise<InTransitSummary> {
   try {
-    const res = await authFetch(`${API_BASE_URL}/delivery-trips/summary`);
+    const res = await authFetch(`${API_BASE_URL}/api/delivery-trips/summary`);
     if (res.ok) {
       return await res.json();
     }
@@ -432,7 +495,7 @@ export async function fetchInTransitSummary(): Promise<InTransitSummary> {
  */
 export async function fetchDeliveryTripById(id: number): Promise<DeliveryTrip> {
   try {
-    const res = await authFetch(`${API_BASE_URL}/delivery-trips/${id}`);
+    const res = await authFetch(`${API_BASE_URL}/api/delivery-trips/${id}`);
     if (res.ok) {
       const data = await res.json();
       // Nếu backend trả về { trip: {...}, stops: [...] }
@@ -460,7 +523,7 @@ export async function fetchDeliveryTripById(id: number): Promise<DeliveryTrip> {
  */
 export async function createDeliveryTrip(req: DeliveryTripCreateRequest): Promise<DeliveryTrip> {
   try {
-    const res = await authFetch(`${API_BASE_URL}/delivery-trips`, {
+    const res = await authFetch(`${API_BASE_URL}/api/delivery-trips`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -485,8 +548,16 @@ export async function createDeliveryTrip(req: DeliveryTripCreateRequest): Promis
       saveStoredDispatchedOrders(filtered);
 
       return tripObj;
+    } else {
+      const errJson = await res.json().catch(() => null);
+      if (res.status === 400 || res.status === 409 || res.status === 403) {
+        throw new Error(errJson?.message || errJson?.error || `Lỗi máy chủ (${res.status})`);
+      }
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) {
+      throw err;
+    }
     console.warn('Backend create delivery trip failed, saving locally:', err);
   }
 
@@ -541,7 +612,7 @@ export async function createDeliveryTrip(req: DeliveryTripCreateRequest): Promis
  */
 export async function completeDeliveryTrip(id: number, req?: DeliveryTripCompleteRequest): Promise<DeliveryTrip> {
   try {
-    const res = await authFetch(`${API_BASE_URL}/delivery-trips/${id}/complete`, {
+    const res = await authFetch(`${API_BASE_URL}/api/delivery-trips/${id}/complete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req || {})
@@ -554,8 +625,16 @@ export async function completeDeliveryTrip(id: number, req?: DeliveryTripComplet
       if (idx >= 0) trips[idx] = tripObj;
       saveStoredTrips(trips);
       return tripObj;
+    } else {
+      const errJson = await res.json().catch(() => null);
+      if (res.status === 400 || res.status === 409 || res.status === 403 || res.status === 404) {
+        throw new Error(errJson?.message || errJson?.error || `Lỗi máy chủ (${res.status})`);
+      }
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) {
+      throw err;
+    }
     console.warn('Backend complete delivery trip failed, updating locally:', err);
   }
 
@@ -582,4 +661,69 @@ export async function completeDeliveryTrip(id: number, req?: DeliveryTripComplet
 
   saveStoredTrips(trips);
   return { ...trip };
+}
+
+/**
+ * 7. Xác nhận giao hàng thành công cho một điểm giao (Sales Order)
+ * POST /api/orders/{id}/status với { status: 'DELIVERED', note }
+ */
+export async function confirmStopDelivery(orderId: number, note?: string): Promise<any> {
+  const res = await authFetch(`${API_BASE_URL}/api/orders/${orderId}/status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      status: 'DELIVERED',
+      note: note || 'Đại lý đã nhận đủ hàng thành công'
+    })
+  });
+  if (!res.ok) {
+    const errJson = await res.json().catch(() => null);
+    throw new Error(errJson?.message || errJson?.error || 'Không thể xác nhận giao hàng cho đơn này');
+  }
+  return await res.json();
+}
+
+/**
+ * 8. Ghi nhận giao hàng không thành công cho một điểm giao (Sales Order)
+ * POST /api/orders/{id}/delivery-failed với { reason }
+ */
+export async function failStopDelivery(orderId: number, reason: string): Promise<any> {
+  const cleanReason = (reason || '').trim();
+  if (!cleanReason) {
+    throw new Error('Bắt buộc nhập lý do giao hàng không thành công');
+  }
+  const res = await authFetch(`${API_BASE_URL}/api/orders/${orderId}/delivery-failed`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason: cleanReason })
+  });
+  if (!res.ok) {
+    const errJson = await res.json().catch(() => null);
+    throw new Error(errJson?.message || errJson?.error || 'Không thể ghi nhận giao thất bại cho đơn này');
+  }
+  return await res.json();
+}
+
+/**
+ * 9. Tự động xác nhận giao thành công tất cả điểm còn lại và kết thúc chuyến (Xe về kho)
+ */
+export async function completeTripWithAutoResolve(
+  tripId: number,
+  note?: string
+): Promise<DeliveryTrip> {
+  // Lấy chi tiết các điểm giao hiện tại
+  const trip = await fetchDeliveryTripById(tripId);
+  if (trip.stops && trip.stops.length > 0) {
+    const pendingStops = trip.stops.filter((s) => s.status === 'DISPATCHED');
+    for (const stop of pendingStops) {
+      try {
+        await confirmStopDelivery(stop.orderId, note || 'Tự động xác nhận giao hàng khi xe về kho');
+      } catch (err) {
+        console.warn(`Lỗi xác nhận đơn ${stop.orderCode}:`, err);
+      }
+    }
+  }
+
+  // Kết thúc chuyến xe về kho
+  return await completeDeliveryTrip(tripId, { note });
 }

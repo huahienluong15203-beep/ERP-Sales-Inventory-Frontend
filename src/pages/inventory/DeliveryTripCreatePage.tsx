@@ -11,7 +11,6 @@ import {
   User,
   Phone,
   MapPin,
-  Building2,
   CheckCircle2,
   RefreshCw,
   GripVertical
@@ -179,7 +178,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
         vehiclePlate: vehiclePlate.trim(),
         driverName: driverName.trim(),
         driverPhone: driverPhone.trim(),
-        expectedReturnAt: new Date(expectedReturnAt).toISOString(),
+        expectedReturnAt: expectedReturnAt.length === 16 ? `${expectedReturnAt}:00` : expectedReturnAt,
         note: note.trim()
       });
 
@@ -196,50 +195,24 @@ export const DeliveryTripCreatePage: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* Header */}
-      <div className="flex items-center justify-between bg-white p-6 rounded-2xl shadow-xs border border-gray-100">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/inventory/delivery-trips')}
-            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-              <Truck className="w-6 h-6 text-blue-600" />
-              Lập Chuyến Giao Hàng & Phân Tuyến Theo Khu Vực (S6-06)
-            </h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Gom nhiều phiếu xuất vào một chuyến xe, kéo thả/chọn thứ tự giao và gán phương tiện
-            </p>
-          </div>
-        </div>
-
+      {/* Select Warehouse & Back Button Row */}
+      <div className="flex items-center justify-between gap-4">
         <button
           type="button"
           onClick={() => navigate('/inventory/delivery-trips')}
-          className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+          className="px-4 py-2.5 bg-white text-gray-700 hover:text-[#F85606] hover:border-orange-300 rounded-xl border border-gray-200 shadow-xs hover:shadow transition-all cursor-pointer inline-flex items-center gap-2 text-xs font-bold active:scale-95"
+          title="Quay lại danh sách chuyến giao hàng"
+          id="btn-delivery-trip-create-back"
         >
-          Hủy bỏ
+          <ArrowLeft className="w-4 h-4" />
+          <span>Quay lại</span>
         </button>
-      </div>
-
-      {/* Select Warehouse Row */}
-      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-xs flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Building2 className="w-5 h-5 text-blue-600" />
-          <div>
-            <div className="text-xs font-bold text-gray-900 uppercase">Kho hàng xuất phát:</div>
-            <div className="text-[11px] text-gray-500">Các đơn trên cùng một chuyến phải xuất từ cùng một kho</div>
-          </div>
-        </div>
 
         <div className="w-full sm:w-72">
           <select
             value={warehouseId}
             onChange={(e) => setWarehouseId(Number(e.target.value))}
-            className="w-full text-xs font-semibold border border-blue-300 rounded-xl px-3 py-2 bg-blue-50/50 text-blue-950 focus:ring-2 focus:ring-blue-200 outline-none"
+            className="w-full text-xs font-semibold border border-orange-200 rounded-xl px-3.5 py-2.5 bg-white text-gray-900 focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none shadow-xs cursor-pointer"
           >
             {SYSTEM_WAREHOUSES.map((wh) => (
               <option key={wh.id} value={wh.id}>
@@ -253,28 +226,25 @@ export const DeliveryTripCreatePage: React.FC = () => {
       {/* ========================================================================= */}
       {/* GIAO DIỆN KÉO THẢ & CHỌN CHUYẾN (TEST FE / SUBTASK) */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         {/* CỘT TRÁI: ĐƠN HÀNG ĐÃ XUẤT CHỜ XẾP CHUYẾN (GOM THEO KHU VỰC - AC1) */}
-        <div className="bg-white p-5 rounded-2xl shadow-xs border border-gray-100 flex flex-col h-[640px]">
-          <div className="border-b border-gray-100 pb-3 mb-3">
+        <div className="bg-white p-5 rounded-2xl shadow-xs border border-orange-200 flex flex-col h-full transition-all">
+          <div className="border-b border-gray-100 pb-3 mb-3 min-h-[76px] flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">1</span>
+                <span className="w-5 h-5 rounded-full bg-[#F85606] text-white flex items-center justify-center text-xs font-bold">1</span>
                 Phiếu Xuất Chờ Xếp Chuyến ({filteredAvailable.length})
               </h2>
               {filteredAvailable.length > 0 && (
                 <button
                   type="button"
                   onClick={handleAddAllFiltered}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                  className="text-xs font-semibold text-[#F85606] hover:text-[#E04D05] hover:underline cursor-pointer"
                 >
                   + Gom tất cả vào chuyến
                 </button>
               )}
             </div>
-            <p className="text-[11px] text-gray-500 mt-0.5">
-              Chọn hoặc kéo thả các điểm giao sang cột bên phải để xếp vào xe
-            </p>
 
             {/* Bộ lọc khu vực (AC1: Gom theo khu vực) */}
             <div className="mt-3 flex flex-col sm:flex-row gap-2">
@@ -282,7 +252,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
                 <select
                   value={districtFilter}
                   onChange={(e) => setDistrictFilter(e.target.value)}
-                  className="w-full text-xs font-medium border border-gray-300 rounded-lg px-2.5 py-1.5 bg-gray-50 outline-none"
+                  className="w-full text-xs font-medium border border-gray-300 rounded-lg px-2.5 py-1.5 bg-gray-50 focus:ring-2 focus:ring-orange-200 outline-none"
                 >
                   <option value="ALL">📍 Tất cả khu vực</option>
                   {districts.map((dist, idx) => (
@@ -300,23 +270,23 @@ export const DeliveryTripCreatePage: React.FC = () => {
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
                   placeholder="Tìm theo mã đơn, khách, địa chỉ..."
-                  className="w-full text-xs pl-8 pr-3 py-1.5 border border-gray-300 rounded-lg outline-none"
+                  className="w-full text-xs pl-8 pr-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none"
                 />
               </div>
             </div>
           </div>
 
           {/* Danh sách đơn hàng bên trái */}
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+          <div className="flex-1 flex flex-col space-y-2 pr-1 max-h-[580px] overflow-y-auto">
             {loadingOrders ? (
-              <div className="p-8 text-center text-gray-500 space-y-2">
-                <RefreshCw className="w-6 h-6 animate-spin mx-auto text-blue-600" />
-                <p className="text-xs">Đang tải phiếu xuất kho...</p>
+              <div className="flex-1 flex flex-col items-center justify-center py-8 text-center text-gray-500 space-y-2">
+                <RefreshCw className="w-6 h-6 animate-spin mx-auto text-[#F85606]" />
+                <p className="text-xs font-semibold">Đang tải phiếu xuất kho...</p>
               </div>
             ) : filteredAvailable.length === 0 ? (
-              <div className="p-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-1">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                <p className="text-xs font-semibold text-gray-700">Đã xếp hết các đơn khả dụng</p>
+              <div className="flex-1 min-h-[140px] flex flex-col items-center justify-center py-6 px-4 text-center border-2 border-dashed border-orange-200/80 rounded-xl bg-orange-50/20 space-y-1.5">
+                <CheckCircle2 className="w-8 h-8 text-[#F85606] mx-auto stroke-1" />
+                <p className="text-xs font-bold text-gray-700">Đã xếp hết các đơn khả dụng</p>
                 <p className="text-[11px] text-gray-400">Không còn đơn chờ trong bộ lọc hiện tại</p>
               </div>
             ) : (
@@ -325,17 +295,17 @@ export const DeliveryTripCreatePage: React.FC = () => {
                   key={order.orderId}
                   draggable
                   onDragStart={(e) => handleDragStart(e, order)}
-                  className="p-3 bg-gray-50 hover:bg-blue-50/60 rounded-xl border border-gray-200 transition-all cursor-grab active:cursor-grabbing flex items-center justify-between gap-3 group"
+                  className="p-3 bg-gray-50 hover:bg-orange-50/40 rounded-xl border border-gray-200 transition-all cursor-grab active:cursor-grabbing flex items-center justify-between gap-3 group"
                 >
                   <div className="flex items-start gap-2 flex-1 min-w-0">
-                    <GripVertical className="w-4 h-4 text-gray-400 group-hover:text-blue-500 mt-1 shrink-0" />
+                    <GripVertical className="w-4 h-4 text-gray-400 group-hover:text-[#F85606] mt-1 shrink-0" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-bold text-gray-900 text-xs">
                           {order.orderCode}
                         </span>
                         {order.district && (
-                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 font-medium">
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-orange-100 text-orange-800 font-medium">
                             {order.district}
                           </span>
                         )}
@@ -349,7 +319,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
                       </div>
                       <div className="text-[11px] text-gray-600 font-mono mt-1 flex items-center justify-between">
                         <span>📞 {order.receiverPhone}</span>
-                        <strong className="text-blue-700">
+                        <strong className="text-[#F85606]">
                           {order.totalAmount?.toLocaleString('vi-VN')} đ
                         </strong>
                       </div>
@@ -361,7 +331,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
                     type="button"
                     onClick={() => handleAddStop(order)}
                     title="Đưa vào chuyến"
-                    className="p-2 bg-white hover:bg-blue-600 hover:text-white text-blue-600 rounded-lg border border-gray-200 transition-colors shadow-xs shrink-0"
+                    className="p-2 bg-white hover:bg-[#F85606] hover:text-white text-[#F85606] rounded-lg border border-gray-200 transition-colors shadow-xs shrink-0 cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -375,48 +345,54 @@ export const DeliveryTripCreatePage: React.FC = () => {
         <div
           onDragOver={handleDragOver}
           onDrop={handleDropToTrip}
-          className="bg-white p-5 rounded-2xl shadow-xs border border-blue-200 flex flex-col h-[640px]"
+          className="bg-white p-5 rounded-2xl shadow-xs border border-orange-200 flex flex-col h-full transition-all"
         >
-          <div className="border-b border-gray-100 pb-3 mb-3">
+          <div className="border-b border-gray-100 pb-3 mb-3 min-h-[76px] flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">2</span>
+                <span className="w-5 h-5 rounded-full bg-[#F85606] text-white flex items-center justify-center text-xs font-bold">2</span>
                 Lộ Trình Chuyến Xe ({assignedStops.length} điểm giao)
               </h2>
               {assignedStops.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setAssignedStops([])}
-                  className="text-xs font-semibold text-red-500 hover:underline"
+                  className="text-xs font-semibold text-red-500 hover:underline cursor-pointer"
                 >
                   Xóa tất cả
                 </button>
               )}
             </div>
-            <p className="text-[11px] text-gray-500 mt-0.5">
-              Thứ tự từ trên xuống dưới là thứ tự xe sẽ ghé giao (Kéo thả hoặc dùng nút ↑ ↓ để tối ưu vòng chạy)
-            </p>
+
+            <div className="mt-3 flex items-center justify-between text-xs text-gray-500 h-[31px]">
+              <span className="text-[11px] text-gray-400">Xe sẽ ghé giao lần lượt theo thứ tự từ trên xuống</span>
+              {assignedStops.length > 0 && (
+                <span className="font-bold text-[#F85606] text-xs">
+                  Tổng COD: {totalAssignedValue.toLocaleString('vi-VN')} đ
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Danh sách các điểm dừng trên chuyến */}
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+          <div className="flex-1 flex flex-col space-y-2 pr-1 max-h-[580px] overflow-y-auto">
             {assignedStops.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center p-8 text-center border-2 border-dashed border-blue-200 rounded-xl bg-blue-50/20 text-gray-500 space-y-2">
-                <Truck className="w-10 h-10 text-blue-400 stroke-1" />
+              <div className="flex-1 min-h-[140px] flex flex-col items-center justify-center py-6 px-4 text-center border-2 border-dashed border-orange-200/80 rounded-xl bg-orange-50/20 text-gray-500 space-y-1.5">
+                <Truck className="w-8 h-8 text-[#F85606] stroke-1" />
                 <p className="text-xs font-bold text-gray-700">Chưa có điểm giao nào trong chuyến</p>
                 <p className="text-[11px] text-gray-400 max-w-xs">
-                  Bấm nút <strong>"+"</strong> hoặc <strong>Kéo thả</strong> các phiếu xuất từ cột bên trái vào đây để xếp chuyến.
+                  Bấm nút <strong>"+"</strong> hoặc <strong>kéo thả</strong> các phiếu xuất từ cột bên trái vào đây để xếp chuyến.
                 </p>
               </div>
             ) : (
               assignedStops.map((stop, idx) => (
                 <div
                   key={stop.orderId}
-                  className="p-3 bg-white rounded-xl border-2 border-blue-100 hover:border-blue-300 transition-all shadow-xs flex items-center justify-between gap-2"
+                  className="p-3 bg-white rounded-xl border-2 border-orange-100 hover:border-orange-300 transition-all shadow-xs flex items-center justify-between gap-2"
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     {/* Số thứ tự điểm dừng */}
-                    <span className="w-7 h-7 rounded-lg bg-blue-600 text-white font-black flex items-center justify-center text-xs shrink-0 shadow-xs">
+                    <span className="w-7 h-7 rounded-lg bg-[#F85606] text-white font-black flex items-center justify-center text-xs shrink-0 shadow-xs">
                       #{idx + 1}
                     </span>
 
@@ -436,7 +412,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
                         <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
                         <span>{stop.deliveryAddress}</span>
                       </div>
-                      <div className="text-[11px] font-bold text-blue-700 font-mono mt-0.5">
+                      <div className="text-[11px] font-bold text-[#F85606] font-mono mt-0.5">
                         Thu COD: {stop.totalAmount?.toLocaleString('vi-VN')} đ
                       </div>
                     </div>
@@ -449,7 +425,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
                       disabled={idx === 0}
                       onClick={() => handleMoveStop(idx, 'UP')}
                       title="Chuyển lên đầu lộ trình"
-                      className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-gray-100 rounded-lg disabled:opacity-30"
+                      className="p-1.5 text-gray-500 hover:text-[#F85606] hover:bg-gray-100 rounded-lg disabled:opacity-30 cursor-pointer"
                     >
                       <ArrowUp className="w-4 h-4" />
                     </button>
@@ -458,7 +434,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
                       disabled={idx === assignedStops.length - 1}
                       onClick={() => handleMoveStop(idx, 'DOWN')}
                       title="Chuyển xuống sau"
-                      className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-gray-100 rounded-lg disabled:opacity-30"
+                      className="p-1.5 text-gray-500 hover:text-[#F85606] hover:bg-gray-100 rounded-lg disabled:opacity-30 cursor-pointer"
                     >
                       <ArrowDown className="w-4 h-4" />
                     </button>
@@ -466,7 +442,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
                       type="button"
                       onClick={() => handleRemoveStop(stop.orderId)}
                       title="Bỏ khỏi chuyến"
-                      className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-1"
+                      className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-1 cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -482,7 +458,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
               <span className="text-gray-600">
                 Tổng cộng: <strong className="text-gray-900">{assignedStops.length} điểm dừng</strong>
               </span>
-              <span className="text-blue-700 font-bold">
+              <span className="text-[#F85606] font-bold">
                 Tiền hàng trên xe: {totalAssignedValue.toLocaleString('vi-VN')} đ
               </span>
             </div>
@@ -495,15 +471,15 @@ export const DeliveryTripCreatePage: React.FC = () => {
       {/* ========================================================================= */}
       <form onSubmit={handleCreateTrip} className="bg-white p-6 rounded-2xl shadow-xs border border-gray-100 space-y-5">
         <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-3">
-          <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">3</span>
-          Gán Tài Xế & Phương Tiện Cho Chuyến Xe (AC2)
+          <span className="w-6 h-6 rounded-full bg-[#F85606] text-white flex items-center justify-center text-xs font-bold">3</span>
+          Gán Tài Xế & Phương Tiện Cho Chuyến Xe
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
           {/* Tên tài xế */}
           <div>
             <label className="block font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
-              <User className="w-4 h-4 text-blue-600" />
+              <User className="w-4 h-4 text-[#F85606]" />
               Tên tài xế / người giao: <span className="text-red-500">*</span>
             </label>
             <input
@@ -512,14 +488,14 @@ export const DeliveryTripCreatePage: React.FC = () => {
               onChange={(e) => setDriverName(e.target.value)}
               placeholder="Ví dụ: Nguyễn Văn Mạnh..."
               required
-              className="w-full font-medium border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-200 outline-none"
+              className="w-full font-medium border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none"
             />
           </div>
 
           {/* Số điện thoại tài xế */}
           <div>
             <label className="block font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
-              <Phone className="w-4 h-4 text-blue-600" />
+              <Phone className="w-4 h-4 text-[#F85606]" />
               Số điện thoại tài xế:
             </label>
             <input
@@ -527,14 +503,14 @@ export const DeliveryTripCreatePage: React.FC = () => {
               value={driverPhone}
               onChange={(e) => setDriverPhone(e.target.value)}
               placeholder="Ví dụ: 0912.334.556..."
-              className="w-full font-medium border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-200 outline-none"
+              className="w-full font-medium border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none"
             />
           </div>
 
           {/* Biển số xe */}
           <div>
             <label className="block font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
-              <Truck className="w-4 h-4 text-blue-600" />
+              <Truck className="w-4 h-4 text-[#F85606]" />
               Biển số xe / Phương tiện:
             </label>
             <input
@@ -542,14 +518,14 @@ export const DeliveryTripCreatePage: React.FC = () => {
               value={vehiclePlate}
               onChange={(e) => setVehiclePlate(e.target.value)}
               placeholder="Ví dụ: 29C-912.45..."
-              className="w-full font-mono font-bold border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-200 outline-none uppercase"
+              className="w-full font-mono font-bold border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none uppercase"
             />
           </div>
 
           {/* Thời gian dự kiến về kho */}
           <div>
             <label className="block font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-blue-600" />
+              <Clock className="w-4 h-4 text-[#F85606]" />
               Thời gian dự kiến giao xong & về kho: <span className="text-red-500">*</span>
             </label>
             <input
@@ -557,7 +533,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
               value={expectedReturnAt}
               onChange={(e) => setExpectedReturnAt(e.target.value)}
               required
-              className="w-full font-medium border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-200 outline-none"
+              className="w-full font-medium border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none"
             />
             <p className="text-[10px] text-gray-400 mt-1">
               Hệ thống sẽ tự động cảnh báo chuyến trễ hạn nếu quá thời gian này.
@@ -574,7 +550,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Ví dụ: Chú ý đường cấm xe tải giờ cao điểm, ưu tiên giao Đại lý VinMart trước 11h..."
-              className="w-full font-medium border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-200 outline-none"
+              className="w-full font-medium border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none"
             />
           </div>
         </div>
@@ -584,14 +560,14 @@ export const DeliveryTripCreatePage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/inventory/delivery-trips')}
-            className="px-5 py-2.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+            className="px-5 py-2.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
           >
             Hủy bỏ
           </button>
           <button
             type="submit"
             disabled={assignedStops.length === 0 || submitting}
-            className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2"
+            className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
           >
             {submitting ? (
               <>

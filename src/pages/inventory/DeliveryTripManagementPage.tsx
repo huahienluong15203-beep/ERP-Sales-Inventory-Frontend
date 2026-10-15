@@ -3,13 +3,13 @@ import {
   Truck,
   Plus,
   Eye,
-  Printer,
   CheckCircle2,
   AlertTriangle,
   Clock,
   RefreshCw,
-  User,
-  Package
+  Package,
+  CheckCheck,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
@@ -17,10 +17,9 @@ import type { DeliveryTrip, InTransitSummary } from '../../types/deliveryTrip';
 import {
   fetchDeliveryTrips,
   fetchInTransitSummary,
-  completeDeliveryTrip
+  completeTripWithAutoResolve
 } from '../../services/deliveryTripApi';
 import { SYSTEM_WAREHOUSES } from '../../types/inventory';
-import { DeliveryTripPrintModal } from '../../components/inventory/DeliveryTripPrintModal';
 
 export const DeliveryTripManagementPage: React.FC = () => {
   const navigate = useNavigate();
@@ -37,8 +36,8 @@ export const DeliveryTripManagementPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
   // Modals
-  const [selectedForPrint, setSelectedForPrint] = useState<DeliveryTrip | null>(null);
-  const [completingTripId, setCompletingTripId] = useState<number | null>(null);
+  const [pendingModalTrip, setPendingModalTrip] = useState<DeliveryTrip | null>(null);
+  const [resolvingStops, setResolvingStops] = useState<boolean>(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -60,67 +59,44 @@ export const DeliveryTripManagementPage: React.FC = () => {
     loadData();
   }, [warehouseId, statusFilter]);
 
-  // Xác nhận xe về kho / kết thúc chuyến
-  const handleConfirmComplete = async (trip: DeliveryTrip) => {
-    const confirm = window.confirm(
-      `Xác nhận xe ${trip.vehiclePlate} (${trip.driverName}) đã hoàn thành giao hàng và quay về kho?`
-    );
-    if (!confirm) return;
-
-    setCompletingTripId(trip.id);
+  // Tự động xác nhận giao đủ và kết thúc chuyến
+  const handleAutoResolveAndComplete = async () => {
+    if (!pendingModalTrip) return;
+    setResolvingStops(true);
     try {
-      await completeDeliveryTrip(trip.id);
-      showToast('Thành công', `Chuyến giao ${trip.code} đã kết thúc hoàn tất`, 'success');
-      loadData();
+      await completeTripWithAutoResolve(pendingModalTrip.id);
+      showToast(
+        'Thành công',
+        `Chuyến giao ${pendingModalTrip.code} đã hoàn tất và xe đã về kho thành công!`,
+        'success'
+      );
+      setPendingModalTrip(null);
+      await loadData();
     } catch (err: any) {
-      showToast('Lỗi', err.message || 'Không thể kết thúc chuyến giao', 'error');
+      showToast('Lỗi kết thúc chuyến', err.message || 'Không thể kết thúc chuyến giao', 'error');
     } finally {
-      setCompletingTripId(null);
+      setResolvingStops(false);
     }
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-xs border border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl shadow-md">
-            <Truck className="w-7 h-7" />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
-              Quản Lý Phân Tuyến Giao Hàng (Delivery Dispatch)
-            </h1>
-            <p className="text-xs md:text-sm text-gray-500 mt-0.5">
-              Gom nhiều phiếu xuất vào một chuyến xe, gán tài xế và in danh sách điểm giao theo khu vực (S6-06)
-            </p>
-          </div>
-        </div>
-
+    <div className="space-y-5 max-w-7xl mx-auto pb-12">
+      {/* Top Action Bar (Chỉ nút Lập chuyến mới, tiêu đề do MainLayout quản lý) */}
+      <div className="flex items-center justify-end">
         {isWarehouseStaff && (
           <button
             onClick={() => navigate('/inventory/delivery-trips/create')}
-            className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 text-sm"
+            className="px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-2 text-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            Lập chuyến giao mới
+            <span>Lập chuyến giao mới</span>
           </button>
         )}
       </div>
 
-      {/* KPI Stats Bar */}
+      {/* KPI Stats Bar (3 thẻ: Trễ hạn, Đơn hàng đang giao, Giá trị hàng trên xe) */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-xs flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-blue-600">Chuyến đang chạy</p>
-              <p className="text-xl font-bold text-gray-900 mt-0.5">{summary.runningTrips} chuyến</p>
-            </div>
-            <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
-              <Truck className="w-5 h-5" />
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
           <div className="bg-white p-4 rounded-xl border border-red-100 shadow-xs flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-red-600">Chuyến trễ hạn</p>
@@ -131,12 +107,12 @@ export const DeliveryTripManagementPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-amber-100 shadow-xs flex items-center justify-between">
+          <div className="bg-white p-4 rounded-xl border border-orange-100 shadow-xs flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-amber-600">Đơn hàng đang giao</p>
+              <p className="text-xs font-medium text-orange-600">Đơn hàng đang giao</p>
               <p className="text-xl font-bold text-gray-900 mt-0.5">{summary.ordersOnRoad} đơn</p>
             </div>
-            <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg">
+            <div className="p-2.5 bg-orange-50 text-orange-600 rounded-lg">
               <Package className="w-5 h-5" />
             </div>
           </div>
@@ -160,15 +136,15 @@ export const DeliveryTripManagementPage: React.FC = () => {
         <div className="flex flex-wrap gap-1.5 border-b border-gray-100 pb-3">
           {[
             { key: 'ALL', label: 'Tất cả chuyến xe' },
-            { key: 'IN_PROGRESS', label: 'Đang lưu thông (IN_PROGRESS)' },
-            { key: 'COMPLETED', label: 'Đã về kho (COMPLETED)' }
+            { key: 'IN_PROGRESS', label: 'Đang lưu thông' },
+            { key: 'COMPLETED', label: 'Đã về kho' }
           ].map((tab) => (
             <button
               key={tab.key}
               onClick={() => setStatusFilter(tab.key)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+              className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
                 statusFilter === tab.key
-                  ? 'bg-blue-600 text-white font-semibold shadow-xs'
+                  ? 'bg-[#F85606] text-white font-bold shadow-xs'
                   : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
               }`}
             >
@@ -182,7 +158,7 @@ export const DeliveryTripManagementPage: React.FC = () => {
             <select
               value={warehouseId ?? ''}
               onChange={(e) => setWarehouseId(e.target.value ? Number(e.target.value) : undefined)}
-              className="w-full text-xs font-medium border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-200 outline-none"
+              className="w-full text-xs font-medium border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none"
             >
               <option value="">🏢 Tất cả kho xuất phát</option>
               {SYSTEM_WAREHOUSES.map((wh) => (
@@ -203,8 +179,8 @@ export const DeliveryTripManagementPage: React.FC = () => {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-gray-500 space-y-3">
-            <RefreshCw className="w-8 h-8 animate-spin mx-auto text-blue-600" />
-            <p className="text-sm">Đang tải danh sách chuyến giao hàng...</p>
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto text-[#F85606]" />
+            <p className="text-sm font-semibold">Đang tải danh sách chuyến giao hàng...</p>
           </div>
         ) : trips.length === 0 ? (
           <div className="p-12 text-center space-y-3">
@@ -216,7 +192,7 @@ export const DeliveryTripManagementPage: React.FC = () => {
             {isWarehouseStaff && (
               <button
                 onClick={() => navigate('/inventory/delivery-trips/create')}
-                className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow transition-colors inline-flex items-center gap-1.5"
+                className="mt-2 px-4 py-2 bg-[#F85606] hover:bg-[#E04D05] text-white text-xs font-semibold rounded-lg shadow transition-colors inline-flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Lập chuyến đầu tiên
@@ -230,12 +206,10 @@ export const DeliveryTripManagementPage: React.FC = () => {
                 <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-700 font-bold uppercase text-[11px] tracking-wider">
                   <th className="py-3 px-4">Mã chuyến</th>
                   <th className="py-3 px-4">Kho xuất phát</th>
-                  <th className="py-3 px-4">Phương tiện & Tài xế</th>
                   <th className="py-3 px-4 text-center">Tiến độ điểm giao</th>
                   <th className="py-3 px-4 text-right">Tiền hàng trên xe</th>
-                  <th className="py-3 px-4">Thời gian xuất / Dự kiến về</th>
+                  <th className="py-3 px-4">Thời gian</th>
                   <th className="py-3 px-4 text-center">Trạng thái</th>
-                  <th className="py-3 px-4 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -243,44 +217,32 @@ export const DeliveryTripManagementPage: React.FC = () => {
                   const percent =
                     trip.totalStops > 0 ? Math.round((trip.deliveredStops / trip.totalStops) * 100) : 0;
                   return (
-                    <tr key={trip.id} className="hover:bg-blue-50/30 transition-colors">
+                    <tr
+                      key={trip.id}
+                      onClick={() => navigate(`/inventory/delivery-trips/${trip.id}`)}
+                      className="hover:bg-orange-50/40 transition-colors cursor-pointer group"
+                      title="Nhấn vào dòng để xem chi tiết chuyến giao hàng"
+                    >
                       <td className="py-3.5 px-4 font-mono font-bold text-gray-900">
-                        <button
-                          onClick={() => navigate(`/inventory/delivery-trips/${trip.id}`)}
-                          className="hover:text-blue-600 hover:underline flex items-center gap-1.5"
-                        >
-                          <Truck className="w-3.5 h-3.5 text-blue-600" />
-                          {trip.code}
-                        </button>
+                        <div className="group-hover:text-[#F85606] flex items-center gap-1.5 transition-colors">
+                          <Truck className="w-3.5 h-3.5 text-[#F85606]" />
+                          <span>{trip.code}</span>
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 font-medium text-gray-800">
                         {trip.warehouseName}
                       </td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-gray-900 flex items-center gap-1.5">
-                          <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200 text-[11px]">
-                            {trip.vehiclePlate || 'Xe giao hàng'}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-gray-600 flex items-center gap-1 mt-0.5">
-                          <User className="w-3 h-3 text-gray-400" />
-                          <span>{trip.driverName}</span>
-                          {trip.driverPhone && (
-                            <span className="text-gray-400">({trip.driverPhone})</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-center w-40">
+                      <td className="py-3.5 px-4 text-center w-44">
                         <div className="space-y-1">
                           <div className="flex justify-between text-[11px]">
                             <span className="font-semibold text-gray-700">
                               {trip.deliveredStops}/{trip.totalStops} điểm
                             </span>
-                            <span className="font-bold text-blue-600">{percent}%</span>
+                            <span className="font-bold text-[#F85606]">{percent}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
                             <div
-                              className="bg-blue-600 h-1.5 rounded-full transition-all"
+                              className="bg-[#F85606] h-1.5 rounded-full transition-all"
                               style={{ width: `${percent}%` }}
                             />
                           </div>
@@ -313,38 +275,6 @@ export const DeliveryTripManagementPage: React.FC = () => {
                           </span>
                         )}
                       </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => navigate(`/inventory/delivery-trips/${trip.id}`)}
-                            title="Xem chi tiết lộ trình"
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-
-                          {/* In danh sách điểm giao AC3 */}
-                          <button
-                            onClick={() => setSelectedForPrint(trip)}
-                            title="In danh sách điểm giao (AC3)"
-                            className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
-                          >
-                            <Printer className="w-4 h-4" />
-                          </button>
-
-                          {/* Xác nhận xe về kho */}
-                          {isWarehouseStaff && trip.status === 'IN_PROGRESS' && (
-                            <button
-                              onClick={() => handleConfirmComplete(trip)}
-                              disabled={completingTripId === trip.id}
-                              title="Xác nhận xe về kho / Kết thúc chuyến"
-                              className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-[11px] transition-colors"
-                            >
-                              Xe về kho
-                            </button>
-                          )}
-                        </div>
-                      </td>
                     </tr>
                   );
                 })}
@@ -354,12 +284,81 @@ export const DeliveryTripManagementPage: React.FC = () => {
         )}
       </div>
 
-      {/* Modal In Bảng Kê Điểm Giao */}
-      <DeliveryTripPrintModal
-        isOpen={Boolean(selectedForPrint)}
-        trip={selectedForPrint}
-        onClose={() => setSelectedForPrint(null)}
-      />
+      {/* Modal Xác nhận Xe về kho khi còn điểm giao chưa cập nhật */}
+      {pendingModalTrip && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 space-y-5">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-amber-100 text-amber-600 rounded-xl">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-gray-900">
+                    Xác Nhận Xe Về Kho ({pendingModalTrip.code})
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Xe: <strong>{pendingModalTrip.vehiclePlate}</strong> • Tài xế: <strong>{pendingModalTrip.driverName}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPendingModalTrip(null)}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900 space-y-1.5">
+              <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                <span>⚠️ Chuyến xe còn {pendingModalTrip.remainingStops}/{pendingModalTrip.totalStops} điểm chưa ghi nhận kết quả</span>
+              </div>
+              <p className="leading-relaxed text-amber-700">
+                Theo quy chuẩn ERP, chuyến xe chỉ được kết thúc khi tất cả hàng hoá trên xe đã được xác nhận kết quả (đã giao thành công hoặc ghi nhận không giao được).
+              </p>
+              <div className="pt-1 text-[11px] font-semibold text-amber-900 flex justify-between">
+                <span>Tiền hàng còn trên xe:</span>
+                <span className="font-mono font-bold">{pendingModalTrip.valueOnRoad?.toLocaleString('vi-VN')} đ</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <button
+                onClick={handleAutoResolveAndComplete}
+                disabled={resolvingStops}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50"
+              >
+                {resolvingStops ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCheck className="w-4 h-4" />
+                )}
+                <span>Xác nhận giao đủ tất cả & Cho xe về kho</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  const id = pendingModalTrip.id;
+                  setPendingModalTrip(null);
+                  navigate(`/inventory/delivery-trips/${id}`);
+                }}
+                className="w-full py-2.5 px-4 rounded-xl border border-orange-200 bg-orange-50/50 hover:bg-orange-100 text-orange-700 font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+              >
+                <Eye className="w-4 h-4 text-orange-600" />
+                <span>Xem chi tiết chuyến để xử lý từng điểm giao</span>
+              </button>
+
+              <button
+                onClick={() => setPendingModalTrip(null)}
+                className="w-full py-2 text-center text-xs text-gray-500 hover:text-gray-700 font-medium cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
