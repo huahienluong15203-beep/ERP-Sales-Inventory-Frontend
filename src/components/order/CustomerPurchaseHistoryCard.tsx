@@ -308,8 +308,8 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                             <div
                               key={prod.sku}
                               className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-3 ${isAlreadyInCart
-                                  ? 'bg-orange-50/30 border-orange-200 shadow-xs'
-                                  : 'bg-white border-gray-200/90 hover:border-orange-300 hover:shadow-xs'
+                                ? 'bg-orange-50/30 border-orange-200 shadow-xs'
+                                : 'bg-white border-gray-200/90 hover:border-orange-300 hover:shadow-xs'
                                 }`}
                             >
                               <div className="space-y-2">
@@ -376,10 +376,10 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                                   <span className="text-gray-500">Tồn kho khả dụng:</span>
                                   <span
                                     className={`font-bold ${!hasStock
-                                        ? 'text-rose-600'
-                                        : (prod.availableInPreferredUnit ?? 99) < 20
-                                          ? 'text-amber-600'
-                                          : 'text-emerald-700'
+                                      ? 'text-rose-600'
+                                      : (prod.availableInPreferredUnit ?? 99) < 20
+                                        ? 'text-amber-600'
+                                        : 'text-emerald-700'
                                       }`}
                                   >
                                     {!hasStock
@@ -394,8 +394,8 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                                 type="button"
                                 onClick={() => onQuickAddSingleProduct(prod)}
                                 className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${isAlreadyInCart
-                                    ? 'bg-orange-100 hover:bg-orange-200 text-[#F85606]'
-                                    : 'bg-gray-900 hover:bg-[#F85606] text-white shadow-xs'
+                                  ? 'bg-orange-100 hover:bg-orange-200 text-[#F85606]'
+                                  : 'bg-gray-900 hover:bg-[#F85606] text-white shadow-xs'
                                   }`}
                                 title={`Thêm ${prod.name} (${prod.preferredUnit}) vào đơn`}
                               >
@@ -403,7 +403,7 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                                 <span>
                                   {isAlreadyInCart
                                     ? `Thêm tiếp (+${Math.max(1, Math.round(prod.avgQuantityPerOrder))} ${prod.preferredUnit})`
-                                    : `+ Gợi ý thêm (${Math.max(1, Math.round(prod.avgQuantityPerOrder))} ${prod.preferredUnit})`}
+                                    : `Gợi ý thêm (+${Math.max(1, Math.round(prod.avgQuantityPerOrder))} ${prod.preferredUnit})`}
                                 </span>
                               </button>
                             </div>
@@ -491,11 +491,10 @@ export const CustomerPurchaseHistoryCard: React.FC<CustomerPurchaseHistoryCardPr
                                   key={p}
                                   type="button"
                                   onClick={() => setCurrentPage(p)}
-                                  className={`w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center transition cursor-pointer ${
-                                    currentPage === p
-                                      ? 'bg-[#F85606] text-white shadow-2xs'
-                                      : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                                  }`}
+                                  className={`w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center transition cursor-pointer ${currentPage === p
+                                    ? 'bg-[#F85606] text-white shadow-2xs'
+                                    : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                                    }`}
                                 >
                                   {p}
                                 </button>
