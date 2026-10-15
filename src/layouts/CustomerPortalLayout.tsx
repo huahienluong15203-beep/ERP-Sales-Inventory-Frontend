@@ -27,8 +27,8 @@ interface CustomerPortalLayoutProps {
   cartItemCount?: number;
   cartTotalAmount?: number;
   onOpenCart?: () => void;
-  activeTab?: 'catalog' | 'history';
-  onChangeTab?: (tab: 'catalog' | 'history') => void;
+  activeTab?: 'catalog' | 'history' | 'debt';
+  onChangeTab?: (tab: 'catalog' | 'history' | 'debt') => void;
 }
 
 /**
@@ -309,6 +309,17 @@ export const CustomerPortalLayout: React.FC<CustomerPortalLayoutProps> = ({
               >
                 <Clock size={15} />
                 <span>Đơn hàng đã đặt của đại lý</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onChangeTab('debt')}
+                className={`py-2.5 text-xs sm:text-sm font-bold border-b-2 transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'debt'
+                    ? 'border-[#F85606] text-[#F85606]'
+                    : 'border-transparent text-gray-500 hover:text-gray-900'
+                  }`}
+              >
+                <Layers size={15} />
+                <span>Công nợ & Hoá đơn</span>
               </button>
             </div>
           </div>
