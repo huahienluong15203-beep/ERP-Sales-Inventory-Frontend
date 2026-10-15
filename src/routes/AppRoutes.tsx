@@ -45,6 +45,7 @@ import { DeliveryTripManagementPage } from '../pages/inventory/DeliveryTripManag
 import { DeliveryTripCreatePage } from '../pages/inventory/DeliveryTripCreatePage';
 import { DeliveryTripDetailPage } from '../pages/inventory/DeliveryTripDetailPage';
 import { DebtAdjustmentPage } from '../pages/payment/DebtAdjustmentPage';
+import { ProductLotManagementPage } from '../pages/inventory/ProductLotManagementPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -71,16 +72,16 @@ export const AppRoutes: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // 2b. S4-10: Cổng đại lý đặt hàng (B2B Customer Portal)
-  // Khách hàng/đại lý (ROLE_CUSTOMER) không dùng giao diện Dashboard nội bộ, luôn vào thẳng cổng đặt hàng
+  // Cổng đại lý đặt hàng & Quản lý công nợ (B2B Customer Portal)
+  // Khách hàng/đại lý (ROLE_CUSTOMER) không dùng giao diện Dashboard nội bộ, luôn vào thẳng cổng đặt hàng & công nợ
   if (currentRole === 'ROLE_CUSTOMER') {
-    if (pathname !== '/portal') {
+    if (pathname !== '/portal' && pathname !== '/portal/debt') {
       return <Navigate to="/portal" replace />;
     }
     return <CustomerOrderPortalPage />;
   }
 
-  if (pathname === '/portal') {
+  if (pathname === '/portal' || pathname === '/portal/debt') {
     return <CustomerOrderPortalPage />;
   }
 
@@ -446,6 +447,24 @@ export const AppRoutes: React.FC = () => {
           }
         />
         <Route path="/warehouses" element={<Navigate to="/inventory/warehouses" replace />} />
+
+        {/* Theo dõi lô & hạn sử dụng, cảnh báo cận date */}
+        <Route
+          path="/inventory/lots"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <ProductLotManagementPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* S6-03: Phiếu soạn hàng (Wave Picking) */}
         <Route

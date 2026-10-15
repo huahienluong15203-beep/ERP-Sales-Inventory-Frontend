@@ -36,6 +36,7 @@ import { OrderItemRow } from '../../components/order/OrderItemRow';
 import { ProductPickerModal } from '../../components/order/ProductPickerModal';
 import { OrderDraftsModal } from '../../components/order/OrderDraftsModal';
 import { CustomerPurchaseHistoryCard } from '../../components/order/CustomerPurchaseHistoryCard';
+import { DebtWarningBanner } from '../../components/customer/DebtWarningBanner';
 import {
   ShoppingCart,
   Plus,
@@ -855,11 +856,13 @@ export const OrderCreatePage: React.FC = () => {
 
       {/* Nội dung tạo đơn */}
       <div className="space-y-3.5">
-
-
-
-
-        {/* CẢNH BÁO TỪ BACKEND NẾU CÓ (S3-07 / S3-09) */}
+        {/* CẢNH BÁO NỢ QUÁ HẠN & KHÓA GIAO DỊCH TỰ ĐỘNG */}
+        {selectedAgency && creditStatus && (
+          <DebtWarningBanner
+            creditStatus={creditStatus}
+            customerName={selectedAgency.name}
+          />
+        )}
         {backendWarnings.length > 0 && (
           <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 space-y-1.5 animate-in fade-in">
             {backendWarnings.map((warn, wIdx) => (
@@ -1274,7 +1277,6 @@ export const OrderCreatePage: React.FC = () => {
         onSelectDraft={handleSelectSavedDraft}
         onDeleteDraft={handleDeleteDraft}
       />
-
     </div>
   );
 };
