@@ -214,12 +214,51 @@ export interface OrderBackendResponse {
   createdAt?: string;
   updatedAt?: string;
   warnings?: string[];
-  // S5-01: Cảnh báo giao thiếu hàng
+  // Cảnh báo giao thiếu hàng
   hasShortage?: boolean | null;
   shortageLineCount?: number | null;
-  // S4-06 & S4-08: Huỷ đơn / Từ chối duyệt
+  // Huỷ đơn / Từ chối duyệt
   cancelReason?: string | null;
   lastApprovalComment?: string | null;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
+  approvedByUsername?: string | null;
+  cancelledAt?: string | null;
+  cancelledByUsername?: string | null;
+  // Xuất kho, đơn nợ hàng và thông tin giao hàng
+  fulfillment?: OrderFulfillmentInfo | null;
+}
+
+export interface OrderFulfillmentInfo {
+  dispatchedAt?: string | null;
+  dispatchedByUsername?: string | null;
+  dispatchNote?: string | null;
+  backorder?: boolean;
+  parentOrderId?: number | null;
+  parentOrderCode?: string | null;
+  backorderCodes?: string[];
+  receiverName?: string | null;
+  deliveredAt?: string | null;
+  deliveryConfirmedAt?: string | null;
+  deliveryConfirmedByUsername?: string | null;
+  hasDeliveryProof?: boolean;
+  deliveryFailedReason?: string | null;
+  deliveryFailedAt?: string | null;
+}
+
+export interface OrderDispatchRequest {
+  lines?: Array<{
+    lineId: number;
+    dispatchedQuantity: number;
+    shortageReason?: string;
+  }>;
+  note?: string;
+  createBackorder?: boolean;
+}
+
+export interface OrderDispatchResponse {
+  order: OrderBackendResponse;
+  backorder?: OrderBackendResponse | null;
 }
 
 export interface ProductOptionBackendResponse {
@@ -259,8 +298,10 @@ export interface OrderSummaryItem {
   createdByUsername?: string | null;
   updatedAt?: string | null;
   salesRepId?: number | null;
-  // S5-01: Cảnh báo giao thiếu hàng
+  // Cảnh báo giao thiếu hàng và đơn nợ hàng (Backorder)
   hasShortage?: boolean | null;
+  backorder?: boolean | null;
+  parentOrderCode?: string | null;
   salesRepName?: string | null;
   regionId?: number | null;
   regionName?: string | null;

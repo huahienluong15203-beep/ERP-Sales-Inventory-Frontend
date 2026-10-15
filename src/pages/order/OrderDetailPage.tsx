@@ -44,6 +44,7 @@ import { OrderApprovalActionModal, type ApprovalActionType } from '../../compone
 import { OrderLifecycleTimeline } from '../../components/order/OrderLifecycleTimeline';
 import { OrderCancelModal } from '../../components/order/OrderCancelModal';
 import { OrderPdfPreviewModal } from '../../components/order/OrderPdfPreviewModal';
+import { OrderDispatchModal } from '../../components/order/OrderDispatchModal';
 import { getUserFullName } from '../../lib/userFormatters';
 
 export const OrderDetailPage: React.FC = () => {
@@ -64,6 +65,7 @@ export const OrderDetailPage: React.FC = () => {
   }>({ isOpen: false, actionType: 'APPROVE' });
   const [isCancelModalOpen, setIsCancelModalOpen] = useState<boolean>(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
+  const [isDispatchModalOpen, setIsDispatchModalOpen] = useState<boolean>(false);
   const [updatingStatus, setUpdatingStatus] = useState<boolean>(false);
   const [cloningOrder, setCloningOrder] = useState<boolean>(false);
 
@@ -422,10 +424,10 @@ export const OrderDetailPage: React.FC = () => {
             <button
               type="button"
               disabled={updatingStatus}
-              onClick={() => handleUpdateStatus('DISPATCHED', 'Đã xuất kho')}
+              onClick={() => setIsDispatchModalOpen(true)}
               className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
             >
-              <Truck size={14} className={updatingStatus ? 'animate-spin' : ''} />
+              <Truck size={14} />
               <span>Xác nhận xuất kho</span>
             </button>
           )}
@@ -537,7 +539,7 @@ export const OrderDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. S4-06: TIMELINE HÀNH TRÌNH VÒNG ĐỜI ĐƠN HÀNG */}
+      {/* 3. TIMELINE HÀNH TRÌNH VÒNG ĐỜI ĐƠN HÀNG */}
       <OrderLifecycleTimeline
         status={order.status}
         cancelReason={order.lastApprovalComment || order.cancelReason || undefined}
@@ -545,6 +547,68 @@ export const OrderDetailPage: React.FC = () => {
         createdAt={order.createdAt}
         desiredDeliveryDate={order.desiredDeliveryDate || undefined}
       />
+
+      {/* THÔNG TIN CHỨNG TỪ XUẤT KHO (ĐÃ XÁC NHẬN - BẤT BIẾN KHÔNG SỬA ĐƯỢC) */}
+      {['DISPATCHED', 'DELIVERED', 'CLOSED'].includes(order.status) && (
+        <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200 text-xs text-teal-950 space-y-2.5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 font-bold text-teal-900 text-sm">
+              <Truck size={17} className="text-teal-700" />
+              <span>Chứng từ xuất kho (Đã xác nhận — Bất biến không sửa đổi)</span>
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-300">
+              Đã khóa phiếu xuất
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-gray-700">
+            <div>
+              <span className="text-gray-400 block text-[11px]">Người xác nhận xuất:</span>
+              <strong className="text-gray-900">{order.fulfillment?.dispatchedByUsername || 'Thủ kho'}</strong>
+            </div>
+            <div>
+              <span className="text-gray-400 block text-[11px]">Thời điểm xuất kho:</span>
+              <strong className="text-gray-900">
+                {order.fulfillment?.dispatchedAt ? new Date(order.fulfillment.dispatchedAt).toLocaleString('vi-VN') : '—'}
+              </strong>
+            </div>
+            <div>
+              <span className="text-gray-400 block text-[11px]">Ghi chú xuất kho:</span>
+              <span className="text-gray-800 italic">
+                {order.fulfillment?.dispatchNote || 'Hàng đã xuất theo biên bản giao nhận'}
+              </span>
+            </div>
+          </div>
+
+          {/* Nếu đơn này là đơn nợ hàng tách từ đơn gốc */}
+          {order.fulfillment?.backorder && order.fulfillment.parentOrderCode && (
+            <div className="p-2.5 rounded-xl bg-amber-100/70 border border-amber-300 text-amber-950 flex items-center justify-between">
+              <span>Đơn này là <strong>Đơn nợ hàng</strong> được tách từ lần xuất thiếu của đơn gốc:</span>
+              <button
+                type="button"
+                onClick={() => order.fulfillment?.parentOrderId && navigate(`/orders/${order.fulfillment.parentOrderId}`)}
+                className="font-mono font-bold text-orange-700 hover:underline cursor-pointer"
+              >
+                {order.fulfillment.parentOrderCode}
+              </button>
+            </div>
+          )}
+
+          {/* Nếu đơn này đã sinh ra đơn nợ hàng con */}
+          {order.fulfillment?.backorderCodes && order.fulfillment.backorderCodes.length > 0 && (
+            <div className="p-2.5 rounded-xl bg-amber-100/70 border border-amber-300 text-amber-950 flex items-center justify-between">
+              <span>Đơn hàng này đã tách ra các <strong>Đơn nợ hàng</strong> để giao ở lượt sau:</span>
+              <div className="flex items-center gap-1.5 font-mono font-bold text-orange-700">
+                {order.fulfillment.backorderCodes.map((code) => (
+                  <span key={code} className="bg-white px-2 py-0.5 rounded border border-amber-300">
+                    {code}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 4. CẢNH BÁO PHÊ DUYỆT NGOẠI LỆ HOẶC GIAO THIẾU HÀNG */}
       {order.warnings && order.warnings.length > 0 && (
@@ -983,12 +1047,31 @@ export const OrderDetailPage: React.FC = () => {
         onSuccess={() => loadOrderDetail()}
       />
 
-      {/* MODAL XEM TRƯỚC VÀ IN PDF (S4-08) */}
+      {/* MODAL XEM TRƯỚC VÀ IN PDF */}
       <OrderPdfPreviewModal
         isOpen={isPdfModalOpen}
         order={order}
         onClose={() => setIsPdfModalOpen(false)}
       />
+
+      {/* MODAL XÁC NHẬN XUẤT KHO VÀ GIAO THIẾU */}
+      {isDispatchModalOpen && order && (
+        <OrderDispatchModal
+          isOpen={isDispatchModalOpen}
+          order={order}
+          onClose={() => setIsDispatchModalOpen(false)}
+          onSuccess={(result) => {
+            showToast('Xác nhận xuất kho thành công', 'success');
+            if (result.backorder) {
+              showToast(
+                `Đã tự động tạo đơn nợ hàng mới: ${result.backorder.code} để giao ở lượt sau`,
+                'success'
+              );
+            }
+            loadOrderDetail();
+          }}
+        />
+      )}
     </div>
   );
 };
