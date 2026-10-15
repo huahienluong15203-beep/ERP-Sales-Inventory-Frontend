@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import {
   ArrowLeft,
   Warehouse,
-  Building2,
   Package,
   Plus,
   Minus,
@@ -774,9 +773,13 @@ export const GoodsReceiptCreatePage: React.FC = () => {
 
       {/* 3. KHỐI 1: THÔNG TIN CHỨNG TỪ & NHÀ CUNG CẤP */}
       <div className="bg-white rounded-3xl p-5 sm:p-6 border border-gray-200 shadow-2xs space-y-5">
-        <div className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wider pb-2 border-b border-gray-100">
-          <Building2 size={16} className="text-[#F85606]" />
-          <span>1. Thông Tin Nhà Cung Cấp & Kho Nhận Hàng</span>
+        <div className="flex items-center gap-2.5 pb-2 border-b border-gray-100">
+          <div className="w-6 h-6 rounded-lg bg-[#F85606] text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
+            1
+          </div>
+          <h2 className="text-xs sm:text-sm font-black text-gray-900 uppercase tracking-wider">
+            Thông Tin Nhà Cung Cấp & Kho Nhận Hàng
+          </h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -891,10 +894,12 @@ export const GoodsReceiptCreatePage: React.FC = () => {
       {/* 4. KHỐI 2: CHI TIẾT SẢN PHẨM ĐÃ CHỌN NHẬP KHO (TÁCH 2 CỘT SỐ LÔ & HẠN DÙNG) */}
       <div id="receipt-lines-section" className="bg-white rounded-3xl border border-gray-200 shadow-2xs overflow-hidden space-y-0">
         <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-gray-50/90 to-white">
-          <div className="flex items-center gap-2">
-            <Package size={18} className="text-[#F85606]" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-lg bg-[#F85606] text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
+              2
+            </div>
             <h2 className="text-xs sm:text-sm font-black text-gray-900 uppercase tracking-wider">
-              2. Chi Tiết Dòng Hàng Nhập Kho ({lines.length} mặt hàng)
+              Chi Tiết Dòng Hàng Nhập Kho ({lines.length} mặt hàng)
             </h2>
           </div>
 
@@ -928,7 +933,7 @@ export const GoodsReceiptCreatePage: React.FC = () => {
                 className="inline-flex items-center gap-1 font-bold text-[#F85606] bg-orange-100/70 hover:bg-orange-200/80 px-2 py-0.5 rounded-md border border-orange-300 hover:border-[#F85606] cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-2xs group align-baseline"
                 title="Bấm để cuộn nhanh xuống danh mục sản phẩm"
               >
-                <span>+ Thêm vào phiếu</span>
+                <span>Thêm vào phiếu</span>
                 <ArrowDown size={12} className="text-[#F85606] inline transition-transform group-hover:translate-y-0.5 animate-bounce" />
               </button>{' '}
               để đưa các mặt hàng vào phiếu nhập kho.
@@ -1085,37 +1090,19 @@ export const GoodsReceiptCreatePage: React.FC = () => {
         <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-orange-50/60 via-amber-50/20 to-white">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-[#F85606] text-white flex items-center justify-center font-black text-xs shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-lg bg-[#F85606] text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
                   3
                 </div>
-                <h2 className="text-sm sm:text-base font-black text-gray-900 uppercase tracking-tight">
+                <h2 className="text-xs sm:text-sm font-black text-gray-900 uppercase tracking-wider">
                   Danh Mục Sản Phẩm Để Chọn Nhập Kho
                 </h2>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Bấm nút <strong className="text-[#F85606]">+ Thêm vào phiếu</strong> để đưa sản phẩm vào danh sách dòng hàng. Chọn số trang hoặc số dòng/trang bên dưới để duyệt toàn bộ danh mục.
-              </p>
+
             </div>
 
             {/* Phân trang rõ ràng */}
-            <div className="flex items-center gap-2 self-start md:self-auto">
-              <div className="px-3.5 py-1.5 rounded-xl bg-orange-50 border border-orange-200 text-orange-900 font-bold text-xs flex items-center gap-2 shadow-2xs">
-                <span>
-                  Đang hiển thị:{' '}
-                  <strong className="text-[#F85606] font-mono">
-                    {catalogTotalElements === 0 ? 0 : catalogPage * catalogPageSize + 1}–{Math.min((catalogPage + 1) * catalogPageSize, catalogTotalElements)}
-                  </strong>{' '}
-                  /{' '}
-                  <strong className="font-mono">{catalogTotalElements}</strong> sản phẩm
-                </span>
-                <span className="text-orange-300">•</span>
-                <span>
-                  Trang <strong className="font-mono">{catalogTotalPages > 0 ? catalogPage + 1 : 0}</strong> /{' '}
-                  <strong className="font-mono">{catalogTotalPages}</strong>
-                </span>
-              </div>
-            </div>
+
           </div>
 
           {/* Ô tìm kiếm & Bộ lọc ngành hàng */}
@@ -1190,15 +1177,6 @@ export const GoodsReceiptCreatePage: React.FC = () => {
           )}
         </div>
 
-        {/* Thanh tiến trình tải sản phẩm */}
-        <div className="w-full bg-gray-100 h-1">
-          <div
-            className="bg-gradient-to-r from-orange-500 to-amber-500 h-1 transition-all duration-300"
-            style={{
-              width: `${Math.min(100, Math.round((catalogProducts.length / Math.max(1, catalogTotalElements)) * 100))}%`
-            }}
-          />
-        </div>
 
         {/* Bảng Danh Sách Sản Phẩm Mở Rộng Toàn Trang */}
         {loadingCatalog ? (
@@ -1229,10 +1207,10 @@ export const GoodsReceiptCreatePage: React.FC = () => {
                   <th className="py-3 px-2 text-center w-10">#</th>
                   <th className="py-3 px-3 min-w-[140px]">Mã SKU</th>
                   <th className="py-3 px-3 min-w-[280px]">Tên sản phẩm</th>
-                  <th className="py-3 px-3 min-w-[150px]">Ngành hàng</th>
+                  <th className="py-3 px-3 min-w-[150px]">Nhóm hàng</th>
                   <th className="py-3 px-3 text-center min-w-[100px]">ĐVT Cơ sở</th>
-                  <th className="py-3 px-3 text-right min-w-[130px]">Giá vốn tham chiếu</th>
-                  <th className="py-3 px-3 text-center min-w-[180px]">Thao tác</th>
+                  <th className="py-3 px-3 text-right min-w-[130px]">Giá vốn</th>
+                  <th className="py-3 px-3 text-center min-w-[140px]">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -1243,9 +1221,8 @@ export const GoodsReceiptCreatePage: React.FC = () => {
                   return (
                     <tr
                       key={prod.id}
-                      className={`hover:bg-orange-50/30 transition-colors ${
-                        isSelected ? 'bg-orange-50/40' : selectedInfo ? 'bg-orange-50/15' : ''
-                      }`}
+                      className={`hover:bg-orange-50/30 transition-colors ${isSelected ? 'bg-orange-50/40' : selectedInfo ? 'bg-orange-50/15' : ''
+                        }`}
                     >
                       <td className="py-3 px-3 text-center">
                         <input
@@ -1281,22 +1258,23 @@ export const GoodsReceiptCreatePage: React.FC = () => {
                       <td className="py-3 px-3 text-right font-mono font-bold text-gray-800">
                         {formatCurrencyVND(prod.costPrice || 0)}
                       </td>
-                      <td className="py-3 px-3 text-center">
+                      <td className="py-3.5 px-3 text-center">
                         {selectedInfo ? (
-                          <div className="inline-flex items-center gap-1.5">
-                            <span className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px] inline-flex items-center gap-1">
-                              <Check size={12} />
-                              <span>Đã chọn ({selectedInfo.qty} {selectedInfo.unit})</span>
+                          <button
+                            type="button"
+                            onClick={() => handleAddProductToReceipt(prod)}
+                            className="relative px-3.5 py-1.5 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer active:scale-95 group"
+                            title={`Đã thêm ${selectedInfo.qty} ${selectedInfo.unit} vào phiếu. Bấm để tăng thêm 1`}
+                          >
+                            {/* Huy hiệu số lượng nhỏ trên đầu nút, tự tăng lên khi bấm thêm tiếp */}
+                            <span className="absolute -top-2.5 -right-2 bg-emerald-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full border-2 border-white shadow-xs flex items-center gap-0.5 whitespace-nowrap animate-in zoom-in-75">
+                              <Check size={10} strokeWidth={3} />
+                              <span>{selectedInfo.qty}</span>
+                              <span className="text-[9px] font-medium opacity-95">{selectedInfo.unit}</span>
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => handleAddProductToReceipt(prod)}
-                              className="px-2.5 py-1 rounded-lg bg-[#F85606] hover:bg-orange-600 text-white font-bold text-[11px] transition cursor-pointer shadow-2xs active:scale-95"
-                              title="Tăng thêm 1 số lượng"
-                            >
-                              + Thêm tiếp
-                            </button>
-                          </div>
+                            <Plus size={14} />
+                            <span>Thêm tiếp</span>
+                          </button>
                         ) : (
                           <button
                             type="button"
