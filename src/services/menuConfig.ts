@@ -73,6 +73,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Hóa đơn bán hàng',
+    path: '/invoices',
+    group: 'Bán hàng',
+    icon: 'Receipt',
+    epic: 'Bán hàng & Hóa đơn',
+    description: 'Phát hành hoá đơn từ phiếu đã giao (POD), gộp nhiều phiếu, xuất mẫu in A4',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
+  },
+
+  {
     title: 'Danh mục sản phẩm',
     path: '/products',
     group: 'Sản phẩm & Kho',

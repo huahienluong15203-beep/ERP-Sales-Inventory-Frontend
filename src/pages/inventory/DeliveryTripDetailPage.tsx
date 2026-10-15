@@ -22,10 +22,10 @@ import {
   fetchDeliveryTripById,
   completeDeliveryTrip,
   confirmStopDelivery,
-  failStopDelivery,
   completeTripWithAutoResolve
 } from '../../services/deliveryTripApi';
 import { DeliveryTripPrintModal } from '../../components/inventory/DeliveryTripPrintModal';
+import { DeliveryProofModal } from '../../components/delivery/DeliveryProofModal';
 
 export const DeliveryTripDetailPage: React.FC = () => {
   const navigate = useNavigate();
@@ -38,7 +38,18 @@ export const DeliveryTripDetailPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
   const [completing, setCompleting] = useState<boolean>(false);
-  const [processingStopId, setProcessingStopId] = useState<number | null>(null);
+
+  // S6-08: Quản lý Modal xác nhận giao hàng & Tải ảnh chứng từ chữ ký (POD)
+  const [proofModalState, setProofModalState] = useState<{
+    isOpen: boolean;
+    orderId: number;
+    orderCode: string;
+    customerName?: string;
+    deliveryAddress?: string;
+    receiverPhone?: string;
+    isDelivered?: boolean;
+    mode: 'CONFIRM' | 'FAIL' | 'VIEW';
+  } | null>(null);
 
   const loadData = async () => {
     if (!id) return;
@@ -56,41 +67,6 @@ export const DeliveryTripDetailPage: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [id]);
-
-  // Xác nhận 1 điểm đã giao thành công
-  const handleConfirmSingleStop = async (orderId: number, orderCode: string) => {
-    setProcessingStopId(orderId);
-    try {
-      await confirmStopDelivery(orderId);
-      showToast('Thành công', `Đơn hàng ${orderCode} đã xác nhận giao thành công!`, 'success');
-      await loadData();
-    } catch (err: any) {
-      showToast('Lỗi xác nhận giao hàng', err.message || 'Không thể xác nhận giao hàng', 'error');
-    } finally {
-      setProcessingStopId(null);
-    }
-  };
-
-  // Ghi nhận 1 điểm giao không thành công
-  const handleFailSingleStop = async (orderId: number, orderCode: string) => {
-    const reason = window.prompt(`Nhập lý do giao không thành công cho đơn ${orderCode} (ví dụ: Khách vắng nhà, Khách dời lịch, Sai địa chỉ...):`);
-    if (reason === null) return;
-    if (!reason.trim()) {
-      showToast('Cảnh báo', 'Vui lòng nhập lý do giao không thành công', 'info');
-      return;
-    }
-
-    setProcessingStopId(orderId);
-    try {
-      await failStopDelivery(orderId, reason);
-      showToast('Đã ghi nhận', `Đơn hàng ${orderCode} đã ghi nhận giao không thành công. Hàng sẽ được nhập lại kho khi xe về.`, 'info');
-      await loadData();
-    } catch (err: any) {
-      showToast('Lỗi ghi nhận', err.message || 'Không thể ghi nhận giao thất bại', 'error');
-    } finally {
-      setProcessingStopId(null);
-    }
-  };
 
   // Xác nhận giao tất cả các điểm còn lại
   const handleConfirmAllStops = async () => {
@@ -436,29 +412,72 @@ export const DeliveryTripDetailPage: React.FC = () => {
                     )}
                   </td>
                   <td className="py-3 px-3 text-center">
-                    <div className="flex items-center justify-center gap-1.5">
+                    <div className="flex items-center justify-center gap-1.5 flex-wrap">
                       {isWarehouseStaff && trip.status === 'IN_PROGRESS' && stop.status === 'DISPATCHED' && (
                         <>
                           <button
-                            onClick={() => handleConfirmSingleStop(stop.orderId, stop.orderCode)}
-                            disabled={processingStopId === stop.orderId}
-                            className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                            title="Xác nhận điểm này đã giao hàng thành công"
+                            onClick={() =>
+                              setProofModalState({
+                                isOpen: true,
+                                orderId: stop.orderId,
+                                orderCode: stop.orderCode,
+                                customerName: stop.customerName || undefined,
+                                deliveryAddress: stop.deliveryAddress || undefined,
+                                receiverPhone: stop.receiverPhone || undefined,
+                                isDelivered: false,
+                                mode: 'CONFIRM'
+                              })
+                            }
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                            title="Xác nhận giao thành công & Tải ảnh biên bản có chữ ký (POD)"
                           >
                             <Check className="w-3.5 h-3.5" />
-                            Đã giao
+                            Xác nhận giao
                           </button>
                           <button
-                            onClick={() => handleFailSingleStop(stop.orderId, stop.orderCode)}
-                            disabled={processingStopId === stop.orderId}
-                            className="px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 font-bold text-[11px] transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                            title="Ghi nhận giao không thành công (hàng chở về nhập lại kho)"
+                            onClick={() =>
+                              setProofModalState({
+                                isOpen: true,
+                                orderId: stop.orderId,
+                                orderCode: stop.orderCode,
+                                customerName: stop.customerName || undefined,
+                                deliveryAddress: stop.deliveryAddress || undefined,
+                                receiverPhone: stop.receiverPhone || undefined,
+                                isDelivered: false,
+                                mode: 'FAIL'
+                              })
+                            }
+                            className="px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 font-bold text-[11px] transition-colors flex items-center gap-1 cursor-pointer"
+                            title="Ghi nhận giao không thành công (chọn lý do, hàng quay về kho)"
                           >
                             <X className="w-3.5 h-3.5" />
                             Thất bại
                           </button>
                         </>
                       )}
+
+                      {stop.status === 'DELIVERED' && (
+                        <button
+                          onClick={() =>
+                            setProofModalState({
+                              isOpen: true,
+                              orderId: stop.orderId,
+                              orderCode: stop.orderCode,
+                              customerName: stop.customerName || undefined,
+                              deliveryAddress: stop.deliveryAddress || undefined,
+                              receiverPhone: stop.receiverPhone || undefined,
+                              isDelivered: true,
+                              mode: 'VIEW'
+                            })
+                          }
+                          className="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Xem ảnh biên bản giao hàng có chữ ký khách hàng"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                          Xem POD
+                        </button>
+                      )}
+
                       <button
                         onClick={() => navigate(`/orders/${stop.orderId}`)}
                         className="p-1.5 text-gray-400 hover:text-[#F85606] hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
@@ -481,6 +500,26 @@ export const DeliveryTripDetailPage: React.FC = () => {
         trip={trip}
         onClose={() => setIsPrintModalOpen(false)}
       />
+
+      {/* S6-08: Modal Xác Nhận Giao Hàng & Tải Biên Bản Có Chữ Ký (POD) */}
+      {proofModalState && (
+        <DeliveryProofModal
+          isOpen={proofModalState.isOpen}
+          onClose={() => setProofModalState(null)}
+          orderId={proofModalState.orderId}
+          orderCode={proofModalState.orderCode}
+          customerName={proofModalState.customerName}
+          deliveryAddress={proofModalState.deliveryAddress}
+          receiverPhone={proofModalState.receiverPhone}
+          isDelivered={proofModalState.isDelivered}
+          initialMode={proofModalState.mode}
+          onSuccess={() => {
+            setProofModalState(null);
+            loadData();
+          }}
+          showToast={showToast}
+        />
+      )}
     </div>
   );
 };

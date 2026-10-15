@@ -45,6 +45,7 @@ import { OrderLifecycleTimeline } from '../../components/order/OrderLifecycleTim
 import { OrderCancelModal } from '../../components/order/OrderCancelModal';
 import { OrderPdfPreviewModal } from '../../components/order/OrderPdfPreviewModal';
 import { AgencyDeliveryTimeline } from '../../components/portal/AgencyDeliveryTimeline';
+import { DeliveryProofModal } from '../../components/delivery/DeliveryProofModal';
 import { getUserFullName } from '../../lib/userFormatters';
 
 export const OrderDetailPage: React.FC = () => {
@@ -65,6 +66,10 @@ export const OrderDetailPage: React.FC = () => {
   }>({ isOpen: false, actionType: 'APPROVE' });
   const [isCancelModalOpen, setIsCancelModalOpen] = useState<boolean>(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
+  const [proofModalState, setProofModalState] = useState<{
+    isOpen: boolean;
+    mode: 'CONFIRM' | 'FAIL' | 'VIEW';
+  }>({ isOpen: false, mode: 'CONFIRM' });
   const [updatingStatus, setUpdatingStatus] = useState<boolean>(false);
   const [cloningOrder, setCloningOrder] = useState<boolean>(false);
 
@@ -431,15 +436,38 @@ export const OrderDetailPage: React.FC = () => {
             </button>
           )}
 
-          {order.status === 'DISPATCHED' && (
+          {order.status === 'DISPATCHED' && isWarehouseOrAdmin && (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setProofModalState({ isOpen: true, mode: 'CONFIRM' })}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition cursor-pointer"
+                title="Xác nhận giao thành công & Tải ảnh biên bản có chữ ký (POD)"
+              >
+                <CheckCheck size={14} />
+                <span>Xác nhận giao hàng (POD)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setProofModalState({ isOpen: true, mode: 'FAIL' })}
+                className="px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                title="Ghi nhận giao không thành công (hàng quay về kho)"
+              >
+                <XCircle size={14} />
+                <span>Báo giao thất bại</span>
+              </button>
+            </div>
+          )}
+
+          {order.status === 'DELIVERED' && (
             <button
               type="button"
-              disabled={updatingStatus}
-              onClick={() => handleUpdateStatus('DELIVERED', 'Đã giao hàng')}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
+              onClick={() => setProofModalState({ isOpen: true, mode: 'VIEW' })}
+              className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+              title="Xem ảnh chứng từ / biên bản giao hàng có chữ ký"
             >
-              <CheckCheck size={14} className={updatingStatus ? 'animate-spin' : ''} />
-              <span>Xác nhận đã giao hàng</span>
+              <FileText size={14} />
+              <span>Xem biên bản POD</span>
             </button>
           )}
 
@@ -996,6 +1024,26 @@ export const OrderDetailPage: React.FC = () => {
         order={order}
         onClose={() => setIsPdfModalOpen(false)}
       />
+
+      {/* S6-08: MODAL XÁC NHẬN GIAO HÀNG & TẢI BIÊN BẢN CHỮ KÝ (POD) */}
+      {proofModalState.isOpen && order.id && (
+        <DeliveryProofModal
+          isOpen={proofModalState.isOpen}
+          onClose={() => setProofModalState((s) => ({ ...s, isOpen: false }))}
+          orderId={order.id}
+          orderCode={order.code || ''}
+          customerName={order.customerName}
+          deliveryAddress={order.deliveryAddress?.address}
+          receiverPhone={order.deliveryAddress?.receiverPhone}
+          isDelivered={order.status === 'DELIVERED'}
+          initialMode={proofModalState.mode}
+          onSuccess={() => {
+            setProofModalState((s) => ({ ...s, isOpen: false }));
+            loadOrderDetail();
+          }}
+          showToast={showToast}
+        />
+      )}
     </div>
   );
 };

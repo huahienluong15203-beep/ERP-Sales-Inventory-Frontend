@@ -46,6 +46,8 @@ import { DeliveryTripCreatePage } from '../pages/inventory/DeliveryTripCreatePag
 import { DeliveryTripDetailPage } from '../pages/inventory/DeliveryTripDetailPage';
 import { DebtAdjustmentPage } from '../pages/payment/DebtAdjustmentPage';
 import { ProductLotManagementPage } from '../pages/inventory/ProductLotManagementPage';
+import { InvoiceManagementPage } from '../pages/payment/InvoiceManagementPage';
+import { InvoiceCreatePage } from '../pages/payment/InvoiceCreatePage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -716,6 +718,51 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <DebtAdjustmentPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S7-01: Phát hành và quản lý hoá đơn bán hàng từ phiếu đã giao */}
+        <Route
+          path="/invoices"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <InvoiceManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invoices/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <InvoiceCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invoices/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <InvoiceManagementPage />
             </ProtectedRoute>
           }
         />
