@@ -1,5 +1,5 @@
 /**
- * S5-05: Service API Sổ tồn kho 3 cột (tồn thực tế, đang giữ chỗ, khả dụng)
+ * Service API Sổ tồn kho 3 cột (tồn thực tế, đang giữ chỗ, khả dụng)
  * - Ba cột tách bạch theo ĐVT cơ sở
  * - Lọc theo kho, nhóm hàng, trạng thái tồn; tìm nhanh theo mã / tên sản phẩm
  * - Tổng hợp sổ tồn: tổng dòng, tổng 3 cột, số lượng dòng theo trạng thái
@@ -16,7 +16,7 @@ import type {
 const BASE_URL = `${API_BASE_URL}/api/inventory`;
 
 /**
- * Lấy danh sách sổ tồn kho 3 cột có phân trang và bộ lọc (S5-05)
+ * Lấy danh sách sổ tồn kho 3 cột có phân trang và bộ lọc
  */
 export async function fetchStockLedger(
   params?: StockLedgerFilterParams
@@ -53,7 +53,7 @@ export async function fetchStockLedger(
 }
 
 /**
- * Lấy tổng hợp của toàn bộ kết quả đang lọc (S5-05)
+ * Lấy tổng hợp của toàn bộ kết quả đang lọc
  */
 export async function fetchStockLedgerSummary(params?: {
   warehouseId?: number | string;
