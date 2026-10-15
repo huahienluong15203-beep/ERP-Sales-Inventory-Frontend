@@ -76,19 +76,17 @@ export const PickingListDetailPage: React.FC = () => {
   // Cập nhật số lượng thực soạn
   const handleQuantityChange = async (item: PickingListItem, newQty: number) => {
     if (!pickingList || pickingList.status === 'COMPLETED' || pickingList.status === 'CANCELLED') return;
-    const validQty = Math.max(0, newQty);
+    const validQty = Math.max(0, Math.min(item.requiredQuantity, newQty));
 
-    // Nếu soạn thiếu và muốn tick hoàn thành ngay -> Cần lý do (AC4)
-    if (validQty < item.requiredQuantity) {
-      setDiscrepancyTargetItem({
-        item,
-        tempPickedQty: validQty
-      });
+    // Nếu soạn đủ số lượng yêu cầu -> Tự động đánh dấu hoàn thành
+    if (validQty === item.requiredQuantity) {
+      await saveItemUpdate(item.id, validQty, true, null);
       return;
     }
 
-    // Nếu soạn đủ hoặc dư -> Cho phép lưu luôn
-    await saveItemUpdate(item.id, validQty, true, null);
+    // Nếu số lượng nhỏ hơn yêu cầu -> Cập nhật số lượng thực soạn, chưa đánh dấu xong
+    // (Chỉ bật Modal khi thủ kho bấm tick Hoàn thành hoặc bấm Báo thiếu)
+    await saveItemUpdate(item.id, validQty, false, item.discrepancyReason);
   };
 
   // Toggle tick hoàn thành cho một dòng hàng (Checkbox di động AC5)
@@ -138,7 +136,6 @@ export const PickingListDetailPage: React.FC = () => {
         discrepancyReason: discrepancyReason || undefined
       });
       setPickingList(updatedList);
-      showToast('Đã lưu tiến độ', 'Cập nhật dòng hàng thành công', 'success');
     } catch (err: any) {
       showToast('Lỗi cập nhật', err.message || 'Không thể lưu tiến độ', 'error');
     } finally {
@@ -229,77 +226,81 @@ export const PickingListDetailPage: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
-      {/* Top Bar with Mode Switcher & Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl shadow-xs border border-gray-100">
-        <div className="flex items-center gap-3">
+      {/* 1. THANH ĐIỀU HƯỚNG QUAY LẠI & THAO TÁC (Gọn gàng như các tab khác) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
+            type="button"
             onClick={() => navigate('/inventory/picking-lists')}
-            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
+            className="px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:bg-orange-50 hover:border-orange-200 text-gray-700 hover:text-[#F85606] font-bold text-xs inline-flex items-center gap-2 transition cursor-pointer shadow-2xs active:scale-95"
+            id="picking-detail-back-btn"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
+            <span>Quay lại</span>
           </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black text-gray-900 tracking-tight font-mono">
-                {pickingList.code}
-              </h1>
-              {pickingList.status === 'COMPLETED' ? (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  ✓ ĐÃ HOÀN THÀNH
-                </span>
-              ) : pickingList.status === 'IN_PROGRESS' ? (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 animate-pulse">
-                  ĐANG SOẠN HÀNG
-                </span>
-              ) : pickingList.status === 'CANCELLED' ? (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-700">
-                  ĐÃ HỦY
-                </span>
-              ) : (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
-                  ĐÃ GIAO VIỆC
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Kho: <strong>{pickingList.warehouseName}</strong> • Người soạn:{' '}
-              <strong>{pickingList.pickerName || 'Chưa gán'}</strong> • Gom {pickingList.orderCount} đơn hàng
-            </p>
-          </div>
+          <span className="text-gray-300 hidden sm:inline">•</span>
+          <span className="font-mono text-xs font-bold bg-white px-2.5 py-1 rounded-lg border border-gray-200 text-gray-900 shadow-2xs">
+            {pickingList.code}
+          </span>
+          {pickingList.status === 'COMPLETED' ? (
+            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+              ✓ ĐÃ HOÀN THÀNH
+            </span>
+          ) : pickingList.status === 'IN_PROGRESS' ? (
+            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 animate-pulse">
+              ĐANG SOẠN HÀNG
+            </span>
+          ) : pickingList.status === 'CANCELLED' ? (
+            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200">
+              ĐÃ HỦY
+            </span>
+          ) : (
+            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+              ĐÃ GIAO VIỆC
+            </span>
+          )}
+          <span className="text-gray-300 hidden md:inline">•</span>
+          <span className="text-xs text-gray-500 hidden md:inline">
+            Kho: <strong>{pickingList.warehouseName}</strong> • Người soạn:{' '}
+            <strong>{pickingList.pickerName || 'Chưa gán'}</strong>
+          </span>
         </div>
 
         {/* View mode toggle & Print button */}
         <div className="flex items-center gap-2">
           {/* Switch giữa Máy tính và Di động */}
-          <div className="bg-gray-100 p-1 rounded-xl flex items-center">
+          <div className="bg-white border border-gray-200 p-0.5 rounded-xl flex items-center shadow-2xs">
             <button
+              type="button"
               onClick={() => setIsMobileMode(false)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all ${
-                !isMobileMode ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                !isMobileMode ? 'bg-orange-50 text-[#F85606] font-bold shadow-2xs' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               <Laptop className="w-3.5 h-3.5" />
-              Bàn làm việc
+              <span>Bàn làm việc</span>
             </button>
             <button
+              type="button"
               onClick={() => setIsMobileMode(true)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
                 isMobileMode
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold shadow-xs'
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold shadow-2xs'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               <Smartphone className="w-3.5 h-3.5" />
-              Thủ kho Mobile (AC5)
+              <span>Thủ kho Mobile (AC5)</span>
             </button>
           </div>
 
           <button
+            type="button"
             onClick={() => setIsPrintModalOpen(true)}
-            className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-xl transition-colors flex items-center gap-1.5"
+            className="px-3.5 py-2 bg-white hover:bg-orange-50 hover:border-orange-200 border border-gray-200 text-gray-700 hover:text-[#F85606] font-bold text-xs rounded-xl transition cursor-pointer shadow-2xs flex items-center gap-1.5"
           >
             <Printer className="w-4 h-4" />
-            In phiếu A4
+            <span>In phiếu A4</span>
           </button>
         </div>
       </div>

@@ -17,35 +17,35 @@ export interface WarehouseOption {
 
 export const SYSTEM_WAREHOUSES: WarehouseOption[] = [
   {
-    id: 1,
+    id: 3,
     code: 'WH-MB01',
     name: 'Kho Tổng Miền Bắc',
     address: 'KCN Sài Đồng B, Long Biên, Hà Nội',
     status: 'ACTIVE'
   },
   {
-    id: 2,
+    id: 4,
     code: 'WH-MT01',
     name: 'Kho Miền Trung',
     address: 'KCN Hòa Khánh, Liên Chiểu, Đà Nẵng',
     status: 'ACTIVE'
   },
   {
-    id: 3,
+    id: 5,
     code: 'WH-MN01',
     name: 'Kho Tổng Miền Nam',
     address: 'KCN Sóng Thần 1, Dĩ An, Bình Dương',
     status: 'ACTIVE'
   },
   {
-    id: 4,
+    id: 2,
     code: 'KHO-HCM',
     name: 'Kho Tổng TP.HCM',
     address: 'KCN Cao, Quận 9, TP. Thủ Đức, TP.HCM',
     status: 'ACTIVE'
   },
   {
-    id: 5,
+    id: 1,
     code: 'KHO-HN',
     name: 'Kho Tổng Hà Nội',
     address: 'KCN Đài Tư, Long Biên, Hà Nội',

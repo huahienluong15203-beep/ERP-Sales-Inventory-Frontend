@@ -15,9 +15,10 @@ import type {
 } from '../types/pickingList';
 
 const STORAGE_KEY = 'erp_picking_lists_v1';
+const PICKING_LIST_API_BASE = `${API_BASE_URL}/api/inventory/picking-lists`;
 
 // Dữ liệu mẫu phong phú ban đầu cho Phiếu soạn hàng
-const INITIAL_PICKING_LISTS: PickingList[] = [
+export const INITIAL_PICKING_LISTS: PickingList[] = [
   {
     id: 1,
     code: 'PL261015-A101',
@@ -233,50 +234,6 @@ const INITIAL_PICKING_LISTS: PickingList[] = [
   }
 ];
 
-// Danh sách các đơn hàng APPROVED sẵn sàng để gom
-const INITIAL_AVAILABLE_ORDERS: AvailablePickingOrder[] = [
-  {
-    id: 110,
-    orderCode: 'SO-202610-010',
-    customerName: 'Siêu thị T-Mart Nguyễn Trãi',
-    totalAmount: 15600000,
-    itemCount: 4,
-    createdAt: '2026-10-15T08:15:00',
-    deliveryAddress: '235 Nguyễn Trãi, Thanh Xuân, Hà Nội',
-    phone: '0988112233'
-  },
-  {
-    id: 111,
-    orderCode: 'SO-202610-011',
-    customerName: 'Đại lý Bách Hóa Số 5 Hà Đông',
-    totalAmount: 22400000,
-    itemCount: 6,
-    createdAt: '2026-10-15T08:45:00',
-    deliveryAddress: '48 Quang Trung, Hà Đông, Hà Nội',
-    phone: '0912334455'
-  },
-  {
-    id: 112,
-    orderCode: 'SO-202610-012',
-    customerName: 'Cửa hàng Tiện Lợi 24h Hoàng Mai',
-    totalAmount: 9800000,
-    itemCount: 3,
-    createdAt: '2026-10-15T09:20:00',
-    deliveryAddress: '102 Định Công, Hoàng Mai, Hà Nội',
-    phone: '0903445566'
-  },
-  {
-    id: 113,
-    orderCode: 'SO-202610-013',
-    customerName: 'Tạp hóa Khánh Vy Cầu Giấy',
-    totalAmount: 18200000,
-    itemCount: 5,
-    createdAt: '2026-10-15T09:50:00',
-    deliveryAddress: '68 Xuân Thủy, Cầu Giấy, Hà Nội',
-    phone: '0977889900'
-  }
-];
-
 function getStoredLists(): PickingList[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -284,8 +241,7 @@ function getStoredLists(): PickingList[] {
   } catch (e) {
     console.warn('Lỗi đọc local picking lists:', e);
   }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_PICKING_LISTS));
-  return INITIAL_PICKING_LISTS;
+  return [];
 }
 
 function saveStoredLists(lists: PickingList[]): void {
@@ -297,23 +253,86 @@ function saveStoredLists(lists: PickingList[]): void {
 }
 
 /**
+ * Mapper chuyển đổi DTO PickingListItemResponse từ backend sang frontend PickingListItem
+ */
+function mapBackendPickingListItem(dto: any): PickingListItem {
+  return {
+    id: dto.id,
+    productId: dto.productId,
+    productSku: dto.productSku || '',
+    productName: dto.productName || '',
+    baseUnit: dto.baseUnit || 'Cái',
+    locationCode: dto.locationCode || 'Chưa gán vị trí',
+    routeSequence: dto.routeSequence || 1,
+    requiredQuantity: Number(dto.requestedQuantity ?? dto.requiredQuantity ?? 0),
+    pickedQuantity: Number(dto.pickedQuantity ?? 0),
+    isCompleted: Boolean(dto.isPicked ?? dto.isCompleted),
+    discrepancyReason: dto.shortageReason ?? dto.discrepancyReason ?? null,
+    allocations: (dto.allocations || []).map((a: any) => ({
+      orderId: a.orderId,
+      orderCode: a.orderCode || `Đơn #${a.orderId}`,
+      customerName: a.customerName || 'Khách hàng',
+      quantity: Number(a.requestedQuantity ?? a.quantity ?? 0)
+    }))
+  };
+}
+
+/**
+ * Mapper chuyển đổi DTO PickingListResponse từ backend sang frontend PickingList
+ */
+function mapBackendPickingList(dto: any): PickingList {
+  return {
+    id: dto.id,
+    code: dto.code || `PL-${dto.id}`,
+    warehouseId: dto.warehouseId,
+    warehouseName: dto.warehouseName || `Kho #${dto.warehouseId}`,
+    status: dto.status,
+    pickerId: dto.pickerId,
+    pickerName: dto.pickerName || (dto.pickerId ? `Thủ kho #${dto.pickerId}` : 'Chưa phân công'),
+    orderCount: dto.totalOrders ?? (dto.orders?.length || 0),
+    totalItems: dto.totalItems ?? (dto.items?.length || 0),
+    completedItems: (dto.items || []).filter((i: any) => i.isPicked ?? i.isCompleted).length,
+    note: dto.note || '',
+    createdAt: dto.createdAt || new Date().toISOString(),
+    updatedAt: dto.updatedAt || new Date().toISOString(),
+    orders: (dto.orders || []).map((o: any) => ({
+      id: o.orderId ?? o.id,
+      code: o.orderCode ?? o.code,
+      customerName: o.customerName || '',
+      totalAmount: Number(o.totalAmount || 0),
+      status: o.orderStatus ?? o.status ?? 'APPROVED'
+    })),
+    items: (dto.items || []).map(mapBackendPickingListItem)
+  };
+}
+
+/**
  * 1. Lấy danh sách đơn hàng đã duyệt (APPROVED) sẵn sàng gom vào đợt soạn
  */
 export async function fetchAvailableOrders(warehouseId: number): Promise<AvailablePickingOrder[]> {
   try {
-    const res = await authFetch(`${API_BASE_URL}/inventory/picking-lists/available-orders?warehouseId=${warehouseId}`);
+    const res = await authFetch(`${PICKING_LIST_API_BASE}/available-orders?warehouseId=${warehouseId}`);
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        return data;
+      if (Array.isArray(data)) {
+        return data.map((d: any) => ({
+          id: d.orderId ?? d.id,
+          orderCode: d.orderCode || `DH-${d.orderId ?? d.id}`,
+          customerName: d.customerName || 'Khách hàng',
+          totalAmount: Number(d.totalAmount || 0),
+          itemCount: d.totalLines ?? d.itemCount ?? 0,
+          createdAt: d.approvedAt ?? d.createdAt ?? '',
+          deliveryAddress: d.deliveryAddress || '',
+          phone: d.phone || ''
+        }));
       }
     }
   } catch (err) {
-    console.warn('Backend picking available orders fetch failed, falling back to local data:', err);
+    console.warn('Backend picking available orders fetch failed:', err);
   }
 
-  // Fallback data
-  return INITIAL_AVAILABLE_ORDERS;
+  // Nếu API gọi thành công nhưng không có đơn, trả về rỗng (không hiện data giả)
+  return [];
 }
 
 /**
@@ -321,13 +340,20 @@ export async function fetchAvailableOrders(warehouseId: number): Promise<Availab
  */
 export async function previewPickingList(warehouseId: number, orderIds: number[]): Promise<PickingListPreviewResponse> {
   try {
-    const res = await authFetch(`${API_BASE_URL}/inventory/picking-lists/preview`, {
+    const res = await authFetch(`${PICKING_LIST_API_BASE}/preview`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ warehouseId, orderIds })
     });
     if (res.ok) {
-      return await res.json();
+      const data = await res.json();
+      return {
+        warehouseId: data.warehouseId,
+        warehouseName: data.warehouseName || 'Kho xuất hàng',
+        orderCount: data.totalOrders ?? (data.orderCodes?.length || orderIds.length),
+        totalItems: data.totalItems ?? (data.items?.length || 0),
+        items: (data.items || []).map(mapBackendPickingListItem)
+      };
     }
   } catch (err) {
     console.warn('Backend preview picking list failed, generating dynamic preview:', err);
@@ -408,18 +434,19 @@ export async function previewPickingList(warehouseId: number, orderIds: number[]
  */
 export async function createPickingList(req: PickingListCreateRequest): Promise<PickingList> {
   try {
-    const res = await authFetch(`${API_BASE_URL}/inventory/picking-lists`, {
+    const res = await authFetch(`${PICKING_LIST_API_BASE}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req)
     });
     if (res.ok) {
       const data = await res.json();
+      const mapped = mapBackendPickingList(data);
       // Đồng bộ vào cache
       const lists = getStoredLists();
-      lists.unshift(data);
+      lists.unshift(mapped);
       saveStoredLists(lists);
-      return data;
+      return mapped;
     }
   } catch (err) {
     console.warn('Backend create picking list failed, saving locally:', err);
@@ -481,11 +508,15 @@ export async function fetchPickingLists(params?: {
     if (params?.page !== undefined) query.set('page', String(params.page));
     if (params?.size !== undefined) query.set('size', String(params.size));
 
-    const res = await authFetch(`${API_BASE_URL}/inventory/picking-lists?${query.toString()}`);
+    const res = await authFetch(`${PICKING_LIST_API_BASE}?${query.toString()}`);
     if (res.ok) {
       const data = await res.json();
       if (data && Array.isArray(data.content)) {
-        return data;
+        return {
+          content: data.content.map(mapBackendPickingList),
+          totalElements: data.totalElements,
+          totalPages: data.totalPages
+        };
       }
     }
   } catch (err) {
@@ -523,10 +554,10 @@ export async function fetchPickingLists(params?: {
  */
 export async function fetchPickingListById(id: number): Promise<PickingList> {
   try {
-    const res = await authFetch(`${API_BASE_URL}/inventory/picking-lists/${id}`);
+    const res = await authFetch(`${PICKING_LIST_API_BASE}/${id}`);
     if (res.ok) {
       const data = await res.json();
-      return data;
+      return mapBackendPickingList(data);
     }
   } catch (err) {
     console.warn('Backend fetch picking list by id failed:', err);
@@ -549,18 +580,23 @@ export async function updateItemProgress(
   req: PickingItemUpdateRequest
 ): Promise<PickingList> {
   try {
-    const res = await authFetch(`${API_BASE_URL}/inventory/picking-lists/${listId}/items/${itemId}`, {
+    const res = await authFetch(`${PICKING_LIST_API_BASE}/${listId}/items/${itemId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req)
+      body: JSON.stringify({
+        pickedQuantity: req.pickedQuantity,
+        isPicked: req.isCompleted,
+        shortageReason: req.discrepancyReason || null
+      })
     });
     if (res.ok) {
       const data = await res.json();
+      const mapped = mapBackendPickingList(data);
       const lists = getStoredLists();
       const idx = lists.findIndex((l) => l.id === listId);
-      if (idx >= 0) lists[idx] = data;
+      if (idx >= 0) lists[idx] = mapped;
       saveStoredLists(lists);
-      return data;
+      return mapped;
     }
   } catch (err) {
     console.warn('Backend update item progress failed, updating locally:', err);
@@ -598,18 +634,27 @@ export async function updateProgressBatch(
   req: PickingProgressUpdateRequest
 ): Promise<PickingList> {
   try {
-    const res = await authFetch(`${API_BASE_URL}/inventory/picking-lists/${listId}/progress`, {
+    const res = await authFetch(`${PICKING_LIST_API_BASE}/${listId}/progress`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req)
+      body: JSON.stringify({
+        items: req.items.map((i) => ({
+          itemId: i.itemId,
+          pickedQuantity: i.pickedQuantity,
+          isPicked: i.isCompleted,
+          shortageReason: i.discrepancyReason || null
+        })),
+        autoCompleteIfAllDone: req.autoCompleteIfAllDone
+      })
     });
     if (res.ok) {
       const data = await res.json();
+      const mapped = mapBackendPickingList(data);
       const lists = getStoredLists();
       const idx = lists.findIndex((l) => l.id === listId);
-      if (idx >= 0) lists[idx] = data;
+      if (idx >= 0) lists[idx] = mapped;
       saveStoredLists(lists);
-      return data;
+      return mapped;
     }
   } catch (err) {
     console.warn('Backend batch progress update failed, updating locally:', err);
@@ -645,16 +690,17 @@ export async function updateProgressBatch(
  */
 export async function completePickingList(id: number): Promise<PickingList> {
   try {
-    const res = await authFetch(`${API_BASE_URL}/inventory/picking-lists/${id}/complete`, {
+    const res = await authFetch(`${PICKING_LIST_API_BASE}/${id}/complete`, {
       method: 'POST'
     });
     if (res.ok) {
       const data = await res.json();
+      const mapped = mapBackendPickingList(data);
       const lists = getStoredLists();
       const idx = lists.findIndex((l) => l.id === id);
-      if (idx >= 0) lists[idx] = data;
+      if (idx >= 0) lists[idx] = mapped;
       saveStoredLists(lists);
-      return data;
+      return mapped;
     }
   } catch (err) {
     console.warn('Backend complete picking list failed, updating locally:', err);
@@ -685,16 +731,17 @@ export async function completePickingList(id: number): Promise<PickingList> {
  */
 export async function cancelPickingList(id: number, reason: string): Promise<PickingList> {
   try {
-    const res = await authFetch(`${API_BASE_URL}/inventory/picking-lists/${id}/cancel?reason=${encodeURIComponent(reason)}`, {
+    const res = await authFetch(`${PICKING_LIST_API_BASE}/${id}/cancel?reason=${encodeURIComponent(reason)}`, {
       method: 'POST'
     });
     if (res.ok) {
       const data = await res.json();
+      const mapped = mapBackendPickingList(data);
       const lists = getStoredLists();
       const idx = lists.findIndex((l) => l.id === id);
-      if (idx >= 0) lists[idx] = data;
+      if (idx >= 0) lists[idx] = mapped;
       saveStoredLists(lists);
-      return data;
+      return mapped;
     }
   } catch (err) {
     console.warn('Backend cancel picking list failed, updating locally:', err);

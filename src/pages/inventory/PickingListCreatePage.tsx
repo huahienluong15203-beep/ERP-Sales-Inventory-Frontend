@@ -16,10 +16,38 @@ import { fetchAvailableOrders, previewPickingList, createPickingList } from '../
 
 export const PickingListCreatePage: React.FC = () => {
   const navigate = useNavigate();
-  const { showToast, user } = useAuth();
+  const { showToast, user, currentRole } = useAuth();
 
-  // Warehouse selection
-  const [warehouseId, setWarehouseId] = useState<number>(1);
+  // Lọc danh sách kho mà người dùng được phân công phụ trách
+  const allowedWarehouses = React.useMemo(() => {
+    if (currentRole === 'ROLE_ADMIN' || user?.roles?.includes('ROLE_ADMIN')) {
+      return SYSTEM_WAREHOUSES;
+    }
+    if (user?.warehouseCodes && user.warehouseCodes.length > 0) {
+      const filtered = SYSTEM_WAREHOUSES.filter((wh) => user.warehouseCodes!.includes(wh.code));
+      if (filtered.length > 0) return filtered;
+    }
+    if (user?.warehouse) {
+      const filtered = SYSTEM_WAREHOUSES.filter(
+        (wh) => user.warehouse!.includes(wh.code) || user.warehouse!.includes(wh.name)
+      );
+      if (filtered.length > 0) return filtered;
+    }
+    return SYSTEM_WAREHOUSES;
+  }, [user, currentRole]);
+
+  // Warehouse selection: Mặc định chọn kho user phụ trách
+  const [warehouseId, setWarehouseId] = useState<number>(() => {
+    if (user?.warehouseCodes && user.warehouseCodes.length > 0) {
+      const found = SYSTEM_WAREHOUSES.find((wh) => user.warehouseCodes!.includes(wh.code));
+      if (found) return Number(found.id);
+    }
+    if (user?.warehouse) {
+      const found = SYSTEM_WAREHOUSES.find((wh) => user.warehouse!.includes(wh.code) || user.warehouse!.includes(wh.name));
+      if (found) return Number(found.id);
+    }
+    return Number(SYSTEM_WAREHOUSES[0]?.id || 3);
+  });
   const [availableOrders, setAvailableOrders] = useState<AvailablePickingOrder[]>([]);
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [loadingOrders, setLoadingOrders] = useState<boolean>(false);
@@ -30,8 +58,21 @@ export const PickingListCreatePage: React.FC = () => {
 
   // Form State
   const [note, setNote] = useState<string>('');
-  const [pickerName, setPickerName] = useState<string>('Trần Văn Thủ Kho');
+  const [pickerName, setPickerName] = useState<string>(() => user?.fullName || 'Nhân Viên Kho01');
   const [submitting, setSubmitting] = useState<boolean>(false);
+
+  // Đảm bảo warehouseId luôn đồng bộ với kho nhân viên phụ trách khi user load xong
+  useEffect(() => {
+    if (allowedWarehouses.length > 0 && !allowedWarehouses.some((w) => Number(w.id) === warehouseId)) {
+      setWarehouseId(Number(allowedWarehouses[0].id));
+    }
+  }, [allowedWarehouses, warehouseId]);
+
+  useEffect(() => {
+    if (user?.fullName && (pickerName === 'Trần Văn Thủ Kho' || !pickerName)) {
+      setPickerName(user.fullName);
+    }
+  }, [user]);
 
   // Load available orders whenever warehouseId changes
   useEffect(() => {
@@ -120,35 +161,17 @@ export const PickingListCreatePage: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* Header */}
-      <div className="flex items-center justify-between bg-white p-6 rounded-2xl shadow-xs border border-gray-100">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/inventory/picking-lists')}
-            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-              <ClipboardCheck className="w-6 h-6 text-orange-500" />
-              Lập Phiếu Soạn Hàng Mới (Wave Picking)
-            </h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Chọn các đơn đã duyệt (APPROVED) để gom thành một đợt soạn duy nhất theo đường đi trong kho
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/inventory/picking-lists')}
-            className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
-          >
-            Hủy bỏ
-          </button>
-        </div>
+      {/* Nút quay lại */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => navigate('/inventory/picking-lists')}
+          className="px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:bg-orange-50 hover:border-orange-200 text-gray-700 hover:text-[#F85606] font-bold text-xs inline-flex items-center gap-2 transition cursor-pointer shadow-2xs active:scale-95"
+          id="picking-create-back-btn"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Quay lại</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -158,13 +181,9 @@ export const PickingListCreatePage: React.FC = () => {
           <div className="bg-white p-6 rounded-2xl shadow-xs border border-gray-100 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
               <div>
-                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs font-bold">1</span>
-                  Chọn Kho & Đơn Hàng Đã Duyệt
+                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+                  Đơn hàng đã duyệt
                 </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Chỉ các đơn hàng trạng thái APPROVED và chưa nằm trên đợt soạn nào mới hiển thị ở đây
-                </p>
               </div>
 
               {/* Warehouse selector */}
@@ -174,7 +193,7 @@ export const PickingListCreatePage: React.FC = () => {
                   onChange={(e) => setWarehouseId(Number(e.target.value))}
                   className="w-full text-xs font-semibold border border-orange-300 rounded-xl px-3 py-2 bg-orange-50/50 text-orange-950 focus:ring-2 focus:ring-orange-200 outline-none"
                 >
-                  {SYSTEM_WAREHOUSES.map((wh) => (
+                  {allowedWarehouses.map((wh) => (
                     <option key={wh.id} value={wh.id}>
                       📍 {wh.name}
                     </option>
@@ -234,9 +253,8 @@ export const PickingListCreatePage: React.FC = () => {
                           <tr
                             key={ord.id}
                             onClick={() => handleToggleOrder(ord.id)}
-                            className={`cursor-pointer transition-colors ${
-                              isSelected ? 'bg-orange-50/70' : 'hover:bg-gray-50'
-                            }`}
+                            className={`cursor-pointer transition-colors ${isSelected ? 'bg-orange-50/70' : 'hover:bg-gray-50'
+                              }`}
                           >
                             <td className="py-2.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
                               <input
@@ -300,8 +318,7 @@ export const PickingListCreatePage: React.FC = () => {
             <div className="bg-white p-6 rounded-2xl shadow-xs border border-amber-200 space-y-4 animate-fade-in">
               <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                 <div>
-                  <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold">2</span>
+                  <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
                     Lộ Trình Soạn Hàng Đã Tối Ưu Theo Vị Trí (Route Sequence)
                   </h2>
                   <p className="text-xs text-gray-500 mt-0.5">
@@ -367,8 +384,7 @@ export const PickingListCreatePage: React.FC = () => {
         {/* Cột phải: Thông tin phân công & Xác nhận tạo phiếu */}
         <div className="space-y-6">
           <form onSubmit={handleCreatePickingList} className="bg-white p-6 rounded-2xl shadow-xs border border-gray-100 space-y-5">
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-3">
-              <span className="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs font-bold">3</span>
+            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-3">
               Thông Tin Phân Công & Tạo Phiếu
             </h2>
 
@@ -386,9 +402,6 @@ export const PickingListCreatePage: React.FC = () => {
                 className="w-full text-xs font-medium border border-gray-300 rounded-xl px-3 py-2.5 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-200 focus:border-orange-500 outline-none"
                 required
               />
-              <p className="text-[11px] text-gray-400 mt-1">
-                Phiếu sẽ được giao trực tiếp cho thủ kho này để đi soạn trong kho.
-              </p>
             </div>
 
             {/* Ghi chú */}

@@ -3,9 +3,6 @@ import {
   ClipboardCheck,
   Plus,
   Search,
-  Eye,
-  Smartphone,
-  Printer,
   CheckCircle2,
   Clock,
   AlertCircle,
@@ -23,15 +20,46 @@ import { PickingListPrintModal } from '../../components/inventory/PickingListPri
 
 export const PickingListManagementPage: React.FC = () => {
   const navigate = useNavigate();
-  const { showToast, currentRole } = useAuth();
+  const { showToast, currentRole, user } = useAuth();
 
   const isWarehouseStaff = ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'].includes(currentRole ?? '');
+
+  // Lọc danh sách kho mà người dùng được phân công phụ trách
+  const allowedWarehouses = React.useMemo(() => {
+    if (currentRole === 'ROLE_ADMIN' || user?.roles?.includes('ROLE_ADMIN')) {
+      return SYSTEM_WAREHOUSES;
+    }
+    if (user?.warehouseCodes && user.warehouseCodes.length > 0) {
+      const filtered = SYSTEM_WAREHOUSES.filter((wh) => user.warehouseCodes!.includes(wh.code));
+      if (filtered.length > 0) return filtered;
+    }
+    if (user?.warehouse) {
+      const filtered = SYSTEM_WAREHOUSES.filter(
+        (wh) => user.warehouse!.includes(wh.code) || user.warehouse!.includes(wh.name)
+      );
+      if (filtered.length > 0) return filtered;
+    }
+    return SYSTEM_WAREHOUSES;
+  }, [user, currentRole]);
 
   const [pickingLists, setPickingLists] = useState<PickingList[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Filters
-  const [warehouseId, setWarehouseId] = useState<number | undefined>(undefined);
+  // Filters: Nhân viên kho mặc định chọn kho mình phụ trách
+  const [warehouseId, setWarehouseId] = useState<number | undefined>(() => {
+    if (currentRole === 'ROLE_ADMIN' || user?.roles?.includes('ROLE_ADMIN')) {
+      return undefined;
+    }
+    if (user?.warehouseCodes && user.warehouseCodes.length > 0) {
+      const found = SYSTEM_WAREHOUSES.find((wh) => user.warehouseCodes!.includes(wh.code));
+      if (found) return Number(found.id);
+    }
+    if (user?.warehouse) {
+      const found = SYSTEM_WAREHOUSES.find((wh) => user.warehouse!.includes(wh.code) || user.warehouse!.includes(wh.name));
+      if (found) return Number(found.id);
+    }
+    return undefined;
+  });
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [keyword, setKeyword] = useState<string>('');
 
@@ -39,6 +67,13 @@ export const PickingListManagementPage: React.FC = () => {
   const [selectedForPrint, setSelectedForPrint] = useState<PickingList | null>(null);
   const [cancelTarget, setCancelTarget] = useState<PickingList | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
+
+  // Đồng bộ kho phụ trách khi user load xong
+  useEffect(() => {
+    if (currentRole !== 'ROLE_ADMIN' && allowedWarehouses.length > 0 && warehouseId === undefined) {
+      setWarehouseId(Number(allowedWarehouses[0].id));
+    }
+  }, [allowedWarehouses, currentRole, warehouseId]);
 
   const loadData = async () => {
     setLoading(true);
@@ -123,32 +158,28 @@ export const PickingListManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-xs border border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-xl shadow-md">
-            <ClipboardCheck className="w-7 h-7" />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
-              Phiếu Soạn Hàng (Wave Picking)
-            </h1>
-            <p className="text-xs md:text-sm text-gray-500 mt-0.5">
-              Gom nhiều đơn đã duyệt, gộp mặt hàng và tối ưu lộ trình di chuyển trong kho (S6-03)
-            </p>
-          </div>
-        </div>
+      {/* Nút thao tác chính (Tinh gọn góc phải) */}
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={loadData}
+          disabled={loading}
+          title="Làm mới danh sách phiếu soạn hàng"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:text-orange-600 rounded-lg text-xs font-semibold shadow-2xs h-9 cursor-pointer transition-all"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <span>Làm mới</span>
+        </button>
 
         {isWarehouseStaff && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate('/inventory/picking-lists/create')}
-              className="px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Lập phiếu soạn hàng mới
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/inventory/picking-lists/create')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow transition-all cursor-pointer h-9 active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Lập phiếu soạn hàng mới</span>
+          </button>
         )}
       </div>
 
@@ -230,10 +261,12 @@ export const PickingListManagementPage: React.FC = () => {
                 onChange={(e) => setWarehouseId(e.target.value ? Number(e.target.value) : undefined)}
                 className="w-full text-xs font-medium border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-orange-200 focus:border-orange-500 outline-none"
               >
-                <option value="">🏢 Tất cả các kho</option>
-                {SYSTEM_WAREHOUSES.map((wh) => (
+                {allowedWarehouses.length > 1 && (
+                  <option value="">🏢 Tất cả các kho phụ trách</option>
+                )}
+                {allowedWarehouses.map((wh) => (
                   <option key={wh.id} value={wh.id}>
-                    {wh.name}
+                    🏢 {wh.name}
                   </option>
                 ))}
               </select>
@@ -298,22 +331,23 @@ export const PickingListManagementPage: React.FC = () => {
                   <th className="py-3 px-4">Tiến độ soạn hàng</th>
                   <th className="py-3 px-4 text-center">Trạng thái</th>
                   <th className="py-3 px-4">Ngày tạo</th>
-                  <th className="py-3 px-4 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {pickingLists.map((list) => {
                   const percent = list.totalItems > 0 ? Math.round((list.completedItems / list.totalItems) * 100) : 0;
                   return (
-                    <tr key={list.id} className="hover:bg-orange-50/30 transition-colors">
+                    <tr
+                      key={list.id}
+                      onClick={() => navigate(`/inventory/picking-lists/${list.id}`)}
+                      className="hover:bg-orange-50/40 transition-colors cursor-pointer group"
+                      title="Bấm để xem chi tiết đợt soạn hàng"
+                    >
                       <td className="py-3.5 px-4 font-mono font-bold text-gray-900">
-                        <button
-                          onClick={() => navigate(`/inventory/picking-lists/${list.id}`)}
-                          className="hover:text-orange-600 hover:underline flex items-center gap-1.5"
-                        >
+                        <span className="group-hover:text-orange-600 group-hover:underline flex items-center gap-1.5 transition-colors">
                           <ClipboardCheck className="w-3.5 h-3.5 text-orange-500" />
                           {list.code}
-                        </button>
+                        </span>
                       </td>
                       <td className="py-3.5 px-4 font-medium text-gray-800">
                         {list.warehouseName}
@@ -352,51 +386,6 @@ export const PickingListManagementPage: React.FC = () => {
                       </td>
                       <td className="py-3.5 px-4 text-gray-500">
                         {new Date(list.createdAt).toLocaleString('vi-VN')}
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* Chế độ di động trực tiếp (AC5) */}
-                          <button
-                            onClick={() => navigate(`/inventory/picking-lists/${list.id}?mode=mobile`)}
-                            title="Mở giao diện Thủ kho Soạn hàng trên Di Động (AC5)"
-                            className="p-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors flex items-center gap-1 text-[11px] font-semibold"
-                          >
-                            <Smartphone className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Soạn Mobile</span>
-                          </button>
-
-                          {/* Chi tiết */}
-                          <button
-                            onClick={() => navigate(`/inventory/picking-lists/${list.id}`)}
-                            title="Xem chi tiết phiếu"
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-
-                          {/* In phiếu */}
-                          <button
-                            onClick={() => setSelectedForPrint(list)}
-                            title="In phiếu soạn hàng A4"
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-                          >
-                            <Printer className="w-4 h-4" />
-                          </button>
-
-                          {/* Hủy phiếu */}
-                          {isWarehouseStaff && list.status !== 'COMPLETED' && list.status !== 'CANCELLED' && (
-                            <button
-                              onClick={() => {
-                                setCancelTarget(list);
-                                setCancelReason('');
-                              }}
-                              title="Hủy phiếu soạn hàng"
-                              className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
                       </td>
                     </tr>
                   );
