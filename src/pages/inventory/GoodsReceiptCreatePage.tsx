@@ -20,7 +20,8 @@ import type { GoodsReceiptFormPayload } from '../../types/inventory';
 import { SYSTEM_WAREHOUSES } from '../../types/inventory';
 import { fetchSuppliers, INITIAL_SUPPLIERS } from '../../services/supplierApi';
 import type { Supplier } from '../../types/supplier';
-import { productService, PRODUCT_CATEGORIES } from '../../services/productService';
+import { productService } from '../../services/productService';
+import { fetchCategories, buildHierarchicalCategoryOptions, type CategoryWithCount } from '../../services/categoryApi';
 import type { Product } from '../../types/product';
 import { createGoodsReceipt } from '../../services/inventoryReceiptApi';
 import { formatCurrencyVND, formatQuantity } from '../../services/orderService';
@@ -224,6 +225,27 @@ export const GoodsReceiptCreatePage: React.FC = () => {
 
   // Tick chọn nhanh sản phẩm trong danh mục (từng sản phẩm hoặc tick all)
   const [selectedCatalogProductIds, setSelectedCatalogProductIds] = useState<Set<number>>(new Set());
+
+  // Danh mục nhóm hàng đồng bộ từ Quản lý nhóm hàng
+  const [categories, setCategories] = useState<CategoryWithCount[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    fetchCategories()
+      .then((cats) => {
+        if (alive && Array.isArray(cats)) {
+          setCategories(cats);
+        }
+      })
+      .catch((err) => console.warn('Lỗi tải nhóm hàng:', err));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const hierarchicalCategoryOptions = useMemo(() => {
+    return buildHierarchicalCategoryOptions(categories);
+  }, [categories]);
 
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -1097,8 +1119,8 @@ export const GoodsReceiptCreatePage: React.FC = () => {
           </div>
 
           {/* Ô tìm kiếm & Bộ lọc ngành hàng */}
-          <div className="mt-4 space-y-3">
-            <div className="relative">
+          <div className="mt-4 flex flex-col sm:flex-row items-center gap-3">
+            <div className="relative flex-1 w-full">
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 id="catalog-search-input"
@@ -1120,31 +1142,20 @@ export const GoodsReceiptCreatePage: React.FC = () => {
               )}
             </div>
 
-            {/* Các nút ngành hàng */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-              <button
-                type="button"
-                onClick={() => setCatalogCategory('ALL')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${catalogCategory === 'ALL'
-                  ? 'bg-[#F85606] text-white shadow-xs'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                  }`}
+            <div className="w-full sm:w-72">
+              <SearchSelect
+                value={catalogCategory}
+                onChange={(e) => setCatalogCategory(e.target.value)}
+                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-2xl text-xs font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 shadow-2xs transition-all"
+                searchPlaceholder="Tìm ngành / nhóm hàng..."
               >
-                Tất cả ngành hàng
-              </button>
-              {PRODUCT_CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setCatalogCategory(cat)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${catalogCategory === cat
-                    ? 'bg-[#F85606] text-white shadow-xs'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                    }`}
-                >
-                  {cat}
-                </button>
-              ))}
+                <option value="ALL">Tất cả nhóm hàng ({categories.length})</option>
+                {hierarchicalCategoryOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </SearchSelect>
             </div>
           </div>
 

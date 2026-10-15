@@ -17,7 +17,7 @@ import {
   getDashboardMinStockSummary,
   updateMinStockThreshold
 } from '../../services/stockAlertApi';
-import { fetchCategories } from '../../services/categoryApi';
+import { fetchCategories, buildHierarchicalCategoryOptions, type CategoryWithCount } from '../../services/categoryApi';
 import { useLocation } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
 import { SearchSelect } from '../../components/common/SearchSelect';
@@ -72,8 +72,8 @@ export const StockLedgerPage: React.FC = () => {
   const [keyword, setKeyword] = useState<string>('');
   const [debouncedKeyword, setDebouncedKeyword] = useState<string>('');
 
-  // Danh mục nhóm hàng
-  const [categoryList, setCategoryList] = useState<{ code: string; name: string }[]>([]);
+  // Danh mục nhóm hàng đồng bộ từ Quản lý nhóm hàng
+  const [categories, setCategories] = useState<CategoryWithCount[]>([]);
 
   // Highlight SKU được bấm từ thông báo chuông hoặc thẻ cảnh báo
   const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
@@ -103,19 +103,16 @@ export const StockLedgerPage: React.FC = () => {
     fetchCategories()
       .then((res) => {
         if (Array.isArray(res)) {
-          setCategoryList(res.map((c) => ({ code: c.code || String(c.id), name: c.name })));
+          setCategories(res);
         }
       })
       .catch((err) => console.warn('Lỗi tải nhóm hàng:', err));
   }, []);
 
-  // Tổng hợp danh sách nhóm hàng bao gồm cả các nhóm hàng thực tế từ sản phẩm
-  const allCategoryNames = useMemo(() => {
-    const set = new Set<string>();
-    categoryList.forEach((c) => c.name && set.add(c.name));
-    configs.forEach((cfg) => cfg.category && set.add(cfg.category));
-    return Array.from(set).filter(Boolean).sort();
-  }, [categoryList, configs]);
+  // Sắp xếp nhóm hàng theo phân cấp cây DFS trực quan cho combobox lọc
+  const hierarchicalCategoryOptions = useMemo(() => {
+    return buildHierarchicalCategoryOptions(categories);
+  }, [categories]);
 
   // Debounce tìm kiếm reactive: gõ là tự lọc sau 300ms, không bắt buộc bấm nút Lọc
   useEffect(() => {
@@ -427,22 +424,23 @@ export const StockLedgerPage: React.FC = () => {
             </SearchSelect>
 
             {/* 2. Lọc Nhóm Hàng */}
-            <select
+            <SearchSelect
               value={selectedCategory}
               onChange={(e) => {
                 setHighlightedKey(null);
                 setSelectedCategory(e.target.value);
                 setPage(0);
               }}
-              className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606] cursor-pointer text-gray-700"
+              className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606] cursor-pointer text-gray-700 min-w-[200px]"
+              searchPlaceholder="Tìm nhóm hàng..."
             >
-              <option value="ALL">Tất cả nhóm hàng</option>
-              {allCategoryNames.map((catName) => (
-                <option key={catName} value={catName}>
-                  {catName}
+              <option value="ALL">Tất cả nhóm hàng ({categories.length})</option>
+              {hierarchicalCategoryOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
 
             {/* 3. Lọc Trạng Thái Tồn */}
             <select
