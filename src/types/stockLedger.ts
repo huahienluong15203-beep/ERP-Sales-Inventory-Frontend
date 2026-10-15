@@ -1,5 +1,5 @@
 /**
- * S5-05: Định nghĩa kiểu dữ liệu Sổ tồn kho 3 cột
+ * Định nghĩa kiểu dữ liệu Sổ tồn kho 3 cột
  * - Ba cột tách bạch: tồn thực tế, tồn đang giữ chỗ, tồn khả dụng = thực tế - giữ chỗ
  * - Lọc theo kho, nhóm hàng, trạng thái tồn; tìm nhanh theo mã / tên sản phẩm
  */
