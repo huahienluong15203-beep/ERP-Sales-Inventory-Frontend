@@ -146,6 +146,26 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Phiếu soạn hàng',
+    path: '/inventory/picking-lists',
+    group: 'Sản phẩm & Kho',
+    icon: 'ClipboardCheck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Gom đơn duyệt, gộp mặt hàng và tối ưu lộ trình soạn hàng trong kho (hỗ trợ di động)',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER']
+  },
+
+  {
+    title: 'Chuyến giao hàng',
+    path: '/inventory/delivery-trips',
+    group: 'Sản phẩm & Kho',
+    icon: 'Truck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Phân tuyến giao hàng theo khu vực, gán tài xế & phương tiện, in danh sách điểm giao',
+    allowedRoles: ['ROLE_WH_MANAGER', 'ROLE_WAREHOUSE', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER']
+  },
+
+  {
     title: 'Danh mục kho & vị trí',
     path: '/inventory/warehouses',
     group: 'Sản phẩm & Kho',
