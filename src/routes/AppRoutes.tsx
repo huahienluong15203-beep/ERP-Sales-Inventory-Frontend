@@ -38,6 +38,7 @@ import { StockTakeManagementPage } from '../pages/inventory/StockTakeManagementP
 import { StockTakeCreatePage } from '../pages/inventory/StockTakeCreatePage';
 import { StockTakeDetailPage } from '../pages/inventory/StockTakeDetailPage';
 import { WarehouseManagementPage } from '../pages/inventory/WarehouseManagementPage';
+import { DebtAdjustmentPage } from '../pages/payment/DebtAdjustmentPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -578,6 +579,22 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <OrderListPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Chứng từ giảm trừ công nợ khi trả hàng */}
+        <Route
+          path="/payments/adjustments"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <DebtAdjustmentPage />
             </ProtectedRoute>
           }
         />

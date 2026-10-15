@@ -63,6 +63,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Duyệt giảm trừ công nợ',
+    path: '/payments/adjustments',
+    group: 'Bán hàng',
+    icon: 'FileCheck',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: 'Duyệt chứng từ giảm trừ công nợ khi trả hàng theo đúng giá bán hoá đơn gốc',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+  },
+
+  {
     title: 'Danh mục sản phẩm',
     path: '/products',
     group: 'Sản phẩm & Kho',
