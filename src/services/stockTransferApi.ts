@@ -279,6 +279,27 @@ export async function createStockTransfer(
 }
 
 /**
+ * Xem chi tiết một phiếu chuyển kho theo ID hoặc mã phiếu
+ */
+export async function fetchStockTransferById(id: string): Promise<StockTransfer> {
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/inventory/transfers/${id}`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback localStorage
+  }
+
+  const list = getLocalTransfers();
+  const found = list.find((t) => String(t.id) === String(id) || t.code === id);
+  if (!found) {
+    throw new Error('Không tìm thấy phiếu chuyển kho yêu cầu');
+  }
+  return found;
+}
+
+/**
  * Kho đi xuất kho: chuyển trạng thái phiếu sang IN_TRANSIT (AC2)
  * Hàng đang chuyển ghi nhận là Đang trên đường, CHƯA cộng vào kho đến
  */

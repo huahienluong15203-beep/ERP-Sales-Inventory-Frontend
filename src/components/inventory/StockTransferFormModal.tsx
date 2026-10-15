@@ -231,7 +231,7 @@ export const StockTransferFormModal: React.FC<StockTransferFormModalProps> = ({
       category: defaultP.category,
       unit: defaultP.baseUnit || 'Thùng',
       sourceAvailableStock: availStock,
-      transferQuantity: availStock > 0 ? Math.min(10, availStock) : 10,
+      transferQuantity: 1,
       batchNumber: `LOT-TRF-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
       expiredDate: new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().slice(0, 10)
     };
