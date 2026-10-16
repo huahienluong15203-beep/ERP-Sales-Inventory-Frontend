@@ -420,15 +420,27 @@ export const OrderDetailPage: React.FC = () => {
 
           {/* Thao tác xử lý kho theo vòng đời */}
           {order.status === 'APPROVED' && isWarehouseOrAdmin && (
-            <button
-              type="button"
-              disabled={updatingStatus}
-              onClick={() => handleUpdateStatus('PICKING', 'Đang soạn hàng')}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
-            >
-              <Package size={14} className={updatingStatus ? 'animate-spin' : ''} />
-              <span>Bắt đầu soạn hàng</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/inventory/picking-lists/create')}
+                className="px-3.5 py-2 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#F85606] font-bold text-xs flex items-center gap-1.5 border border-orange-200 shadow-xs transition cursor-pointer"
+                title="Gom đơn này vào đợt soạn hàng tối ưu theo lộ trình FEFO của kho"
+              >
+                <Package size={14} />
+                <span>Gom vào đợt soạn kho</span>
+              </button>
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={() => handleUpdateStatus('PICKING', 'Đang soạn hàng')}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
+                title="Chuyển trạng thái đơn sang Đang soạn hàng lẻ"
+              >
+                <Package size={14} className={updatingStatus ? 'animate-spin' : ''} />
+                <span>Bắt đầu soạn hàng</span>
+              </button>
+            </div>
           )}
 
           {order.status === 'PICKING' && isWarehouseOrAdmin && (
@@ -437,9 +449,22 @@ export const OrderDetailPage: React.FC = () => {
               disabled={updatingStatus}
               onClick={() => handleUpdateStatus('DISPATCHED', 'Đã xuất kho')}
               className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
+              title="Xác nhận hàng đã đóng gói rời kho, chuyển sang Đã xuất kho để đưa vào Chuyến giao hàng"
             >
               <Truck size={14} className={updatingStatus ? 'animate-spin' : ''} />
-              <span>Xác nhận xuất kho</span>
+              <span>Xác nhận xuất kho (Sẵn sàng xếp xe)</span>
+            </button>
+          )}
+
+          {order.status === 'DISPATCHED' && isWarehouseOrAdmin && (
+            <button
+              type="button"
+              onClick={() => navigate('/inventory/delivery-trips/create')}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+              title="Đưa đơn hàng đã xuất kho này vào chuyến xe giao hàng"
+            >
+              <Truck size={14} />
+              <span>Xếp chuyến xe ngay →</span>
             </button>
           )}
 

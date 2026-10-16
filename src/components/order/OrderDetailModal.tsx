@@ -666,10 +666,10 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
                 disabled={updatingStatus}
                 onClick={() => handleUpdateStatus('DISPATCHED', 'Đã xuất kho')}
                 className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
-                title="Xác nhận hàng đã rời kho và trừ tồn thực tế"
+                title="Xác nhận hàng đã đóng gói rời kho, chuyển sang Đã xuất kho để đưa vào Chuyến giao hàng"
               >
                 <Truck size={14} className={updatingStatus ? 'animate-spin' : ''} />
-                <span>Xác nhận xuất kho</span>
+                <span>Xác nhận xuất kho (Sẵn sàng xếp xe)</span>
               </button>
             )}
 
