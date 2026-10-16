@@ -139,7 +139,19 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
   // Lấy tiêu đề và mô tả của trang hiện tại cho Header
   // Bỏ phần ?query (vd /logs?tab=price) khi so khớp menu
   const currentPath = location.pathname.split('?')[0];
-  const currentMenu = menus.find((m) => m.path === currentPath);
+
+  // Tìm menu item khớp nhất (đường dẫn dài nhất) với currentPath
+  // Tránh lỗi nhiều tab cùng sáng màu (ví dụ /orders và /orders/create)
+  const activeMenu = useMemo(() => {
+    const matchingMenus = displayedMenus.filter(
+      (m) => currentPath === m.path || (m.path !== '/' && currentPath.startsWith(m.path + '/'))
+    );
+    if (matchingMenus.length === 0) return null;
+    return matchingMenus.reduce((prev, curr) => (curr.path.length > prev.path.length ? curr : prev));
+  }, [displayedMenus, currentPath]);
+
+  const currentMenu = activeMenu || menus.find((m) => m.path === currentPath);
+  const isPickingListRoute = location.pathname.startsWith('/inventory/picking-lists');
   const pageTitle =
     location.pathname === '/forbidden'
       ? '403 Truy Cập Bị Từ Chối'
@@ -153,19 +165,25 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
               ? 'Chuyển Giao Địa Bàn Hàng Loạt'
               : location.pathname === '/suppliers/create'
                 ? 'Thêm Mới Đối Tác Cung Ứng'
-                : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
+                : location.pathname === '/inventory/picking-lists/create'
+                  ? 'Lập Phiếu Soạn Hàng Mới'
+                  : location.pathname.startsWith('/inventory/picking-lists/')
+                    ? 'Chi Tiết Phiếu Soạn Hàng'
+                    : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
   const pageSubtitle =
-    location.pathname === '/profile'
-      ? 'Thông tin cá nhân & thiết lập an toàn tài khoản'
-      : location.pathname === '/products/import'
-        ? 'Tải tệp mẫu, xem trước từng dòng và nhập hàng loạt đến 5.000 SKU'
-        : location.pathname === '/customers/create'
-          ? 'Khai báo thông tin pháp lý, nhóm khách hàng, cơ chế bảng giá và phân công địa bàn quản lý'
-          : location.pathname === '/customers/transfer'
-            ? 'Bàn giao toàn bộ hoặc theo khu vực cho nhân viên mới khi có luân chuyển công tác'
-            : location.pathname === '/suppliers/create'
-              ? 'Nguồn hàng chuẩn để gắn vào phiếu nhập kho truy nguyên nguồn gốc'
-              : (currentMenu?.description ?? 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống');
+    isPickingListRoute
+      ? ''
+      : location.pathname === '/profile'
+        ? 'Thông tin cá nhân & thiết lập an toàn tài khoản'
+        : location.pathname === '/products/import'
+          ? 'Tải tệp mẫu, xem trước từng dòng và nhập hàng loạt đến 5.000 SKU'
+          : location.pathname === '/customers/create'
+            ? 'Khai báo thông tin pháp lý, nhóm khách hàng, cơ chế bảng giá và phân công địa bàn quản lý'
+            : location.pathname === '/customers/transfer'
+              ? 'Bàn giao toàn bộ hoặc theo khu vực cho nhân viên mới khi có luân chuyển công tác'
+              : location.pathname === '/suppliers/create'
+                ? 'Nguồn hàng chuẩn để gắn vào phiếu nhập kho truy nguyên nguồn gốc'
+                : (currentMenu?.description ?? 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống');
 
   return (
     <div className="erp-app-shell">
@@ -278,50 +296,39 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             </div>
           ) : (
             <ul className="erp-menu-list">
-              {(() => {
-                // Ưu tiên 1: Khớp chính xác (Exact match)
-                const exactMatch = displayedMenus.find((m) => m.path === currentPath);
-                // Ưu tiên 2: Khớp tiền tố dài nhất (Prefix match) nếu trang con không có trong menu (VD: /customers/create -> /customers)
-                const activePath = exactMatch
-                  ? exactMatch.path
-                  : displayedMenus
-                      .filter((m) => m.path !== '/' && currentPath.startsWith(m.path + '/'))
-                      .sort((a, b) => b.path.length - a.path.length)[0]?.path;
-
-                return displayedMenus.map((item, idx) => {
-                  const isActive = item.path === activePath;
-                  // Gom nhóm theo chức năng: hiện tiêu đề nhóm khi sang nhóm mới
-                  const showGroup = Boolean(item.group) && item.group !== displayedMenus[idx - 1]?.group;
-                  return (
-                    <Fragment key={item.path}>
-                      {showGroup && (
-                        <li className="erp-menu-group" aria-hidden={isSidebarCollapsed}>
-                          {isSidebarCollapsed ? <span className="erp-menu-group-divider" /> : item.group}
-                        </li>
-                      )}
-                      <li className="erp-menu-item">
-                        <Link
-                          to={item.path}
-                          className={`erp-menu-link ${isActive ? 'active' : ''}`}
-                          title={item.title}
-                        >
-                          <span className="erp-menu-icon">
-                            <DynamicIcon name={item.icon} size={18} />
-                          </span>
-                          {!isSidebarCollapsed && (
-                            <>
-                              <span className="erp-menu-title">{item.title}</span>
-                              {item.badge && (
-                                <span className="erp-menu-badge">{item.badge}</span>
-                              )}
-                            </>
-                          )}
-                        </Link>
+              {displayedMenus.map((item, idx) => {
+                const isActive = activeMenu?.path === item.path;
+                // Gom nhóm theo chức năng: hiện tiêu đề nhóm khi sang nhóm mới
+                const showGroup = Boolean(item.group) && item.group !== displayedMenus[idx - 1]?.group;
+                return (
+                  <Fragment key={item.path}>
+                    {showGroup && (
+                      <li className="erp-menu-group" aria-hidden={isSidebarCollapsed}>
+                        {isSidebarCollapsed ? <span className="erp-menu-group-divider" /> : item.group}
                       </li>
-                    </Fragment>
-                  );
-                });
-              })()}
+                    )}
+                    <li className="erp-menu-item">
+                      <Link
+                        to={item.path}
+                        className={`erp-menu-link ${isActive ? 'active' : ''}`}
+                        title={item.title}
+                      >
+                        <span className="erp-menu-icon">
+                          <DynamicIcon name={item.icon} size={18} />
+                        </span>
+                        {!isSidebarCollapsed && (
+                          <>
+                            <span className="erp-menu-title">{item.title}</span>
+                            {item.badge && (
+                              <span className="erp-menu-badge">{item.badge}</span>
+                            )}
+                          </>
+                        )}
+                      </Link>
+                    </li>
+                  </Fragment>
+                );
+              })}
             </ul>
           )}
         </nav>
@@ -346,7 +353,8 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             {/* Tiêu đề trang + mô tả hoạt động bên dưới */}
             <div className="erp-page-title-box">
               <h1 className="erp-page-heading">{pageTitle}</h1>
-              {location.pathname !== '/categories' &&
+              {!['/categories'].includes(location.pathname) &&
+                !location.pathname.startsWith('/inventory/delivery-trips') &&
                 Boolean(pageSubtitle) && (
                   <span className="erp-page-subheading">{pageSubtitle}</span>
                 )}

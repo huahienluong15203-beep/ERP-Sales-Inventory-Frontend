@@ -420,8 +420,8 @@ export const OrderListPage: React.FC = () => {
       statuses: selectedStatusTab
         ? selectedStatusTab.split(',')
         : isWarehouseRole
-        ? WAREHOUSE_ALL_STATUSES
-        : undefined
+          ? WAREHOUSE_ALL_STATUSES
+          : undefined
     };
 
     // Khi ở tab "Tất cả trạng thái", tính tổng tiền các đơn chính thức (loại trừ đơn nháp DRAFT, đơn hủy CANCELLED và đơn từ chối REJECTED)
@@ -659,12 +659,12 @@ export const OrderListPage: React.FC = () => {
                 {selectedStatusTab === 'DRAFT'
                   ? 'Tổng giá trị đơn nháp'
                   : selectedStatusTab === 'REJECTED,CANCELLED'
-                  ? 'Tổng tiền đơn hủy / từ chối'
-                  : selectedStatusTab === 'PENDING_APPROVAL'
-                  ? 'Tổng tiền chờ duyệt'
-                  : selectedStatusTab === 'APPROVED'
-                  ? 'Tổng tiền đã duyệt'
-                  : 'Tổng tiền đơn chính thức'}
+                    ? 'Tổng tiền đơn hủy / từ chối'
+                    : selectedStatusTab === 'PENDING_APPROVAL'
+                      ? 'Tổng tiền chờ duyệt'
+                      : selectedStatusTab === 'APPROVED'
+                        ? 'Tổng tiền đã duyệt'
+                        : 'Tổng tiền đơn chính thức'}
               </span>
             </span>
             <div className="text-xl font-black text-[#F85606] leading-tight">
@@ -674,12 +674,12 @@ export const OrderListPage: React.FC = () => {
               {selectedStatusTab === 'DRAFT'
                 ? 'Tổng giá trị các bản nháp đang soạn'
                 : selectedStatusTab === 'REJECTED,CANCELLED'
-                ? 'Giá trị các đơn bị từ chối hoặc đã hủy'
-                : selectedStatusTab === 'PENDING_APPROVAL'
-                ? 'Giá trị các đơn hàng đang chờ quản lý duyệt'
-                : selectedStatusTab === 'APPROVED'
-                ? 'Giá trị các đơn hàng đã phê duyệt thành công'
-                : 'Giá trị đơn chính thức (không gồm đơn nháp & đã hủy)'}
+                  ? 'Giá trị các đơn bị từ chối hoặc đã hủy'
+                  : selectedStatusTab === 'PENDING_APPROVAL'
+                    ? 'Giá trị các đơn hàng đang chờ quản lý duyệt'
+                    : selectedStatusTab === 'APPROVED'
+                      ? 'Giá trị các đơn hàng đã phê duyệt thành công'
+                      : 'Giá trị đơn chính thức (không gồm đơn nháp & đã hủy)'}
             </p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F85606] to-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-orange-500/20">
@@ -1032,9 +1032,8 @@ export const OrderListPage: React.FC = () => {
                 orders.map((o) => (
                   <tr
                     key={o.id}
-                    className={`transition-colors ${
-                      selectedIds.has(String(o.id)) ? 'bg-orange-50/60' : 'hover:bg-orange-50/25'
-                    }`}
+                    className={`transition-colors ${selectedIds.has(String(o.id)) ? 'bg-orange-50/60' : 'hover:bg-orange-50/25'
+                      }`}
                   >
                     {canBulkApprove && (
                       <td className="py-3 pl-4 pr-0">
@@ -1257,9 +1256,8 @@ export const OrderListPage: React.FC = () => {
                 type="button"
                 disabled={bulkSubmitting || !bulkComment.trim()}
                 onClick={() => runBulk(bulkAction, bulkComment)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold text-white disabled:opacity-50 cursor-pointer ${
-                  bulkAction === 'REJECT' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-amber-600 hover:bg-amber-700'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold text-white disabled:opacity-50 cursor-pointer ${bulkAction === 'REJECT' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-amber-600 hover:bg-amber-700'
+                  }`}
               >
                 {bulkSubmitting ? 'Đang xử lý...' : 'Xác nhận'}
               </button>
