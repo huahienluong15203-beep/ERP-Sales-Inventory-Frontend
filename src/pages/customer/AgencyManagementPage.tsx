@@ -54,9 +54,11 @@ import {
   Navigation,
   Trash2
 } from '../../components/common/Icons';
+import { useNavigate } from '../../routes/Router';
 import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const AgencyManagementPage: React.FC = () => {
+  const navigate = useNavigate();
 
   // Dữ liệu danh sách đại lý
   const [agencies, setAgencies] = useState<Agency[]>([]);
@@ -339,12 +341,6 @@ export const AgencyManagementPage: React.FC = () => {
     setRouteQuickFilter('ALL');
   };
 
-  // Mở modal tạo mới
-  const handleOpenCreate = () => {
-    setEditingAgency(null);
-    setIsFormModalOpen(true);
-  };
-
   // Mở modal sửa
   const handleOpenEdit = (item: Agency) => {
     setEditingAgency(item);
@@ -432,7 +428,7 @@ export const AgencyManagementPage: React.FC = () => {
           {/* S3-06: Chuyển giao địa bàn hàng loạt (chỉ Quản lý kinh doanh & Admin) */}
           {canManageAssignments && (
             <button
-              onClick={() => setIsTransferModalOpen(true)}
+              onClick={() => navigate('/customers/transfer')}
               className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:opacity-95 text-white text-xs font-bold rounded-lg shadow-sm shadow-amber-500/20 flex items-center gap-1.5 transition-all cursor-pointer h-9"
               title="Chuyển giao địa bàn hàng loạt khi nhân viên nghỉ việc hoặc điều chuyển"
             >
@@ -443,7 +439,7 @@ export const AgencyManagementPage: React.FC = () => {
 
           {canManageAgency && (
             <button
-              onClick={handleOpenCreate}
+              onClick={() => navigate('/customers/create')}
               className="px-3.5 py-1.5 bg-gradient-to-r from-[#FF6A00] to-[#EE4D2D] hover:opacity-95 text-white text-xs font-bold rounded-lg shadow-sm shadow-orange-500/20 flex items-center gap-1.5 transition-all cursor-pointer h-9"
             >
               <Plus size={16} />

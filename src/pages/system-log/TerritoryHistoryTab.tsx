@@ -16,9 +16,11 @@ import {
   CheckCircle2
 } from '../../components/common/Icons';
 import { Pagination } from '../../components/common/Pagination';
+import { useNavigate } from '../../routes/Router';
 import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const TerritoryHistoryTab: React.FC = () => {
+  const navigate = useNavigate();
   const { currentRole } = useAuth();
   const canTransfer = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER';
 
@@ -132,7 +134,7 @@ export const TerritoryHistoryTab: React.FC = () => {
           {canTransfer && (
             <button
               type="button"
-              onClick={() => setIsTransferModalOpen(true)}
+              onClick={() => navigate('/customers/transfer')}
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#F85606] hover:bg-[#e04d05] text-white rounded-lg text-xs font-bold shadow-sm transition hover:shadow-md cursor-pointer h-9"
               title="Thực hiện chuyển giao đại lý giữa các nhân viên"
             >

@@ -173,7 +173,7 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
   return (
     <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
       <div
-        className="w-full sm:max-w-2xl bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-100 flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden"
+        className="w-full sm:max-w-4xl lg:max-w-5xl xl:max-w-6xl bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-100 flex flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden transition-all"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Modal */}
