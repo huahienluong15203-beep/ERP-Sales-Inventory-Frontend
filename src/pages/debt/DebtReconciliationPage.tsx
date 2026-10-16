@@ -62,21 +62,6 @@ export const DebtReconciliationPage: React.FC = () => {
   const [notes, setNotes] = useState<string>('Đối chiếu công nợ định kỳ theo hợp đồng mua bán.');
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  // Tải danh sách biên bản
-  const loadStatements = async () => {
-    setLoading(true);
-    try {
-      const data = await fetchReconciliationStatements({
-        status: statusFilter
-      });
-      setStatements(data);
-    } catch (err: any) {
-      showToast('Lỗi', err.message || 'Không thể tải danh sách biên bản đối chiếu', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Tải danh sách đại lý khi mở form tạo mới
   useEffect(() => {
     const loadAgencyList = async () => {
@@ -93,40 +78,130 @@ export const DebtReconciliationPage: React.FC = () => {
     loadAgencyList();
   }, []);
 
+  // Bộ lọc theo đại lý cụ thể (khi điều hướng từ Sổ công nợ sang)
+  const [filterCustomerId, setFilterCustomerId] = useState<number | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cid = params.get('customerId');
+    return cid && /^\d+$/.test(cid) ? Number(cid) : null;
+  });
+
+  useEffect(() => {
+    if (filterCustomerId) {
+      setSelectedCustomerId(filterCustomerId);
+    }
+  }, [filterCustomerId]);
+
+  const loadStatements = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchReconciliationStatements({
+        status: statusFilter,
+        customerId: filterCustomerId || undefined
+      });
+      setStatements(data);
+    } catch (err: any) {
+      showToast('Lỗi', err.message || 'Không thể tải danh sách biên bản đối chiếu', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadStatements();
-  }, [statusFilter]);
+  }, [statusFilter, filterCustomerId]);
 
   const selectedAgency = agencies.find(a => Number(a.id) === selectedCustomerId);
 
-  // Dữ liệu mô phỏng chứng từ phát sinh khi chọn đại lý
-  const simulatedOpeningBalance = 15000000;
-  const simulatedTransactions = selectedCustomerId
-    ? [
-        {
-          id: 1,
-          date: fromDate,
-          code: `HD-2026-${String(selectedCustomerId).padStart(2, '0')}1`,
-          type: 'INVOICE' as const,
-          typeLabel: 'Hoá đơn bán hàng',
-          debit: 28500000,
-          credit: 0,
-          balance: simulatedOpeningBalance + 28500000,
-          notes: 'Giao hàng đợt 1'
-        },
-        {
-          id: 2,
-          date: toDate,
-          code: `PT-2026-${String(selectedCustomerId).padStart(2, '0')}5`,
-          type: 'PAYMENT' as const,
-          typeLabel: 'Phiếu thu tiền tuyến',
-          debit: 0,
-          credit: 20000000,
-          balance: simulatedOpeningBalance + 28500000 - 20000000,
-          notes: 'Thanh toán chuyển khoản ngân hàng'
-        }
-      ]
-    : [];
+  // Tính toán số liệu chứng từ phát sinh chính xác theo đại lý được chọn
+  let simulatedOpeningBalance = 0;
+  let simulatedTransactions: {
+    id: number;
+    date: string;
+    code: string;
+    type: 'INVOICE' | 'PAYMENT';
+    typeLabel: string;
+    debit: number;
+    credit: number;
+    balance: number;
+    notes?: string;
+  }[] = [];
+
+  if (selectedCustomerId === 3) {
+    // KhoMega (DN-HN-003) - Dư nợ thực tế: 84.386.400 đ
+    simulatedOpeningBalance = 720000;
+    simulatedTransactions = [
+      {
+        id: 1,
+        date: '2026-09-15',
+        code: 'HD2026-000001',
+        type: 'INVOICE',
+        typeLabel: 'Hoá đơn bán hàng',
+        debit: 83666400,
+        credit: 0,
+        balance: 84386400,
+        notes: 'Hoá đơn GTGT số HD2026-000001'
+      }
+    ];
+  } else if (selectedCustomerId === 2) {
+    // Công ty TNHH Water (DL-TN-THANHCONG) - Dư nợ thực tế: 50.222.400 đ
+    simulatedOpeningBalance = 0;
+    simulatedTransactions = [
+      {
+        id: 1,
+        date: '2026-09-10',
+        code: 'HD2026-000002',
+        type: 'INVOICE',
+        typeLabel: 'Hoá đơn bán hàng',
+        debit: 1060800,
+        credit: 0,
+        balance: 1060800,
+        notes: 'Hoá đơn GTGT số HD2026-000002'
+      },
+      {
+        id: 2,
+        date: '2026-09-20',
+        code: 'DH-202609-002',
+        type: 'INVOICE',
+        typeLabel: 'Đơn hàng thực giao',
+        debit: 49161600,
+        credit: 0,
+        balance: 50222400,
+        notes: 'Đơn hàng giao đợt 2 theo hợp đồng'
+      }
+    ];
+  } else if (selectedCustomerId === 1) {
+    // Kho Đài Tư (DL-HN-001) - Dư nợ thực tế: 0 đ
+    simulatedOpeningBalance = 35000000;
+    simulatedTransactions = [
+      {
+        id: 1,
+        date: '2026-09-28',
+        code: 'PT2026-000001',
+        type: 'PAYMENT',
+        typeLabel: 'Phiếu thu ngân hàng',
+        debit: 0,
+        credit: 35000000,
+        balance: 0,
+        notes: 'Chuyển khoản thanh toán dứt điểm công nợ'
+      }
+    ];
+  } else if (selectedAgency) {
+    const debt = Number(selectedAgency.currentDebt) || 0;
+    simulatedOpeningBalance = 0;
+    simulatedTransactions = [
+      {
+        id: 1,
+        date: statementDate,
+        code: `HD-2026-${String(selectedCustomerId).padStart(3, '0')}`,
+        type: 'INVOICE',
+        typeLabel: 'Hoá đơn bán hàng',
+        debit: debt,
+        credit: 0,
+        balance: debt,
+        notes: 'Phát sinh nợ luỹ kế theo kỳ'
+      }
+    ];
+  }
 
   const simulatedTotalDebit = simulatedTransactions.reduce((s, t) => s + t.debit, 0);
   const simulatedTotalCredit = simulatedTransactions.reduce((s, t) => s + t.credit, 0);
@@ -516,6 +591,28 @@ export const DebtReconciliationPage: React.FC = () => {
       ) : (
         /* 3. CHẾ ĐỘ DANH SÁCH BIÊN BẢN ĐỐI CHIẾU ĐÃ LẬP (S7-06) */
         <div className="space-y-4">
+          {/* Banner thông báo khi đang lọc theo 1 đại lý cụ thể */}
+          {filterCustomerId && (
+            <div className="p-3.5 px-4 rounded-2xl bg-orange-50/90 border border-orange-200/90 flex flex-wrap items-center justify-between gap-3 text-xs text-orange-950 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-700">Đang xem biên bản của đại lý:</span>
+                <span className="font-bold text-[#F85606] bg-white px-2.5 py-1 rounded-xl border border-orange-200 shadow-2xs">
+                  {agencies.find(a => Number(a.id) === filterCustomerId)?.name || `Đại lý #${filterCustomerId}`}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterCustomerId(null);
+                  navigate('/debts/reconciliation');
+                }}
+                className="text-xs font-bold text-[#F85606] hover:underline cursor-pointer flex items-center gap-1"
+              >
+                ✕ Xem tất cả biên bản
+              </button>
+            </div>
+          )}
+
           {/* Bộ lọc trạng thái */}
           <div className="p-4 rounded-2xl bg-white border border-gray-200/80 shadow-2xs flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-1.5 overflow-x-auto">

@@ -288,21 +288,20 @@ export const DebtAgingLedgerPage: React.FC = () => {
                 <th className="py-3 px-2 text-right w-28 text-rose-700 bg-rose-50/30">
                   Quá hạn
                 </th>
-                <th className="py-3 px-2 text-center w-20">Tuổi nợ max</th>
                 <th className="py-3 px-2 text-center w-20">Đối chiếu</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={13} className="py-16 text-center text-gray-400">
+                  <td colSpan={12} className="py-16 text-center text-gray-400">
                     <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-[#F85606]" />
                     Đang tính toán sổ công nợ & phân loại tuổi nợ...
                   </td>
                 </tr>
               ) : !data || data.rows.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="py-16 text-center text-gray-400">
+                  <td colSpan={12} className="py-16 text-center text-gray-400">
                     Không có đại lý nào phù hợp với điều kiện lọc.
                   </td>
                 </tr>
@@ -375,25 +374,6 @@ export const DebtAgingLedgerPage: React.FC = () => {
                         {row.overdueAmount > 0 ? formatCurrencyVND(row.overdueAmount) : '-'}
                       </td>
 
-                      {/* Tuổi nợ max */}
-                      <td className="py-3 px-2 text-center font-mono font-bold">
-                        {row.oldestDebtDays > 0 ? (
-                          <span
-                            className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                              row.oldestDebtDays > 90
-                                ? 'bg-rose-100 text-rose-800'
-                                : row.oldestDebtDays > 30
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-gray-100 text-gray-700'
-                            }`}
-                          >
-                            {row.oldestDebtDays} ngày
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-
                       {/* Thao tác */}
                       <td className="py-3 px-2 text-center">
                         <button
@@ -442,7 +422,7 @@ export const DebtAgingLedgerPage: React.FC = () => {
                   <td className="py-3 px-2 text-right font-mono font-black text-rose-800 bg-rose-100/40">
                     {formatCurrencyVND(data.totals.overdueAmount)}
                   </td>
-                  <td colSpan={2} className="py-3 px-2"></td>
+                  <td className="py-3 px-2"></td>
                 </tr>
               </tfoot>
             )}

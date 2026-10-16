@@ -4,94 +4,72 @@ import type {
   CreateReconciliationParams
 } from '../types/debtReconciliation';
 
-const RECON_STORAGE_KEY = 'erp_periodic_reconciliations_v1';
+const RECON_STORAGE_KEY = 'erp_periodic_reconciliations_v2';
 
 const INITIAL_STATEMENTS: PeriodicReconciliationStatement[] = [
   {
     id: 1,
     statementCode: 'BB-DC-202610-001',
-    customerId: 1,
-    customerCode: 'DL-001',
-    customerName: 'Đại lý Bia Nước Giải Khát Tuấn Hưng',
-    customerAddress: 'Số 45 Cầu Giấy, Hà Nội',
-    customerTaxCode: '0101234567',
-    customerPhone: '0912345678',
+    customerId: 2,
+    customerCode: 'DL-TN-THANHCONG',
+    customerName: 'Công ty TNHH Water',
+    customerAddress: 'Phường An Sinh, Thành phố Quảng Ninh',
+    customerTaxCode: '1112223331',
+    customerPhone: '0374668406',
     fromDate: '2026-09-01',
     toDate: '2026-09-30',
     statementDate: '2026-10-01',
-    openingBalance: 15000000,
-    totalDebit: 45000000,
-    totalCredit: 35000000,
-    closingBalance: 25000000,
+    openingBalance: 0,
+    totalDebit: 50222400,
+    totalCredit: 0,
+    closingBalance: 50222400,
     status: 'AGENCY_ACCEPTED',
-    confirmedBy: 'Kế toán trưởng',
+    confirmedBy: 'Phạm Thị Kế Toán',
     confirmedAt: '2026-10-02 10:15',
-    agencySignedBy: 'Phạm Tuấn Hưng (Chủ đại lý)',
+    agencySignedBy: 'Nguyễn Văn Nước (Đại diện đại lý)',
     agencySignedAt: '2026-10-03 14:20',
     notes: 'Đối chiếu chốt công nợ tháng 09/2026 chuẩn xác, không có tranh chấp.',
     transactions: [
       {
         id: 101,
-        date: '2026-09-05',
-        code: 'HD-202609-012',
+        date: '2026-09-10',
+        code: 'HD2026-000002',
         type: 'INVOICE',
         typeLabel: 'Hoá đơn bán hàng',
-        debit: 25000000,
+        debit: 1060800,
         credit: 0,
-        balance: 40000000,
-        notes: 'Xuất 100 thùng bia Tiger'
+        balance: 1060800,
+        notes: 'Hoá đơn GTGT số HD2026-000002'
       },
       {
         id: 102,
-        date: '2026-09-12',
-        code: 'PT-202609-045',
-        type: 'PAYMENT',
-        typeLabel: 'Phiếu thu tiền tuyến',
-        debit: 0,
-        credit: 20000000,
-        balance: 20000000,
-        notes: 'Chuyển khoản thanh toán đợt 1'
-      },
-      {
-        id: 103,
         date: '2026-09-20',
-        code: 'HD-202609-088',
+        code: 'DH-202609-002',
         type: 'INVOICE',
-        typeLabel: 'Hoá đơn bán hàng',
-        debit: 20000000,
+        typeLabel: 'Đơn hàng thực giao',
+        debit: 49161600,
         credit: 0,
-        balance: 40000000,
-        notes: 'Xuất 80 két bia Heineken'
-      },
-      {
-        id: 104,
-        date: '2026-09-25',
-        code: 'PT-202609-102',
-        type: 'PAYMENT',
-        typeLabel: 'Phiếu thu tiền tuyến',
-        debit: 0,
-        credit: 15000000,
-        balance: 25000000,
-        notes: 'Thanh toán tiền mặt cho NV giao hàng'
+        balance: 50222400,
+        notes: 'Đơn hàng giao đợt 2 theo hợp đồng'
       }
     ]
   },
   {
     id: 2,
     statementCode: 'BB-DC-202610-002',
-    customerId: 2,
-    customerCode: 'DL-002',
-    customerName: 'Đại lý Thực phẩm & Bách hóa Mai Linh',
-    customerAddress: 'Số 120 Đường Láng, Đống Đa, Hà Nội',
-    customerTaxCode: '0109876543',
-    customerPhone: '0987654321',
+    customerId: 3,
+    customerCode: 'DN-HN-003',
+    customerName: 'KhoMega',
+    customerAddress: 'Phường An Hội Đông, Thành phố Hồ Chí Minh',
+    customerTaxCode: '2222211111',
+    customerPhone: '0374466840',
     fromDate: '2026-09-01',
     toDate: '2026-09-30',
     statementDate: '2026-10-02',
-    openingBalance: 10000000,
-    totalDebit: 32000000,
-    totalCredit: 20000000,
-    closingBalance: 22000000,
+    openingBalance: 720000,
+    totalDebit: 83666400,
+    totalCredit: 0,
+    closingBalance: 84386400,
     status: 'CONFIRMED',
     confirmedBy: 'Phạm Thị Kế Toán',
     confirmedAt: '2026-10-02 16:30',
@@ -99,71 +77,50 @@ const INITIAL_STATEMENTS: PeriodicReconciliationStatement[] = [
     transactions: [
       {
         id: 201,
-        date: '2026-09-08',
-        code: 'HD-202609-030',
+        date: '2026-09-15',
+        code: 'HD2026-000001',
         type: 'INVOICE',
         typeLabel: 'Hoá đơn bán hàng',
-        debit: 32000000,
+        debit: 83666400,
         credit: 0,
-        balance: 42000000,
-        notes: 'Cung cấp thực phẩm khô & nước ngọt'
-      },
-      {
-        id: 202,
-        date: '2026-09-22',
-        code: 'PT-202609-090',
-        type: 'PAYMENT',
-        typeLabel: 'Phiếu thu tiền mặt',
-        debit: 0,
-        credit: 20000000,
-        balance: 22000000,
-        notes: 'Thu tiền mặt tại quầy'
+        balance: 84386400,
+        notes: 'Hoá đơn GTGT số HD2026-000001'
       }
     ]
   },
   {
     id: 3,
     statementCode: 'BB-DC-202610-003',
-    customerId: 5,
+    customerId: 1,
     customerCode: 'DL-HN-001',
-    customerName: 'Kho Đài Tư - Tổng kho Thực phẩm',
-    customerAddress: 'Xóm Nhội, Xã Thành Công, Thái Nguyên',
+    customerName: 'Kho Đài Tư',
+    customerAddress: 'Xóm Nhội, Xã Thành Công, Tỉnh Thái Nguyên',
     customerTaxCode: '1234567899',
-    customerPhone: '0933221100',
+    customerPhone: '0374668406',
     fromDate: '2026-09-01',
     toDate: '2026-09-30',
     statementDate: '2026-10-03',
-    openingBalance: 20000000,
-    totalDebit: 45000000,
-    totalCredit: 30000000,
-    closingBalance: 35000000,
-    status: 'AGENCY_DISPUTED',
+    openingBalance: 35000000,
+    totalDebit: 0,
+    totalCredit: 35000000,
+    closingBalance: 0,
+    status: 'AGENCY_ACCEPTED',
     confirmedBy: 'Phạm Thị Kế Toán',
     confirmedAt: '2026-10-03 09:00',
-    agencySignedBy: 'Vũ Đức Thành',
+    agencySignedBy: 'Trần Văn Đài (Đại diện đại lý)',
     agencySignedAt: '2026-10-04 11:30',
-    agencyFeedback: 'Hóa đơn ngày 20/09 bên tôi trả lại 5 thùng nước khoáng chưa được cấn trừ vào số dư này, đề nghị kế toán kiểm tra lại biên bản giảm trừ.',
-    notes: 'Đang phối hợp với thủ kho kiểm tra phiếu trả hàng PTH-202609-15.',
+    notes: 'Đại lý đã thanh toán dứt điểm toàn bộ số dư nợ trong kỳ đối chiếu.',
     transactions: [
       {
         id: 301,
-        date: '2026-09-10',
-        code: 'HD-202609-041',
-        type: 'INVOICE',
-        typeLabel: 'Hoá đơn bán hàng',
-        debit: 45000000,
-        credit: 0,
-        balance: 65000000
-      },
-      {
-        id: 302,
         date: '2026-09-28',
-        code: 'PT-202609-115',
+        code: 'PT2026-000001',
         type: 'PAYMENT',
-        typeLabel: 'Phiếu thu tiền ngân hàng',
+        typeLabel: 'Phiếu thu ngân hàng',
         debit: 0,
-        credit: 30000000,
-        balance: 35000000
+        credit: 35000000,
+        balance: 0,
+        notes: 'Chuyển khoản thanh toán dứt điểm công nợ'
       }
     ]
   }
@@ -172,7 +129,12 @@ const INITIAL_STATEMENTS: PeriodicReconciliationStatement[] = [
 function getStoredStatements(): PeriodicReconciliationStatement[] {
   try {
     const raw = localStorage.getItem(RECON_STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && !parsed.some(s => s.customerCode === 'DL-001' || s.customerCode === 'DL-002')) {
+        return parsed;
+      }
+    }
   } catch {
     // ignore
   }
