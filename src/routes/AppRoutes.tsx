@@ -48,6 +48,7 @@ import { DeliveryTripManagementPage } from '../pages/inventory/DeliveryTripManag
 import { DeliveryTripCreatePage } from '../pages/inventory/DeliveryTripCreatePage';
 import { DeliveryTripDetailPage } from '../pages/inventory/DeliveryTripDetailPage';
 import { DebtAdjustmentPage } from '../pages/payment/DebtAdjustmentPage';
+import { PaymentReconciliationPage } from '../pages/payment/PaymentReconciliationPage';
 import { ProductLotManagementPage } from '../pages/inventory/ProductLotManagementPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
@@ -768,6 +769,23 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <DebtAdjustmentPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Đối chiếu thu tiền theo tuyến & nộp quỹ (S7-05) */}
+        <Route
+          path="/payments/reconciliation"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <PaymentReconciliationPage />
             </ProtectedRoute>
           }
         />
