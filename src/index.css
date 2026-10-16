@@ -163,6 +163,21 @@ body {
   overflow-x: hidden;
 }
 
+/* Khóa cuộn trang nền và chặn hiện tượng lọt cuộn khi modal đang mở */
+html.modal-open,
+body.modal-open {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+/* Mọi lớp backdrop modal fixed inset-0 luôn cô lập thanh cuộn bên trong */
+.fixed.inset-0,
+[class*="fixed"][class*="inset-0"] {
+  overscroll-behavior: contain !important;
+}
+
+
+
 #root {
   min-height: 100vh;
   display: flex;

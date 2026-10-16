@@ -246,7 +246,7 @@ export const CreateSupplierPage: React.FC = () => {
           </div>
 
           <div className="p-5 sm:p-6 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
               {/* Mã nhà cung cấp */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
@@ -274,7 +274,7 @@ export const CreateSupplierPage: React.FC = () => {
               </div>
 
               {/* Tên nhà cung cấp */}
-              <div className="md:col-span-2">
+              <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
                   Tên nhà cung cấp <span className="text-red-500">*</span>
                 </label>
