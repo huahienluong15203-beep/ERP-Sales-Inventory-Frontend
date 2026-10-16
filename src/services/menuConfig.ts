@@ -83,6 +83,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Trả hàng đại lý',
+    path: '/sales-returns',
+    group: 'Bán hàng',
+    icon: 'RotateCcw',
+    epic: 'Bán hàng & Kho vận',
+    description: 'Lập phiếu hoàn hàng từ đại lý theo hoá đơn, nhập kho theo lô & kiểm duyệt nhập kho (S8-01)',
+    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ACCOUNTANT']
+  },
+
+  {
     title: 'Đối chiếu thu tiền tuyến',
     path: '/payments/reconciliation',
     group: 'Bán hàng',

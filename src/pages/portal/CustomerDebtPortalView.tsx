@@ -9,10 +9,8 @@ import {
   Eye,
   FileText,
   Search,
-  RefreshCw,
   Printer,
-  ShieldCheck,
-  Building2
+  ShieldCheck
 } from 'lucide-react';
 import { formatCurrencyVND } from '../../services/orderService';
 import { SearchSelect } from '../../components/common/SearchSelect';
@@ -113,51 +111,7 @@ export const CustomerDebtPortalView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* 1. Header Trang & Trạng thái Công Nợ */}
-      <div className="bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 rounded-2xl p-6 text-white shadow-md">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-xs text-xs font-semibold mb-2">
-              <Building2 size={14} />
-              <span>Cổng thông tin Đại lý phân phối</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-black">Tra cứu công nợ & Hoá đơn mua hàng</h1>
-            <p className="text-xs sm:text-sm text-orange-100 mt-1">
-              Theo dõi chi tiết số dư công nợ còn lại, hạn mức mua hàng và lịch sử hoá đơn phát hành
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={loadData}
-            className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-xs rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 self-start md:self-auto cursor-pointer transition active:scale-95"
-          >
-            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-            <span>Cập nhật số dư</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Cảnh báo nợ quá hạn nếu có */}
-      {stats.overdueCount > 0 && (
-        <div className="p-4 bg-rose-50 border border-rose-300 rounded-2xl flex items-start gap-3 text-rose-900 shadow-xs animate-fade-in">
-          <AlertTriangle size={22} className="text-rose-600 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <h4 className="text-sm font-bold">
-              Quý đại lý đang có {stats.overdueCount} khoản nợ đã quá hạn thanh toán!
-            </h4>
-            <p className="text-xs text-rose-800">
-              Tổng số tiền quá hạn là{' '}
-              <strong className="font-mono font-bold text-rose-900">
-                {formatCurrencyVND(stats.overdueDebt)}
-              </strong>
-              . Quý đại lý vui lòng thanh toán sớm để không bị gián đoạn quyền đặt thêm các đơn hàng mới.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* 2. 4 Thẻ KPI Tóm tắt Công nợ & Hạn mức */}
+      {/* 4 Thẻ KPI Tóm tắt Công nợ & Hạn mức */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Tổng còn nợ */}
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-xs">

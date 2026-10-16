@@ -57,6 +57,8 @@ import { InventoryAgingReportPage } from '../pages/inventory/InventoryAgingRepor
 import { InTransitDashboardPage } from '../pages/inventory/InTransitDashboardPage';
 import { DebtAgingLedgerPage } from '../pages/debt/DebtAgingLedgerPage';
 import { DebtReconciliationPage } from '../pages/debt/DebtReconciliationPage';
+import { SalesReturnListPage } from '../pages/salesreturn/SalesReturnListPage';
+import { CreateSalesReturnPage } from '../pages/salesreturn/CreateSalesReturnPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -857,6 +859,40 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <InvoiceManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S8-01: Trả hàng nhập kho */}
+        <Route
+          path="/sales-returns"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_REP',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <SalesReturnListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sales-returns/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_REP',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <CreateSalesReturnPage />
             </ProtectedRoute>
           }
         />

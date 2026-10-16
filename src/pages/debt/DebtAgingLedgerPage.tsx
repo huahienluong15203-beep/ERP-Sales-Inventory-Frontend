@@ -18,6 +18,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { formatCurrencyVND } from '../../services/orderService';
 import { fetchDebtLedger, downloadDebtLedgerExcel } from '../../services/debtLedgerApi';
 import type { DebtLedgerResponse, DebtLedgerFilterParams } from '../../types/debtLedger';
+import { PaymentReminderPopupModal } from '../../components/debt/PaymentReminderPopupModal';
 
 export const DebtAgingLedgerPage: React.FC = () => {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ export const DebtAgingLedgerPage: React.FC = () => {
   const [data, setData] = useState<DebtLedgerResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [exporting, setExporting] = useState<boolean>(false);
+  const [showReminderModal, setShowReminderModal] = useState<boolean>(false);
 
   // Bộ lọc
   const [keyword, setKeyword] = useState<string>('');
@@ -118,6 +120,16 @@ export const DebtAgingLedgerPage: React.FC = () => {
           >
             <FileSpreadsheet size={15} className={exporting ? 'animate-spin' : 'text-emerald-600'} />
             <span>{exporting ? 'Đang xuất...' : 'Xuất Excel'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowReminderModal(true)}
+            className="px-3.5 py-2 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 text-[#F85606] font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+            title="Xem danh sách thông báo nhắc nợ tự động (S7-08)"
+          >
+            <Clock size={15} />
+            <span>Nhắc nợ (S7-08)</span>
           </button>
 
           <button
@@ -458,6 +470,12 @@ export const DebtAgingLedgerPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* S7-08: Modal Popup Nhắc Hạn Thanh Toán Tự Động */}
+      <PaymentReminderPopupModal
+        isOpen={showReminderModal}
+        onClose={() => setShowReminderModal(false)}
+      />
     </div>
   );
 };

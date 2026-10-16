@@ -186,7 +186,7 @@ export const DebtReconciliationPage: React.FC = () => {
       }
     ];
   } else if (selectedAgency) {
-    const debt = Number(selectedAgency.currentDebt) || 0;
+    const debt = Number((selectedAgency as any).currentDebt ?? selectedAgency.totalDebt) || 0;
     simulatedOpeningBalance = 0;
     simulatedTransactions = [
       {

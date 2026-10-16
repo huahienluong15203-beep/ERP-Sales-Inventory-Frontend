@@ -22,7 +22,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  ArrowLeft
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
@@ -96,8 +97,8 @@ export const CustomerOrderPortalPage: React.FC = () => {
   const { user, currentRole, showToast } = useAuth();
   const navigate = useNavigate();
 
-  // Tab: 'catalog' (Đặt hàng), 'history' (Đơn hàng của tôi) hoặc 'debt' (Công nợ & Hoá đơn)
-  const [activeTab, setActiveTab] = useState<'catalog' | 'history' | 'debt'>('catalog');
+  // Tab: 'catalog' (Đặt hàng), 'history' (Đơn hàng của tôi), 'debt' (Công nợ & Hoá đơn) hoặc 'cart' (Giỏ hàng & Xác nhận đơn riêng biệt)
+  const [activeTab, setActiveTab] = useState<'catalog' | 'history' | 'debt' | 'cart'>('catalog');
 
   // Thông tin đại lý hiện tại
   const [agency, setAgency] = useState<Agency | null>(null);
@@ -125,11 +126,9 @@ export const CustomerOrderPortalPage: React.FC = () => {
     setCurrentPage(1);
   }, [searchKeyword, selectedCategory]);
 
-  // Giỏ hàng
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartPreview, setCartPreview] = useState<PortalOrderResult | null>(null);
   const [loadingPreview, setLoadingPreview] = useState<boolean>(false);
-  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Modal thông báo đặt hàng thành công
@@ -158,21 +157,8 @@ export const CustomerOrderPortalPage: React.FC = () => {
   // Tick chọn nhanh sản phẩm trong danh mục để thêm nhanh vào giỏ hàng
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
 
-  // S5-02: Modal mua lại đơn cũ & UI cảnh báo
   const [reorderModalOrderId, setReorderModalOrderId] = useState<number | string | null>(null);
   const [isReorderModalOpen, setIsReorderModalOpen] = useState<boolean>(false);
-
-  // Khóa cuộn trang khi mở giỏ hàng trên mobile
-  useEffect(() => {
-    if (isCartDrawerOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isCartDrawerOpen]);
 
   const handleConfirmReorder = (items: ReorderItemDraft[]) => {
     if (items.length === 0) return;
@@ -203,7 +189,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
       return next;
     });
 
-    setIsCartDrawerOpen(true);
+    setActiveTab('cart');
     showToast(
       'Đã đưa vào giỏ hàng',
       `Đã lấy lại ${items.length} mặt hàng theo bảng giá hiện hành!`,
@@ -575,9 +561,10 @@ export const CustomerOrderPortalPage: React.FC = () => {
     });
 
     setSelectedProductIds(new Set());
+    setActiveTab('cart');
     showToast(
-      'Đã thêm vào giỏ hàng',
-      `Đã thêm ${prodsToAdd.length} sản phẩm đã chọn vào giỏ hàng!`,
+      'Đã chọn xong mặt hàng',
+      `Đã thêm ${prodsToAdd.length} sản phẩm và sẵn sàng gửi đơn đặt hàng!`,
       'success',
       3000
     );
@@ -618,6 +605,11 @@ export const CustomerOrderPortalPage: React.FC = () => {
     });
 
     showToast('Đã thêm vào giỏ', `${product.name} (${qtyToAdd} ${unit})`, 'success', 2000);
+  };
+
+  const handleQuickBuy = (product: OrderProductCatalogItem, unitName?: string, qtyToAdd: number = 1) => {
+    handleAddToCart(product, unitName, qtyToAdd);
+    setActiveTab('cart');
   };
 
   const handleUpdateCartQuantity = (index: number, newQty: number) => {
@@ -689,7 +681,6 @@ export const CustomerOrderPortalPage: React.FC = () => {
   const currentDebt = Number(creditStatus?.currentDebt ?? agency?.totalDebt ?? 0);
   const remainingBeforeOrder = Number(creditStatus?.availableCredit ?? Math.max(0, creditLimit - currentDebt));
   const remainingAfterOrder = remainingBeforeOrder - cartPayableAmount;
-  const isOverCreditLimit = remainingAfterOrder < 0;
   const hasOverdueDebt = Boolean(creditStatus?.overdue);
 
   // 4. GỬI ĐƠN HÀNG (AC3: ĐƠN GỬI LÊN LUÔN Ở TRẠNG THÁI CHỜ DUYỆT)
@@ -748,7 +739,6 @@ export const CustomerOrderPortalPage: React.FC = () => {
       setCart([]);
       setOrderNote('');
       setDesiredDeliveryDate(getMinDeliveryDateString());
-      setIsCartDrawerOpen(false);
       setSuccessOrder(submittedOrder);
       showToast(
         'Gửi đơn hàng thành công',
@@ -774,7 +764,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
       creditStatus={creditStatus}
       cartItemCount={cartTotalCount}
       cartTotalAmount={cartPayableAmount}
-      onOpenCart={() => setIsCartDrawerOpen(true)}
+      onOpenCart={() => setActiveTab('cart')}
       activeTab={activeTab}
       onChangeTab={(tab) => {
         setViewingDetailOrderId(null);
@@ -874,54 +864,37 @@ export const CustomerOrderPortalPage: React.FC = () => {
       {/* CHỈ RENDER NỘI DUNG ĐẶT HÀNG KHI ĐÃ CÓ DỮ LIỆU ĐẠI LÝ */}
       {agency && activeTab === 'catalog' && (
         <div className="space-y-4">
-          {/* BANNER THÔNG TIN ĐẠI LÝ & TÀI CHÍNH TRÊN ĐẦU TRANG */}
-          <div className="bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 rounded-2xl p-4 sm:p-6 text-white shadow-lg shadow-orange-500/15">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-wider">
-                    {agency?.customerGroupName || 'Đại Lý Cấp 1'}
-                  </span>
-                  <span className="text-orange-100 text-xs font-mono font-medium">
-                    Mã ĐL: {agency?.code || '—'}
-                  </span>
+          {/* BANNER 3 CHỈ SỐ TÀI CHÍNH CHIA ĐỀU Ở GIỮA (ẢNH 2) */}
+          <div className="bg-white rounded-2xl p-4 sm:p-5 text-gray-900 border border-gray-200/90 shadow-2xs">
+            <div className="grid grid-cols-3 divide-x divide-gray-200 text-center">
+              <div className="px-3 sm:px-6">
+                <div className="text-[11px] sm:text-xs uppercase font-bold text-gray-500 tracking-wider">Hạn mức</div>
+                <div className="text-base sm:text-xl font-black font-mono text-gray-900 mt-1">
+                  {formatCurrencyVND(creditLimit)}
                 </div>
-                <h1 className="text-lg sm:text-2xl font-black tracking-tight">
-                  {agency?.name || 'Đại Lý Phân Phối'}
-                </h1>
-                <p className="text-orange-100 text-xs mt-1 flex items-center gap-1.5">
-                  <MapPin size={13} className="shrink-0" />
-                  <span className="truncate">{agency?.address || '—'}</span>
-                </p>
               </div>
-
-              {/* Bảng chỉ số công nợ trực quan (AC2) */}
-              <div className="grid grid-cols-3 gap-2 bg-black/15 backdrop-blur-md p-3 rounded-xl border border-white/10 text-center sm:text-right sm:min-w-[340px]">
-                <div>
-                  <div className="text-[10px] uppercase font-bold text-orange-200">Hạn mức</div>
-                  <div className="text-xs sm:text-sm font-black font-mono mt-0.5">
-                    {formatCurrencyVND(creditLimit)}
-                  </div>
+              <div className="px-3 sm:px-6">
+                <div className="text-[11px] sm:text-xs uppercase font-bold text-gray-500 tracking-wider">Nợ hiện tại</div>
+                <div className="text-base sm:text-xl font-black font-mono text-rose-600 mt-1">
+                  {formatCurrencyVND(currentDebt)}
                 </div>
-                <div>
-                  <div className="text-[10px] uppercase font-bold text-orange-200">Nợ hiện tại</div>
-                  <div className="text-xs sm:text-sm font-black font-mono text-rose-200 mt-0.5">
-                    {formatCurrencyVND(currentDebt)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase font-bold text-emerald-300">Còn lại</div>
-                  <div className="text-xs sm:text-sm font-black font-mono text-emerald-300 mt-0.5">
-                    {formatCurrencyVND(remainingBeforeOrder)}
-                  </div>
+              </div>
+              <div className="px-3 sm:px-6">
+                <div className="text-[11px] sm:text-xs uppercase font-bold text-gray-500 tracking-wider">Còn lại</div>
+                <div
+                  className={`text-base sm:text-xl font-black font-mono mt-1 ${
+                    remainingBeforeOrder < 0 ? 'text-rose-600' : 'text-emerald-600'
+                  }`}
+                >
+                  {formatCurrencyVND(remainingBeforeOrder)}
                 </div>
               </div>
             </div>
 
             {/* Cảnh báo nợ quá hạn nếu có */}
             {hasOverdueDebt && (
-              <div className="mt-3 bg-rose-900/90 border border-rose-300/30 rounded-xl p-2.5 flex items-center gap-2 text-rose-100 text-xs">
-                <ShieldAlert size={16} className="text-rose-300 shrink-0" />
+              <div className="mt-3 bg-rose-50 border border-rose-200 rounded-xl p-2.5 flex items-center justify-center gap-2 text-rose-800 text-xs">
+                <ShieldAlert size={16} className="text-rose-600 shrink-0" />
                 <span>
                   <strong>Cảnh báo tài chính:</strong> Đại lý có khoản nợ quá hạn ({creditStatus?.overdueDays || 30} ngày). Đơn hàng sẽ bị chặn gửi cho đến khi hoàn tất thanh toán.
                 </span>
@@ -1034,9 +1007,10 @@ export const CustomerOrderPortalPage: React.FC = () => {
                         type="button"
                         onClick={handleAddSelectedProductsToCart}
                         className="px-3.5 py-1.5 rounded-xl bg-[#F85606] hover:bg-orange-600 active:scale-95 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer"
+                        title="Đặt mua ngay các sản phẩm đã tick chọn"
                       >
-                        <ShoppingCart size={14} />
-                        <span>Thêm {selectedProductIds.size} sản phẩm vào giỏ</span>
+                        <Send size={13} />
+                        <span>Đặt hàng ngay ({selectedProductIds.size} SP)</span>
                       </button>
                     </div>
                   )}
@@ -1057,6 +1031,7 @@ export const CustomerOrderPortalPage: React.FC = () => {
                       isSelected={selectedProductIds.has(p.id)}
                       onToggleSelect={toggleSelectProduct}
                       onAddToCart={handleAddToCart}
+                      onQuickBuy={handleQuickBuy}
                     />
                   );
                 })}
@@ -1181,45 +1156,6 @@ export const CustomerOrderPortalPage: React.FC = () => {
       {/* ============================================================== */}
       {agency && activeTab === 'history' && (
         <div className="space-y-4">
-          {/* TIÊU ĐỀ & NÚT THAO TÁC TRÊN CÙNG */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-gray-900">
-                  Đơn Hàng Đã Gửi Của Đại Lý
-                </h2>
-                <span className="text-xs font-bold text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">
-                  {historyTotalElements} đơn
-                </span>
-              </div>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Theo dõi tiến độ duyệt, xuất kho và lịch sử các đơn hàng đã đặt
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {hasActiveHistoryFilters && (
-                <button
-                  type="button"
-                  onClick={handleResetHistoryFilters}
-                  className="px-3 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-600 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
-                  title="Xóa tất cả bộ lọc tìm kiếm"
-                >
-                  <X size={14} />
-                  <span>Đặt lại lọc</span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={loadOrderHistory}
-                disabled={loadingHistory}
-                className="px-3 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
-              >
-                <RefreshCw size={14} className={loadingHistory ? 'animate-spin text-[#F85606]' : ''} />
-                <span>Làm mới</span>
-              </button>
-            </div>
-          </div>
-
           {/* BỘ LỌC TỐC ĐỘ CAO (LỌC TRẠNG THÁI + TỪ KHÓA + KHOẢNG NGÀY) */}
           <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 shadow-2xs space-y-3">
             {/* Lọc nhanh theo trạng thái */}
@@ -1320,13 +1256,25 @@ export const CustomerOrderPortalPage: React.FC = () => {
                 >
                   Tháng này
                 </button>
-                {(historyFromDate || historyToDate) && (
+                <button
+                  type="button"
+                  onClick={loadOrderHistory}
+                  disabled={loadingHistory}
+                  className="px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-700 font-bold cursor-pointer inline-flex items-center gap-1 sm:ml-auto"
+                  title="Làm mới danh sách đơn hàng"
+                >
+                  <RefreshCw size={12} className={loadingHistory ? 'animate-spin text-[#F85606]' : ''} />
+                  <span>Làm mới</span>
+                </button>
+                {hasActiveHistoryFilters && (
                   <button
                     type="button"
-                    onClick={() => handleQuickDateFilter('all')}
-                    className="px-2 py-1 rounded-lg bg-orange-100 hover:bg-orange-200 text-[#F85606] font-bold cursor-pointer"
+                    onClick={handleResetHistoryFilters}
+                    className="px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-600 font-bold cursor-pointer inline-flex items-center gap-1"
+                    title="Xóa tất cả bộ lọc tìm kiếm"
                   >
-                    Xóa ngày
+                    <X size={12} />
+                    <span>Đặt lại</span>
                   </button>
                 )}
               </div>
@@ -1605,82 +1553,99 @@ export const CustomerOrderPortalPage: React.FC = () => {
       {agency && activeTab === 'debt' && (
         <CustomerDebtPortalView />
       )}
-        </>
-      )}
 
       {/* ============================================================== */}
-      {/* DRAWER GIỎ HÀNG & TÍNH TOÁN CÔNG NỢ (CART DRAWER - AC2) */}
+      {/* TAB 4: TRANG GIỎ HÀNG & XÁC NHẬN ĐẶT HÀNG RIÊNG BIỆT VÀ TO (ẢNH 1) */}
       {/* ============================================================== */}
-      {isCartDrawerOpen && (
-        <div className="fixed inset-0 z-[9999] overflow-hidden">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
-            onClick={() => setIsCartDrawerOpen(false)}
-          />
-
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-2 sm:pl-10">
-            <div className="w-screen max-w-full sm:max-w-md bg-white shadow-2xl flex flex-col rounded-l-2xl sm:rounded-none overflow-hidden">
-              {/* Header Drawer */}
-              <div className="p-4 sm:p-5 border-b border-gray-200 flex items-center justify-between bg-orange-50/50">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#F85606] text-white flex items-center justify-center shadow-xs">
-                    <ShoppingCart size={17} />
+      {agency && activeTab === 'cart' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {cart.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-gray-200 p-12 sm:p-16 text-center space-y-4 max-w-xl mx-auto shadow-sm">
+              <div className="w-20 h-20 rounded-3xl bg-orange-50 text-[#F85606] flex items-center justify-center mx-auto shadow-inner">
+                <ShoppingCart size={40} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base sm:text-lg font-black text-gray-900">
+                  Giỏ hàng của đại lý đang trống
+                </h3>
+                <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                  Quý đại lý chưa chọn sản phẩm nào. Hãy quay lại danh mục sản phẩm để bắt đầu đặt hàng.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('catalog')}
+                className="px-5 py-2.5 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white font-bold text-xs sm:text-sm inline-flex items-center gap-2 shadow-lg shadow-orange-500/25 transition cursor-pointer active:scale-95"
+              >
+                <Sparkles size={16} />
+                <span>Khám phá danh mục sản phẩm ngay</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* CỘT TRÁI: BẢNG SẢN PHẨM RỘNG RÃI */}
+              <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden">
+                  <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/60">
+                    <button
+                      type="button"
+                      onClick={() => setCart([])}
+                      className="text-xs text-gray-400 hover:text-rose-600 font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                      title="Xóa toàn bộ các món trong giỏ hàng"
+                    >
+                      <Trash2 size={15} />
+                      <span>Xóa sạch giỏ hàng</span>
+                    </button>
+                    <span className="text-xs text-gray-500">
+                      Tổng số lượng: <strong className="text-gray-900 font-mono">{cartTotalCount}</strong>
+                    </span>
                   </div>
-                  <div>
-                    <h2 className="font-black text-sm sm:text-base text-gray-900">
-                      Giỏ Hàng Đặt Của Đại Lý
-                    </h2>
-                    <p className="text-[11px] text-gray-500 font-medium">
-                      {cart.length} mặt hàng • {cartTotalCount} đơn vị
-                    </p>
+
+                  <div className="p-4 divide-y divide-gray-100 space-y-4">
+                    {cart.map((item, idx) => {
+                      const previewLine = cartPreview?.lines?.find(
+                        (l) => l.productSku === item.sku && l.unitName === item.selectedUnit
+                      );
+                      return (
+                        <div key={`${item.productId}-${item.selectedUnit}`} className="pt-4 first:pt-0">
+                          <PortalCartItemRow
+                            item={item}
+                            index={idx}
+                            previewLine={previewLine}
+                            onUpdateQuantity={handleUpdateCartQuantity}
+                            onRemoveItem={handleRemoveCartItem}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsCartDrawerOpen(false)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
+
+                <div className="flex items-center justify-between text-xs pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('catalog')}
+                    className="text-[#F85606] hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <ArrowLeft size={14} />
+                    <span>← Chọn thêm mặt hàng khác</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Danh sách mặt hàng trong giỏ */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 divide-y divide-gray-100">
-                {cart.length === 0 ? (
-                  <div className="py-16 text-center text-gray-400 space-y-2">
-                    <ShoppingCart size={40} className="mx-auto text-gray-300" />
-                    <p className="font-bold text-gray-700 text-sm">Giỏ hàng của bạn đang trống</p>
-                    <p className="text-xs text-gray-500">
-                      Hãy chọn các sản phẩm từ danh mục để bắt đầu đặt hàng.
-                    </p>
-                  </div>
-                ) : (
-                  cart.map((item, idx) => {
-                    const previewLine = cartPreview?.lines?.find(
-                      (l) => l.productSku === item.sku && l.unitName === item.selectedUnit
-                    );
-                    return (
-                      <PortalCartItemRow
-                        key={`${item.productId}-${item.selectedUnit}`}
-                        item={item}
-                        index={idx}
-                        previewLine={previewLine}
-                        onUpdateQuantity={handleUpdateCartQuantity}
-                        onRemoveItem={handleRemoveCartItem}
-                      />
-                    );
-                  })
-                )}
-              </div>
+              {/* CỘT PHẢI: THÔNG TIN GIAO HÀNG & TÀI CHÍNH CHỐT ĐƠN */}
+              <div className="lg:col-span-5 xl:col-span-4 space-y-4 lg:sticky lg:top-4">
+                {/* Khối Điểm nhận hàng & Ghi chú */}
+                <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-2xs space-y-3.5">
+                  <h3 className="text-xs font-bold uppercase text-gray-700 tracking-wider flex items-center gap-2">
+                    <MapPin size={15} className="text-[#F85606]" />
+                    <span>Thông tin nhận hàng</span>
+                  </h3>
 
-              {/* Thông tin giao hàng & Ghi chú */}
-              {cart.length > 0 && (
-                <div className="p-4 bg-gray-50/80 border-t border-gray-200 space-y-3">
                   {/* Điểm nhận hàng */}
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 uppercase mb-1">
-                      Điểm nhận hàng của đại lý
+                      Địa điểm giao hàng
                     </label>
                     {deliveryPoints.length > 0 ? (
                       <SearchSelect
@@ -1695,21 +1660,18 @@ export const CustomerOrderPortalPage: React.FC = () => {
                         ))}
                       </SearchSelect>
                     ) : (
-                      <div className="text-xs text-gray-500 bg-white p-2 rounded-xl border border-gray-200">
+                      <div className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded-xl border border-gray-200">
                         {agency?.address || 'Giao theo địa chỉ mặc định trong hồ sơ đại lý'}
                       </div>
                     )}
                   </div>
 
-                  {/* Ngày mong muốn nhận hàng (Ràng buộc Lead-time tối thiểu 24h - 48h) */}
+                  {/* Ngày mong muốn nhận hàng */}
                   <div>
-                    <label className="block text-[11px] font-bold text-gray-700 uppercase mb-1 flex items-center justify-between">
+                    <label className="block text-[11px] font-bold text-gray-700 uppercase mb-1">
                       <span className="flex items-center gap-1">
                         <Calendar size={13} className="text-[#F85606]" />
-                        <span>Ngày mong muốn nhận hàng <span className="text-rose-500">*</span></span>
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-normal">
-                        Tối thiểu từ {formatDateVN(minDeliveryDate)}
+                        <span>Ngày nhận hàng mong muốn <span className="text-rose-500">*</span></span>
                       </span>
                     </label>
                     <input
@@ -1727,39 +1689,42 @@ export const CustomerOrderPortalPage: React.FC = () => {
                       }}
                       className="w-full text-xs font-semibold border border-gray-200 rounded-xl p-2 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 text-gray-800"
                     />
-                    <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
-                      <Clock size={11} className="shrink-0 text-orange-500" />
-                      <span>Quy định kho: Đặt trước 12h trưa giao ngày mai ($N+1$), sau 12h trưa giao ngày kia ($N+2$).</span>
-                    </p>
                   </div>
 
                   {/* Ghi chú đơn */}
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 uppercase mb-1">
-                      Ghi chú đơn hàng (Thời gian giao, yêu cầu đặc biệt)
+                      Ghi chú đơn hàng (Thời gian giao, lưu ý bốc xếp)
                     </label>
-                    <input
-                      type="text"
-                      placeholder="Ví dụ: Giao trước 10h sáng mai..."
+                    <textarea
+                      rows={2}
+                      placeholder="Ví dụ: Giao trước 10h sáng, liên hệ thủ kho trước khi tới..."
                       value={orderNote}
                       onChange={(e) => setOrderNote(e.target.value)}
-                      className="w-full text-xs border border-gray-200 rounded-xl p-2 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                      className="w-full text-xs border border-gray-200 rounded-xl p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 resize-none"
                     />
                   </div>
+                </div>
 
-                  {/* BẢNG TỔNG KẾT TÀI CHÍNH & CÔNG NỢ TRƯỚC KHI GỬI (AC2 & CHIẾT KHẤU) */}
-                  <div className="bg-white rounded-xl border border-gray-200 p-3 space-y-1.5 text-xs">
+                {/* Khối Tóm tắt thanh toán & Hạn mức tín dụng */}
+                <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-2xs space-y-3">
+                  <h3 className="text-xs font-bold uppercase text-gray-700 tracking-wider">
+                    Thanh toán & Hạn mức
+                  </h3>
+
+                  <div className="space-y-2 text-xs">
                     <div className="flex justify-between text-gray-600">
                       <span>Tổng tiền hàng tạm tính:</span>
-                      <span className={`font-bold font-mono ${discountTotal > 0 ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                      <span className="font-mono font-bold text-gray-900">
                         {formatCurrencyVND(cartGrossAmount)}
                       </span>
                     </div>
 
                     {discountTotal > 0 && (
-                      <div className="flex justify-between text-emerald-700 font-bold bg-emerald-50 px-2 py-1.5 rounded-lg border border-emerald-200">
+                      <div className="flex justify-between text-emerald-600 font-medium">
                         <span className="flex items-center gap-1">
-                          <span>🎯 Chiết khấu sản lượng:</span>
+                          <CheckCircle2 size={13} />
+                          <span>Chiết khấu sản lượng:</span>
                         </span>
                         <span className="font-mono font-bold">
                           -{formatCurrencyVND(discountTotal)}
@@ -1767,26 +1732,26 @@ export const CustomerOrderPortalPage: React.FC = () => {
                       </div>
                     )}
 
-                    <div className="flex justify-between text-gray-900 font-bold pt-0.5">
-                      <span className="flex items-center gap-1.5">
+                    <div className="flex justify-between text-gray-900 font-bold pt-1 border-t border-gray-100">
+                      <span className="flex items-center gap-1.5 text-sm">
                         <span>Tổng thanh toán thực tế:</span>
-                        {loadingPreview && <RefreshCw size={11} className="animate-spin text-orange-500" />}
+                        {loadingPreview && <RefreshCw size={12} className="animate-spin text-orange-500" />}
                       </span>
-                      <span className="font-black font-mono text-[#F85606] text-sm sm:text-base">
+                      <span className="font-black font-mono text-[#F85606] text-base">
                         {formatCurrencyVND(cartPayableAmount)}
                       </span>
                     </div>
 
                     <div className="h-px bg-gray-100 my-1" />
 
-                    <div className="flex justify-between text-gray-600">
+                    <div className="flex justify-between text-gray-500">
                       <span>Hạn mức tín dụng:</span>
-                      <span className="font-bold font-mono text-gray-700">
+                      <span className="font-bold font-mono text-gray-800">
                         {formatCurrencyVND(creditLimit)}
                       </span>
                     </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Công nợ hiện tại:</span>
+                    <div className="flex justify-between text-gray-500">
+                      <span>Nợ hiện tại:</span>
                       <span className="font-bold font-mono text-rose-600">
                         {formatCurrencyVND(currentDebt)}
                       </span>
@@ -1796,81 +1761,50 @@ export const CustomerOrderPortalPage: React.FC = () => {
                     <div className="flex justify-between text-gray-900 font-bold">
                       <span>Công nợ còn lại sau đơn này:</span>
                       <span
-                        className={`font-black font-mono text-sm ${remainingAfterOrder < 0 ? 'text-rose-600' : 'text-emerald-600'
-                          }`}
+                        className={`font-black font-mono text-sm ${
+                          remainingAfterOrder < 0 ? 'text-rose-600' : 'text-emerald-600'
+                        }`}
                       >
                         {formatCurrencyVND(remainingAfterOrder)}
                       </span>
                     </div>
+                  </div>
 
-                    {/* Cảnh báo nếu vượt hạn mức */}
-                    {isOverCreditLimit && (
-                      <div className="mt-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] flex items-start gap-1.5">
-                        <AlertTriangle size={14} className="shrink-0 text-amber-600 mt-0.5" />
-                        <span>
-                          <strong>Đơn vượt hạn mức:</strong> Đơn hàng sẽ được chuyển vào danh sách Chờ duyệt để Quản lý kinh doanh phê duyệt trước khi giao.
-                        </span>
-                      </div>
-                    )}
+                  {/* Nút gửi đơn hàng */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={handleSubmitCustomerOrder}
+                      disabled={cart.length === 0 || isSubmitting || hasOverdueDebt}
+                      className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#F85606] to-orange-500 hover:from-orange-600 hover:to-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 transition cursor-pointer active:scale-98"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <RefreshCw size={18} className="animate-spin" />
+                          <span>Đang gửi đơn hàng lên hệ thống...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send size={18} />
+                          <span>GỬI ĐƠN HÀNG</span>
+                        </>
+                      )}
+                    </button>
+                    <p className="text-[10px] text-gray-400 text-center mt-2">
+                      * Đơn hàng gửi lên sẽ ở trạng thái <strong>Chờ duyệt</strong> để NVKD phụ trách xác nhận.
+                    </p>
                   </div>
                 </div>
-              )}
-
-              {/* Nút gửi đơn hàng đặt (AC3) */}
-              <div className="p-4 border-t border-gray-200 bg-white">
-                <button
-                  type="button"
-                  onClick={handleSubmitCustomerOrder}
-                  disabled={cart.length === 0 || isSubmitting || hasOverdueDebt}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#F85606] to-orange-500 hover:from-orange-600 hover:to-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 transition cursor-pointer active:scale-98"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <RefreshCw size={16} className="animate-spin" />
-                      <span>Đang gửi đơn hàng lên hệ thống...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send size={16} />
-                      <span>GỬI ĐƠN HÀNG</span>
-                    </>
-                  )}
-                </button>
-                <p className="text-[10px] text-gray-400 text-center mt-2">
-                  * Đơn hàng gửi lên sẽ ở trạng thái <strong>Chờ duyệt</strong> để NVKD phụ trách xác nhận.
-                </p>
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
-
-      {/* ============================================================== */}
-      {/* 4. FIXED BOTTOM BAR TRÊN ĐIỆN THOẠI (MOBILE RESPONSIVE 360px - AC4) */}
-      {/* ============================================================== */}
-      {cart.length > 0 && !isCartDrawerOpen && (
-        <div className="fixed bottom-0 inset-x-0 z-30 sm:hidden bg-white/95 backdrop-blur-md border-t border-gray-200 p-3 shadow-2xl">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-[10px] text-gray-500 font-semibold uppercase">
-                {cartTotalCount} món trong giỏ
-              </div>
-              <div className="font-black text-[#F85606] font-mono text-sm">
-                {formatCurrencyVND(cartPayableAmount)}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setIsCartDrawerOpen(true)}
-              className="px-4 py-2.5 rounded-xl bg-[#F85606] text-white font-black text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/30 cursor-pointer"
-            >
-              <ShoppingCart size={15} />
-              <span>Xem giỏ & Gửi đơn</span>
-            </button>
-          </div>
-        </div>
+        </>
       )}
+
+
+
 
       {/* ============================================================== */}
       {/* 5. MODAL CHÚC MỪNG GỬI ĐƠN HÀNG THÀNH CÔNG (AC3) */}
@@ -1968,6 +1902,7 @@ interface ProductCardProps {
   isSelected?: boolean;
   onToggleSelect?: (productId: string) => void;
   onAddToCart: (product: OrderProductCatalogItem, unitName?: string, qty?: number) => void;
+  onQuickBuy?: (product: OrderProductCatalogItem, unitName?: string, qty?: number) => void;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -1975,7 +1910,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   inCartCount,
   isSelected = false,
   onToggleSelect,
-  onAddToCart
+  onAddToCart,
+  onQuickBuy
 }) => {
   const [selectedUnitName, setSelectedUnitName] = useState<string>(() => {
     return product.availableUnits[0]?.unitName || product.baseUnit;
@@ -2105,18 +2041,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
         )}
       </div>
 
-      {/* Hành động: Số lượng cho nhập tự do & Nút Thêm vào giỏ */}
-      <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+      {/* Hành động: Số lượng cho nhập tự do & Nút Đặt ngay / Thêm vào giỏ */}
+      <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-1.5">
         {/* Bộ tăng giảm số lượng với ô input cho nhập tự do */}
-        <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-white focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
+        <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-white focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 transition-all shrink-0">
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={handleDecrease}
-            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition cursor-pointer"
+            className="w-7 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition cursor-pointer"
             title="Giảm 1"
           >
-            <Minus size={13} />
+            <Minus size={12} />
           </button>
           <NumberInput
             value={qtyText}
@@ -2125,34 +2061,58 @@ const ProductCard: React.FC<ProductCardProps> = ({
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleAdd();
             }}
-            className="w-11 h-8 text-center font-bold text-xs text-gray-900 bg-transparent outline-none font-mono"
+            className="w-9 h-8 text-center font-bold text-xs text-gray-900 bg-transparent outline-none font-mono"
             title="Nhập số lượng tự do"
           />
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={handleIncrease}
-            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition cursor-pointer"
+            className="w-7 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition cursor-pointer"
             title="Tăng 1"
           >
-            <Plus size={13} />
+            <Plus size={12} />
           </button>
         </div>
 
-        {/* Nút thêm giỏ */}
+        {/* Nút thêm giỏ (icon nhỏ) */}
         <button
           type="button"
           onClick={handleAdd}
-          className="flex-1 py-2 px-3 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer"
+          title="Thêm vào giỏ hàng"
+          className="h-8 px-2.5 rounded-xl border border-orange-200 bg-orange-50/80 hover:bg-orange-100 text-[#F85606] font-bold text-xs flex items-center justify-center gap-1 transition cursor-pointer active:scale-95 shrink-0"
           id={`add-btn-${product.sku}`}
         >
           <ShoppingCart size={14} />
-          <span>Thêm</span>
+          <span className="hidden xl:inline text-[11px]">Thêm</span>
           {inCartCount > 0 && (
-            <span className="bg-white/25 px-1.5 py-0.2 rounded-full text-[10px]">
-              +{inCartCount}
+            <span className="bg-[#F85606] text-white px-1.5 py-0.2 rounded-full text-[9px] font-black">
+              {inCartCount}
             </span>
           )}
+        </button>
+
+        {/* Nút đặt ngay (Mở ngay giỏ/đơn để gửi luôn - AC) */}
+        <button
+          type="button"
+          onClick={() => {
+            const num = parseInt(qtyText, 10);
+            if (isNaN(num) || num <= 0) {
+              showToast('Số lượng chưa hợp lệ', 'Vui lòng chọn số lượng từ 1 trở lên để đặt hàng', 'info', 2500);
+              return;
+            }
+            if (onQuickBuy) {
+              onQuickBuy(product, selectedUnitName, num);
+            } else {
+              onAddToCart(product, selectedUnitName, num);
+            }
+          }}
+          className="flex-1 h-8 px-2.5 rounded-xl bg-[#F85606] hover:bg-orange-600 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer whitespace-nowrap"
+          id={`quick-buy-btn-${product.sku}`}
+          title="Đặt mua sản phẩm này ngay"
+        >
+          <Send size={12} />
+          <span>Đặt ngay</span>
         </button>
       </div>
     </div>
