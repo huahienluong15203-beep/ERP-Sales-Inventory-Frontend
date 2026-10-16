@@ -208,30 +208,46 @@ export const InvoiceCreatePage: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20 antialiased">
-      {/* 1. Header tinh gọn */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate('/invoices')}
-          className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-2xs transition cursor-pointer"
-          title="Quay lại danh sách hoá đơn"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-          Lập hoá đơn bán hàng từ phiếu đã giao
-        </h1>
+      {/* 1. Header tinh gọn có nút Quay lại kèm chữ và icon màu cam */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4.5 rounded-2xl border border-gray-200/80 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/invoices')}
+            className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+            title="Quay lại danh sách hoá đơn"
+          >
+            <ArrowLeft size={16} />
+            <span>Quay lại</span>
+          </button>
+          <div className="w-10 h-10 rounded-xl bg-orange-100 text-[#F85606] flex items-center justify-center font-bold shadow-xs">
+            <Receipt size={20} />
+          </div>
+          <h1 className="text-lg font-bold text-gray-900">
+            Lập hoá đơn bán hàng từ phiếu đã giao
+          </h1>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* CỘT TRÁI: CHỌN ĐẠI LÝ & KỲ GIAO HÀNG (1/3) */}
-        <div className="space-y-5">
-          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-100 pb-2">
-              <Building2 className="w-4 h-4 text-[#F85606]" />
-              1. Chọn Đại lý / Khách hàng
+      {/* 2. Hai cột nằm ngang cao bằng nhau */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
+        {/* CỘT 1: CHỌN ĐẠI LÝ / KHÁCH HÀNG */}
+        <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs flex flex-col justify-between h-full space-y-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-800 uppercase tracking-wider">
+                <Building2 className="w-4 h-4 text-[#F85606]" />
+                <span>1. Chọn Đại lý / Khách hàng</span>
+              </div>
+              {selectedCustomerId && (
+                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                  <Check size={12} />
+                  <span>Đã chọn</span>
+                </span>
+              )}
             </div>
 
-            {/* Tìm kiếm đại lý */}
+            {/* Ô tìm kiếm đại lý */}
             <div className="relative">
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
               <input
@@ -239,16 +255,16 @@ export const InvoiceCreatePage: React.FC = () => {
                 value={agencyKeyword}
                 onChange={(e) => setAgencyKeyword(e.target.value)}
                 placeholder="Tìm mã hoặc tên đại lý..."
-                className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-xl focus:border-[#F85606] focus:outline-none"
+                className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:border-[#F85606] focus:bg-white focus:outline-none transition"
               />
             </div>
 
             {/* Danh sách đại lý */}
-            <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 divide-y divide-gray-50">
+            <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1 divide-y divide-gray-50">
               {loadingAgencies ? (
-                <div className="text-center py-6 text-xs text-gray-400">Đang tải danh sách đại lý...</div>
+                <div className="text-center py-8 text-xs text-gray-400">Đang tải danh sách đại lý...</div>
               ) : filteredAgencies.length === 0 ? (
-                <div className="text-center py-6 text-xs text-gray-400">Không tìm thấy đại lý phù hợp</div>
+                <div className="text-center py-8 text-xs text-gray-400">Không tìm thấy đại lý phù hợp</div>
               ) : (
                 filteredAgencies.map((agency) => {
                   const custId = Number(agency.id);
@@ -261,15 +277,17 @@ export const InvoiceCreatePage: React.FC = () => {
                       className={`w-full text-left p-2.5 rounded-xl transition cursor-pointer flex items-start justify-between gap-2 ${
                         isSelected
                           ? 'bg-orange-50 border border-orange-200 text-[#F85606]'
-                          : 'hover:bg-gray-50 border border-transparent'
+                          : 'hover:bg-gray-50 border border-transparent text-gray-700'
                       }`}
                     >
                       <div>
-                        <div className="font-bold text-xs text-gray-900">{agency.name}</div>
+                        <div className={`font-bold text-xs ${isSelected ? 'text-[#F85606]' : 'text-gray-900'}`}>
+                          {agency.name}
+                        </div>
                         <div className="text-[10px] text-gray-400 font-mono mt-0.5">
                           Mã: {agency.code} {agency.taxCode ? `• MST: ${agency.taxCode}` : ''}
                         </div>
-                        <div className="text-[10px] text-gray-500 truncate max-w-[200px] mt-0.5">
+                        <div className="text-[10px] text-gray-500 truncate max-w-[260px] mt-0.5">
                           {agency.address}
                         </div>
                       </div>
@@ -282,23 +300,25 @@ export const InvoiceCreatePage: React.FC = () => {
               )}
             </div>
           </div>
+        </div>
 
-          {/* Chọn kỳ giao hàng & Ngày hoá đơn */}
-          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-100 pb-2">
+        {/* CỘT 2: KỲ GIAO HÀNG & NGÀY LẬP HĐ */}
+        <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs flex flex-col justify-between h-full space-y-4">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-xs font-bold text-gray-800 uppercase tracking-wider border-b border-gray-100 pb-2.5">
               <Calendar className="w-4 h-4 text-[#F85606]" />
-              2. Kỳ Giao Hàng & Ngày Lập HĐ
+              <span>2. Kỳ Giao Hàng & Ngày Lập HĐ</span>
             </div>
 
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="space-y-3.5">
+              <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
                   <label className="block text-[11px] font-semibold text-gray-600 mb-1">Từ ngày</label>
                   <input
                     type="date"
                     value={fromDate}
                     onChange={(e) => setFromDate(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs font-mono focus:border-[#F85606] focus:outline-none"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono focus:border-[#F85606] focus:bg-white focus:outline-none transition"
                   />
                 </div>
                 <div>
@@ -307,7 +327,7 @@ export const InvoiceCreatePage: React.FC = () => {
                     type="date"
                     value={toDate}
                     onChange={(e) => setToDate(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs font-mono focus:border-[#F85606] focus:outline-none"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono focus:border-[#F85606] focus:bg-white focus:outline-none transition"
                   />
                 </div>
               </div>
@@ -333,7 +353,7 @@ export const InvoiceCreatePage: React.FC = () => {
                   value={invoiceDate}
                   max={new Date().toISOString().slice(0, 10)}
                   onChange={(e) => setInvoiceDate(e.target.value)}
-                  className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs font-mono font-bold text-gray-900 focus:border-[#F85606] focus:outline-none"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono font-bold text-gray-900 focus:border-[#F85606] focus:bg-white focus:outline-none transition"
                 />
                 <span className="text-[10px] text-gray-400 mt-0.5 block">
                   Không được chọn ngày trong tương lai
@@ -350,34 +370,31 @@ export const InvoiceCreatePage: React.FC = () => {
                   rows={2}
                   maxLength={500}
                   placeholder="Ghi chú chiết khấu, đối trừ hoặc số hợp đồng..."
-                  className="w-full p-2 border border-gray-200 rounded-lg text-xs focus:border-[#F85606] focus:outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:border-[#F85606] focus:bg-white focus:outline-none transition resize-none"
                 />
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* CỘT PHẢI: DANH SÁCH PHIẾU GIAO ĐÃ GIAO ĐỂ GỘP (2/3) */}
-        <div className="lg:col-span-2 space-y-5">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+      {/* 3. KHỐI CHỌN PHIẾU GIAO ĐỂ GỘP: CHỈ XUẤT HIỆN KHI ĐÃ CHỌN ĐẠI LÝ */}
+      {selectedCustomerId && (
+        <div className="space-y-5 animate-fade-in">
+          <div className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs overflow-hidden">
             <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <PackageCheck className="w-4 h-4 text-[#F85606]" />
-                  <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wider">
-                    3. Chọn Phiếu Giao Để Gộp Hoá Đơn (AC3)
-                  </h3>
-                </div>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Chỉ bao gồm các đơn đã giao thành công (DELIVERED) và chưa từng lập hoá đơn
-                </p>
+              <div className="flex items-center gap-2">
+                <PackageCheck className="w-4 h-4 text-[#F85606]" />
+                <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wider">
+                  3. Chọn Phiếu Giao Để Gộp Hoá Đơn
+                </h3>
               </div>
 
               {uninvoicedOrders.length > 0 && (
                 <button
                   type="button"
                   onClick={handleToggleSelectAll}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-700 transition cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-700 transition cursor-pointer"
                 >
                   {selectedOrderIds.length === uninvoicedOrders.length
                     ? 'Bỏ chọn tất cả'
@@ -388,14 +405,7 @@ export const InvoiceCreatePage: React.FC = () => {
 
             {/* Bảng danh sách phiếu giao */}
             <div className="overflow-x-auto">
-              {!selectedCustomerId ? (
-                <div className="py-16 text-center space-y-2">
-                  <Building2 className="w-10 h-10 text-gray-300 mx-auto" />
-                  <p className="text-xs text-gray-500 font-semibold">
-                    Vui lòng chọn đại lý ở cột bên trái để tải danh sách phiếu giao
-                  </p>
-                </div>
-              ) : loadingOrders ? (
+              {loadingOrders ? (
                 <div className="py-16 text-center space-y-2">
                   <RefreshCw className="w-8 h-8 text-[#F85606] animate-spin mx-auto" />
                   <p className="text-xs text-gray-500">Đang quét các đơn đã giao trong kỳ...</p>
@@ -419,7 +429,7 @@ export const InvoiceCreatePage: React.FC = () => {
                       <th className="py-3 px-3 text-center w-20">Số dòng</th>
                       <th className="py-3 px-3 text-right w-28">Tiền đặt hàng</th>
                       <th className="py-3 px-3 text-right w-32 bg-orange-50/50 text-[#F85606]">
-                        Tiền thực giao (AC1)
+                        Tiền thực giao
                       </th>
                       <th className="py-3 px-3 text-center w-16">Xem</th>
                     </tr>
@@ -445,7 +455,7 @@ export const InvoiceCreatePage: React.FC = () => {
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => handleToggleOrder(order.orderId)}
-                              className="w-4 h-4 text-[#F85606] rounded border-gray-300 focus:ring-orange-500 cursor-pointer"
+                              className="w-4 h-4 accent-[#F85606] text-[#F85606] rounded border-gray-300 focus:ring-orange-500 cursor-pointer"
                             />
                           </td>
                           <td className="py-3 px-3 font-mono font-bold text-gray-900">
@@ -535,7 +545,7 @@ export const InvoiceCreatePage: React.FC = () => {
               type="button"
               onClick={handlePreview}
               disabled={previewing || selectedOrderIds.length === 0}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 text-[#F85606] font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-50"
             >
               <FileText className="w-4 h-4" />
               <span>{previewing ? 'Đang tạo bản xem trước...' : 'Xem trước hoá đơn (A4 Preview)'}</span>
@@ -552,7 +562,7 @@ export const InvoiceCreatePage: React.FC = () => {
             </button>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Modal Xem Trước Hoá Đơn (Preview) */}
       <InvoicePrintModal
