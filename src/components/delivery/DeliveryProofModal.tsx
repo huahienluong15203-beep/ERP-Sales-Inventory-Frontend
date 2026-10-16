@@ -59,12 +59,17 @@ export const DeliveryProofModal: React.FC<DeliveryProofModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'CONFIRM' | 'FAIL' | 'VIEW'>('CONFIRM');
 
+  const getTodayLocalDate = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Form Xác nhận giao (CONFIRM)
   const [receiverName, setReceiverName] = useState<string>('');
-  const [deliveredAt, setDeliveredAt] = useState<string>(() => {
-    const d = new Date();
-    return d.toISOString().slice(0, 16);
-  });
+  const [deliveryDate, setDeliveryDate] = useState<string>(getTodayLocalDate());
   const [note, setNote] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -90,8 +95,7 @@ export const DeliveryProofModal: React.FC<DeliveryProofModalProps> = ({
     if (isOpen) {
       setActiveTab(isDelivered ? 'VIEW' : initialMode);
       setReceiverName(customerName || '');
-      const now = new Date();
-      setDeliveredAt(now.toISOString().slice(0, 16));
+      setDeliveryDate(getTodayLocalDate());
       setSelectedFile(null);
       setPreviewUrl(null);
       setNote('');
@@ -231,10 +235,16 @@ export const DeliveryProofModal: React.FC<DeliveryProofModalProps> = ({
       // Bước 1: Upload ảnh biên bản có chữ ký qua API S6-08
       await uploadDeliveryProof(orderId, fileToUpload, `POD_${orderCode}.png`);
 
+      // Lấy giờ thực tế hiện tại (local time) ghép với ngày đã chọn để tránh lỗi múi giờ
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const realTimeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      const finalDeliveredAt = `${deliveryDate}T${realTimeStr}`;
+
       // Bước 2: Xác nhận giao hàng
       await confirmOrderDelivery(orderId, {
         receiverName: receiverName.trim(),
-        deliveredAt: deliveredAt ? `${deliveredAt}:00` : undefined,
+        deliveredAt: finalDeliveredAt,
         note: note.trim()
       });
 
@@ -292,10 +302,7 @@ export const DeliveryProofModal: React.FC<DeliveryProofModalProps> = ({
               <FileText className="w-5 h-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-base font-bold truncate">Biên Bản Bàn Giao Hàng (S6-08)</h3>
-              <p className="text-xs text-orange-100 font-mono mt-0.5">
-                Đơn: <strong>{orderCode}</strong>
-              </p>
+              <h3 className="text-base font-bold truncate">Biên bản giao hàng</h3>
             </div>
           </div>
           <button
@@ -365,18 +372,18 @@ export const DeliveryProofModal: React.FC<DeliveryProofModalProps> = ({
                 />
               </div>
 
-              {/* Thời điểm giao hàng */}
+              {/* Thời điểm giao hàng thực tế (chỉ hiển thị ngày, tự động gắn giờ thực tế) */}
               <div>
                 <label className="block font-bold text-gray-700 mb-1 flex items-center gap-1.5">
                   <Clock className="w-4 h-4 text-[#F85606]" />
                   Thời điểm giao hàng thực tế: <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="datetime-local"
-                  value={deliveredAt}
-                  onChange={(e) => setDeliveredAt(e.target.value)}
+                  type="date"
+                  value={deliveryDate}
+                  onChange={(e) => setDeliveryDate(e.target.value)}
                   required
-                  className="w-full font-medium border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none"
+                  className="w-full font-medium font-mono border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none"
                 />
               </div>
 
@@ -543,7 +550,7 @@ export const DeliveryProofModal: React.FC<DeliveryProofModalProps> = ({
               <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-900 space-y-1">
                 <div className="font-bold flex items-center gap-1.5 text-red-700">
                   <AlertTriangle className="w-4 h-4 shrink-0" />
-                  <span>Quy định xử lý hàng giao thất bại (S6-08):</span>
+                  <span>Quy định xử lý hàng giao thất bại:</span>
                 </div>
                 <p className="text-[11px] leading-relaxed text-red-700">
                   Toàn bộ hàng hoá chưa giao được của đơn <strong>{orderCode}</strong> sẽ được chở về và hệ thống tự động nhập lại kho khi xe quay về kết thúc chuyến.

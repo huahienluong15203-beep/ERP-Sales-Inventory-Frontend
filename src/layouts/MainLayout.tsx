@@ -340,7 +340,10 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
             {/* Tiêu đề trang + mô tả hoạt động bên dưới */}
             <div className="erp-page-title-box">
-              <h1 className="erp-page-heading">{pageTitle}</h1>
+              {!location.pathname.startsWith('/inventory/delivery-trips/') &&
+                location.pathname !== '/inventory/delivery-trips/create' && (
+                  <h1 className="erp-page-heading">{pageTitle}</h1>
+                )}
               {!['/categories'].includes(location.pathname) &&
                 !location.pathname.startsWith('/inventory/delivery-trips') &&
                 Boolean(pageSubtitle) && (
