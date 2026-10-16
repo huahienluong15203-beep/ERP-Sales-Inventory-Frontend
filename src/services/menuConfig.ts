@@ -73,6 +73,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Đối chiếu thu tiền tuyến',
+    path: '/payments/reconciliation',
+    group: 'Bán hàng',
+    icon: 'Receipt',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: 'Đối chiếu tiền đã thu trên tuyến với tiền đã nộp về công ty mà không tranh cãi ',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
+  },
+
+  {
     title: 'Danh mục sản phẩm',
     path: '/products',
     group: 'Sản phẩm & Kho',
@@ -166,12 +176,48 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Phiếu soạn hàng',
+    path: '/inventory/picking-lists',
+    group: 'Sản phẩm & Kho',
+    icon: 'ClipboardCheck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: '',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER']
+  },
+
+  {
+    title: 'Chuyến giao hàng',
+    path: '/inventory/delivery-trips',
+    group: 'Sản phẩm & Kho',
+    icon: 'Truck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Phân tuyến giao hàng theo khu vực, gán tài xế & phương tiện, in danh sách điểm giao',
+    allowedRoles: ['ROLE_WH_MANAGER', 'ROLE_WAREHOUSE', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER']
+  },
+
+  {
     title: 'Danh mục kho & vị trí',
     path: '/inventory/warehouses',
     group: 'Sản phẩm & Kho',
     icon: 'Layers',
     epic: 'Sản phẩm & Tồn kho',
     description: 'Quản lý danh sách kho hàng, phân khu (Zone), kệ (Rack), tầng (Shelf) và ô chứa (Bin)',
+    allowedRoles: [
+      'ROLE_WAREHOUSE',
+      'ROLE_WH_MANAGER',
+      'ROLE_ADMIN',
+      'ROLE_ACCOUNTANT',
+      'ROLE_SALES_MANAGER'
+    ]
+  },
+
+  {
+    title: 'Quản lý lô hàng',
+    path: '/inventory/lots',
+    group: 'Sản phẩm & Kho',
+    icon: 'Boxes',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Theo dõi lô sản xuất, hạn sử dụng, cảnh báo cận date và quy tắc xuất FEFO',
     allowedRoles: [
       'ROLE_WAREHOUSE',
       'ROLE_WH_MANAGER',
