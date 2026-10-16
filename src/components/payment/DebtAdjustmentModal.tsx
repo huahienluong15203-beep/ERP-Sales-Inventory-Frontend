@@ -91,7 +91,7 @@ export const DebtAdjustmentModal: React.FC<DebtAdjustmentModalProps> = ({
                 Duyệt Chứng từ Giảm trừ Công nợ khi Trả hàng
               </h2>
               <p className="text-xs text-blue-100">
-                Mã chứng từ: <span className="font-mono font-bold text-white">{adjustment.adjustmentCode}</span>
+                Mã chứng từ: <span className="font-mono font-bold text-white">{adjustment.adjustmentCode || 'Chưa cấp số (chờ duyệt)'}</span>
               </p>
             </div>
           </div>
@@ -218,7 +218,7 @@ export const DebtAdjustmentModal: React.FC<DebtAdjustmentModalProps> = ({
                         {formatCurrencyVND(item.originalSoldPrice)}
                       </td>
                       <td className="px-3 py-2.5 text-right font-mono text-gray-400 line-through">
-                        {formatCurrencyVND(item.currentCatalogPrice)}
+                        {item.currentCatalogPrice != null ? formatCurrencyVND(item.currentCatalogPrice) : '—'}
                       </td>
                       <td className="px-3 py-2.5 text-right font-mono font-black text-rose-700">
                         -{formatCurrencyVND(item.adjustmentAmount)}

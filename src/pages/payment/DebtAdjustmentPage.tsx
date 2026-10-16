@@ -29,6 +29,7 @@ export const DebtAdjustmentPage: React.FC = () => {
   // Modal duyệt
   const [selectedAdjustment, setSelectedAdjustment] = useState<DebtAdjustment | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAgencies({ size: 100 })
@@ -38,6 +39,7 @@ export const DebtAdjustmentPage: React.FC = () => {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await fetchDebtAdjustments({
         status: statusFilter,
@@ -47,6 +49,8 @@ export const DebtAdjustmentPage: React.FC = () => {
       setAdjustments(data);
     } catch (err) {
       console.error('Lỗi tải danh sách chứng từ điều chỉnh:', err);
+      setAdjustments([]);
+      setLoadError(err instanceof Error ? err.message : 'Không tải được danh sách chứng từ điều chỉnh');
     } finally {
       setLoading(false);
     }
@@ -217,14 +221,18 @@ export const DebtAdjustmentPage: React.FC = () => {
               ) : adjustments.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-14 text-center text-gray-400">
-                    Không có chứng từ điều chỉnh công nợ nào.
+                    {loadError ? (
+                      <span className="text-rose-600">{loadError}</span>
+                    ) : (
+                      'Không có chứng từ điều chỉnh công nợ nào.'
+                    )}
                   </td>
                 </tr>
               ) : (
                 adjustments.map((adj) => (
                   <tr key={adj.id} className="hover:bg-blue-50/20 transition">
                     <td className="py-3 px-4 font-mono font-bold text-gray-900 whitespace-nowrap">
-                      {adj.adjustmentCode}
+                      {adj.adjustmentCode || <span className="text-gray-400 font-normal">Chưa cấp số</span>}
                       <span className="text-[10px] text-gray-400 block font-normal">{adj.createdAt}</span>
                     </td>
                     <td className="py-3 px-4">
