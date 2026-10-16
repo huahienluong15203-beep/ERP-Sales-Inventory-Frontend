@@ -199,6 +199,18 @@ export const DeliveryTripDetailPage: React.FC = () => {
   const sortedStops = [...(trip.stops || [])].sort((a, b) => (a.stopSequence || 0) - (b.stopSequence || 0));
   const percent = trip.totalStops > 0 ? Math.round((trip.deliveredStops / trip.totalStops) * 100) : 0;
 
+  // Tính toán minh bạch các giá trị tiền hàng của chuyến
+  const calculatedTotal = sortedStops.reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
+  const totalTripValue = (trip.totalValue && trip.totalValue > 0) ? trip.totalValue : calculatedTotal;
+  const deliveredValue = sortedStops
+    .filter((s) => s.status === 'DELIVERED' || s.status === 'CLOSED')
+    .reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
+  const remainingValue = (trip.valueOnRoad !== undefined && trip.valueOnRoad !== null && trip.valueOnRoad > 0)
+    ? trip.valueOnRoad
+    : sortedStops
+        .filter((s) => s.status === 'DISPATCHED')
+        .reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
       {/* 1. Nút Quay lại chuẩn như các trang trước */}
@@ -350,9 +362,14 @@ export const DeliveryTripDetailPage: React.FC = () => {
 
         {/* Tiến độ & Tiền hàng */}
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs space-y-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-100 pb-2">
-            <Package className="w-4 h-4 text-[#F85606]" />
-            Tiến độ giao hàng ({percent}%)
+          <div className="flex items-center justify-between text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-100 pb-2">
+            <span className="flex items-center gap-2">
+              <Package className="w-4 h-4 text-[#F85606]" />
+              Tiến độ giao hàng ({percent}%)
+            </span>
+            <span className="text-[#F85606] font-mono font-black text-sm">
+              {totalTripValue.toLocaleString('vi-VN')} đ
+            </span>
           </div>
           <div className="space-y-2">
             <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
@@ -366,11 +383,27 @@ export const DeliveryTripDetailPage: React.FC = () => {
               <span>Còn lại: <strong>{trip.remainingStops}</strong></span>
               <span>Thất bại: <strong className="text-red-600">{trip.failedStops}</strong></span>
             </div>
-            <div className="pt-1 text-xs flex justify-between font-bold border-t border-gray-100">
-              <span className="text-gray-500">Tiền còn trên xe:</span>
-              <span className="text-[#F85606] font-mono">
-                {trip.valueOnRoad?.toLocaleString('vi-VN')} đ
-              </span>
+            <div className="pt-2 text-xs space-y-1.5 border-t border-gray-100">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 font-medium">Tổng tiền hàng chuyến:</span>
+                <span className="font-mono font-black text-gray-900">
+                  {totalTripValue.toLocaleString('vi-VN')} đ
+                </span>
+              </div>
+              {deliveredValue > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 font-medium">Đã giao cho khách:</span>
+                  <span className="font-mono font-bold text-emerald-700">
+                    {deliveredValue.toLocaleString('vi-VN')} đ
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 font-medium">Tiền còn trên xe:</span>
+                <span className={`font-mono font-bold ${remainingValue > 0 ? 'text-[#F85606]' : 'text-emerald-600'}`}>
+                  {remainingValue > 0 ? `${remainingValue.toLocaleString('vi-VN')} đ` : '0 đ (Đã giao đủ)'}
+                </span>
+              </div>
             </div>
           </div>
         </div>

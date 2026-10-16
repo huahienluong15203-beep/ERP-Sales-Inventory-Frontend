@@ -207,7 +207,7 @@ export const DeliveryTripManagementPage: React.FC = () => {
                   <th className="py-3 px-4">Mã chuyến</th>
                   <th className="py-3 px-4">Kho xuất phát</th>
                   <th className="py-3 px-4 text-center">Tiến độ điểm giao</th>
-                  <th className="py-3 px-4 text-right">Tiền hàng trên xe</th>
+                  <th className="py-3 px-4 text-right">Tiền hàng / Trên xe</th>
                   <th className="py-3 px-4">Thời gian</th>
                   <th className="py-3 px-4 text-center">Trạng thái</th>
                 </tr>
@@ -248,8 +248,43 @@ export const DeliveryTripManagementPage: React.FC = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-right font-black text-gray-900">
-                        {trip.valueOnRoad?.toLocaleString('vi-VN')} đ
+                      <td className="py-3.5 px-4 text-right">
+                        {trip.totalValue && trip.totalValue > 0 ? (
+                          <div>
+                            <div className="font-mono font-black text-gray-900 text-xs">
+                              {trip.totalValue.toLocaleString('vi-VN')} đ
+                            </div>
+                            <div className="text-[10px] mt-0.5">
+                              {trip.valueOnRoad > 0 ? (
+                                <span className="text-[#F85606] font-semibold">
+                                  Trên xe: {trip.valueOnRoad.toLocaleString('vi-VN')} đ
+                                </span>
+                              ) : (
+                                <span className="text-emerald-600 font-semibold">
+                                  ✓ Đã giao hết
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ) : trip.valueOnRoad > 0 ? (
+                          <div>
+                            <div className="font-mono font-black text-gray-900 text-xs">
+                              {trip.valueOnRoad.toLocaleString('vi-VN')} đ
+                            </div>
+                            <div className="text-[10px] text-orange-600 font-semibold mt-0.5">
+                              Đang trên đường
+                            </div>
+                          </div>
+                        ) : percent === 100 ? (
+                          <div>
+                            <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[11px]">
+                              ✓ Đã giao xong
+                            </span>
+                            <div className="text-[10px] text-gray-400 mt-0.5">Trên xe: 0 đ</div>
+                          </div>
+                        ) : (
+                          <span className="font-mono text-gray-400 text-xs">0 đ</span>
+                        )}
                       </td>
                       <td className="py-3.5 px-4 text-[11px]">
                         <div>Xuất: {trip.departedAt ? new Date(trip.departedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'Chờ'}</div>
