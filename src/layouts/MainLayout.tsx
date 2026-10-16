@@ -139,7 +139,18 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
   // Lấy tiêu đề và mô tả của trang hiện tại cho Header
   // Bỏ phần ?query (vd /logs?tab=price) khi so khớp menu
   const currentPath = location.pathname.split('?')[0];
-  const currentMenu = menus.find((m) => m.path === currentPath);
+
+  // Tìm menu item khớp nhất (đường dẫn dài nhất) với currentPath
+  // Tránh lỗi nhiều tab cùng sáng màu (ví dụ /orders và /orders/create)
+  const activeMenu = useMemo(() => {
+    const matchingMenus = displayedMenus.filter(
+      (m) => currentPath === m.path || (m.path !== '/' && currentPath.startsWith(m.path + '/'))
+    );
+    if (matchingMenus.length === 0) return null;
+    return matchingMenus.reduce((prev, curr) => (curr.path.length > prev.path.length ? curr : prev));
+  }, [displayedMenus, currentPath]);
+
+  const currentMenu = activeMenu || menus.find((m) => m.path === currentPath);
   const pageTitle =
     location.pathname === '/forbidden'
       ? '403 Truy Cập Bị Từ Chối'
@@ -147,13 +158,20 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
         ? 'Hồ Sơ Cá Nhân'
         : location.pathname === '/products/import'
           ? 'Nhập Sản Phẩm Từ Excel'
-          : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
+          : location.pathname === '/inventory/picking-lists/create'
+            ? 'Lập Phiếu Soạn Hàng Mới'
+            : location.pathname.startsWith('/inventory/picking-lists/')
+              ? 'Chi Tiết Phiếu Soạn Hàng'
+              : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
+  const isPickingListRoute = location.pathname.startsWith('/inventory/picking-lists');
   const pageSubtitle =
-    location.pathname === '/profile'
-      ? 'Thông tin cá nhân & thiết lập an toàn tài khoản'
-      : location.pathname === '/products/import'
-        ? 'Tải tệp mẫu, xem trước từng dòng và nhập hàng loạt đến 5.000 SKU'
-        : (currentMenu?.description ?? 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống');
+    isPickingListRoute
+      ? ''
+      : location.pathname === '/profile'
+        ? 'Thông tin cá nhân & thiết lập an toàn tài khoản'
+        : location.pathname === '/products/import'
+          ? 'Tải tệp mẫu, xem trước từng dòng và nhập hàng loạt đến 5.000 SKU'
+          : (currentMenu?.description ?? 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống');
 
   return (
     <div className="erp-app-shell">
@@ -267,7 +285,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
           ) : (
             <ul className="erp-menu-list">
               {displayedMenus.map((item, idx) => {
-                const isActive = currentPath === item.path;
+                const isActive = activeMenu?.path === item.path;
                 // Gom nhóm theo chức năng: hiện tiêu đề nhóm khi sang nhóm mới
                 const showGroup = Boolean(item.group) && item.group !== displayedMenus[idx - 1]?.group;
                 return (
@@ -323,7 +341,8 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             {/* Tiêu đề trang + mô tả hoạt động bên dưới */}
             <div className="erp-page-title-box">
               <h1 className="erp-page-heading">{pageTitle}</h1>
-              {location.pathname !== '/categories' &&
+              {!['/categories'].includes(location.pathname) &&
+                !location.pathname.startsWith('/inventory/delivery-trips') &&
                 Boolean(pageSubtitle) && (
                   <span className="erp-page-subheading">{pageSubtitle}</span>
                 )}

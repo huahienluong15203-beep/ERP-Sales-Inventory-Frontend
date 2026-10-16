@@ -38,6 +38,12 @@ import { StockTakeManagementPage } from '../pages/inventory/StockTakeManagementP
 import { StockTakeCreatePage } from '../pages/inventory/StockTakeCreatePage';
 import { StockTakeDetailPage } from '../pages/inventory/StockTakeDetailPage';
 import { WarehouseManagementPage } from '../pages/inventory/WarehouseManagementPage';
+import { PickingListManagementPage } from '../pages/inventory/PickingListManagementPage';
+import { PickingListCreatePage } from '../pages/inventory/PickingListCreatePage';
+import { PickingListDetailPage } from '../pages/inventory/PickingListDetailPage';
+import { DeliveryTripManagementPage } from '../pages/inventory/DeliveryTripManagementPage';
+import { DeliveryTripCreatePage } from '../pages/inventory/DeliveryTripCreatePage';
+import { DeliveryTripDetailPage } from '../pages/inventory/DeliveryTripDetailPage';
 import { DebtAdjustmentPage } from '../pages/payment/DebtAdjustmentPage';
 import { ProductLotManagementPage } from '../pages/inventory/ProductLotManagementPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
@@ -456,6 +462,102 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <ProductLotManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S6-03: Phiếu soạn hàng (Wave Picking) */}
+        <Route
+          path="/inventory/picking-lists"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <PickingListManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/picking-lists/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <PickingListCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/picking-lists/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <PickingListDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S6-06: Phân tuyến giao hàng (Delivery Trips & Route Dispatch) */}
+        <Route
+          path="/inventory/delivery-trips"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WH_MANAGER',
+                'ROLE_WAREHOUSE',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <DeliveryTripManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/delivery-trips/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WH_MANAGER',
+                'ROLE_WAREHOUSE',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <DeliveryTripCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/delivery-trips/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WH_MANAGER',
+                'ROLE_WAREHOUSE',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <DeliveryTripDetailPage />
             </ProtectedRoute>
           }
         />
