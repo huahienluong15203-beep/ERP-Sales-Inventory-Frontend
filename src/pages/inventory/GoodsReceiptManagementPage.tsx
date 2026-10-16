@@ -13,7 +13,7 @@ import type { GoodsReceipt } from '../../types/inventory';
 import { SYSTEM_WAREHOUSES } from '../../types/inventory';
 import {
   fetchGoodsReceipts,
-  confirmGoodsReceipt
+  deleteGoodsReceipt
 } from '../../services/inventoryReceiptApi';
 import { formatQuantity } from '../../services/orderService';
 import { useAuth } from '../../contexts/AuthContext';
@@ -22,7 +22,7 @@ import { SearchSelect } from '../../components/common/SearchSelect';
 import { GoodsReceiptDraftsModal } from '../../components/inventory/GoodsReceiptDraftsModal';
 
 export const GoodsReceiptManagementPage: React.FC = () => {
-  const { user, showToast, currentRole } = useAuth();
+  const { showToast, currentRole } = useAuth();
 
   // Mục 12 (góp ý GV): chặn ở cả FE và BE - chỉ NV kho, QL kho, Admin được lập / xác nhận / sửa;
   // Kế toán, QL kinh doanh chỉ xem.
@@ -67,20 +67,16 @@ export const GoodsReceiptManagementPage: React.FC = () => {
     loadData();
   }, [loadData]);
 
-  // Xác nhận phiếu nhập kho trực tiếp từ danh sách hoặc modal nháp (AC4: Cộng tồn kho khi xác nhận)
-  const handleConfirmDirect = async (receiptId: number | string) => {
+  // Xóa phiếu nhập kho nháp
+  const handleDeleteDraft = async (receiptId: number | string) => {
     try {
-      const confirmed = await confirmGoodsReceipt(receiptId, user?.username || 'wh_manager');
-      showToast(
-        'Đã xác nhận nhập kho',
-        `Phiếu [${confirmed.code}] đã được ghi sổ thành công. Tồn kho đã được cộng thêm theo đơn vị cơ sở!`,
-        'success',
-        5000
-      );
+      await deleteGoodsReceipt(receiptId);
+      showToast('Đã xóa phiếu nháp', 'Phiếu nhập kho nháp đã được xóa thành công.', 'success');
       loadData();
     } catch (err: unknown) {
-      console.error('Lỗi xác nhận phiếu nhập kho:', err);
-      showToast('Lỗi xác nhận', err instanceof Error ? err.message : 'Không thể xác nhận phiếu', 'error');
+      console.error('Lỗi xóa phiếu nhập kho nháp:', err);
+      showToast('Lỗi xóa phiếu nháp', err instanceof Error ? err.message : 'Không thể xóa phiếu nháp', 'error');
+      throw err;
     }
   };
 
@@ -308,8 +304,8 @@ export const GoodsReceiptManagementPage: React.FC = () => {
         isOpen={isDraftsModalOpen}
         onClose={() => setIsDraftsModalOpen(false)}
         drafts={draftReceipts}
-        onConfirmReceipt={handleConfirmDirect}
-        onViewDetail={(id) => navigate(`/inventory/receipts/${id}`)}
+        onEdit={(id) => navigate(`/inventory/receipts/${id}`)}
+        onDeleteDraft={handleDeleteDraft}
         canEdit={canEditInventory}
       />
     </div>

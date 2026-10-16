@@ -4,8 +4,8 @@ import { formatQuantity } from '../../services/orderService';
 import {
   FileText,
   X,
-  Eye,
-  Check,
+  Edit,
+  Trash2,
   Clock,
   Building2,
   Package,
@@ -21,8 +21,8 @@ interface GoodsReceiptDraftsModalProps {
   isOpen: boolean;
   onClose: () => void;
   drafts: GoodsReceipt[];
-  onConfirmReceipt?: (receiptId: number | string) => Promise<void>;
-  onViewDetail: (receiptId: number | string) => void;
+  onEdit: (receiptId: number | string) => void;
+  onDeleteDraft?: (receiptId: number | string) => Promise<void>;
   canEdit?: boolean;
 }
 
@@ -30,13 +30,13 @@ export const GoodsReceiptDraftsModal: React.FC<GoodsReceiptDraftsModalProps> = (
   isOpen,
   onClose,
   drafts,
-  onConfirmReceipt,
-  onViewDetail,
+  onEdit,
+  onDeleteDraft,
   canEdit = true
 }) => {
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
-  const [confirmingId, setConfirmingId] = useState<number | string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | string | null>(null);
 
   // Lọc theo từ khóa tìm kiếm (mã phiếu, nhà cung cấp, số chứng từ, kho)
   const filteredDrafts = useMemo(() => {
@@ -75,13 +75,16 @@ export const GoodsReceiptDraftsModal: React.FC<GoodsReceiptDraftsModalProps> = (
     return filteredDrafts.slice(start, start + PAGE_SIZE);
   }, [filteredDrafts, currentDisplay]);
 
-  const handleConfirm = async (receiptId: number | string) => {
-    if (!onConfirmReceipt) return;
-    setConfirmingId(receiptId);
+  const handleDelete = async (receiptId: number | string, code: string) => {
+    if (!onDeleteDraft) return;
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn phiếu nhập kho nháp ${code} không?`)) {
+      return;
+    }
+    setDeletingId(receiptId);
     try {
-      await onConfirmReceipt(receiptId);
+      await onDeleteDraft(receiptId);
     } finally {
-      setConfirmingId(null);
+      setDeletingId(null);
     }
   };
 
@@ -224,31 +227,31 @@ export const GoodsReceiptDraftsModal: React.FC<GoodsReceiptDraftsModalProps> = (
                   )}
                 </div>
 
-                {/* Nút hành động */}
+                {/* Nút hành động: Chỉ có Chỉnh sửa và Xóa */}
                 <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                   <button
                     type="button"
                     onClick={() => {
-                      onViewDetail(r.id);
+                      onEdit(r.id);
                       onClose();
                     }}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:text-[#F85606] hover:bg-orange-50/50 hover:border-orange-200 text-xs font-semibold transition cursor-pointer shadow-2xs"
-                    title="Xem chi tiết phiếu nhập kho"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:text-[#F85606] hover:bg-orange-50/60 hover:border-orange-200 text-xs font-semibold transition cursor-pointer shadow-2xs"
+                    title="Chỉnh sửa phiếu nhập kho nháp"
                   >
-                    <Eye size={13} />
-                    <span>Chi tiết</span>
+                    <Edit size={13} />
+                    <span>Chỉnh sửa</span>
                   </button>
 
-                  {canEdit && onConfirmReceipt && (
+                  {canEdit && onDeleteDraft && (
                     <button
                       type="button"
-                      onClick={() => handleConfirm(r.id)}
-                      disabled={confirmingId === r.id}
-                      className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition cursor-pointer disabled:opacity-50"
-                      title="Xác nhận nhập kho & cộng tồn ngay"
+                      onClick={() => handleDelete(r.id, r.code)}
+                      disabled={deletingId === r.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 bg-red-50/50 hover:bg-red-100 text-red-600 text-xs font-bold transition cursor-pointer shadow-2xs disabled:opacity-50"
+                      title="Xóa phiếu nhập kho nháp"
                     >
-                      <Check size={13} className={confirmingId === r.id ? 'animate-spin' : ''} />
-                      <span>{confirmingId === r.id ? 'Đang xác nhận...' : 'Xác Nhận Nhập'}</span>
+                      <Trash2 size={13} className={deletingId === r.id ? 'animate-spin' : ''} />
+                      <span>{deletingId === r.id ? 'Đang xóa...' : 'Xóa'}</span>
                     </button>
                   )}
                 </div>

@@ -292,3 +292,30 @@ export async function confirmGoodsReceipt(
   saveLocalReceipts(list);
   return list[idx];
 }
+
+/**
+ * Xóa phiếu nhập kho nháp (DRAFT)
+ */
+export async function deleteGoodsReceipt(id: number | string): Promise<void> {
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/inventory/receipts/${id}`, {
+      method: 'DELETE'
+    });
+    if (res.ok || res.status === 204) {
+      // Xóa thành công trên backend
+      const list = getLocalReceipts().filter((r) => String(r.id) !== String(id));
+      saveLocalReceipts(list);
+      return;
+    }
+    const errData = await res.json().catch(() => null);
+    throw new Error(errData?.message || `Lỗi máy chủ (${res.status}) khi xóa phiếu nhập kho`);
+  } catch (err: unknown) {
+    if (err instanceof Error && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
+  }
+
+  // Fallback Local Storage
+  const list = getLocalReceipts().filter((r) => String(r.id) !== String(id));
+  saveLocalReceipts(list);
+}
