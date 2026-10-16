@@ -113,6 +113,15 @@ function recordInvoiceAllocations(allocations: InvoicePaymentAllocation[]): void
  */
 export async function fetchCustomerInvoicesForDebt(customerId: number | string): Promise<CustomerInvoiceDebtItem[]> {
   try {
+    const res = await authFetch(`${API_BASE_URL}/api/payments/customers/${customerId}/invoices`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('Không tải được hoá đơn nợ từ /api/payments/customers/...:', err);
+  }
+
+  try {
     const res = await authFetch(`${API_BASE_URL}/api/invoices?customerId=${customerId}&size=100`);
     if (res.ok) {
       const data = await res.json();
@@ -122,8 +131,8 @@ export async function fetchCustomerInvoicesForDebt(customerId: number | string):
 
       return content.map((inv) => {
         const total = Number(inv.totalAmount || 0);
-        const alreadyPaid = allocationState[inv.id] || 0;
-        const remaining = Math.max(0, total - alreadyPaid);
+        const alreadyPaid = inv.paidAmount != null ? Number(inv.paidAmount) : (allocationState[inv.id] || 0);
+        const remaining = inv.remainingAmount != null ? Number(inv.remainingAmount) : Math.max(0, total - alreadyPaid);
         const dueDate = inv.invoiceDate || today;
         const isOverdue = dueDate < today && remaining > 0;
         let overdueDays = 0;
@@ -132,11 +141,13 @@ export async function fetchCustomerInvoicesForDebt(customerId: number | string):
           overdueDays = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
         }
 
-        let status: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' = 'UNPAID';
-        if (remaining <= 0) {
-          status = 'PAID';
-        } else if (alreadyPaid > 0) {
-          status = 'PARTIALLY_PAID';
+        let status: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' = (inv.paymentStatus as any) || 'UNPAID';
+        if (!inv.paymentStatus) {
+          if (remaining <= 0) {
+            status = 'PAID';
+          } else if (alreadyPaid > 0) {
+            status = 'PARTIALLY_PAID';
+          }
         }
 
         return {
@@ -277,8 +288,13 @@ export async function createPaymentReceipt(
     if (res.ok) {
       return await res.json();
     }
-  } catch {
-    // Fallback sang local storage
+    const errData = await res.json().catch(() => null);
+    const errorMsg = errData?.message || `Lỗi ghi nhận thanh toán (${res.status})`;
+    throw new Error(errorMsg);
+  } catch (err: unknown) {
+    if (err instanceof Error && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
   }
 
   // Xử lý cấn trừ hoá đơn
