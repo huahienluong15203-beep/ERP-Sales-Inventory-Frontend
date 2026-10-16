@@ -286,12 +286,37 @@ export const DeliveryTripManagementPage: React.FC = () => {
                           <span className="font-mono text-gray-400 text-xs">0 đ</span>
                         )}
                       </td>
-                      <td className="py-3.5 px-4 text-[11px]">
-                        <div>Xuất: {trip.departedAt ? new Date(trip.departedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'Chờ'}</div>
-                        <div className="text-gray-500">
-                          Về: {new Date(trip.expectedReturnAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+                      <td className="py-3.5 px-4 text-[11px] whitespace-nowrap">
+                        <div className="font-medium text-gray-800">
+                          <span className="text-gray-500">Xuất: </span>
+                          <span className="font-mono font-semibold">
+                            {trip.departedAt ? (
+                              `${new Date(trip.departedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ${new Date(trip.departedAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+                            ) : (
+                              'Chờ'
+                            )}
+                          </span>
                         </div>
-                        {trip.overdue && (
+                        <div className="mt-0.5 font-medium">
+                          {trip.completedAt ? (
+                            <div className="text-emerald-700">
+                              <span className="text-gray-500">Về: </span>
+                              <span className="font-mono font-semibold">
+                                {new Date(trip.completedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}{' '}
+                                {new Date(trip.completedAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="text-gray-500">
+                              <span>Dự kiến: </span>
+                              <span className="font-mono">
+                                {new Date(trip.expectedReturnAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}{' '}
+                                {new Date(trip.expectedReturnAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        {trip.overdue && !trip.completedAt && (
                           <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-red-100 text-red-700 font-bold text-[10px]">
                             Trễ {trip.overdueMinutes} phút
                           </span>

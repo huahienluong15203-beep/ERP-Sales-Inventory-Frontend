@@ -339,21 +339,28 @@ export const DeliveryTripDetailPage: React.FC = () => {
           <div className="space-y-1.5 text-xs">
             <div className="flex justify-between">
               <span className="text-gray-500">Xuất bến:</span>
-              <strong className="text-gray-900">
-                {trip.departedAt ? new Date(trip.departedAt).toLocaleString('vi-VN') : 'Đang chuẩn bị'}
+              <strong className="text-gray-900 font-mono">
+                {trip.departedAt ? (
+                  `${new Date(trip.departedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ${new Date(trip.departedAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+                ) : (
+                  'Đang chuẩn bị'
+                )}
               </strong>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Dự kiến về:</span>
-              <strong className="text-gray-900">
-                {new Date(trip.expectedReturnAt).toLocaleString('vi-VN')}
-              </strong>
-            </div>
-            {trip.completedAt && (
+            {trip.completedAt ? (
               <div className="flex justify-between">
-                <span className="text-gray-500">Về thực tế:</span>
-                <strong className="text-emerald-700">
-                  {new Date(trip.completedAt).toLocaleString('vi-VN')}
+                <span className="text-gray-500">Bàn giao / Về:</span>
+                <strong className="text-emerald-700 font-mono">
+                  {new Date(trip.completedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}{' '}
+                  {new Date(trip.completedAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                </strong>
+              </div>
+            ) : (
+              <div className="flex justify-between">
+                <span className="text-gray-500">Dự kiến về:</span>
+                <strong className="text-gray-900 font-mono">
+                  {new Date(trip.expectedReturnAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}{' '}
+                  {new Date(trip.expectedReturnAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                 </strong>
               </div>
             )}
@@ -471,10 +478,18 @@ export const DeliveryTripDetailPage: React.FC = () => {
                   </td>
                   <td className="py-3 px-3 text-center">
                     {stop.status === 'DELIVERED' ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        Đã giao xong
-                      </span>
+                      <div>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          Đã giao xong
+                        </span>
+                        {stop.deliveredAt && (
+                          <div className="text-[10px] text-emerald-700 font-mono mt-0.5 font-medium">
+                            {new Date(stop.deliveredAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}{' '}
+                            {new Date(stop.deliveredAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                          </div>
+                        )}
+                      </div>
                     ) : stop.status === 'DELIVERY_FAILED' ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-red-700 border border-red-200" title={stop.deliveryFailedReason || ''}>
                         <XCircle className="w-3 h-3 text-red-600" />
