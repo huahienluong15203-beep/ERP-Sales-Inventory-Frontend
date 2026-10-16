@@ -663,6 +663,13 @@ async function fetchCustomer(id: string): Promise<BackendCustomer | null> {
   return res.ok ? res.json() : null;
 }
 
+/** Lấy chi tiết thông tin đại lý theo ID */
+export async function fetchAgencyById(id: string | number): Promise<Agency | null> {
+  if (!id) return null;
+  const customer = await fetchCustomer(String(id));
+  return customer ? mapCustomer(customer) : null;
+}
+
 /** Hạn mức công nợ đổi qua API riêng vì Backend bắt buộc lý do để ghi nhật ký (S3-05). */
 async function saveCreditLimit(id: string, creditLimit: number, maxDebtDays: number, reason: string) {
   const res = await authFetch(`${CUSTOMERS_URL}/${id}/debt-limit`, {

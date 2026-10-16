@@ -147,13 +147,25 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
         ? 'Hồ Sơ Cá Nhân'
         : location.pathname === '/products/import'
           ? 'Nhập Sản Phẩm Từ Excel'
-          : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
+          : location.pathname === '/customers/create'
+            ? 'Khai Báo Hồ Sơ Đại Lý Mới'
+            : location.pathname === '/customers/transfer'
+              ? 'Chuyển Giao Địa Bàn Hàng Loạt'
+              : location.pathname === '/suppliers/create'
+                ? 'Thêm Mới Đối Tác Cung Ứng'
+                : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
   const pageSubtitle =
     location.pathname === '/profile'
       ? 'Thông tin cá nhân & thiết lập an toàn tài khoản'
       : location.pathname === '/products/import'
         ? 'Tải tệp mẫu, xem trước từng dòng và nhập hàng loạt đến 5.000 SKU'
-        : (currentMenu?.description ?? 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống');
+        : location.pathname === '/customers/create'
+          ? 'Khai báo thông tin pháp lý, nhóm khách hàng, cơ chế bảng giá và phân công địa bàn quản lý'
+          : location.pathname === '/customers/transfer'
+            ? 'Bàn giao toàn bộ hoặc theo khu vực cho nhân viên mới khi có luân chuyển công tác'
+            : location.pathname === '/suppliers/create'
+              ? 'Nguồn hàng chuẩn để gắn vào phiếu nhập kho truy nguyên nguồn gốc'
+              : (currentMenu?.description ?? 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống');
 
   return (
     <div className="erp-app-shell">
@@ -266,39 +278,50 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             </div>
           ) : (
             <ul className="erp-menu-list">
-              {displayedMenus.map((item, idx) => {
-                const isActive = currentPath === item.path;
-                // Gom nhóm theo chức năng: hiện tiêu đề nhóm khi sang nhóm mới
-                const showGroup = Boolean(item.group) && item.group !== displayedMenus[idx - 1]?.group;
-                return (
-                  <Fragment key={item.path}>
-                  {showGroup && (
-                    <li className="erp-menu-group" aria-hidden={isSidebarCollapsed}>
-                      {isSidebarCollapsed ? <span className="erp-menu-group-divider" /> : item.group}
-                    </li>
-                  )}
-                  <li className="erp-menu-item">
-                    <Link
-                      to={item.path}
-                      className={`erp-menu-link ${isActive ? 'active' : ''}`}
-                      title={item.title}
-                    >
-                      <span className="erp-menu-icon">
-                        <DynamicIcon name={item.icon} size={18} />
-                      </span>
-                      {!isSidebarCollapsed && (
-                        <>
-                          <span className="erp-menu-title">{item.title}</span>
-                          {item.badge && (
-                            <span className="erp-menu-badge">{item.badge}</span>
-                          )}
-                        </>
+              {(() => {
+                // Ưu tiên 1: Khớp chính xác (Exact match)
+                const exactMatch = displayedMenus.find((m) => m.path === currentPath);
+                // Ưu tiên 2: Khớp tiền tố dài nhất (Prefix match) nếu trang con không có trong menu (VD: /customers/create -> /customers)
+                const activePath = exactMatch
+                  ? exactMatch.path
+                  : displayedMenus
+                      .filter((m) => m.path !== '/' && currentPath.startsWith(m.path + '/'))
+                      .sort((a, b) => b.path.length - a.path.length)[0]?.path;
+
+                return displayedMenus.map((item, idx) => {
+                  const isActive = item.path === activePath;
+                  // Gom nhóm theo chức năng: hiện tiêu đề nhóm khi sang nhóm mới
+                  const showGroup = Boolean(item.group) && item.group !== displayedMenus[idx - 1]?.group;
+                  return (
+                    <Fragment key={item.path}>
+                      {showGroup && (
+                        <li className="erp-menu-group" aria-hidden={isSidebarCollapsed}>
+                          {isSidebarCollapsed ? <span className="erp-menu-group-divider" /> : item.group}
+                        </li>
                       )}
-                    </Link>
-                  </li>
-                  </Fragment>
-                );
-              })}
+                      <li className="erp-menu-item">
+                        <Link
+                          to={item.path}
+                          className={`erp-menu-link ${isActive ? 'active' : ''}`}
+                          title={item.title}
+                        >
+                          <span className="erp-menu-icon">
+                            <DynamicIcon name={item.icon} size={18} />
+                          </span>
+                          {!isSidebarCollapsed && (
+                            <>
+                              <span className="erp-menu-title">{item.title}</span>
+                              {item.badge && (
+                                <span className="erp-menu-badge">{item.badge}</span>
+                              )}
+                            </>
+                          )}
+                        </Link>
+                      </li>
+                    </Fragment>
+                  );
+                });
+              })()}
             </ul>
           )}
         </nav>

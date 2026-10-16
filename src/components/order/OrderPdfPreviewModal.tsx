@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Printer,
@@ -12,8 +12,9 @@ import {
   BadgePercent,
   AlertTriangle
 } from 'lucide-react';
-import type { OrderBackendResponse } from '../../types/order';
-import { formatCurrencyVND, formatQuantity } from '../../services/orderService';
+import type { OrderBackendResponse, OrderApprovalHistoryResponse } from '../../types/order';
+import { formatCurrencyVND, formatQuantity, fetchOrderApprovalHistory } from '../../services/orderService';
+import { fetchAgencyById } from '../../services/agencyApi';
 import { useAuth } from '../../contexts/AuthContext';
 import { API_BASE_URL, authFetch } from '../../services/api';
 
@@ -27,6 +28,7 @@ const STAMPS: Record<string, string> = {
 interface OrderPdfPreviewModalProps {
   isOpen: boolean;
   order: OrderBackendResponse | null;
+  approvalHistory?: OrderApprovalHistoryResponse[];
   onClose: () => void;
 }
 
@@ -104,10 +106,94 @@ const BarcodeSvg: React.FC<{ code: string }> = ({ code }) => {
 export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
   isOpen,
   order,
+  approvalHistory,
   onClose
 }) => {
   const { showToast } = useAuth();
   const printContentRef = useRef<HTMLDivElement>(null);
+
+  const [agencySalesRep, setAgencySalesRep] = useState<string>('');
+  const [internalHistory, setInternalHistory] = useState<OrderApprovalHistoryResponse[]>([]);
+
+  // Tải NVKD phụ trách đại lý từ hồ sơ đại lý
+  useEffect(() => {
+    if (!order?.customerId) return;
+    let isMounted = true;
+    fetchAgencyById(order.customerId)
+      .then((agency) => {
+        if (isMounted && agency?.assignedRepName && agency.assignedRepName !== 'Chưa gán') {
+          setAgencySalesRep(agency.assignedRepName);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [order?.customerId]);
+
+  // Tải lịch sử duyệt nếu chưa truyền vào
+  useEffect(() => {
+    if (!approvalHistory && order?.id) {
+      let isMounted = true;
+      fetchOrderApprovalHistory(order.id)
+        .then((h) => {
+          if (isMounted) setInternalHistory(h);
+        })
+        .catch(() => {});
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [approvalHistory, order?.id]);
+
+  const effectiveHistory = approvalHistory || internalHistory;
+
+  // Xác định tên Nhân viên kinh doanh phụ trách (tuyệt đối không để customer_agent)
+  const salesRepDisplay = useMemo(() => {
+    if (agencySalesRep) {
+      return agencySalesRep;
+    }
+    const anyOrder = order as unknown as { salesRepName?: string };
+    if (anyOrder?.salesRepName) {
+      return anyOrder.salesRepName;
+    }
+    const creator = order?.createdByUsername;
+    if (creator && !creator.toLowerCase().includes('customer') && creator !== 'client') {
+      return creator;
+    }
+    return agencySalesRep || 'Nhân viên kinh doanh';
+  }, [agencySalesRep, order]);
+
+  // Xác định Thủ kho xuất hàng (người thực tế thực hiện xuất kho)
+  const dispatchActorDisplay = useMemo(() => {
+    // 1. Kiểm tra trong lịch sử duyệt xem ai là người thực hiện xuất kho
+    const dispatchEvent = effectiveHistory.find(
+      (h) =>
+        h.toStatus === 'DISPATCHED' ||
+        h.toStatus === 'SHIPPED' ||
+        h.action === 'DISPATCH' ||
+        h.action === 'DISPATCHED'
+    );
+    if (dispatchEvent?.actorFullName) {
+      return dispatchEvent.actorFullName;
+    }
+    if (dispatchEvent?.actorUsername) {
+      return dispatchEvent.actorUsername;
+    }
+
+    // 2. Kiểm tra fulfillment trên đơn
+    if (order?.fulfillment?.dispatchedByUsername) {
+      return order.fulfillment.dispatchedByUsername;
+    }
+
+    // 3. Nếu đơn chưa xuất kho
+    const st = order?.status?.toUpperCase();
+    if (st === 'DRAFT' || st === 'PENDING_APPROVAL' || st === 'APPROVED' || st === 'PICKING') {
+      return '(Ký khi xuất hàng)';
+    }
+
+    return 'Thủ kho xuất hàng';
+  }, [effectiveHistory, order]);
 
   if (!isOpen || !order) return null;
 
@@ -307,7 +393,7 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
                     <Calendar size={11} /> Ngày giao dự kiến: <strong>{order.desiredDeliveryDate ? new Date(order.desiredDeliveryDate).toLocaleDateString('vi-VN') : 'Theo thoả thuận'}</strong>
                   </p>
                   <p className="text-gray-600 flex items-center gap-1">
-                    <User size={11} /> NVKD phụ trách: <strong>{order.createdByUsername || 'sales_rep'}</strong>
+                    <User size={11} /> NVKD phụ trách: <strong>{salesRepDisplay}</strong>
                   </p>
                 </div>
               </div>
@@ -416,8 +502,8 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
                   <strong className="block text-gray-800 font-bold">NHÂN VIÊN KINH DOANH</strong>
                   <span className="text-[10px] text-gray-400">(Ký, ghi rõ họ tên)</span>
                 </div>
-                <div className="text-[11px] text-gray-600 font-bold">
-                  {order.createdByUsername || 'sales_rep'}
+                <div className="text-[11px] text-gray-700 font-bold">
+                  {salesRepDisplay}
                 </div>
               </div>
 
@@ -426,8 +512,8 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
                   <strong className="block text-gray-800 font-bold">THỦ KHO XUẤT HÀNG</strong>
                   <span className="text-[10px] text-gray-400">(Ký, ghi rõ họ tên)</span>
                 </div>
-                <div className="text-[11px] text-gray-400 font-medium italic">
-                  Bộ phận kho vận
+                <div className="text-[11px] text-gray-700 font-bold">
+                  {dispatchActorDisplay}
                 </div>
               </div>
             </div>
