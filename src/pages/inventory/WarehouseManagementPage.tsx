@@ -54,9 +54,9 @@ export const WarehouseManagementPage: React.FC = () => {
   const [locationTypeTab, setLocationTypeTab] = useState<'' | LocationType>('');
   const [locationStatusFilter, setLocationStatusFilter] = useState<'' | 'ACTIVE' | 'INACTIVE'>('');
 
-  // Phân trang danh sách kho
+  // Phân trang danh sách kho (30 / 50 kho / trang)
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(30);
 
   // Reset về trang 1 khi tìm kiếm hoặc lọc
   useEffect(() => {
@@ -257,6 +257,14 @@ export const WarehouseManagementPage: React.FC = () => {
           </span>
         );
     }
+  };
+
+  // Helper lấy thông tin hiển thị thủ kho/quản lý kho (hỗ trợ cả RefItem name/code và fullName/username)
+  const getManagerInfo = (wh?: Warehouse | null) => {
+    if (!wh) return { name: '', username: '' };
+    const name = wh.manager?.name || wh.manager?.fullName || wh.managerName || '';
+    const username = wh.manager?.code || wh.manager?.username || '';
+    return { name, username };
   };
 
   return (
@@ -505,10 +513,34 @@ export const WarehouseManagementPage: React.FC = () => {
 
                               {/* Thủ kho / Quản lý */}
                               <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">
-                                <div className="flex items-center gap-1.5">
-                                  <User size={13} className="text-slate-400 shrink-0" />
-                                  <span className="truncate font-medium">{wh.manager?.fullName || wh.managerName || 'Chưa phân công'}</span>
-                                </div>
+                                {(() => {
+                                  const { name, username } = getManagerInfo(wh);
+                                  if (!name && !username) {
+                                    return (
+                                      <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500">
+                                        <User size={13} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                                        <span className="text-xs italic">Chưa phân công</span>
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-950/60 border border-orange-200 dark:border-orange-800 flex items-center justify-center text-orange-700 dark:text-orange-300 font-bold text-[11px] shrink-0">
+                                        {(name || username).charAt(0).toUpperCase()}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <div className="font-medium text-slate-800 dark:text-slate-200 text-xs truncate max-w-[170px]" title={name || username}>
+                                          {name || username}
+                                        </div>
+                                        {username && name && (
+                                          <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[170px]">
+                                            @{username}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
                               </td>
 
                               {/* Số vị trí */}
@@ -594,10 +626,9 @@ export const WarehouseManagementPage: React.FC = () => {
                             setPageSize(Number(e.target.value));
                             setCurrentPage(1);
                           }}
-                          className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium"
+                          className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
                         >
-                          <option value={10}>10 kho / trang</option>
-                          <option value={20}>20 kho / trang</option>
+                          <option value={30}>30 kho / trang</option>
                           <option value={50}>50 kho / trang</option>
                         </select>
                       </div>
@@ -689,12 +720,24 @@ export const WarehouseManagementPage: React.FC = () => {
                     {selectedWarehouse.address}
                   </span>
                 )}
-                {(selectedWarehouse.manager?.fullName || selectedWarehouse.managerName) && (
-                  <span className="flex items-center gap-1">
-                    <User size={13} className="text-slate-400" />
-                    Quản lý: <strong>{selectedWarehouse.manager?.fullName || selectedWarehouse.managerName}</strong>
-                  </span>
-                )}
+                {(() => {
+                  const { name, username } = getManagerInfo(selectedWarehouse);
+                  if (!name && !username) return null;
+                  return (
+                    <span className="flex items-center gap-1.5">
+                      <User size={13} className="text-slate-400" />
+                      Quản lý:{' '}
+                      <strong className="text-slate-700 dark:text-slate-200 font-semibold">
+                        {name || username}
+                        {username && name && (
+                          <span className="font-normal text-slate-400 dark:text-slate-500 ml-1">
+                            (@{username})
+                          </span>
+                        )}
+                      </strong>
+                    </span>
+                  );
+                })()}
               </div>
             </div>
 

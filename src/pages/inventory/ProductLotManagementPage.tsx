@@ -28,11 +28,14 @@ import type { ProductLotResponse, LotStockSummaryResponse } from '../../types/pr
 import type { Warehouse } from '../../types/warehouse';
 import type { Product } from '../../types/product';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from '../../routes/Router';
 import { ProductLotCreateModal } from '../../components/inventory/ProductLotCreateModal';
 import { ProductLotUpdateModal } from '../../components/inventory/ProductLotUpdateModal';
 import { ProductLotDispatchCheckModal } from '../../components/inventory/ProductLotDispatchCheckModal';
+import { ProductLotLockConfirmModal } from '../../components/inventory/ProductLotLockConfirmModal';
 
 export const ProductLotManagementPage: React.FC = () => {
+  const navigate = useNavigate();
   const { currentRole, user, showToast } = useAuth();
 
   // State danh sách & phân trang
@@ -62,6 +65,8 @@ export const ProductLotManagementPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingLot, setEditingLot] = useState<ProductLotResponse | null>(null);
   const [validatingLot, setValidatingLot] = useState<ProductLotResponse | null>(null);
+  const [lotToToggleLock, setLotToToggleLock] = useState<ProductLotResponse | null>(null);
+  const [submittingLock, setSubmittingLock] = useState(false);
 
   const isWhManagerOrAdmin =
     currentRole === 'ROLE_WH_MANAGER' ||
@@ -127,23 +132,39 @@ export const ProductLotManagementPage: React.FC = () => {
     loadSummary();
   }, [loadLots, loadSummary]);
 
-  // Khóa / Mở khóa nhanh một lô hàng
-  const handleToggleLock = async (lot: ProductLotResponse) => {
+  // Mở modal xác nhận Khóa / Mở khóa một lô hàng
+  const handleOpenLockModal = (lot: ProductLotResponse) => {
     if (!isWhManagerOrAdmin) {
       showToast?.('Chỉ Quản lý kho hoặc Admin mới có quyền khóa/mở khóa lô', 'error');
       return;
     }
-    const nextStatus = lot.status === 'ACTIVE' ? 'LOCKED' : 'ACTIVE';
+    setLotToToggleLock(lot);
+  };
+
+  // Xác nhận Khóa / Mở khóa lô hàng từ modal
+  const handleConfirmToggleLock = async () => {
+    if (!lotToToggleLock) return;
+    if (!isWhManagerOrAdmin) {
+      showToast?.('Chỉ Quản lý kho hoặc Admin mới có quyền khóa/mở khóa lô', 'error');
+      return;
+    }
+    const nextStatus = lotToToggleLock.status === 'ACTIVE' ? 'LOCKED' : 'ACTIVE';
     try {
-      await updateProductLot(lot.id, { status: nextStatus });
+      setSubmittingLock(true);
+      await updateProductLot(lotToToggleLock.id, { status: nextStatus });
       showToast?.(
-        nextStatus === 'LOCKED' ? `Đã khóa lô ${lot.batchNumber}` : `Đã mở khóa lô ${lot.batchNumber}`,
+        nextStatus === 'LOCKED'
+          ? `Đã khóa thành công lô hàng ${lotToToggleLock.batchNumber}`
+          : `Đã mở khóa thành công lô hàng ${lotToToggleLock.batchNumber}`,
         'success'
       );
+      setLotToToggleLock(null);
       loadLots();
       loadSummary();
     } catch (err: unknown) {
-      showToast?.(err instanceof Error ? err.message : 'Thao tác thất bại', 'error');
+      showToast?.(err instanceof Error ? err.message : 'Thao tác không thành công', 'error');
+    } finally {
+      setSubmittingLock(false);
     }
   };
 
@@ -182,7 +203,7 @@ export const ProductLotManagementPage: React.FC = () => {
           {isWhManagerOrAdmin && (
             <button
               type="button"
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={() => navigate('/inventory/lots/create')}
               className="px-4 py-2 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer"
             >
               <Plus size={15} />
@@ -525,11 +546,11 @@ export const ProductLotManagementPage: React.FC = () => {
                             </button>
                           )}
 
-                          {/* Khóa / Mở khóa nhanh */}
+                          {/* Khóa / Mở khóa (Có modal popup xác nhận) */}
                           {isWhManagerOrAdmin && (
                             <button
                               type="button"
-                              onClick={() => handleToggleLock(lot)}
+                              onClick={() => handleOpenLockModal(lot)}
                               title={isLocked ? 'Mở khóa cho phép xuất kho' : 'Khóa lô ngăn xuất kho'}
                               className={`p-1.5 rounded-lg border transition cursor-pointer ${
                                 isLocked
@@ -612,6 +633,19 @@ export const ProductLotManagementPage: React.FC = () => {
           isOpen={Boolean(validatingLot)}
           lot={validatingLot}
           onClose={() => setValidatingLot(null)}
+        />
+      )}
+
+      {/* Modal xác nhận Khóa / Mở khóa lô hàng */}
+      {lotToToggleLock && (
+        <ProductLotLockConfirmModal
+          isOpen={Boolean(lotToToggleLock)}
+          lot={lotToToggleLock}
+          isLoading={submittingLock}
+          onClose={() => {
+            if (!submittingLock) setLotToToggleLock(null);
+          }}
+          onConfirm={handleConfirmToggleLock}
         />
       )}
     </div>
