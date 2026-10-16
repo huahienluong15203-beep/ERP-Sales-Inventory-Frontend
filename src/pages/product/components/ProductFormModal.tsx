@@ -8,6 +8,7 @@ import {
   productService
 } from '../../../services/productService';
 import { fetchCategories, type CategoryWithCount } from '../../../services/categoryApi';
+import { toggleProductBatchManagement } from '../../../services/productLotApi';
 import { useAuth } from '../../../contexts/AuthContext';
 import { Icons } from '../../../components/common/Icons';
 import { SearchSelect } from '../../../components/common/SearchSelect';
@@ -71,6 +72,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [costPrice, setCostPrice] = useState<number | string>(0);
   const [imageUrl, setImageUrl] = useState('');
   const [status, setStatus] = useState<ProductStatus>('ACTIVE');
+  const [hasBatchManagement, setHasBatchManagement] = useState(false);
 
   const [skuError, setSkuError] = useState<string | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -113,6 +115,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         setCostPrice(productToEdit.costPrice || 0);
         setImageUrl(productToEdit.imageUrl || '');
         setStatus(productToEdit.status || 'ACTIVE');
+        setHasBatchManagement(Boolean(productToEdit.hasBatchManagement));
       } else {
         setSku('');
         setName('');
@@ -123,6 +126,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         setCostPrice(0);
         setImageUrl('');
         setStatus('ACTIVE');
+        setHasBatchManagement(false);
       }
       setSkuError(null);
       setGeneralError(null);
@@ -283,6 +287,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
         const res = await productService.updateProduct(productToEdit.id, updatePayload, currentRole);
         if (res.success) {
+          if (hasBatchManagement !== Boolean(productToEdit.hasBatchManagement)) {
+            await toggleProductBatchManagement(productToEdit.id, hasBatchManagement).catch(() => {});
+          }
           onSuccess(res.message);
           onClose();
         } else {
@@ -303,6 +310,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
         const res = await productService.createProduct(createPayload, currentRole);
         if (res.success) {
+          if (res.product?.id && hasBatchManagement) {
+            await toggleProductBatchManagement(res.product.id, true).catch(() => {});
+          }
           onSuccess(res.message);
           onClose();
         } else {
@@ -653,6 +663,28 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* 8. QUẢN LÝ THEO LÔ & HẠN SỬ DỤNG (FEFO) */}
+            <div className="p-3.5 rounded-xl bg-orange-50/50 border border-orange-200/80 flex items-center justify-between gap-3">
+              <div>
+                <label className="text-xs font-bold text-gray-900 block">
+                  Bật quản lý theo lô & hạn sử dụng (FEFO)
+                </label>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  Theo dõi số lô, ngày sản xuất và hạn sử dụng khi nhập xuất kho cho sản phẩm này.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={hasBatchManagement}
+                  onChange={(e) => setHasBatchManagement(e.target.checked)}
+                  disabled={isSubmitting}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F85606]"></div>
+              </label>
             </div>
           </div>
 

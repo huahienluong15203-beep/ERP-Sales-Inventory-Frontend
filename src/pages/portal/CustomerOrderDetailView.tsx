@@ -27,6 +27,7 @@ import {
 } from '../../services/orderService';
 import { useAuth } from '../../contexts/AuthContext';
 import { OrderLifecycleTimeline } from '../../components/order/OrderLifecycleTimeline';
+import { AgencyDeliveryTimeline } from '../../components/portal/AgencyDeliveryTimeline';
 import { OrderCancelModal } from '../../components/order/OrderCancelModal';
 import { OrderPdfPreviewModal } from '../../components/order/OrderPdfPreviewModal';
 
@@ -357,6 +358,12 @@ export const CustomerOrderDetailView: React.FC<CustomerOrderDetailViewProps> = (
               desiredDeliveryDate={order.desiredDeliveryDate || undefined}
             />
           </div>
+
+          {/* TIMELINE TRẠNG THÁI GIAO HÀNG & THỰC GIAO TỪNG MẶT HÀNG CHO ĐẠI LÝ */}
+          <AgencyDeliveryTimeline
+            order={order}
+            approvalHistory={approvalHistory}
+          />
 
           {/* 2 CỘT THÔNG TIN: ĐẠI LÝ & THỜI GIAN/NGƯỜI LẬP */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -695,6 +702,7 @@ export const CustomerOrderDetailView: React.FC<CustomerOrderDetailViewProps> = (
       <OrderPdfPreviewModal
         isOpen={isPdfModalOpen}
         order={order}
+        approvalHistory={approvalHistory}
         onClose={() => setIsPdfModalOpen(false)}
       />
 

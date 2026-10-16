@@ -45,6 +45,7 @@ import { OrderLifecycleTimeline } from '../../components/order/OrderLifecycleTim
 import { OrderCancelModal } from '../../components/order/OrderCancelModal';
 import { OrderPdfPreviewModal } from '../../components/order/OrderPdfPreviewModal';
 import { OrderDispatchModal } from '../../components/order/OrderDispatchModal';
+import { AgencyDeliveryTimeline } from '../../components/portal/AgencyDeliveryTimeline';
 import { getUserFullName } from '../../lib/userFormatters';
 
 export const OrderDetailPage: React.FC = () => {
@@ -546,6 +547,13 @@ export const OrderDetailPage: React.FC = () => {
         approvalHistory={approvalHistory}
         createdAt={order.createdAt}
         desiredDeliveryDate={order.desiredDeliveryDate || undefined}
+      />
+
+      {/* CHI TIẾT SỐ LƯỢNG THỰC GIAO TỪNG MẶT HÀNG & THÔNG TIN GIAO NHẬN (Ẩn timeline 5 nấc trùng lặp) */}
+      <AgencyDeliveryTimeline
+        order={order}
+        approvalHistory={approvalHistory}
+        hideTimelineTrack={true}
       />
 
       {/* THÔNG TIN CHỨNG TỪ XUẤT KHO (ĐÃ XÁC NHẬN - BẤT BIẾN KHÔNG SỬA ĐƯỢC) */}
@@ -1051,6 +1059,7 @@ export const OrderDetailPage: React.FC = () => {
       <OrderPdfPreviewModal
         isOpen={isPdfModalOpen}
         order={order}
+        approvalHistory={approvalHistory}
         onClose={() => setIsPdfModalOpen(false)}
       />
 
