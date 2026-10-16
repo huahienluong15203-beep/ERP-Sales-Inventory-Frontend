@@ -555,7 +555,6 @@ export const AppRoutes: React.FC = () => {
                 'ROLE_SALES_MANAGER'
               ]}
             >
-              <InventoryAgingReportPage />
               <InTransitDashboardPage />
             </ProtectedRoute>
           }
