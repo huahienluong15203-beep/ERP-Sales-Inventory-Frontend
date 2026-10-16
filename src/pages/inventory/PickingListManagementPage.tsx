@@ -9,7 +9,8 @@ import {
   XCircle,
   RefreshCw,
   User,
-  PackageCheck
+  PackageCheck,
+  PackageSearch
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
@@ -134,8 +135,8 @@ export const PickingListManagementPage: React.FC = () => {
         );
       case 'IN_PROGRESS':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">
-            <RefreshCw className="w-3 h-3 animate-spin text-amber-600" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+            <PackageSearch className="w-3.5 h-3.5 text-amber-600" />
             Đang soạn hàng
           </span>
         );

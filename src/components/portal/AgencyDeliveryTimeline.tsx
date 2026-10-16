@@ -6,7 +6,8 @@ import {
   Truck,
   CheckCheck,
   AlertTriangle,
-  MapPin
+  MapPin,
+  XCircle
 } from 'lucide-react';
 import type { OrderBackendResponse, OrderApprovalHistoryResponse } from '../../types/order';
 
@@ -14,6 +15,7 @@ interface AgencyDeliveryTimelineProps {
   order: OrderBackendResponse;
   approvalHistory?: OrderApprovalHistoryResponse[];
   className?: string;
+  hideStepper?: boolean;
 }
 
 interface TimelineStep {
@@ -29,7 +31,8 @@ interface TimelineStep {
 export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
   order,
   approvalHistory = [],
-  className = ''
+  className = '',
+  hideStepper = false
 }) => {
   // Mapping chỉ số bước hiện tại của đơn hàng đối với Đại lý (1 -> 5)
   // 1: Đã duyệt, 2: Đang soạn, 3: Đã xuất, 4: Đang giao, 5: Đã giao
@@ -169,7 +172,17 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
 
         {/* Badge nấc hiện tại */}
         <div>
-          {currentStep === 5 ? (
+          {order.status === 'DELIVERY_FAILED' ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
+              <AlertTriangle size={14} />
+              <span>Giao hàng không thành công (Đã quay về kho)</span>
+            </span>
+          ) : order.status === 'CANCELLED' ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
+              <XCircle size={14} />
+              <span>Đơn hàng đã hủy</span>
+            </span>
+          ) : currentStep === 5 ? (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
               <CheckCheck size={14} />
               <span>Giao hàng hoàn tất</span>
@@ -202,7 +215,8 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
         </div>
       </div>
 
-      {/* THANH TIMELINE 5 MỐC THỜI GIAN (AC 1) */}
+      {/* THANH TIMELINE 5 MỐC THỜI GIAN (AC 1) - Ẩn nếu hideStepper = true để tránh trùng lặp */}
+      {!hideStepper && (
       <div className="overflow-x-auto pb-3 pt-1 scrollbar-thin">
         <div className="min-w-[620px] px-2 flex items-start justify-between relative">
           {/* Thanh nối ngầm */}
@@ -273,6 +287,7 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
           })}
         </div>
       </div>
+      )}
 
       {/* THÔNG TIN BIÊN BẢN GIAO HÀNG / NGƯỜI NHẬN NẾU ĐÃ GIAO */}
       {order.fulfillment && (order.fulfillment.receiverName || order.fulfillment.dispatchedByUsername) && (

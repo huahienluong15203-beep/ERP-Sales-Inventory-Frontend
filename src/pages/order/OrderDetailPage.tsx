@@ -264,6 +264,13 @@ export const OrderDetailPage: React.FC = () => {
             <span>Đã hủy</span>
           </span>
         );
+      case 'DELIVERY_FAILED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
+            <AlertTriangle size={13} />
+            <span>Giao thất bại (Về kho)</span>
+          </span>
+        );
       default:
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
@@ -575,10 +582,11 @@ export const OrderDetailPage: React.FC = () => {
         desiredDeliveryDate={order.desiredDeliveryDate || undefined}
       />
 
-      {/* TIMELINE TRẠNG THÁI GIAO HÀNG & THỰC GIAO TỪNG DÒNG */}
+      {/* THÔNG TIN BÀN GIAO & BẢNG SỐ LƯỢNG THỰC GIAO TỪNG DÒNG (Đã ẩn thanh stepper trùng lặp) */}
       <AgencyDeliveryTimeline
         order={order}
         approvalHistory={approvalHistory}
+        hideStepper={true}
       />
 
       {/* 4. CẢNH BÁO PHÊ DUYỆT NGOẠI LỆ HOẶC GIAO THIẾU HÀNG */}
