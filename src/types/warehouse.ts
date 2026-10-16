@@ -2,8 +2,10 @@ export type LocationType = 'ZONE' | 'RACK' | 'SHELF' | 'BIN';
 
 export interface WarehouseManager {
   id: number;
-  username: string;
-  fullName: string;
+  code?: string;
+  name?: string;
+  username?: string;
+  fullName?: string;
 }
 
 export interface WarehouseLocation {

@@ -52,7 +52,7 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
   // S5-03: Ô nhập trực tiếp kiêm chọn dropdown người phụ trách kho
   const [inputValue, setInputValue] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [roleFilter, setRoleFilter] = useState<'ALL' | 'WAREHOUSE' | 'ADMIN' | 'OTHER'>('ALL');
+  const [roleFilter, setRoleFilter] = useState<'ALL' | 'MANAGER' | 'STAFF'>('ALL');
   const [dropdownPosition, setDropdownPosition] = useState<{
     top?: number;
     bottom?: number;
@@ -74,9 +74,10 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
         status: 'ACTIVE'
       });
       const users = res.content || [];
-      // Lọc bỏ tài khoản đại lý (B2B Customer)
+      // S5-03: Chỉ lọc các nhân sự thuộc bộ phận Kho (Quản lý kho hoặc Thủ kho)
+      // Loại trừ Admin (toàn quyền hệ thống) và các vai trò không liên quan (Kế toán, Sales, Đại lý)
       const list: ManagerOption[] = users
-        .filter((u) => !u.roles?.includes('ROLE_CUSTOMER'))
+        .filter((u) => u.roles?.some((r) => r === 'ROLE_WH_MANAGER' || r === 'ROLE_WAREHOUSE'))
         .map((u) => ({
           id: u.id,
           fullName: u.fullName || u.username,
@@ -84,6 +85,21 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
           email: u.email,
           roles: (u.roles || []) as string[]
         }));
+
+      // Nếu kho đang sửa đã có người phụ trách từ trước thì đảm bảo người đó luôn hiện diện
+      if (warehouseToEdit?.manager) {
+        const cur = warehouseToEdit.manager;
+        const curName = cur.name || cur.fullName || cur.code || cur.username || `Nhân sự #${cur.id}`;
+        const curUser = cur.code || cur.username || '';
+        if (!list.some((item) => item.id === cur.id)) {
+          list.unshift({
+            id: cur.id,
+            fullName: curName,
+            username: curUser,
+            roles: []
+          });
+        }
+      }
 
       setManagers((prev) => {
         if (!keyword) return list;
@@ -104,17 +120,13 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
     loadManagers();
   }, [isOpen, loadManagers]);
 
-  // Cập nhật vị trí hiển thị của portal dropdown
+  // Cập nhật vị trí hiển thị của portal dropdown: LUÔN XỔ XUỐNG DƯỚI (DOWNWARD) theo yêu cầu
   const updateDropdownPosition = useCallback(() => {
     if (!inputContainerRef.current) return;
     const rect = inputContainerRef.current.getBoundingClientRect();
-    const vh = window.innerHeight;
-    const spaceBelow = vh - rect.bottom - 10;
-    const openUp = spaceBelow < 220 && rect.top > spaceBelow;
 
     setDropdownPosition({
-      top: openUp ? undefined : rect.bottom + 4,
-      bottom: openUp ? vh - rect.top + 4 : undefined,
+      top: rect.bottom + 6,
       left: rect.left,
       width: rect.width
     });
@@ -189,50 +201,32 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
     if (roles.includes('ROLE_WAREHOUSE')) {
       return { label: 'Thủ kho', color: 'bg-amber-50 text-amber-700 border-amber-200' };
     }
-    if (roles.includes('ROLE_ADMIN')) {
-      return { label: 'Admin', color: 'bg-purple-50 text-purple-700 border-purple-200' };
-    }
-    if (roles.includes('ROLE_SALES_MANAGER') || roles.includes('ROLE_SALES_REP')) {
-      return { label: 'Kinh doanh', color: 'bg-blue-50 text-blue-700 border-blue-200' };
-    }
-    if (roles.includes('ROLE_ACCOUNTANT')) {
-      return { label: 'Kế toán', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
-    }
-    return { label: 'Nhân viên', color: 'bg-gray-50 text-gray-600 border-gray-200' };
+    return { label: 'Nhân sự kho', color: 'bg-gray-50 text-gray-600 border-gray-200' };
   };
 
-  // Đếm số lượng nhân sự theo từng nhóm vai trò để hiển thị trên chip filter
+  // Đếm số lượng nhân sự theo từng nhóm vai trò kho để hiển thị trên chip filter
   const filterCounts = useMemo(() => {
-    let whCount = 0;
-    let adminCount = 0;
-    let otherCount = 0;
+    let managerCount = 0;
+    let staffCount = 0;
     managers.forEach((m) => {
-      const isWh = m.roles.some((r) => r === 'ROLE_WH_MANAGER' || r === 'ROLE_WAREHOUSE');
-      const isAdmin = m.roles.includes('ROLE_ADMIN');
-      if (isWh) whCount++;
-      else if (isAdmin) adminCount++;
-      else otherCount++;
+      if (m.roles.includes('ROLE_WH_MANAGER')) managerCount++;
+      else if (m.roles.includes('ROLE_WAREHOUSE')) staffCount++;
     });
     return {
       all: managers.length,
-      warehouse: whCount,
-      admin: adminCount,
-      other: otherCount
+      manager: managerCount,
+      staff: staffCount
     };
   }, [managers]);
 
   // Danh sách nhân sự sau khi lọc vai trò & tìm kiếm
   const filteredManagers = useMemo(() => {
     return managers.filter((m) => {
-      // 1. Lọc theo nhóm vai trò
-      if (roleFilter === 'WAREHOUSE') {
-        const isWh = m.roles.some((r) => r === 'ROLE_WH_MANAGER' || r === 'ROLE_WAREHOUSE');
-        if (!isWh) return false;
-      } else if (roleFilter === 'ADMIN') {
-        if (!m.roles.includes('ROLE_ADMIN')) return false;
-      } else if (roleFilter === 'OTHER') {
-        const isWhOrAdmin = m.roles.some((r) => r === 'ROLE_WH_MANAGER' || r === 'ROLE_WAREHOUSE' || r === 'ROLE_ADMIN');
-        if (isWhOrAdmin) return false;
+      // 1. Lọc theo nhóm chức danh kho
+      if (roleFilter === 'MANAGER') {
+        if (!m.roles.includes('ROLE_WH_MANAGER')) return false;
+      } else if (roleFilter === 'STAFF') {
+        if (m.roles.includes('ROLE_WH_MANAGER') || !m.roles.includes('ROLE_WAREHOUSE')) return false;
       }
 
       // 2. Tìm kiếm theo từ khóa đang gõ
@@ -267,7 +261,9 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
       setManagerId(mId);
       setStatus(warehouseToEdit.status);
       if (warehouseToEdit.manager) {
-        setInputValue(`${warehouseToEdit.manager.fullName} (@${warehouseToEdit.manager.username})`);
+        const curName = warehouseToEdit.manager.name || warehouseToEdit.manager.fullName || '';
+        const curUser = warehouseToEdit.manager.code || warehouseToEdit.manager.username || '';
+        setInputValue(curUser && curName ? `${curName} (@${curUser})` : (curName || curUser));
       } else {
         setInputValue('');
       }
@@ -309,6 +305,10 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
     }
     if (!cleanName) {
       setErrorMsg('Vui lòng nhập tên kho hàng');
+      return;
+    }
+    if (!managerId) {
+      setErrorMsg('Vui lòng phân công nhân sự phụ trách kho (Thủ kho / Quản lý)');
       return;
     }
 
@@ -355,20 +355,20 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
       <div
         role="dialog"
         aria-modal="true"
-        className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+        className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/80 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-[#F85606]">
-              <Building2 size={20} />
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-orange-50/70 via-white to-white shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-orange-100/80 border border-orange-200 flex items-center justify-center text-[#F85606] shadow-xs">
+              <Building2 size={22} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-gray-900">
-                {isEdit ? 'Chỉnh sửa thông tin kho' : 'Thêm mới kho hàng'}
+              <h3 className="text-base font-bold text-gray-900">
+                {isEdit ? 'Chỉnh sửa thông tin kho hàng' : 'Thêm mới kho hàng'}
               </h3>
-              <p className="text-[11px] text-gray-500">
+              <p className="text-xs text-gray-500 mt-0.5">
                 {isEdit ? `Mã kho: ${warehouseToEdit?.code}` : 'Khai báo thông tin kho lưu trữ trong hệ thống'}
               </p>
             </div>
@@ -376,88 +376,104 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
               {errorMsg}
             </div>
           )}
 
-          {/* Mã kho & Trạng thái (Trạng thái chỉ hiển thị khi Chỉnh sửa, khi Tạo mới mặc định luôn là Đang hoạt động) */}
+          {/* Mã kho & Tên kho (hoặc Trạng thái nếu Chỉnh sửa) - Dàn 2 cột rộng rãi */}
           {isEdit ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Mã định danh kho <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={code}
+                    disabled
+                    className="w-full h-11 px-3.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 font-mono text-xs sm:text-sm font-bold cursor-not-allowed"
+                  />
+                  <span className="text-[10px] text-gray-400 mt-1 block">
+                    Mã kho cố định không thể sửa
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Trạng thái hoạt động
+                  </label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
+                    className="w-full h-11 px-3.5 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs sm:text-sm font-semibold focus:outline-none focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 transition cursor-pointer shadow-2xs"
+                  >
+                    <option value="ACTIVE">Đang hoạt động</option>
+                    <option value="INACTIVE">Ngừng hoạt động</option>
+                  </select>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Tên kho hàng <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ví dụ: Kho Tổng Miền Bắc, Kho Cầu Giấy..."
+                  className="w-full h-11 px-3.5 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs sm:text-sm focus:outline-none focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 transition shadow-2xs"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                   Mã định danh kho <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={code}
-                  disabled
-                  className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 font-mono text-sm font-bold cursor-not-allowed"
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  placeholder="Ví dụ: WH-MB02, KHO-HN"
+                  className="w-full h-11 px-3.5 rounded-xl border border-gray-200 bg-white text-gray-900 font-mono text-xs sm:text-sm font-semibold focus:outline-none focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 transition shadow-2xs"
+                  autoFocus
                 />
-                <span className="text-[10px] text-gray-400 mt-0.5 block">
-                  Mã kho cố định không thể sửa
+                <span className="text-[10px] text-gray-400 mt-1 block">
+                  Chỉ gồm chữ in hoa, số và dấu gạch nối (-)
                 </span>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Trạng thái hoạt động
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Tên kho hàng <span className="text-rose-500">*</span>
                 </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
-                  className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs font-semibold focus:outline-none focus:border-[#F85606] transition cursor-pointer"
-                >
-                  <option value="ACTIVE">Đang hoạt động</option>
-                  <option value="INACTIVE">Ngừng hoạt động</option>
-                </select>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ví dụ: Kho Tổng Miền Bắc, Kho Cầu Giấy..."
+                  className="w-full h-11 px-3.5 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs sm:text-sm focus:outline-none focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 transition shadow-2xs"
+                />
               </div>
-            </div>
-          ) : (
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Mã định danh kho <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="Ví dụ: WH-MB02, KHO-HN"
-                className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 font-mono text-sm font-semibold focus:outline-none focus:border-[#F85606] focus:ring-1 focus:ring-[#F85606] transition"
-                autoFocus
-              />
-              <span className="text-[10px] text-gray-400 mt-0.5 block">
-                Chỉ gồm chữ in hoa, số và dấu gạch nối
-              </span>
             </div>
           )}
 
-          {/* Tên kho */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
-              Tên kho hàng <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ví dụ: Kho Tổng Miền Bắc, Kho Cầu Giấy..."
-              className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-sm focus:outline-none focus:border-[#F85606] focus:ring-1 focus:ring-[#F85606] transition"
-            />
-          </div>
-
           {/* Địa chỉ */}
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
               Địa chỉ chi tiết
             </label>
             <textarea
@@ -465,23 +481,23 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Địa chỉ số nhà, khu công nghiệp, đường, quận/huyện, tỉnh/thành..."
-              className="w-full p-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs focus:outline-none focus:border-[#F85606] focus:ring-1 focus:ring-[#F85606] transition resize-none"
+              className="w-full p-3.5 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs sm:text-sm focus:outline-none focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 transition resize-none shadow-2xs"
             />
           </div>
 
-          {/* Quản lý kho phụ trách: Ô nhập trực tiếp kiêm chọn dropdown */}
+          {/* Quản lý kho phụ trách: Bắt buộc chọn nhân sự kho */}
           <div>
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between mb-1.5">
               <label className="block text-xs font-semibold text-gray-700">
-                Nhân sự phụ trách kho
+                Nhân sự phụ trách kho (Thủ kho / Quản lý) <span className="text-rose-500">*</span>
               </label>
               {managerId && (
                 <button
                   type="button"
                   onClick={handleClearManager}
-                  className="text-[11px] text-rose-500 hover:text-rose-700 font-medium transition cursor-pointer"
+                  className="text-[11px] text-orange-600 hover:text-orange-700 font-semibold transition cursor-pointer"
                 >
-                  Gỡ bỏ người phụ trách
+                  Đổi người khác
                 </button>
               )}
             </div>
@@ -489,13 +505,13 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
             {/* Ô input chính: Cho phép nhập trực tiếp VÀ click chọn */}
             <div
               ref={inputContainerRef}
-              className={`w-full min-h-[42px] px-3 rounded-xl border transition-all flex items-center gap-2 bg-white ${
+              className={`w-full min-h-[44px] px-3.5 rounded-xl border transition-all flex items-center gap-2.5 bg-white shadow-2xs ${
                 isDropdownOpen
                   ? 'border-[#F85606] ring-2 ring-orange-100'
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              <User size={16} className={selectedManager ? 'text-[#F85606] shrink-0' : 'text-gray-400 shrink-0'} />
+              <User size={18} className={selectedManager ? 'text-[#F85606] shrink-0' : 'text-gray-400 shrink-0'} />
 
               <input
                 ref={inputRef}
@@ -507,8 +523,8 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
                   setInputValue(e.target.value);
                   if (!isDropdownOpen) openDropdown();
                 }}
-                placeholder="Nhập tên, username hoặc bấm để chọn..."
-                className="flex-1 h-9 text-xs text-gray-900 bg-transparent outline-none placeholder:text-gray-400 font-medium"
+                placeholder="Bấm để chọn thủ kho / quản lý phụ trách kho..."
+                className="flex-1 h-9 text-xs text-gray-900 bg-transparent outline-none placeholder:text-gray-400 font-medium cursor-pointer"
               />
 
               {/* Badge vai trò nếu đã chọn một người */}
@@ -561,7 +577,7 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
             )}
           </div>
 
-          {/* Portal Dropdown Menu hiển thị nổi toàn cục (không bao giờ bị cắt hay che) */}
+          {/* Portal Dropdown Menu hiển thị nổi toàn cục - luôn xổ xuống dưới theo yêu cầu */}
           {isDropdownOpen &&
             dropdownPosition &&
             createPortal(
@@ -570,14 +586,13 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
                 style={{
                   position: 'fixed',
                   top: dropdownPosition.top,
-                  bottom: dropdownPosition.bottom,
                   left: dropdownPosition.left,
                   width: dropdownPosition.width,
                   zIndex: 100002
                 }}
-                className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-2.5 animate-in fade-in-0 zoom-in-95 duration-150 text-xs"
+                className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-2.5 animate-in fade-in-0 slide-in-from-top-2 duration-150 text-xs"
               >
-                {/* 1. Các chip lọc nhanh theo vai trò */}
+                {/* 1. Các chip lọc nhanh theo chức danh kho */}
                 <div className="flex items-center gap-1.5 mb-2 overflow-x-auto pb-1 no-scrollbar border-b border-gray-100 pt-0.5">
                   <button
                     type="button"
@@ -589,69 +604,40 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    Tất cả ({filterCounts.all})
+                    Tất cả kho ({filterCounts.all})
                   </button>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => setRoleFilter('WAREHOUSE')}
-                    className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition cursor-pointer shrink-0 ${
-                      roleFilter === 'WAREHOUSE'
-                        ? 'bg-[#F85606] text-white shadow-xs'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    Nhân sự Kho ({filterCounts.warehouse})
-                  </button>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => setRoleFilter('ADMIN')}
-                    className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition cursor-pointer shrink-0 ${
-                      roleFilter === 'ADMIN'
-                        ? 'bg-[#F85606] text-white shadow-xs'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    Quản trị ({filterCounts.admin})
-                  </button>
-                  {filterCounts.other > 0 && (
+                  {filterCounts.manager > 0 && (
                     <button
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => setRoleFilter('OTHER')}
+                      onClick={() => setRoleFilter('MANAGER')}
                       className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition cursor-pointer shrink-0 ${
-                        roleFilter === 'OTHER'
+                        roleFilter === 'MANAGER'
                           ? 'bg-[#F85606] text-white shadow-xs'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
                     >
-                      Khác ({filterCounts.other})
+                      Quản lý kho ({filterCounts.manager})
+                    </button>
+                  )}
+                  {filterCounts.staff > 0 && (
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => setRoleFilter('STAFF')}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition cursor-pointer shrink-0 ${
+                        roleFilter === 'STAFF'
+                          ? 'bg-[#F85606] text-white shadow-xs'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      Thủ kho ({filterCounts.staff})
                     </button>
                   )}
                 </div>
 
-                {/* 2. Danh sách nhân sự cuộn mượt mà */}
+                {/* 2. Danh sách nhân sự kho */}
                 <div className="max-h-56 overflow-y-auto space-y-0.5 divide-y divide-gray-50 pr-0.5">
-                  {/* Tùy chọn bỏ gán */}
-                  <div
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={handleClearManager}
-                    className={`p-2 rounded-xl text-xs flex items-center justify-between cursor-pointer transition ${
-                      managerId === null
-                        ? 'bg-orange-50/70 text-[#F85606] font-bold'
-                        : 'text-gray-500 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center">
-                        <X size={12} />
-                      </div>
-                      <span>-- Chưa gán người phụ trách --</span>
-                    </div>
-                    {managerId === null && <Check size={14} className="text-[#F85606]" />}
-                  </div>
-
                   {filteredManagers.map((m) => {
                     const isSelected = managerId === m.id;
                     const badge = getRoleBadge(m.roles);
@@ -708,7 +694,7 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
 
                   {filteredManagers.length === 0 && (
                     <div className="py-6 text-center text-gray-400 text-xs">
-                      {loadingManagers ? 'Đang truy vấn...' : 'Không tìm thấy nhân sự phù hợp'}
+                      {loadingManagers ? 'Đang truy vấn...' : 'Không tìm thấy nhân sự kho phù hợp'}
                     </div>
                   )}
                 </div>
@@ -717,28 +703,28 @@ export const WarehouseFormModal: React.FC<WarehouseFormModalProps> = ({
             )}
 
           {/* Buttons */}
-          <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2.5">
+          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3 shrink-0">
             <button
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
-              className="px-4 h-10 rounded-xl border border-gray-200 text-gray-600 font-semibold text-xs hover:bg-gray-50 transition cursor-pointer"
+              className="px-5 h-11 rounded-xl border border-gray-200 text-gray-600 font-semibold text-xs hover:bg-gray-100 transition cursor-pointer"
             >
               Hủy bỏ
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 h-10 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition disabled:opacity-60 cursor-pointer"
+              className="px-6 h-11 rounded-xl bg-gradient-to-r from-orange-500 to-[#F85606] hover:opacity-95 text-white font-bold text-xs shadow-md shadow-orange-500/25 flex items-center gap-2 transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <>
-                  <RefreshCw size={14} className="animate-spin" />
-                  <span>Đang lưu...</span>
+                  <RefreshCw size={15} className="animate-spin" />
+                  <span>Đang xử lý...</span>
                 </>
               ) : (
                 <>
-                  <Save size={14} />
+                  <Save size={15} />
                   <span>{isEdit ? 'Lưu thay đổi' : 'Tạo kho hàng'}</span>
                 </>
               )}

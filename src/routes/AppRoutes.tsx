@@ -50,6 +50,7 @@ import { DeliveryTripDetailPage } from '../pages/inventory/DeliveryTripDetailPag
 import { DebtAdjustmentPage } from '../pages/payment/DebtAdjustmentPage';
 import { PaymentReconciliationPage } from '../pages/payment/PaymentReconciliationPage';
 import { ProductLotManagementPage } from '../pages/inventory/ProductLotManagementPage';
+import { ProductLotCreatePage } from '../pages/inventory/ProductLotCreatePage';
 import { InvoiceManagementPage } from '../pages/payment/InvoiceManagementPage';
 import { InvoiceCreatePage } from '../pages/payment/InvoiceCreatePage';
 import { SalesTargetManagementPage } from '../pages/kpi/SalesTargetManagementPage';
@@ -524,6 +525,22 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <ProductLotManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Khai báo lô hàng mới (Trang riêng) */}
+        <Route
+          path="/inventory/lots/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <ProductLotCreatePage />
             </ProtectedRoute>
           }
         />
