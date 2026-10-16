@@ -331,7 +331,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] my-auto flex flex-col shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95">
+      <div className="bg-white rounded-2xl max-w-4xl lg:max-w-5xl w-full max-h-[92vh] my-auto flex flex-col shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95">
         {/* Header Modal */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-orange-50/70 to-white shrink-0">
           <div className="flex items-center gap-3">
@@ -367,22 +367,66 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               </div>
             )}
 
-            {/* 1. Mã SKU & Trạng thái kinh doanh */}
-            {isEditing ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+            {/* 1. Mã SKU & 2. Tên sản phẩm (Căn đều 50% - 50% thẳng hàng với các dòng dưới) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
                     1. Mã SKU duy nhất <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={sku}
-                    disabled
-                    className="w-full px-3.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-sm font-mono font-semibold uppercase tracking-wider text-gray-700 opacity-80 cursor-not-allowed min-h-[44px]"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">Mã SKU cố định không được thay đổi</p>
+                  {!isEditing ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      Mặc định: Đang kinh doanh
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-gray-400 font-medium">Mã cố định</span>
+                  )}
                 </div>
+                <input
+                  type="text"
+                  value={sku}
+                  disabled={isEditing || isSubmitting}
+                  onChange={(e) => handleSkuChange(e.target.value)}
+                  placeholder="VD: SP-COCA-330"
+                  className={`w-full px-3.5 py-2.5 rounded-xl text-sm font-mono font-semibold uppercase tracking-wider min-h-[44px] transition-all ${
+                    isEditing
+                      ? 'bg-gray-100 border border-gray-200 text-gray-700 opacity-80 cursor-not-allowed'
+                      : skuError
+                      ? 'bg-gray-50 border border-red-400 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 text-gray-900'
+                      : 'bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-gray-900'
+                  }`}
+                />
+                {skuError && !isEditing ? (
+                  <p className="text-xs text-red-600 font-medium mt-1">{skuError}</p>
+                ) : (
+                  <p className="text-xs text-gray-400 mt-1">
+                    {isEditing
+                      ? 'Mã SKU cố định không được thay đổi'
+                      : 'Mã nhận diện duy nhất toàn hệ thống (không trùng lặp)'}
+                  </p>
+                )}
+              </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+                  2. Tên sản phẩm chuẩn hóa <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="VD: Nước ngọt có gas Coca-Cola lon 330ml"
+                  disabled={isSubmitting}
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
+                />
+                <p className="text-xs text-gray-400 mt-1">Tên chuẩn hóa dùng trên chứng từ và thẻ kho</p>
+              </div>
+            </div>
+
+            {/* Trạng thái kinh doanh (chỉ hiển thị khi chỉnh sửa sản phẩm) */}
+            {isEditing && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
                     Trạng thái kinh doanh <span className="text-red-500">*</span>
@@ -398,52 +442,28 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   </SearchSelect>
                   <p className="text-xs text-gray-400 mt-1">Chuyển sang "Ngừng kinh doanh" khi sản phẩm ngừng lưu hành</p>
                 </div>
-              </div>
-            ) : (
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    1. Mã SKU duy nhất <span className="text-red-500">*</span>
-                  </label>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    Mặc định: Đang kinh doanh
-                  </span>
+                <div className="flex items-center">
+                  <div
+                    className={`p-3 rounded-xl border w-full text-xs flex items-center gap-2 ${
+                      status === 'ACTIVE'
+                        ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
+                        : 'bg-amber-50/80 border-amber-200 text-amber-800'
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full shrink-0 ${
+                        status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-amber-500'
+                      }`}
+                    />
+                    <span>
+                      {status === 'ACTIVE'
+                        ? 'Sản phẩm đang kinh doanh: cho phép xuất nhập kho và lên đơn bán hàng.'
+                        : 'Ngừng kinh doanh: không cho phép tạo mới đơn hàng bán cho sản phẩm này.'}
+                    </span>
+                  </div>
                 </div>
-                <input
-                  type="text"
-                  value={sku}
-                  onChange={(e) => handleSkuChange(e.target.value)}
-                  placeholder="VD: SP-COCA-330"
-                  disabled={isSubmitting}
-                  className={`w-full px-3.5 py-2.5 bg-gray-50 border rounded-xl text-sm font-mono font-semibold uppercase tracking-wider text-gray-900 focus:outline-none focus:ring-2 transition-all min-h-[44px] ${
-                    skuError
-                      ? 'border-red-400 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-gray-200 focus:ring-orange-500/20 focus:border-orange-500'
-                  }`}
-                />
-                {skuError ? (
-                  <p className="text-xs text-red-600 font-medium mt-1">{skuError}</p>
-                ) : (
-                  <p className="text-xs text-gray-400 mt-1">Mã nhận diện duy nhất toàn hệ thống (không trùng lặp)</p>
-                )}
               </div>
             )}
-
-            {/* 2. Tên sản phẩm */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
-                2. Tên sản phẩm chuẩn hóa <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="VD: Nước ngọt có gas Coca-Cola lon 330ml"
-                disabled={isSubmitting}
-                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
-              />
-            </div>
 
             {/* 3. Nhóm hàng & 4. ĐVT cơ sở */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -506,74 +526,79 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               </div>
             </div>
 
-            {/* 5. Quy cách đóng gói */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
-                5. Quy cách đóng gói
-              </label>
-              <input
-                type="text"
-                value={packagingSpec}
-                onChange={(e) => setPackagingSpec(e.target.value)}
-                placeholder="VD: 24 lon / thùng (4 lốc x 6 lon)"
-                disabled={isSubmitting}
-                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
-              />
-            </div>
-
-            {/* 6. GIÁ VỐN (Bảo mật RBAC EP-02) */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                  6. Giá vốn (VNĐ)
+            {/* 5. Quy cách đóng gói & 6. GIÁ VỐN (Bảo mật RBAC EP-02) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+                  5. Quy cách đóng gói
                 </label>
-                {canEditCost ? (
-                  <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
-                    Quyền hạn: Quản lý KD / Admin
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
-                    <Icons.Lock size={12} />
-                    Bảo mật: Bị khóa theo vai trò
-                  </span>
-                )}
+                <input
+                  type="text"
+                  value={packagingSpec}
+                  onChange={(e) => setPackagingSpec(e.target.value)}
+                  placeholder="VD: 24 lon / thùng (4 lốc x 6 lon)"
+                  disabled={isSubmitting}
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
+                />
+                <p className="text-xs text-gray-400 mt-1">VD: 24 lon / thùng, 12 chai / két...</p>
               </div>
 
-              {canEditCost ? (
-                <div>
-                  <div className="flex rounded-xl border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-500 transition-all overflow-hidden min-h-[44px]">
-                    <NumberInput
-                      min="0"
-                      step="1000"
-                      value={costPrice}
-                      onChange={(e) => setCostPrice(e.target.value)}
-                      disabled={isSubmitting}
-                      placeholder="VD: 215000"
-                      className="flex-1 px-3.5 py-2.5 bg-transparent text-sm font-semibold text-gray-900 focus:outline-none min-h-[44px]"
-                    />
-                    <span className="bg-gray-100 px-3.5 flex items-center justify-center border-l border-gray-200 text-xs font-bold text-gray-500 select-none shrink-0">
-                      VNĐ
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    6. Giá vốn (VNĐ)
+                  </label>
+                  {canEditCost ? (
+                    <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
+                      Quyền hạn: Quản lý KD / Admin
                     </span>
-                  </div>
-                  {Number(costPrice) > 0 && (
-                    <div className="mt-1.5 flex items-center justify-between text-[11px] text-gray-500">
-                      <span>Quy đổi:</span>
-                      <span className="font-bold text-orange-600 font-mono">
-                        {formatCurrencyVND(Number(costPrice) || 0)}
-                      </span>
-                    </div>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
+                      <Icons.Lock size={12} />
+                      Bảo mật: Bị khóa theo vai trò
+                    </span>
                   )}
                 </div>
-              ) : (
-                <div className="relative">
-                  <input
-                    type="text"
-                    disabled
-                    value="•••••• (Bạn không có quyền xem/sửa giá vốn)"
-                    className="w-full px-3.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-400 cursor-not-allowed italic min-h-[44px]"
-                  />
-                </div>
-              )}
+
+                {canEditCost ? (
+                  <div>
+                    <div className="flex rounded-xl border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-500 transition-all overflow-hidden min-h-[44px]">
+                      <NumberInput
+                        min="0"
+                        step="1000"
+                        value={costPrice}
+                        onChange={(e) => setCostPrice(e.target.value)}
+                        disabled={isSubmitting}
+                        placeholder="VD: 215000"
+                        className="flex-1 px-3.5 py-2.5 bg-transparent text-sm font-semibold text-gray-900 focus:outline-none min-h-[44px]"
+                      />
+                      <span className="bg-gray-100 px-3.5 flex items-center justify-center border-l border-gray-200 text-xs font-bold text-gray-500 select-none shrink-0">
+                        VNĐ
+                      </span>
+                    </div>
+                    {Number(costPrice) > 0 ? (
+                      <div className="mt-1.5 flex items-center justify-between text-[11px] text-gray-500">
+                        <span>Quy đổi:</span>
+                        <span className="font-bold text-orange-600 font-mono">
+                          {formatCurrencyVND(Number(costPrice) || 0)}
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 mt-1">Giá vốn ban đầu tính theo ĐVT cơ sở</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      disabled
+                      value="•••••• (Bạn không có quyền xem/sửa giá vốn)"
+                      className="w-full px-3.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-400 cursor-not-allowed italic min-h-[44px]"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Chỉ Quản lý KD / Admin xem được giá vốn</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 7. URL Ảnh sản phẩm */}

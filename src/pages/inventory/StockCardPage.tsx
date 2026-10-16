@@ -399,9 +399,25 @@ export const StockCardPage: React.FC = () => {
     <div className="space-y-3.5 pb-10">
       {/* Nút thao tác chính - Tinh gọn đồng bộ toàn hệ thống */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (window.history.length > 2) {
+                navigate(-1);
+              } else {
+                navigate('/inventory/ledger');
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-lg transition cursor-pointer h-9 shadow-2xs active:scale-95"
+            title="Quay lại trang trước hoặc danh sách sổ tồn kho"
+          >
+            <ArrowLeft size={15} className="text-gray-600" />
+            <span>Về sổ tồn</span>
+          </button>
+
           {selectedProduct && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 border border-orange-200/80 rounded-lg text-xs">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 border border-orange-200/80 rounded-lg text-xs h-9">
               <span className="font-mono font-bold text-[#F85606]">[{selectedProduct.sku}]</span>
               <span className="text-gray-800 font-semibold truncate max-w-xs">{selectedProduct.name}</span>
               {selectedProduct.baseUnit && (
@@ -443,16 +459,6 @@ export const StockCardPage: React.FC = () => {
           >
             <FileSpreadsheet size={14} />
             <span>Xuất Excel</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/inventory/ledger')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition cursor-pointer h-9"
-            title="Quay lại danh sách sổ tồn kho"
-          >
-            <ArrowLeft size={14} />
-            <span>Về sổ tồn</span>
           </button>
         </div>
       </div>
@@ -957,143 +963,187 @@ export const StockCardPage: React.FC = () => {
 
       {/* 6. MODAL XEM CHI TIẾT DÒNG PHÁT SINH THẺ KHO (QUICK VIEW) */}
       {selectedRowDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-3xl sm:max-w-4xl w-full p-6 sm:p-7 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-150 my-auto">
             {/* Header Modal */}
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-orange-100 text-[#F85606] flex items-center justify-center font-bold">
-                  <BookOpenCheck size={18} />
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-orange-100 text-[#F85606] flex items-center justify-center font-bold shadow-xs">
+                  <BookOpenCheck size={20} />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-gray-900">Chi Tiết Nghiệp Vụ Thẻ Kho</h3>
-                  <div className="text-[11px] text-gray-400 font-mono">ID: #{selectedRowDetail.id}</div>
+                  <h3 className="text-base sm:text-lg font-black text-gray-900 leading-tight">
+                    Chi Tiết Nghiệp Vụ Thẻ Kho
+                  </h3>
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
+                    <span className="font-mono text-gray-400">ID: #{selectedRowDetail.id}</span>
+                    {selectedRowDetail.docCode && (
+                      <>
+                        <span>•</span>
+                        <span className="font-mono font-semibold text-orange-600">
+                          {selectedRowDetail.docCode}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedRowDetail(null)}
-                className="p-1 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+                className="w-8 h-8 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition cursor-pointer flex items-center justify-center"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Body Modal */}
-            <div className="py-4 space-y-3.5 text-xs">
-              <div className="grid grid-cols-2 gap-3 bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
-                <div>
-                  <span className="text-[11px] text-gray-400 block">Thời gian phát sinh</span>
-                  <span className="font-mono font-bold text-gray-900">
-                    {formatTime(selectedRowDetail.movementAt)}
+            {/* Body Modal - 2 Cột Rộng Rãi & Thông Thoáng */}
+            <div className="py-5 space-y-4 text-xs">
+              {/* Khối 1: Thông tin nghiệp vụ & Thông tin hàng hóa chia 2 cột */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Cột 1: Thông tin phát sinh */}
+                <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                    Thông tin phát sinh
                   </span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className="text-[11px] text-gray-400 block mb-0.5">Thời gian phát sinh</span>
+                      <span className="font-mono font-bold text-gray-900 text-xs sm:text-sm">
+                        {formatTime(selectedRowDetail.movementAt)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[11px] text-gray-400 block mb-0.5">Loại nghiệp vụ</span>
+                      <span className="font-bold text-gray-900 text-xs sm:text-sm inline-block">
+                        {selectedRowDetail.movementTypeLabel || selectedRowDetail.movementType}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[11px] text-gray-400 block mb-0.5">Kho lưu trữ</span>
+                      <span className="font-mono font-bold text-gray-900 text-xs sm:text-sm">
+                        {selectedRowDetail.warehouseCode}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[11px] text-gray-400 block mb-0.5">Người thực hiện</span>
+                      <span className="font-bold text-gray-900 text-xs sm:text-sm flex items-center gap-1.5">
+                        <User size={13} className="text-gray-400" />
+                        <span>{selectedRowDetail.actorUsername || 'Hệ thống'}</span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[11px] text-gray-400 block">Loại nghiệp vụ</span>
-                  <span className="font-bold text-gray-800">
-                    {selectedRowDetail.movementTypeLabel || selectedRowDetail.movementType}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[11px] text-gray-400 block">Kho lưu trữ</span>
-                  <span className="font-mono font-bold text-gray-900">
-                    {selectedRowDetail.warehouseCode}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[11px] text-gray-400 block">Người thực hiện</span>
-                  <span className="font-bold text-gray-900 flex items-center gap-1">
-                    <User size={12} className="text-gray-400" />
-                    {selectedRowDetail.actorUsername || 'Hệ thống'}
-                  </span>
+
+                {/* Cột 2: Thông tin hàng hóa */}
+                <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80 flex flex-col justify-between space-y-2">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-2">
+                      Sản phẩm & Đơn vị tính
+                    </span>
+                    <div className="font-mono font-bold text-sm text-[#F85606] bg-orange-50/80 border border-orange-200/60 px-2.5 py-1 rounded-lg inline-block">
+                      {selectedRowDetail.productSku}
+                    </div>
+                    <div className="font-bold text-gray-900 text-xs sm:text-sm mt-2 leading-relaxed">
+                      {selectedRowDetail.productName}
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200/60 text-[11px] text-gray-600 flex items-center justify-between">
+                    <span>Đơn vị tính cơ sở:</span>
+                    <strong className="text-gray-900 font-bold font-mono text-xs">
+                      {selectedRowDetail.baseUnit || '—'}
+                    </strong>
+                  </div>
                 </div>
               </div>
 
-              {/* Thông tin hàng hóa */}
-              <div className="p-3.5 rounded-2xl border border-gray-200/80">
-                <span className="text-[11px] text-gray-400 block mb-1">Mặt hàng & Đơn vị tính cơ sở</span>
-                <div className="font-mono font-bold text-sm text-gray-900">
-                  {selectedRowDetail.productSku}
-                </div>
-                <div className="font-semibold text-gray-800 mt-0.5">
-                  {selectedRowDetail.productName}
-                </div>
-                <div className="text-[11px] text-gray-500 mt-1">
-                  Đơn vị tính cơ sở: <strong className="text-gray-900">{selectedRowDetail.baseUnit}</strong>
-                </div>
-              </div>
-
-              {/* Biến động số lượng và tồn sau phát sinh */}
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
-                  <div className="text-[10px] text-emerald-700 font-bold uppercase">Nhập vào</div>
-                  <div className="text-base font-black text-emerald-700 font-mono mt-0.5">
+              {/* Khối 2: Ba thẻ số lượng biến động (Nhập / Xuất / Tồn sau phiếu) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+                <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/90 shadow-2xs">
+                  <div className="text-[11px] text-emerald-800 font-bold uppercase tracking-wider">
+                    Nhập vào (+)
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black text-emerald-700 font-mono mt-1">
                     +{formatQty(selectedRowDetail.quantityIn)}
                   </div>
+                  <div className="text-[10px] text-emerald-600 mt-0.5">{selectedRowDetail.baseUnit}</div>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-orange-50 border border-orange-200">
-                  <div className="text-[10px] text-orange-700 font-bold uppercase">Xuất ra</div>
-                  <div className="text-base font-black text-orange-700 font-mono mt-0.5">
+                <div className="p-4 rounded-2xl bg-orange-50/80 border border-orange-200/90 shadow-2xs">
+                  <div className="text-[11px] text-orange-800 font-bold uppercase tracking-wider">
+                    Xuất ra (-)
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black text-orange-700 font-mono mt-1">
                     -{formatQty(selectedRowDetail.quantityOut)}
                   </div>
+                  <div className="text-[10px] text-orange-600 mt-0.5">{selectedRowDetail.baseUnit}</div>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-gray-100 border border-gray-200">
-                  <div className="text-[10px] text-gray-700 font-bold uppercase">Tồn sau phiếu</div>
-                  <div className="text-base font-black text-gray-900 font-mono mt-0.5">
+                <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200/90 shadow-2xs">
+                  <div className="text-[11px] text-blue-900 font-bold uppercase tracking-wider">
+                    Tồn sau phát sinh
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black text-blue-900 font-mono mt-1">
                     {formatQty(selectedRowDetail.balanceAfter)}
                   </div>
+                  <div className="text-[10px] text-blue-700 mt-0.5">Tồn lũy kế ({selectedRowDetail.baseUnit})</div>
                 </div>
               </div>
 
-              {/* Chứng từ gốc */}
-              {selectedRowDetail.docCode && (
-                <div className="p-3.5 rounded-2xl bg-orange-50/40 border border-orange-200/60 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-orange-700 tracking-wider block">
-                      Chứng từ gốc ({selectedRowDetail.docType})
-                    </span>
-                    <span className="font-mono font-black text-sm text-gray-900 mt-0.5 block">
-                      {selectedRowDetail.docCode}
-                    </span>
+              {/* Khối 3: Chứng từ gốc & Ghi chú nghiệp vụ */}
+              <div className="space-y-3">
+                {/* Chứng từ gốc */}
+                {selectedRowDetail.docCode && (
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-orange-50/70 to-white border border-orange-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-orange-800 tracking-wider block">
+                        Chứng từ gốc ({selectedRowDetail.docType})
+                      </span>
+                      <span className="font-mono font-black text-sm sm:text-base text-gray-900 mt-0.5 block">
+                        {selectedRowDetail.docCode}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const row = selectedRowDetail;
+                        setSelectedRowDetail(null);
+                        handleOpenDocument(row);
+                      }}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#F85606] to-orange-600 text-white rounded-xl font-bold text-xs hover:opacity-95 shadow-xs transition cursor-pointer active:scale-95 shrink-0"
+                    >
+                      <span>Mở chứng từ gốc</span>
+                      <ExternalLink size={13} />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const row = selectedRowDetail;
-                      setSelectedRowDetail(null);
-                      handleOpenDocument(row);
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F85606] text-white rounded-xl font-bold text-xs hover:bg-[#E04D05] transition cursor-pointer"
-                  >
-                    <span>Mở chứng từ</span>
-                    <ExternalLink size={12} />
-                  </button>
-                </div>
-              )}
+                )}
 
-              {/* Ghi chú & Diễn giải chi tiết */}
-              <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-gray-800 text-xs">
-                <span className="font-bold text-amber-900 block text-[11px] uppercase tracking-wider mb-1">
-                  Ghi chú / Diễn giải nghiệp vụ:
-                </span>
-                <div className="text-gray-800 leading-relaxed font-medium">
-                  {selectedRowDetail.note ? (
-                    selectedRowDetail.note
-                  ) : (
-                    <span className="text-gray-400 italic">Không có ghi chú thêm cho nghiệp vụ này.</span>
-                  )}
+                {/* Ghi chú & Diễn giải chi tiết */}
+                <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 text-gray-800 text-xs">
+                  <span className="font-bold text-amber-900 block text-[11px] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <span>💡</span>
+                    <span>Ghi chú / Diễn giải nghiệp vụ:</span>
+                  </span>
+                  <div className="text-gray-800 leading-relaxed font-medium text-xs sm:text-sm pl-5">
+                    {selectedRowDetail.note ? (
+                      selectedRowDetail.note
+                    ) : (
+                      <span className="text-gray-400 italic">Không có ghi chú thêm cho nghiệp vụ này.</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Footer Modal */}
-            <div className="pt-3 border-t border-gray-100 flex justify-end">
+            <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
+              <span className="text-[11px] text-gray-400 hidden sm:inline-block">
+                Số liệu được truy nguyên tự động từ nhật ký biến động kho thời gian thực
+              </span>
               <button
                 type="button"
                 onClick={() => setSelectedRowDetail(null)}
-                className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs transition cursor-pointer ml-auto active:scale-95"
               >
                 Đóng
               </button>

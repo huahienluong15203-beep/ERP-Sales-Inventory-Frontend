@@ -206,7 +206,7 @@ export const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
           )}
 
           {/* Hàng 1: Mã & Tên nhà cung cấp */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Mã nhà cung cấp <span className="text-red-500">*</span>
@@ -224,7 +224,7 @@ export const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
               {errors.code && <p className="mt-1 text-[11px] text-red-500">{errors.code}</p>}
             </div>
 
-            <div className="sm:col-span-2">
+            <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Tên nhà cung cấp <span className="text-red-500">*</span>
               </label>

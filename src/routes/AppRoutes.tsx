@@ -525,6 +525,21 @@ export const AppRoutes: React.FC = () => {
         {/* Báo cáo luân chuyển kho & tuổi hàng (S8-07) */}
         <Route
           path="/inventory/aging"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <InventoryAgingReportPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Theo dõi hàng đi đường & tiến độ giao hàng (S6-07) */}
         <Route
           path="/inventory/in-transit"
@@ -538,7 +553,6 @@ export const AppRoutes: React.FC = () => {
                 'ROLE_SALES_MANAGER'
               ]}
             >
-              <InventoryAgingReportPage />
               <InTransitDashboardPage />
             </ProtectedRoute>
           }
