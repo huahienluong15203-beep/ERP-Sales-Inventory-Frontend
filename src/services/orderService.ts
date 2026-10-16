@@ -17,7 +17,9 @@ import type {
   CustomerPurchaseHistoryItem,
   CustomerPurchaseHistoryData,
   PendingOrderResponse,
-  OrderApprovalHistoryResponse
+  OrderApprovalHistoryResponse,
+  OrderDispatchRequest,
+  OrderDispatchResponse
 } from '../types/order';
 import type { Agency, CustomerGroupId } from '../types/agency';
 import type { UserProfile } from '../types/user';
@@ -789,6 +791,55 @@ export async function updateOrderStatus(
   });
   if (!res.ok) {
     throw new Error(await readBackendError(res, 'Không thể chuyển trạng thái đơn hàng'));
+  }
+  return await res.json();
+}
+
+/**
+ * Xác nhận xuất kho đơn hàng (chuyển trạng thái từ PICKING sang DISPATCHED).
+ * Hỗ trợ xuất thiếu từng dòng hàng và tự động tách đơn nợ hàng mới (Backorder).
+ */
+export async function dispatchOrder(
+  id: number | string,
+  request?: OrderDispatchRequest
+): Promise<OrderDispatchResponse> {
+  const res = await callBackend(`${API_BASE_URL}/api/orders/${id}/dispatch`, {
+    method: 'POST',
+    body: JSON.stringify(request || {})
+  });
+  if (!res.ok) {
+    throw new Error(await readBackendError(res, 'Không thể xác nhận xuất kho'));
+  }
+  return await res.json();
+}
+
+/**
+ * Tải danh sách đơn nợ hàng (Backorder - phần còn thiếu từ lần xuất trước)
+ * GET /api/orders/backorders?status=...&customerId=...&keyword=...&page=...&size=...
+ */
+export async function fetchBackorders(params?: {
+  status?: string[];
+  customerId?: number | string | null;
+  keyword?: string | null;
+  page?: number;
+  size?: number;
+}): Promise<OrderPageResponse> {
+  const query = new URLSearchParams();
+  if (params?.status && params.status.length > 0) {
+    params.status.forEach((st) => query.append('status', st));
+  }
+  if (params?.customerId) {
+    query.set('customerId', String(params.customerId));
+  }
+  if (params?.keyword && params.keyword.trim()) {
+    query.set('keyword', params.keyword.trim());
+  }
+  query.set('page', String(params?.page ?? 0));
+  query.set('size', String(params?.size ?? 20));
+
+  const res = await callBackend(`${API_BASE_URL}/api/orders/backorders?${query.toString()}`);
+  if (!res.ok) {
+    throw new Error(await readBackendError(res, 'Không thể tải danh sách đơn nợ hàng'));
   }
   return await res.json();
 }
