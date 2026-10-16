@@ -101,6 +101,7 @@ interface BackendProduct {
   barcode?: string | null;
   imageUrl?: string | null;
   description?: string | null;
+  hasBatchManagement?: boolean | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 }
@@ -124,6 +125,7 @@ function mapProduct(p: BackendProduct): Product {
     costPrice: p.costPrice != null ? Number(p.costPrice) : 0,
     imageUrl: p.imageUrl || '',
     status: p.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+    hasBatchManagement: Boolean(p.hasBatchManagement),
     // Backend chưa trả số giao dịch; sản phẩm không bao giờ xoá cứng nên không cần đếm
     transactionCount: 0,
     createdAt: formatDateTime(p.createdAt),

@@ -43,6 +43,7 @@ import {
   type PortalOrderLine
 } from '../../services/portalApi';
 import { CustomerOrderDetailView } from './CustomerOrderDetailView';
+import { CustomerDebtPortalView } from './CustomerDebtPortalView';
 import { CustomerReorderModal, type ReorderItemDraft } from '../../components/order/CustomerReorderModal';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { NumberInput } from '../../components/common/NumberInput';
@@ -95,8 +96,8 @@ export const CustomerOrderPortalPage: React.FC = () => {
   const { user, currentRole, showToast } = useAuth();
   const navigate = useNavigate();
 
-  // Tab: 'catalog' (Đặt hàng) hoặc 'history' (Đơn hàng của tôi)
-  const [activeTab, setActiveTab] = useState<'catalog' | 'history'>('catalog');
+  // Tab: 'catalog' (Đặt hàng), 'history' (Đơn hàng của tôi) hoặc 'debt' (Công nợ & Hoá đơn)
+  const [activeTab, setActiveTab] = useState<'catalog' | 'history' | 'debt'>('catalog');
 
   // Thông tin đại lý hiện tại
   const [agency, setAgency] = useState<Agency | null>(null);
@@ -1596,6 +1597,13 @@ export const CustomerOrderPortalPage: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* TAB 3: CÔNG NỢ & HOÁ ĐƠN ĐẠI LÝ */}
+      {/* ============================================================== */}
+      {agency && activeTab === 'debt' && (
+        <CustomerDebtPortalView />
       )}
         </>
       )}
