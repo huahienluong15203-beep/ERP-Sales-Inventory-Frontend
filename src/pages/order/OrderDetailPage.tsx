@@ -547,10 +547,11 @@ export const OrderDetailPage: React.FC = () => {
         desiredDeliveryDate={order.desiredDeliveryDate || undefined}
       />
 
-      {/* TIMELINE TRẠNG THÁI GIAO HÀNG & THỰC GIAO TỪNG DÒNG */}
+      {/* CHI TIẾT SỐ LƯỢNG THỰC GIAO TỪNG MẶT HÀNG & THÔNG TIN GIAO NHẬN (Ẩn timeline 5 nấc trùng lặp) */}
       <AgencyDeliveryTimeline
         order={order}
         approvalHistory={approvalHistory}
+        hideTimelineTrack={true}
       />
 
       {/* 4. CẢNH BÁO PHÊ DUYỆT NGOẠI LỆ HOẶC GIAO THIẾU HÀNG */}
@@ -994,6 +995,7 @@ export const OrderDetailPage: React.FC = () => {
       <OrderPdfPreviewModal
         isOpen={isPdfModalOpen}
         order={order}
+        approvalHistory={approvalHistory}
         onClose={() => setIsPdfModalOpen(false)}
       />
     </div>

@@ -37,6 +37,7 @@ import { fetchCategories, type CategoryWithCount } from '../../services/category
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { NumberInput } from '../../components/common/NumberInput';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { Pagination } from '../../components/common/Pagination';
 
 interface EditablePriceItem {
   id?: number;
@@ -88,7 +89,7 @@ export const PriceListCreatePage: React.FC = () => {
   const [loadingCategoryProducts, setLoadingCategoryProducts] = useState<boolean>(false);
   const [categorySearchQuery, setCategorySearchQuery] = useState<string>('');
   const [categoryPage, setCategoryPage] = useState<number>(0);
-  const categoryPageSize = 8;
+  const [categoryPageSize, setCategoryPageSize] = useState<number>(10);
   const [isCategorySelectorOpen, setIsCategorySelectorOpen] = useState<boolean>(true);
 
   // Tập hợp các SKU được tick chọn (checkbox) để thêm nhiều sản phẩm cùng lúc
@@ -114,7 +115,7 @@ export const PriceListCreatePage: React.FC = () => {
   // Phân trang & lọc cho bảng dòng giá đã thêm
   const [itemSearch, setItemSearch] = useState<string>('');
   const [itemPage, setItemPage] = useState<number>(0);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState<number>(20);
 
   // 1. Tải dữ liệu ban đầu nếu là chế độ Sửa (Edit) hoặc Clone
   useEffect(() => {
@@ -1144,31 +1145,22 @@ export const PriceListCreatePage: React.FC = () => {
                 </div>
               )}
 
-              {/* Phân trang danh mục sản phẩm chọn */}
-              {totalCategoryPages > 1 && (
-                <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
-                  <div>
-                    Trang <strong>{currentCategoryPage + 1}</strong> / <strong>{totalCategoryPages}</strong> (Tổng {filteredCategoryProducts.length} SKU)
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      disabled={currentCategoryPage === 0}
-                      onClick={() => setCategoryPage((p) => Math.max(0, p - 1))}
-                      className="px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 disabled:opacity-40 cursor-pointer font-bold text-[11px]"
-                    >
-                      Trước
-                    </button>
-                    <button
-                      type="button"
-                      disabled={currentCategoryPage >= totalCategoryPages - 1}
-                      onClick={() => setCategoryPage((p) => Math.min(totalCategoryPages - 1, p + 1))}
-                      className="px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 disabled:opacity-40 cursor-pointer font-bold text-[11px]"
-                    >
-                      Sau
-                    </button>
-                  </div>
-                </div>
+              {/* Phân trang danh mục sản phẩm chọn chuẩn hệ thống */}
+              {filteredCategoryProducts.length > 0 && (
+                <Pagination
+                  page={currentCategoryPage}
+                  totalPages={totalCategoryPages}
+                  totalElements={filteredCategoryProducts.length}
+                  size={categoryPageSize}
+                  onPageChange={setCategoryPage}
+                  onSizeChange={(newSize) => {
+                    setCategoryPageSize(newSize);
+                    setCategoryPage(0);
+                  }}
+                  sizeOptions={[10, 20, 50, 100]}
+                  itemLabel="sản phẩm"
+                  disabled={loadingCategoryProducts}
+                />
               )}
             </div>
           )}
@@ -1377,34 +1369,24 @@ export const PriceListCreatePage: React.FC = () => {
               )}
             </tbody>
           </table>
-        </div>
 
-        {/* Phân trang danh sách dòng giá */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-3 text-xs text-gray-500">
-            <div>
-              Trang <strong>{currentPage + 1}</strong> / <strong>{totalPages}</strong>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                disabled={currentPage === 0}
-                onClick={() => setItemPage((p) => Math.max(0, p - 1))}
-                className="px-3 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 disabled:opacity-40 cursor-pointer font-bold"
-              >
-                Trước
-              </button>
-              <button
-                type="button"
-                disabled={currentPage >= totalPages - 1}
-                onClick={() => setItemPage((p) => Math.min(totalPages - 1, p + 1))}
-                className="px-3 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 disabled:opacity-40 cursor-pointer font-bold"
-              >
-                Sau
-              </button>
-            </div>
-          </div>
-        )}
+          {/* Phân trang danh sách dòng giá chuẩn hệ thống */}
+          {filteredItems.length > 0 && (
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              totalElements={filteredItems.length}
+              size={pageSize}
+              onPageChange={setItemPage}
+              onSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setItemPage(0);
+              }}
+              sizeOptions={[10, 20, 50, 100]}
+              itemLabel="mặt hàng"
+            />
+          )}
+        </div>
       </div>
 
       {/* 5. NÚT SUBMIT FOOTER */}
