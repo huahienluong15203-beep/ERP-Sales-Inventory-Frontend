@@ -208,8 +208,8 @@ export const DeliveryTripDetailPage: React.FC = () => {
   const remainingValue = (trip.valueOnRoad !== undefined && trip.valueOnRoad !== null && trip.valueOnRoad > 0)
     ? trip.valueOnRoad
     : sortedStops
-        .filter((s) => s.status === 'DISPATCHED')
-        .reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
+      .filter((s) => s.status === 'DISPATCHED')
+      .reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
@@ -234,25 +234,25 @@ export const DeliveryTripDetailPage: React.FC = () => {
             <h1 className="text-xl font-black text-gray-900 tracking-tight font-mono">
               {trip.code}
             </h1>
-              {trip.status === 'COMPLETED' ? (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  ✓ ĐÃ VỀ KHO
-                </span>
-              ) : (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 animate-pulse">
-                  ĐANG LƯU THÔNG
-                </span>
-              )}
-              {trip.overdue && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
-                  ⚠️ Trễ hạn {trip.overdueMinutes} phút
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Kho xuất: <strong>{trip.warehouseName}</strong> • Phương tiện: <strong>{trip.vehiclePlate}</strong> • Tài xế: <strong>{trip.driverName}</strong>
-            </p>
+            {trip.status === 'COMPLETED' ? (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                ✓ ĐÃ VỀ KHO
+              </span>
+            ) : (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 animate-pulse">
+                ĐANG LƯU THÔNG
+              </span>
+            )}
+            {trip.overdue && (
+              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+                ⚠️ Trễ hạn {trip.overdueMinutes} phút
+              </span>
+            )}
           </div>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Kho xuất: <strong>{trip.warehouseName}</strong> • Phương tiện: <strong>{trip.vehiclePlate}</strong> • Tài xế: <strong>{trip.driverName}</strong>
+          </p>
+        </div>
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
@@ -386,9 +386,9 @@ export const DeliveryTripDetailPage: React.FC = () => {
               />
             </div>
             <div className="flex justify-between text-xs text-gray-600">
-              <span>Đã giao: <strong>{trip.deliveredStops} đơn</strong></span>
-              <span>Còn lại: <strong>{trip.remainingStops} đơn</strong></span>
-              <span>Thất bại: <strong className="text-red-600">{trip.failedStops} đơn</strong></span>
+              <span>Đã giao: <strong>{trip.deliveredStops}</strong></span>
+              <span>Còn lại: <strong>{trip.remainingStops}</strong></span>
+              <span>Thất bại: <strong className="text-red-600">{trip.failedStops}</strong></span>
             </div>
             <div className="pt-2 text-xs space-y-1.5 border-t border-gray-100">
               <div className="flex justify-between items-center">
@@ -421,7 +421,7 @@ export const DeliveryTripDetailPage: React.FC = () => {
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
             <MapPin className="w-4 h-4 text-[#F85606]" />
-            Danh Sách Đơn Hàng Của Chuyến ({sortedStops.length} đơn hàng)
+            Danh Sách Điểm Giao Của Chuyến ({sortedStops.length} điểm)
           </h2>
           <span className="text-xs text-gray-400 italic">
             Liệt kê theo thứ tự xe ghé giao kèm địa chỉ và số điện thoại người nhận
