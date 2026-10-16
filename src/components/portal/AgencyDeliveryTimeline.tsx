@@ -7,7 +7,9 @@ import {
   CheckCheck,
   AlertTriangle,
   MapPin,
-  Phone
+  Phone,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import type { OrderBackendResponse, OrderApprovalHistoryResponse } from '../../types/order';
 import { fetchPortalDeliveryTimeline, type PortalDeliveryTimelineResponse } from '../../services/portalApi';
@@ -16,6 +18,8 @@ interface AgencyDeliveryTimelineProps {
   order: OrderBackendResponse;
   approvalHistory?: OrderApprovalHistoryResponse[];
   className?: string;
+  defaultExpandedTimeline?: boolean;
+  hideTimelineTrack?: boolean;
 }
 
 interface TimelineStep {
@@ -31,9 +35,12 @@ interface TimelineStep {
 export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
   order,
   approvalHistory = [],
-  className = ''
+  className = '',
+  defaultExpandedTimeline = true,
+  hideTimelineTrack = false
 }) => {
   const [timelineData, setTimelineData] = useState<PortalDeliveryTimelineResponse | null>(null);
+  const [isTimelineExpanded, setIsTimelineExpanded] = useState<boolean>(defaultExpandedTimeline);
 
   // Tự động tải dữ liệu timeline chuyên dụng từ Backend GET /api/portal/orders/{id}/delivery-timeline (S6-09)
   useEffect(() => {
@@ -52,12 +59,25 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
       cancelled = true;
     };
   }, [order?.id]);
+
+  // Kiểm tra xem đơn hàng đã hoàn tất giao hàng hay chưa
+  const isOrderCompleted = useMemo(() => {
+    const s = order.status?.toUpperCase();
+    return s === 'DELIVERED' || s === 'CLOSED' || s === 'COMPLETED';
+  }, [order.status]);
+
+  const isOrderCancelledOrRejected = useMemo(() => {
+    const s = order.status?.toUpperCase();
+    return s === 'CANCELLED' || s === 'REJECTED';
+  }, [order.status]);
+
   // Mapping chỉ số bước hiện tại của đơn hàng đối với Đại lý (1 -> 5)
   // 1: Đã duyệt, 2: Đang soạn, 3: Đã xuất, 4: Đang giao, 5: Đã giao
   const currentStep = useMemo(() => {
     if (timelineData?.currentStep) {
       return timelineData.currentStep;
     }
+    if (isOrderCancelledOrRejected) return 0;
     switch (order.status?.toUpperCase()) {
       case 'APPROVED':
         return 1;
@@ -76,12 +96,13 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
       default:
         return 0; // Chưa duyệt (DRAFT / PENDING_APPROVAL)
     }
-  }, [order.status, timelineData?.currentStep]);
+  }, [order.status, timelineData?.currentStep, isOrderCancelledOrRejected]);
 
   const formatTime = (iso?: string | null) => {
     if (!iso) return null;
     try {
       const d = new Date(iso);
+      if (isNaN(d.getTime())) return null;
       return d.toLocaleString('vi-VN', {
         hour: '2-digit',
         minute: '2-digit',
@@ -90,14 +111,16 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
         year: 'numeric'
       });
     } catch {
-      return iso;
+      return null;
     }
   };
 
-  // Trích xuất mốc thời gian và người xử lý cho từng bước
+  // Trích xuất mốc thời gian và người xử lý cho từng bước từ cả fulfillment lẫn approvalHistory
   const stepDetails = useMemo(() => {
     // 1. Mốc Đã duyệt
-    const approveEvent = approvalHistory.find((h) => h.toStatus === 'APPROVED' || h.action === 'APPROVE');
+    const approveEvent = approvalHistory.find(
+      (h) => h.toStatus === 'APPROVED' || h.action === 'APPROVE'
+    );
     const approveTime =
       formatTime(timelineData?.steps?.approved?.time) ||
       formatTime(order.approvedAt || approveEvent?.createdAt);
@@ -108,34 +131,73 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
       approveEvent?.actorUsername;
 
     // 2. Mốc Đang soạn hàng
-    const pickingEvent = approvalHistory.find((h) => h.toStatus === 'PICKING' || h.action === 'PICKING');
+    const pickingEvent = approvalHistory.find(
+      (h) => h.toStatus === 'PICKING' || h.action === 'PICKING'
+    );
     const pickingTime =
       formatTime(timelineData?.steps?.picking?.time) ||
       formatTime(pickingEvent?.createdAt);
 
     // 3. Mốc Đã xuất kho
+    const dispatchEvent = approvalHistory.find(
+      (h) =>
+        h.toStatus === 'DISPATCHED' ||
+        h.toStatus === 'SHIPPED' ||
+        h.action === 'DISPATCH' ||
+        h.action === 'DISPATCHED'
+    );
     const dispatchTime =
       formatTime(timelineData?.steps?.dispatched?.time) ||
-      formatTime(order.fulfillment?.dispatchedAt);
+      formatTime(order.fulfillment?.dispatchedAt || dispatchEvent?.createdAt);
     const dispatchActor =
       timelineData?.steps?.dispatched?.actor ||
-      order.fulfillment?.dispatchedByUsername;
+      order.fulfillment?.dispatchedByUsername ||
+      dispatchEvent?.actorFullName ||
+      dispatchEvent?.actorUsername;
     const dispatchNote =
       timelineData?.steps?.dispatched?.note ||
-      order.fulfillment?.dispatchNote;
+      order.fulfillment?.dispatchNote ||
+      dispatchEvent?.comment;
 
     // 4. Mốc Đang giao hàng
+    const inTransitEvent = approvalHistory.find(
+      (h) =>
+        h.toStatus === 'IN_TRANSIT' ||
+        h.toStatus === 'SHIPPING' ||
+        h.action === 'IN_TRANSIT' ||
+        h.action === 'SHIPPING'
+    );
     const shippingTime =
       formatTime(timelineData?.steps?.shipping?.time) ||
-      dispatchTime;
+      (inTransitEvent?.createdAt
+        ? formatTime(inTransitEvent.createdAt)
+        : currentStep >= 4
+        ? dispatchTime
+        : null);
 
     // 5. Mốc Đã giao hàng
+    const deliverEvent = approvalHistory.find(
+      (h) =>
+        h.toStatus === 'DELIVERED' ||
+        h.toStatus === 'CLOSED' ||
+        h.toStatus === 'COMPLETED' ||
+        h.action === 'DELIVER' ||
+        h.action === 'DELIVERED' ||
+        h.action === 'COMPLETE' ||
+        h.action === 'CLOSE'
+    );
     const deliverTime =
       formatTime(timelineData?.steps?.delivered?.time) ||
-      formatTime(order.fulfillment?.deliveredAt || order.fulfillment?.deliveryConfirmedAt);
+      formatTime(
+        order.fulfillment?.deliveredAt ||
+          order.fulfillment?.deliveryConfirmedAt ||
+          deliverEvent?.createdAt
+      );
     const receiver =
       timelineData?.receiverName ||
-      order.fulfillment?.receiverName;
+      order.fulfillment?.receiverName ||
+      deliverEvent?.actorFullName ||
+      deliverEvent?.actorUsername;
 
     return {
       approveTime,
@@ -148,7 +210,7 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
       deliverTime,
       receiver
     };
-  }, [order, approvalHistory, timelineData]);
+  }, [order, approvalHistory, timelineData, currentStep]);
 
   const steps: TimelineStep[] = [
     {
@@ -194,128 +256,163 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
 
   return (
     <div className={`p-5 rounded-2xl bg-white border border-gray-200 shadow-2xs space-y-5 ${className}`}>
-      {/* Header trạng thái */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-orange-100 text-[#F85606] flex items-center justify-center font-bold">
-            <Truck size={17} />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-gray-900">
-              Trạng thái & Tiến độ giao hàng
-            </h4>
-            <p className="text-xs text-gray-500">
-              Theo dõi lộ trình giao hàng trực tuyến theo thời gian thực
-            </p>
-          </div>
-        </div>
-
-        {/* Badge nấc hiện tại */}
-        <div>
-          {currentStep === 5 ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-              <CheckCheck size={14} />
-              <span>Giao hàng hoàn tất</span>
-            </span>
-          ) : currentStep === 4 ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300 animate-pulse">
-              <MapPin size={14} />
-              <span>Xe đang trên đường giao</span>
-            </span>
-          ) : currentStep === 3 ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 border border-teal-300">
-              <Truck size={14} />
-              <span>Đã xuất kho</span>
-            </span>
-          ) : currentStep === 2 ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-300">
-              <Package size={14} />
-              <span>Đang soạn hàng tại kho</span>
-            </span>
-          ) : currentStep === 1 ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
-              <Clock size={14} />
-              <span>Đã duyệt — Chờ soạn kho</span>
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 border border-gray-300">
-              <span>Đang chờ xử lý</span>
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* THANH TIMELINE 5 MỐC THỜI GIAN (AC 1) */}
-      <div className="overflow-x-auto pb-3 pt-1 scrollbar-thin">
-        <div className="min-w-[620px] px-2 flex items-start justify-between relative">
-          {/* Thanh nối ngầm */}
-          <div className="absolute top-4.5 left-8 right-8 h-1 bg-gray-100 z-0" />
-
-          {steps.map((step, idx) => {
-            const stepNum = idx + 1;
-            const isCompleted = currentStep > stepNum;
-            const isCurrent = currentStep === stepNum;
-            const Icon = step.icon;
-
-            return (
-              <div key={step.key} className="flex flex-col items-center text-center relative z-10 w-28 shrink-0">
-                {/* Vòng tròn biểu tượng */}
-                <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                    isCompleted
-                      ? 'bg-emerald-500 text-white shadow-xs shadow-emerald-500/30'
-                      : isCurrent
-                      ? 'bg-[#F85606] text-white ring-4 ring-orange-200 shadow-md shadow-orange-500/30 scale-110'
-                      : 'bg-white border-2 border-gray-200 text-gray-400'
-                  }`}
-                >
-                  <Icon size={16} />
-                </div>
-
-                {/* Tiêu đề nấc */}
-                <span
-                  className={`mt-2 text-xs font-bold leading-tight ${
-                    isCurrent
-                      ? 'text-[#F85606]'
-                      : isCompleted
-                      ? 'text-gray-900'
-                      : 'text-gray-400'
-                  }`}
-                >
-                  {step.label}
-                </span>
-
-                {/* Mô tả phụ */}
-                <span className="text-[10px] text-gray-400 leading-tight mt-0.5 line-clamp-1">
-                  {step.subLabel}
-                </span>
-
-                {/* MỐC THỜI GIAN (HIỂN THỊ RÕ RÀNG AC 1) */}
-                {step.time ? (
-                  <span className="mt-1 text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/60">
-                    {step.time}
-                  </span>
-                ) : isCurrent ? (
-                  <span className="mt-1 text-[10px] font-bold text-orange-600 animate-pulse">
-                    Đang thực hiện
-                  </span>
-                ) : (
-                  <span className="mt-1 text-[10px] text-gray-300">
-                    Chưa tới
-                  </span>
-                )}
-
-                {/* Người phụ trách / Người nhận nếu có */}
-                {step.actor && (
-                  <span className="text-[9px] text-gray-500 mt-0.5 max-w-[110px] truncate" title={step.actor}>
-                    {step.actor}
-                  </span>
-                )}
+      {/* Header trạng thái & thanh timeline (chỉ hiện khi không ẩn hideTimelineTrack) */}
+      {!hideTimelineTrack && (
+        <>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-orange-100 text-[#F85606] flex items-center justify-center font-bold">
+                <Truck size={17} />
               </div>
-            );
-          })}
-        </div>
-      </div>
+              <div>
+                <h4 className="text-sm font-bold text-gray-900">
+                  Trạng thái & Tiến độ giao hàng
+                </h4>
+                <p className="text-xs text-gray-500">
+                  Theo dõi lộ trình giao hàng trực tuyến theo thời gian thực
+                </p>
+              </div>
+            </div>
+
+            {/* Badge nấc hiện tại & nút thu gọn */}
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              {isOrderCompleted ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  <CheckCheck size={14} />
+                  <span>Giao hàng hoàn tất</span>
+                </span>
+              ) : currentStep === 4 ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300 animate-pulse">
+                  <MapPin size={14} />
+                  <span>Xe đang trên đường giao</span>
+                </span>
+              ) : currentStep === 3 ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 border border-teal-300">
+                  <Truck size={14} />
+                  <span>Đã xuất kho</span>
+                </span>
+              ) : currentStep === 2 ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-300">
+                  <Package size={14} />
+                  <span>Đang soạn hàng tại kho</span>
+                </span>
+              ) : currentStep === 1 ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                  <Clock size={14} />
+                  <span>Đã duyệt — Chờ soạn kho</span>
+                </span>
+              ) : isOrderCancelledOrRejected ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                  <span>Đã hủy / Từ chối</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 border border-gray-300">
+                  <span>Đang chờ xử lý</span>
+                </span>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setIsTimelineExpanded((prev) => !prev)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                title={isTimelineExpanded ? 'Thu gọn tiến trình' : 'Mở rộng tiến trình'}
+              >
+                {isTimelineExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {/* THANH TIMELINE 5 MỐC THỜI GIAN (AC 1) */}
+          {isTimelineExpanded && (
+            <div className="overflow-x-auto pb-3 pt-1 scrollbar-thin animate-in fade-in duration-200">
+              <div className="min-w-[620px] px-2 flex items-start justify-between relative">
+                {/* Thanh nối ngầm nền xám */}
+                <div className="absolute top-4.5 left-8 right-8 h-1 bg-gray-200 z-0" />
+                {/* Thanh tiến độ xanh lá đã hoàn thành */}
+                <div
+                  className="absolute top-4.5 left-8 h-1 bg-emerald-500 transition-all duration-500 z-0"
+                  style={{
+                    width: isOrderCompleted
+                      ? 'calc(100% - 64px)'
+                      : currentStep > 1
+                      ? `calc(${((Math.min(currentStep, 5) - 1) / 4) * 100}% - ${currentStep === 5 ? 64 : 32}px)`
+                      : '0%'
+                  }}
+                />
+
+                {steps.map((step, idx) => {
+                  const stepNum = idx + 1;
+                  // Nếu đơn hàng đã hoàn tất (DELIVERED, CLOSED, COMPLETED), tất cả 5 bước đều ĐÃ HOÀN THÀNH
+                  const isCompleted = isOrderCompleted ? true : currentStep > stepNum;
+                  const isCurrent = !isOrderCompleted && currentStep === stepNum;
+                  const Icon = step.icon;
+
+                  return (
+                    <div key={step.key} className="flex flex-col items-center text-center relative z-10 w-28 shrink-0">
+                      {/* Vòng tròn biểu tượng */}
+                      <div
+                        className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                          isCompleted
+                            ? 'bg-emerald-500 text-white shadow-xs shadow-emerald-500/30'
+                            : isCurrent
+                            ? 'bg-[#F85606] text-white ring-4 ring-orange-200 shadow-md shadow-orange-500/30 scale-110'
+                            : 'bg-white border-2 border-gray-200 text-gray-400'
+                        }`}
+                      >
+                        {isCompleted ? <CheckCircle2 size={16} /> : <Icon size={16} />}
+                      </div>
+
+                      {/* Tiêu đề nấc */}
+                      <span
+                        className={`mt-2 text-xs font-bold leading-tight ${
+                          isCurrent
+                            ? 'text-[#F85606]'
+                            : isCompleted
+                            ? 'text-gray-900'
+                            : 'text-gray-400'
+                        }`}
+                      >
+                        {step.label}
+                      </span>
+
+                      {/* Mô tả phụ */}
+                      <span className="text-[10px] text-gray-400 leading-tight mt-0.5 line-clamp-1">
+                        {step.subLabel}
+                      </span>
+
+                      {/* MỐC THỜI GIAN HOẶC TRẠNG THÁI NẤC */}
+                      {step.time ? (
+                        <span className="mt-1 text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/60">
+                          {step.time}
+                        </span>
+                      ) : isCompleted ? (
+                        <span className="mt-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50/80 px-1.5 py-0.2 rounded border border-emerald-200/50">
+                          {stepNum === 5 ? 'Đã giao thành công' : 'Đã hoàn thành'}
+                        </span>
+                      ) : isCurrent ? (
+                        <span className="mt-1 text-[10px] font-bold text-orange-600 animate-pulse bg-orange-50 px-1.5 py-0.2 rounded border border-orange-200">
+                          Đang thực hiện
+                        </span>
+                      ) : (
+                        <span className="mt-1 text-[10px] text-gray-400">
+                          Chưa tới
+                        </span>
+                      )}
+
+                      {/* Người phụ trách / Người nhận nếu có */}
+                      {step.actor && (
+                        <span className="text-[9px] text-gray-500 mt-0.5 max-w-[110px] truncate" title={step.actor}>
+                          {step.actor}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* THÔNG TIN CHUYẾN XE VẬN CHUYỂN (S6-09: Giúp đại lý chủ động bố trí người nhận đúng lúc xe tới) */}
       {timelineData?.tripInfo && (

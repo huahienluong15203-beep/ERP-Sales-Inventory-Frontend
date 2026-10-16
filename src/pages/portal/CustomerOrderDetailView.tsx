@@ -702,6 +702,7 @@ export const CustomerOrderDetailView: React.FC<CustomerOrderDetailViewProps> = (
       <OrderPdfPreviewModal
         isOpen={isPdfModalOpen}
         order={order}
+        approvalHistory={approvalHistory}
         onClose={() => setIsPdfModalOpen(false)}
       />
 

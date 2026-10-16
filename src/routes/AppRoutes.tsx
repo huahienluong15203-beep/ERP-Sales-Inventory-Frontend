@@ -8,6 +8,8 @@ import { ProfilePage } from '../pages/profile/ProfilePage';
 import { UserManagementPage } from '../pages/admin/UserManagementPage';
 import { UserImportPage } from '../pages/admin/UserImportPage';
 import { AgencyManagementPage } from '../pages/customer/AgencyManagementPage';
+import { CreateAgencyPage } from '../pages/customer/CreateAgencyPage';
+import { TransferTerritoryPage } from '../pages/customer/TransferTerritoryPage';
 import { ProductManagementPage } from '../pages/product/ProductManagementPage';
 import { ProductImportPage } from '../pages/product/ProductImportPage';
 import { PriceListPage } from '../pages/pricing/PriceListPage';
@@ -18,6 +20,7 @@ import { OrderCreatePage } from '../pages/order/OrderCreatePage';
 import { OrderListPage } from '../pages/order/OrderListPage';
 import { OrderDetailPage } from '../pages/order/OrderDetailPage';
 import { SupplierManagementPage } from '../pages/supplier/SupplierManagementPage';
+import { CreateSupplierPage } from '../pages/supplier/CreateSupplierPage';
 import { SystemLogPage } from '../pages/system-log/SystemLogPage';
 import { ModulePage } from '../pages/common/ModulePage';
 import { ForbiddenPage } from '../pages/common/ForbiddenPage';
@@ -137,6 +140,37 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* Khai báo hồ sơ đại lý mới (Trang riêng) */}
+        <Route
+          path="/customers/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <CreateAgencyPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Chuyển giao địa bàn hàng loạt (Trang riêng) */}
+        <Route
+          path="/customers/transfer"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <TransferTerritoryPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Quản lý danh mục sản phẩm (Sprint 2: S2-05) */}
         <Route
           path="/products"
@@ -180,6 +214,24 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <SupplierManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Khai báo đối tác cung ứng mới (Trang riêng) */}
+        <Route
+          path="/suppliers/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ADMIN',
+                'ROLE_WH_MANAGER',
+                'ROLE_WAREHOUSE',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <CreateSupplierPage />
             </ProtectedRoute>
           }
         />

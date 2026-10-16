@@ -151,6 +151,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
   }, [displayedMenus, currentPath]);
 
   const currentMenu = activeMenu || menus.find((m) => m.path === currentPath);
+  const isPickingListRoute = location.pathname.startsWith('/inventory/picking-lists');
   const pageTitle =
     location.pathname === '/forbidden'
       ? '403 Truy Cập Bị Từ Chối'
@@ -158,12 +159,17 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
         ? 'Hồ Sơ Cá Nhân'
         : location.pathname === '/products/import'
           ? 'Nhập Sản Phẩm Từ Excel'
-          : location.pathname === '/inventory/picking-lists/create'
-            ? 'Lập Phiếu Soạn Hàng Mới'
-            : location.pathname.startsWith('/inventory/picking-lists/')
-              ? 'Chi Tiết Phiếu Soạn Hàng'
-              : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
-  const isPickingListRoute = location.pathname.startsWith('/inventory/picking-lists');
+          : location.pathname === '/customers/create'
+            ? 'Khai Báo Hồ Sơ Đại Lý Mới'
+            : location.pathname === '/customers/transfer'
+              ? 'Chuyển Giao Địa Bàn Hàng Loạt'
+              : location.pathname === '/suppliers/create'
+                ? 'Thêm Mới Đối Tác Cung Ứng'
+                : location.pathname === '/inventory/picking-lists/create'
+                  ? 'Lập Phiếu Soạn Hàng Mới'
+                  : location.pathname.startsWith('/inventory/picking-lists/')
+                    ? 'Chi Tiết Phiếu Soạn Hàng'
+                    : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
   const pageSubtitle =
     isPickingListRoute
       ? ''
@@ -171,7 +177,13 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
         ? 'Thông tin cá nhân & thiết lập an toàn tài khoản'
         : location.pathname === '/products/import'
           ? 'Tải tệp mẫu, xem trước từng dòng và nhập hàng loạt đến 5.000 SKU'
-          : (currentMenu?.description ?? 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống');
+          : location.pathname === '/customers/create'
+            ? 'Khai báo thông tin pháp lý, nhóm khách hàng, cơ chế bảng giá và phân công địa bàn quản lý'
+            : location.pathname === '/customers/transfer'
+              ? 'Bàn giao toàn bộ hoặc theo khu vực cho nhân viên mới khi có luân chuyển công tác'
+              : location.pathname === '/suppliers/create'
+                ? 'Nguồn hàng chuẩn để gắn vào phiếu nhập kho truy nguyên nguồn gốc'
+                : (currentMenu?.description ?? 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống');
 
   return (
     <div className="erp-app-shell">
@@ -290,30 +302,30 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
                 const showGroup = Boolean(item.group) && item.group !== displayedMenus[idx - 1]?.group;
                 return (
                   <Fragment key={item.path}>
-                  {showGroup && (
-                    <li className="erp-menu-group" aria-hidden={isSidebarCollapsed}>
-                      {isSidebarCollapsed ? <span className="erp-menu-group-divider" /> : item.group}
+                    {showGroup && (
+                      <li className="erp-menu-group" aria-hidden={isSidebarCollapsed}>
+                        {isSidebarCollapsed ? <span className="erp-menu-group-divider" /> : item.group}
+                      </li>
+                    )}
+                    <li className="erp-menu-item">
+                      <Link
+                        to={item.path}
+                        className={`erp-menu-link ${isActive ? 'active' : ''}`}
+                        title={item.title}
+                      >
+                        <span className="erp-menu-icon">
+                          <DynamicIcon name={item.icon} size={18} />
+                        </span>
+                        {!isSidebarCollapsed && (
+                          <>
+                            <span className="erp-menu-title">{item.title}</span>
+                            {item.badge && (
+                              <span className="erp-menu-badge">{item.badge}</span>
+                            )}
+                          </>
+                        )}
+                      </Link>
                     </li>
-                  )}
-                  <li className="erp-menu-item">
-                    <Link
-                      to={item.path}
-                      className={`erp-menu-link ${isActive ? 'active' : ''}`}
-                      title={item.title}
-                    >
-                      <span className="erp-menu-icon">
-                        <DynamicIcon name={item.icon} size={18} />
-                      </span>
-                      {!isSidebarCollapsed && (
-                        <>
-                          <span className="erp-menu-title">{item.title}</span>
-                          {item.badge && (
-                            <span className="erp-menu-badge">{item.badge}</span>
-                          )}
-                        </>
-                      )}
-                    </Link>
-                  </li>
                   </Fragment>
                 );
               })}
