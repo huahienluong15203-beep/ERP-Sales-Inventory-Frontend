@@ -5,12 +5,12 @@ import {
   Search,
   Printer,
   RefreshCw,
-  ShieldAlert,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   TrendingUp,
-  FileSpreadsheet
+  FileSpreadsheet,
+  FileText
 } from 'lucide-react';
 import { useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
@@ -97,31 +97,19 @@ export const InvoiceManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6 antialiased max-w-7xl mx-auto pb-16">
-      {/* 1. Header & Actions */}
+      {/* 1. Header & Actions - Tinh gọn theo yêu cầu */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-orange-100 text-[#F85606] flex items-center justify-center font-black">
-              <Receipt className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-                  Quản Lý Hoá Đơn Bán Hàng
-                </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-orange-100 text-[#F85606] border border-orange-200">
-                  Sprint 7: S7-01
-                </span>
-              </div>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Phát hành hoá đơn theo số lượng thực tế giao hàng (POD), gộp nhiều phiếu giao, dãy số liên tục
-              </p>
-            </div>
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-2xl bg-orange-100 text-[#F85606] flex items-center justify-center font-black">
+            <Receipt className="w-5 h-5" />
           </div>
+          <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+            Quản lý hoá đơn bán hàng
+          </h1>
         </div>
 
-        {/* Nút Lập HĐ Mới */}
-        <div className="flex items-center gap-2">
+        {/* Nút hành động cùng hàng: Tải lại, Lập chứng từ điều chỉnh, Lập HĐ mới */}
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button
             onClick={() => loadInvoices(page)}
             className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-2xs transition cursor-pointer"
@@ -131,41 +119,25 @@ export const InvoiceManagementPage: React.FC = () => {
           </button>
 
           {isAccountantOrAdmin && (
-            <button
-              onClick={() => navigate('/invoices/create')}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-orange-500/20 transition cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ Lập Hoá Đơn Mới (Gộp Đơn)</span>
-            </button>
-          )}
-        </div>
-      </div>
+            <>
+              <button
+                onClick={() => navigate('/payments/adjustments')}
+                className="px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-2 shadow-2xs transition cursor-pointer"
+                title="Lập chứng từ điều chỉnh công nợ khi có sai lệch hoặc trả hàng"
+              >
+                <FileText className="w-4 h-4 text-[#F85606]" />
+                <span>Lập chứng từ điều chỉnh</span>
+              </button>
 
-      {/* 2. Banner Quy Định Nghiệp Vụ AC4 */}
-      <div className="p-4 rounded-2xl bg-white border border-gray-100 shadow-xs flex items-start gap-3 text-xs">
-        <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-          <ShieldAlert className="w-4 h-4" />
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <strong className="font-bold text-gray-900">Quy tắc khoá bảo vệ hoá đơn (AC4):</strong>
-            <span className="px-2 py-0.2 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Bảo mật tài chính
-            </span>
-          </div>
-          <p className="text-gray-600 mt-0.5">
-            Mọi hoá đơn sau khi phát hành sẽ được gán số hoá đơn điện tử liên tục không nhảy cóc (AC2) và{' '}
-            <strong>hoàn toàn không được sửa hoặc xoá</strong> trên hệ thống. Nếu phát sinh sai lệch hoặc đổi trả hàng,
-            kế toán thực hiện{' '}
-            <button
-              onClick={() => navigate('/payments/adjustments')}
-              className="font-bold text-[#F85606] hover:underline cursor-pointer"
-            >
-              Lập chứng từ điều chỉnh công nợ
-            </button>{' '}
-            để đảm bảo tính toàn vẹn sổ sách.
-          </p>
+              <button
+                onClick={() => navigate('/invoices/create')}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-orange-500/20 transition cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Lập hoá đơn mới (Gộp đơn)</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 

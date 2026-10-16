@@ -9,7 +9,6 @@ import {
   Search,
   Check,
   PackageCheck,
-  ShieldAlert,
   RefreshCw,
   ExternalLink
 } from 'lucide-react';
@@ -209,59 +208,18 @@ export const InvoiceCreatePage: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20 antialiased">
-      {/* 1. Header & Breadcrumbs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/invoices')}
-            className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-2xs transition cursor-pointer"
-            title="Quay lại danh sách hoá đơn"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-                Lập Hoá Đơn Bán Hàng Từ Phiếu Đã Giao
-              </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-orange-100 text-[#F85606] border border-orange-200">
-                S7-01
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Xuất hoá đơn đúng số lượng thực giao kèm chứng từ chữ ký (POD), gộp nhiều phiếu giao cùng đại lý
-            </p>
-          </div>
-        </div>
-
-        {/* AC Badges */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-            ✓ AC1: Số thực giao
-          </span>
-          <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-            ✓ AC2: Dãy số liên tục
-          </span>
-          <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-            ✓ AC3: Gộp nhiều phiếu
-          </span>
-          <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-            ✓ AC4: Khoá chống xoá
-          </span>
-        </div>
-      </div>
-
-      {/* 2. Cảnh báo tuân thủ quy trình Kế toán AC4 */}
-      <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 flex items-start gap-3 text-xs text-amber-900">
-        <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-        <div>
-          <strong className="font-bold">Lưu ý nghiệp vụ hoá đơn tài chính:</strong>
-          <p className="mt-0.5 text-amber-800">
-            Hoá đơn điện tử được sinh tự động theo dãy số liên tục tăng dần không nhảy cóc (AC2). Sau khi phát hành,
-            hoá đơn được khoá hoàn toàn và <strong>không thể sửa hoặc xoá</strong> (AC4). Nếu phát sinh sai lệch sau khi xuất,
-            vui lòng lập chứng từ điều chỉnh.
-          </p>
-        </div>
+      {/* 1. Header tinh gọn */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => navigate('/invoices')}
+          className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-2xs transition cursor-pointer"
+          title="Quay lại danh sách hoá đơn"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+          Lập hoá đơn bán hàng từ phiếu đã giao
+        </h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
