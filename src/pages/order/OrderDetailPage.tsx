@@ -46,6 +46,7 @@ import { OrderCancelModal } from '../../components/order/OrderCancelModal';
 import { OrderPdfPreviewModal } from '../../components/order/OrderPdfPreviewModal';
 import { OrderDispatchModal } from '../../components/order/OrderDispatchModal';
 import { AgencyDeliveryTimeline } from '../../components/portal/AgencyDeliveryTimeline';
+import { DeliveryProofModal } from '../../components/delivery/DeliveryProofModal';
 import { getUserFullName } from '../../lib/userFormatters';
 
 export const OrderDetailPage: React.FC = () => {
@@ -66,6 +67,10 @@ export const OrderDetailPage: React.FC = () => {
   }>({ isOpen: false, actionType: 'APPROVE' });
   const [isCancelModalOpen, setIsCancelModalOpen] = useState<boolean>(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
+  const [proofModalState, setProofModalState] = useState<{
+    isOpen: boolean;
+    mode: 'CONFIRM' | 'FAIL' | 'VIEW';
+  }>({ isOpen: false, mode: 'CONFIRM' });
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState<boolean>(false);
   const [updatingStatus, setUpdatingStatus] = useState<boolean>(false);
   const [cloningOrder, setCloningOrder] = useState<boolean>(false);
@@ -261,6 +266,13 @@ export const OrderDetailPage: React.FC = () => {
             <span>Đã hủy</span>
           </span>
         );
+      case 'DELIVERY_FAILED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
+            <AlertTriangle size={13} />
+            <span>Giao thất bại (Về kho)</span>
+          </span>
+        );
       default:
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
@@ -410,15 +422,27 @@ export const OrderDetailPage: React.FC = () => {
 
           {/* Thao tác xử lý kho theo vòng đời */}
           {order.status === 'APPROVED' && isWarehouseOrAdmin && (
-            <button
-              type="button"
-              disabled={updatingStatus}
-              onClick={() => handleUpdateStatus('PICKING', 'Đang soạn hàng')}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
-            >
-              <Package size={14} className={updatingStatus ? 'animate-spin' : ''} />
-              <span>Bắt đầu soạn hàng</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/inventory/picking-lists/create')}
+                className="px-3.5 py-2 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#F85606] font-bold text-xs flex items-center gap-1.5 border border-orange-200 shadow-xs transition cursor-pointer"
+                title="Gom đơn này vào đợt soạn hàng tối ưu theo lộ trình FEFO của kho"
+              >
+                <Package size={14} />
+                <span>Gom vào đợt soạn kho</span>
+              </button>
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={() => handleUpdateStatus('PICKING', 'Đang soạn hàng')}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
+                title="Chuyển trạng thái đơn sang Đang soạn hàng lẻ"
+              >
+                <Package size={14} className={updatingStatus ? 'animate-spin' : ''} />
+                <span>Bắt đầu soạn hàng</span>
+              </button>
+            </div>
           )}
 
           {order.status === 'PICKING' && isWarehouseOrAdmin && (
@@ -427,21 +451,57 @@ export const OrderDetailPage: React.FC = () => {
               disabled={updatingStatus}
               onClick={() => setIsDispatchModalOpen(true)}
               className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
+              title="Xác nhận hàng đã đóng gói rời kho, chuyển sang Đã xuất kho để đưa vào Chuyến giao hàng"
             >
-              <Truck size={14} />
-              <span>Xác nhận xuất kho</span>
+              <Truck size={14} className={updatingStatus ? 'animate-spin' : ''} />
+              <span>Xác nhận xuất kho (Sẵn sàng xếp xe)</span>
             </button>
           )}
 
-          {order.status === 'DISPATCHED' && (
+          {order.status === 'DISPATCHED' && isWarehouseOrAdmin && (
             <button
               type="button"
-              disabled={updatingStatus}
-              onClick={() => handleUpdateStatus('DELIVERED', 'Đã giao hàng')}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
+              onClick={() => navigate('/inventory/delivery-trips/create')}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+              title="Đưa đơn hàng đã xuất kho này vào chuyến xe giao hàng"
             >
-              <CheckCheck size={14} className={updatingStatus ? 'animate-spin' : ''} />
-              <span>Xác nhận đã giao hàng</span>
+              <Truck size={14} />
+              <span>Xếp chuyến xe ngay →</span>
+            </button>
+          )}
+
+          {order.status === 'DISPATCHED' && isWarehouseOrAdmin && (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setProofModalState({ isOpen: true, mode: 'CONFIRM' })}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition cursor-pointer"
+                title="Xác nhận giao thành công & Tải ảnh biên bản có chữ ký (POD)"
+              >
+                <CheckCheck size={14} />
+                <span>Xác nhận giao hàng (POD)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setProofModalState({ isOpen: true, mode: 'FAIL' })}
+                className="px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                title="Ghi nhận giao không thành công (hàng quay về kho)"
+              >
+                <XCircle size={14} />
+                <span>Báo giao thất bại</span>
+              </button>
+            </div>
+          )}
+
+          {order.status === 'DELIVERED' && (
+            <button
+              type="button"
+              onClick={() => setProofModalState({ isOpen: true, mode: 'VIEW' })}
+              className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+              title="Xem ảnh chứng từ / biên bản giao hàng có chữ ký"
+            >
+              <FileText size={14} />
+              <span>Xem biên bản POD</span>
             </button>
           )}
 
@@ -549,11 +609,12 @@ export const OrderDetailPage: React.FC = () => {
         desiredDeliveryDate={order.desiredDeliveryDate || undefined}
       />
 
-      {/* CHI TIẾT SỐ LƯỢNG THỰC GIAO TỪNG MẶT HÀNG & THÔNG TIN GIAO NHẬN (Ẩn timeline 5 nấc trùng lặp) */}
+      {/* THÔNG TIN BÀN GIAO & BẢNG SỐ LƯỢNG THỰC GIAO TỪNG DÒNG (Đã ẩn thanh stepper trùng lặp) */}
       <AgencyDeliveryTimeline
         order={order}
         approvalHistory={approvalHistory}
         hideTimelineTrack={true}
+        hideStepper={true}
       />
 
       {/* THÔNG TIN CHỨNG TỪ XUẤT KHO (ĐÃ XÁC NHẬN - BẤT BIẾN KHÔNG SỬA ĐƯỢC) */}
@@ -1062,6 +1123,26 @@ export const OrderDetailPage: React.FC = () => {
         approvalHistory={approvalHistory}
         onClose={() => setIsPdfModalOpen(false)}
       />
+
+      {/* S6-08: MODAL XÁC NHẬN GIAO HÀNG & TẢI BIÊN BẢN CHỮ KÝ (POD) */}
+      {proofModalState.isOpen && order.id && (
+        <DeliveryProofModal
+          isOpen={proofModalState.isOpen}
+          onClose={() => setProofModalState((s) => ({ ...s, isOpen: false }))}
+          orderId={order.id}
+          orderCode={order.code || ''}
+          customerName={order.customerName}
+          deliveryAddress={order.deliveryAddress?.address}
+          receiverPhone={order.deliveryAddress?.receiverPhone}
+          isDelivered={order.status === 'DELIVERED'}
+          initialMode={proofModalState.mode}
+          onSuccess={() => {
+            setProofModalState((s) => ({ ...s, isOpen: false }));
+            loadOrderDetail();
+          }}
+          showToast={showToast}
+        />
+      )}
 
       {/* MODAL XÁC NHẬN XUẤT KHO VÀ GIAO THIẾU */}
       {isDispatchModalOpen && order && (

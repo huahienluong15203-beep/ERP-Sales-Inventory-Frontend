@@ -460,14 +460,25 @@ export async function fetchDeliveryTrips(params?: {
   }
 
   const localTrips = getStoredTrips();
-  const combined = [...backendTrips];
+  const mergedBackendTrips = backendTrips.map((bt) => {
+    const matchedLocal = localTrips.find((lt) => lt.id === bt.id || lt.code === bt.code);
+    if (matchedLocal && (!bt.totalValue || bt.totalValue === 0)) {
+      return {
+        ...bt,
+        totalValue: matchedLocal.totalValue || (matchedLocal.stops ? matchedLocal.stops.reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0) : undefined)
+      };
+    }
+    return bt;
+  });
+
+  const combined = [...mergedBackendTrips];
   localTrips.forEach((lt) => {
     if (!combined.some((bt) => bt.id === lt.id || bt.code === lt.code)) {
       combined.push(lt);
     }
   });
 
-  let trips = backendSuccess && combined.length > 0 ? combined : (backendSuccess ? backendTrips : localTrips);
+  let trips = backendSuccess && combined.length > 0 ? combined : (backendSuccess ? mergedBackendTrips : localTrips);
 
   if (params?.status && params.status !== 'ALL') {
     trips = trips.filter((t) => t.status === params.status);
@@ -538,10 +549,34 @@ export async function fetchDeliveryTripById(id: number): Promise<DeliveryTrip> {
       const data = await res.json();
       // Nếu backend trả về { trip: {...}, stops: [...] }
       if (data.trip && data.stops) {
-        return {
+        const calculatedTotal = (data.stops || []).reduce(
+          (sum: number, s: any) => sum + (Number(s.totalAmount) || 0),
+          0
+        );
+        const fullTrip: DeliveryTrip = {
           ...data.trip,
+          totalValue:
+            data.trip.totalValue && data.trip.totalValue > 0
+              ? data.trip.totalValue
+              : calculatedTotal,
           stops: data.stops
         };
+
+        // Đồng bộ ngược lại vào storage để danh sách bên ngoài cũng có totalValue
+        try {
+          const stored = getStoredTrips();
+          const idx = stored.findIndex((t) => t.id === fullTrip.id || t.code === fullTrip.code);
+          if (idx >= 0) {
+            stored[idx] = { ...stored[idx], ...fullTrip };
+          } else {
+            stored.unshift(fullTrip);
+          }
+          saveStoredTrips(stored);
+        } catch (e) {
+          console.warn('Lỗi lưu cache chuyến giao:', e);
+        }
+
+        return fullTrip;
       }
       return data;
     }

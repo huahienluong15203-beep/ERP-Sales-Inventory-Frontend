@@ -45,6 +45,7 @@ export interface DeliveryTrip {
   deliveredStops: number;
   failedStops: number;
   remainingStops: number;
+  totalValue?: number;
   valueOnRoad: number;
   overdue: boolean;
   overdueMinutes: number;

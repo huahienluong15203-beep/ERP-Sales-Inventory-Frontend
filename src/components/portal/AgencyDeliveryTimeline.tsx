@@ -7,6 +7,7 @@ import {
   CheckCheck,
   AlertTriangle,
   MapPin,
+  XCircle,
   Phone,
   ChevronDown,
   ChevronUp
@@ -18,6 +19,7 @@ interface AgencyDeliveryTimelineProps {
   order: OrderBackendResponse;
   approvalHistory?: OrderApprovalHistoryResponse[];
   className?: string;
+  hideStepper?: boolean;
   defaultExpandedTimeline?: boolean;
   hideTimelineTrack?: boolean;
 }
@@ -36,6 +38,7 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
   order,
   approvalHistory = [],
   className = '',
+  hideStepper = false,
   defaultExpandedTimeline = true,
   hideTimelineTrack = false
 }) => {
@@ -276,7 +279,17 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
 
             {/* Badge nấc hiện tại & nút thu gọn */}
             <div className="flex items-center gap-2 self-start sm:self-auto">
-              {isOrderCompleted ? (
+              {order.status === 'DELIVERY_FAILED' ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                  <AlertTriangle size={14} />
+                  <span>Giao hàng không thành công (Đã quay về kho)</span>
+                </span>
+              ) : isOrderCancelledOrRejected || order.status === 'CANCELLED' ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                  <XCircle size={14} />
+                  <span>Đơn hàng đã hủy</span>
+                </span>
+              ) : isOrderCompleted || currentStep === 5 ? (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                   <CheckCheck size={14} />
                   <span>Giao hàng hoàn tất</span>
@@ -301,10 +314,6 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
                   <Clock size={14} />
                   <span>Đã duyệt — Chờ soạn kho</span>
                 </span>
-              ) : isOrderCancelledOrRejected ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
-                  <span>Đã hủy / Từ chối</span>
-                </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 border border-gray-300">
                   <span>Đang chờ xử lý</span>
@@ -322,8 +331,8 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
             </div>
           </div>
 
-          {/* THANH TIMELINE 5 MỐC THỜI GIAN (AC 1) */}
-          {isTimelineExpanded && (
+          {/* THANH TIMELINE 5 MỐC THỜI GIAN (AC 1) - Ẩn nếu hideStepper = true */}
+          {!hideStepper && isTimelineExpanded && (
             <div className="overflow-x-auto pb-3 pt-1 scrollbar-thin animate-in fade-in duration-200">
               <div className="min-w-[620px] px-2 flex items-start justify-between relative">
                 {/* Thanh nối ngầm nền xám */}
@@ -457,6 +466,7 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
             </a>
           )}
         </div>
+      
       )}
 
       {/* THÔNG TIN BIÊN BẢN GIAO HÀNG / NGƯỜI NHẬN NẾU ĐÃ GIAO */}

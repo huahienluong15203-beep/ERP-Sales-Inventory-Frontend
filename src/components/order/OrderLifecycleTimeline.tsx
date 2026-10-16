@@ -109,7 +109,8 @@ export const OrderLifecycleTimeline: React.FC<OrderLifecycleTimelineProps> = ({
 }) => {
   const isCancelled = status === 'CANCELLED';
   const isRejected = status === 'REJECTED';
-  const isTerminated = isCancelled || isRejected;
+  const isDeliveryFailed = status === 'DELIVERY_FAILED';
+  const isTerminated = isCancelled || isRejected || isDeliveryFailed;
 
   const currentStepIdx = getStepIndex(status);
 
@@ -145,12 +146,17 @@ export const OrderLifecycleTimeline: React.FC<OrderLifecycleTimelineProps> = ({
           {isCancelled ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
               <XCircle size={13} />
-              <span>Nhánh Hủy Đơn</span>
+              <span>Đơn Hàng Đã Hủy</span>
             </span>
           ) : isRejected ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
               <XCircle size={13} />
               <span>Bị Quản Lý Từ Chối</span>
+            </span>
+          ) : isDeliveryFailed ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
+              <AlertTriangle size={13} />
+              <span>Giao Thất Bại (Đã Quay Về Kho)</span>
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-900 border border-orange-200">
@@ -187,6 +193,24 @@ export const OrderLifecycleTimeline: React.FC<OrderLifecycleTimelineProps> = ({
           </div>
           <p className="text-[10px] text-rose-700 italic pl-5">
             * Không đủ điều kiện phê duyệt vượt hạn mức hoặc bán dưới giá sàn. Đơn dừng tiến trình.
+          </p>
+        </div>
+      )}
+
+      {/* CẢNH BÁO NẾU GIAO THẤT BẠI QUAY VỀ KHO */}
+      {isDeliveryFailed && (
+        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 text-xs text-rose-900 space-y-1 animate-in fade-in">
+          <div className="flex items-center gap-1.5 font-bold text-rose-950">
+            <AlertTriangle size={15} className="text-rose-600 shrink-0" />
+            <span>Đơn hàng giao không thành công — Hàng đã được quay về và nhập lại kho</span>
+          </div>
+          {cancelReason && (
+            <p className="text-[11px] text-rose-800 pl-5">
+              Lý do không giao được: <strong>&ldquo;{cancelReason}&rdquo;</strong>
+            </p>
+          )}
+          <p className="text-[10px] text-rose-700 italic pl-5">
+            * Toàn bộ hàng hoá đã được hoàn trả lại tồn kho khả dụng khi xe kết thúc chuyến.
           </p>
         </div>
       )}

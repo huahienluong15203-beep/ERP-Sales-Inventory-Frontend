@@ -50,6 +50,8 @@ import { DeliveryTripDetailPage } from '../pages/inventory/DeliveryTripDetailPag
 import { DebtAdjustmentPage } from '../pages/payment/DebtAdjustmentPage';
 import { PaymentReconciliationPage } from '../pages/payment/PaymentReconciliationPage';
 import { ProductLotManagementPage } from '../pages/inventory/ProductLotManagementPage';
+import { InvoiceManagementPage } from '../pages/payment/InvoiceManagementPage';
+import { InvoiceCreatePage } from '../pages/payment/InvoiceCreatePage';
 import { SalesTargetManagementPage } from '../pages/kpi/SalesTargetManagementPage';
 import { InventoryAgingReportPage } from '../pages/inventory/InventoryAgingReportPage';
 import { InTransitDashboardPage } from '../pages/inventory/InTransitDashboardPage';
@@ -525,6 +527,21 @@ export const AppRoutes: React.FC = () => {
         {/* Báo cáo luân chuyển kho & tuổi hàng (S8-07) */}
         <Route
           path="/inventory/aging"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <InventoryAgingReportPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Theo dõi hàng đi đường & tiến độ giao hàng (S6-07) */}
         <Route
           path="/inventory/in-transit"
@@ -538,7 +555,6 @@ export const AppRoutes: React.FC = () => {
                 'ROLE_SALES_MANAGER'
               ]}
             >
-              <InventoryAgingReportPage />
               <InTransitDashboardPage />
             </ProtectedRoute>
           }
@@ -794,6 +810,51 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <DebtAdjustmentPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S7-01: Phát hành và quản lý hoá đơn bán hàng từ phiếu đã giao */}
+        <Route
+          path="/invoices"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <InvoiceManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invoices/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <InvoiceCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invoices/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <InvoiceManagementPage />
             </ProtectedRoute>
           }
         />

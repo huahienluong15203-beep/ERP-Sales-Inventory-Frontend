@@ -9,7 +9,8 @@ import {
   XCircle,
   RefreshCw,
   User,
-  PackageCheck
+  PackageCheck,
+  PackageSearch
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
@@ -134,8 +135,8 @@ export const PickingListManagementPage: React.FC = () => {
         );
       case 'IN_PROGRESS':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">
-            <RefreshCw className="w-3 h-3 animate-spin text-amber-600" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+            <PackageSearch className="w-3.5 h-3.5 text-amber-600" />
             Đang soạn hàng
           </span>
         );
@@ -281,7 +282,7 @@ export const PickingListManagementPage: React.FC = () => {
                 type="text"
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
-                placeholder="Tìm mã phiếu, người soạn..."
+                placeholder="Tìm mã phiếu, mã đơn hàng, người soạn..."
                 className="w-full text-xs pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 outline-none"
               />
             </div>
@@ -327,7 +328,7 @@ export const PickingListManagementPage: React.FC = () => {
                   <th className="py-3 px-4">Mã phiếu</th>
                   <th className="py-3 px-4">Kho xuất</th>
                   <th className="py-3 px-4">Người soạn</th>
-                  <th className="py-3 px-4 text-center">Số đơn</th>
+                  <th className="py-3 px-3 text-center w-24">Số đơn</th>
                   <th className="py-3 px-4">Tiến độ soạn hàng</th>
                   <th className="py-3 px-4 text-center">Trạng thái</th>
                   <th className="py-3 px-4">Ngày tạo</th>
@@ -358,8 +359,8 @@ export const PickingListManagementPage: React.FC = () => {
                           <span>{list.pickerName || 'Chưa gán'}</span>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="inline-block px-2 py-0.5 rounded-full bg-gray-100 font-semibold text-gray-800">
+                      <td className="py-3.5 px-3 text-center w-24 whitespace-nowrap">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full bg-gray-100 font-bold text-gray-800 text-xs">
                           {list.orderCount} đơn
                         </span>
                       </td>

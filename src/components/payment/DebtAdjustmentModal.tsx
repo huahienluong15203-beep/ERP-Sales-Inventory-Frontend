@@ -81,7 +81,7 @@ export const DebtAdjustmentModal: React.FC<DebtAdjustmentModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
       <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[92vh] my-auto animate-fade-in">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#F85606] to-orange-600 text-white">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-xs text-white">
               <FileCheck size={22} />
@@ -92,6 +92,8 @@ export const DebtAdjustmentModal: React.FC<DebtAdjustmentModalProps> = ({
               </h2>
               <p className="text-xs text-blue-100">
                 Mã chứng từ: <span className="font-mono font-bold text-white">{adjustment.adjustmentCode || 'Chưa cấp số (chờ duyệt)'}</span>
+              <p className="text-xs text-orange-100">
+                Mã chứng từ: <span className="font-mono font-bold text-white">{adjustment.adjustmentCode}</span>
               </p>
             </div>
           </div>
@@ -119,7 +121,7 @@ export const DebtAdjustmentModal: React.FC<DebtAdjustmentModalProps> = ({
 
             <div>
               <span className="text-[11px] text-gray-500 uppercase tracking-wider block">Hoá đơn bán hàng gốc:</span>
-              <span className="font-bold text-indigo-700 font-mono text-sm block mt-0.5">
+              <span className="font-bold text-[#F85606] font-mono text-sm block mt-0.5">
                 {adjustment.originalInvoiceCode}
               </span>
               <span className="text-[11px] text-gray-500">Ngày lập: {adjustment.originalInvoiceDate}</span>
@@ -157,13 +159,13 @@ export const DebtAdjustmentModal: React.FC<DebtAdjustmentModalProps> = ({
           </div>
 
           {/* Thông tin Đại lý / Khách hàng */}
-          <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-200/80 flex items-start justify-between gap-3">
+          <div className="p-4 bg-orange-50/50 rounded-xl border border-orange-200/80 flex items-start justify-between gap-3">
             <div className="space-y-1">
               <span className="text-gray-500 block text-[11px]">Đại lý được giảm trừ:</span>
-              <div className="text-sm font-bold text-blue-950 flex items-center gap-1.5">
-                <User size={15} className="text-blue-600" />
+              <div className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                <User size={15} className="text-[#F85606]" />
                 <span>{adjustment.customerName}</span>
-                <span className="text-xs font-mono text-blue-700">({adjustment.customerCode})</span>
+                <span className="text-xs font-mono text-[#F85606]">({adjustment.customerCode})</span>
               </div>
               {adjustment.customerAddress && (
                 <div className="text-gray-500 text-[11px]">{adjustment.customerAddress}</div>
@@ -214,7 +216,7 @@ export const DebtAdjustmentModal: React.FC<DebtAdjustmentModalProps> = ({
                       <td className="px-3 py-2.5 text-center font-mono font-bold text-gray-900">
                         {item.returnQuantity}
                       </td>
-                      <td className="px-3 py-2.5 text-right font-mono font-bold text-blue-700">
+                      <td className="px-3 py-2.5 text-right font-mono font-bold text-[#F85606]">
                         {formatCurrencyVND(item.originalSoldPrice)}
                       </td>
                       <td className="px-3 py-2.5 text-right font-mono text-gray-400 line-through">
@@ -258,7 +260,7 @@ export const DebtAdjustmentModal: React.FC<DebtAdjustmentModalProps> = ({
                     value={approvalNote}
                     onChange={(e) => setApprovalNote(e.target.value)}
                     placeholder="Nhập ghi chú phê duyệt giảm trừ công nợ..."
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
                   />
                 </div>
               ) : (
