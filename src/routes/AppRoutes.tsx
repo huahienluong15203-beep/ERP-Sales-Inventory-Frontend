@@ -56,6 +56,8 @@ import { InvoiceCreatePage } from '../pages/payment/InvoiceCreatePage';
 import { SalesTargetManagementPage } from '../pages/kpi/SalesTargetManagementPage';
 import { InventoryAgingReportPage } from '../pages/inventory/InventoryAgingReportPage';
 import { InTransitDashboardPage } from '../pages/inventory/InTransitDashboardPage';
+import { StockAdjustmentListPage } from '../pages/inventory/StockAdjustmentListPage';
+import { StockAdjustmentCreatePage } from '../pages/inventory/StockAdjustmentCreatePage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -669,6 +671,37 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <DeliveryTripDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S8-03: Quản lý & Lập phiếu điều chỉnh tồn kho */}
+        <Route
+          path="/inventory/stock-adjustments"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockAdjustmentListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/stock-adjustments/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <StockAdjustmentCreatePage />
             </ProtectedRoute>
           }
         />
