@@ -10,7 +10,8 @@ import {
   Plus,
   Minus,
   Check,
-  RefreshCw
+  RefreshCw,
+  Truck
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useParams } from '../../routes/Router';
@@ -20,6 +21,7 @@ import {
   updateItemProgress,
   completePickingList
 } from '../../services/pickingListApi';
+import { updateOrderStatus } from '../../services/orderService';
 import { PickingDiscrepancyModal } from '../../components/inventory/PickingDiscrepancyModal';
 import { PickingListPrintModal } from '../../components/inventory/PickingListPrintModal';
 
@@ -55,6 +57,7 @@ export const PickingListDetailPage: React.FC = () => {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
   const [savingItemIds, setSavingItemIds] = useState<Record<number, boolean>>({});
   const [completing, setCompleting] = useState<boolean>(false);
+  const [dispatchingAll, setDispatchingAll] = useState<boolean>(false);
 
   const loadData = async () => {
     if (!id) return;
@@ -182,11 +185,71 @@ export const PickingListDetailPage: React.FC = () => {
     try {
       const updated = await completePickingList(pickingList.id);
       setPickingList(updated);
-      showToast('Chúc mừng', `Đã hoàn thành toàn bộ đợt soạn hàng ${updated.code}!`, 'success');
+
+      // Tự động xuất kho các đơn hàng trong phiếu để Quản lý kho xếp xe ngay
+      const ordersToDispatch = updated.orders || pickingList.orders || [];
+      let dispatchedCount = 0;
+      for (const ord of ordersToDispatch) {
+        const ordId = (ord as any).orderId || ord.id;
+        if (ordId) {
+          try {
+            await updateOrderStatus(ordId, 'DISPATCHED', `Tự động xuất kho sau đợt soạn ${updated.code}`);
+            dispatchedCount++;
+          } catch (e: any) {
+            console.warn(`Lỗi xuất kho đơn ${ord.code}:`, e);
+          }
+        }
+      }
+
+      if (dispatchedCount > 0) {
+        showToast(
+          'Đã hoàn thành & Xuất kho',
+          `Đã chốt đợt soạn ${updated.code} và tự động xuất kho ${dispatchedCount} đơn hàng. Quản lý kho có thể xếp xe ngay!`,
+          'success'
+        );
+      } else {
+        showToast('Chúc mừng', `Đã hoàn thành toàn bộ đợt soạn hàng ${updated.code}!`, 'success');
+      }
+      loadData();
     } catch (err: any) {
       showToast('Lỗi hoàn thành', err.message || 'Chốt phiếu soạn hàng thất bại', 'error');
     } finally {
       setCompleting(false);
+    }
+  };
+
+  // Xuất kho toàn bộ đơn hàng trong phiếu
+  const handleDispatchAllOrders = async () => {
+    const ordersToDispatch = pickingList?.orders || [];
+    if (ordersToDispatch.length === 0) {
+      showToast('Thông báo', 'Không tìm thấy danh sách đơn hàng trong phiếu này', 'info');
+      return;
+    }
+
+    setDispatchingAll(true);
+    let count = 0;
+    try {
+      for (const ord of ordersToDispatch) {
+        const ordId = (ord as any).orderId || ord.id;
+        if (ordId) {
+          try {
+            await updateOrderStatus(ordId, 'DISPATCHED', `Xuất kho đợt soạn ${pickingList?.code}`);
+            count++;
+          } catch (e: any) {
+            console.warn(`Lỗi xuất kho đơn ${ord.code}:`, e);
+          }
+        }
+      }
+      if (count > 0) {
+        showToast('Thành công', `Đã xác nhận xuất kho thành công ${count} đơn hàng để xếp chuyến xe!`, 'success');
+      } else {
+        showToast('Thông báo', 'Các đơn hàng đã ở trạng thái xuất kho hoặc đã xử lý', 'info');
+      }
+      loadData();
+    } catch (err: any) {
+      showToast('Lỗi xuất kho', err.message || 'Không thể xuất kho', 'error');
+    } finally {
+      setDispatchingAll(false);
     }
   };
 
@@ -321,7 +384,7 @@ export const PickingListDetailPage: React.FC = () => {
             <button
               onClick={handleCompletePicking}
               disabled={completing}
-              className="px-5 py-2.5 bg-white text-orange-600 hover:bg-orange-50 font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 shrink-0"
+              className="px-5 py-2.5 bg-white text-orange-600 hover:bg-orange-50 font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
             >
               {completing ? (
                 <RefreshCw className="w-4 h-4 animate-spin text-orange-600" />
@@ -330,6 +393,34 @@ export const PickingListDetailPage: React.FC = () => {
               )}
               Chốt hoàn thành đợt soạn
             </button>
+          )}
+
+          {pickingList.status === 'COMPLETED' && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleDispatchAllOrders}
+                disabled={dispatchingAll}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+                title="Đảm bảo tất cả các đơn hàng đều đã chuyển sang trạng thái Đã xuất kho để xếp xe"
+              >
+                {dispatchingAll ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                )}
+                <span>Xuất kho các đơn</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/inventory/delivery-trips/create')}
+                className="px-4 py-2 bg-white text-[#F85606] hover:bg-orange-50 font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
+              >
+                <Truck className="w-4 h-4 text-[#F85606]" />
+                <span>Xếp chuyến xe ngay →</span>
+              </button>
+            </div>
           )}
         </div>
 
