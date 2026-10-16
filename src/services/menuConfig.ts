@@ -244,6 +244,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     icon: 'Clock',
     epic: 'Sản phẩm & Tồn kho',
     description: 'Báo cáo vòng quay hàng tồn, số ngày lưu kho bình quân và cảnh báo hàng chậm luân chuyển',
+    allowedRoles: [
+      'ROLE_WAREHOUSE',
+      'ROLE_WH_MANAGER',
+      'ROLE_ADMIN',
+      'ROLE_ACCOUNTANT',
+      'ROLE_SALES_MANAGER'
+    ]
+  },
+
+  {
     title: 'Hàng đang đi đường',
     path: '/inventory/in-transit',
     group: 'Sản phẩm & Kho',
