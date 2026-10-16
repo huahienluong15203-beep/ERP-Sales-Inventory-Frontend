@@ -336,12 +336,13 @@ export const CategoryManagement: React.FC = () => {
     return () => clearTimeout(timer);
   }, [assignSearch]);
 
-  // Tải danh sách sản phẩm từ hệ thống (Server-side search + phân trang toàn diện)
-  const loadSystemProducts = useCallback(async (page: number, size: number, search: string) => {
+  // Tải danh sách sản phẩm từ hệ thống (Server-side search + phân trang toàn diện, trừ các sản phẩm đã có trong nhóm)
+  const loadSystemProducts = useCallback(async (page: number, size: number, search: string, excludeCatId?: string) => {
     setLoadingSystemProducts(true);
     try {
       const res = await productService.getProducts({
         keyword: search.trim() || undefined,
+        excludeCategory: excludeCatId,
         page,
         size,
         status: 'ALL'
@@ -357,10 +358,10 @@ export const CategoryManagement: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (isAssignModalOpen) {
-      loadSystemProducts(assignPage, assignPageSize, debouncedAssignSearch);
+    if (isAssignModalOpen && selectedCategory) {
+      loadSystemProducts(assignPage, assignPageSize, debouncedAssignSearch, selectedCategory.id);
     }
-  }, [isAssignModalOpen, assignPage, assignPageSize, debouncedAssignSearch, loadSystemProducts]);
+  }, [isAssignModalOpen, assignPage, assignPageSize, debouncedAssignSearch, selectedCategory, loadSystemProducts]);
 
   // Mở modal gán sản phẩm vào nhóm đang chọn
   const handleOpenAssignModal = () => {
@@ -374,15 +375,17 @@ export const CategoryManagement: React.FC = () => {
     setAssignPageSize(30);
   };
 
-  // Lọc sản phẩm theo trạng thái nhóm
+  // Lọc sản phẩm theo trạng thái nhóm (đã loại trừ toàn bộ sản phẩm đang thuộc nhóm này)
   const filteredSystemProducts = useMemo(() => {
     return systemProducts.filter((p) => {
-      const isCurrentGroup = p.categoryId === selectedCategory?.id;
+      if (selectedCategory && p.categoryId === selectedCategory.id) {
+        return false;
+      }
       if (assignFilter === 'UNASSIGNED') {
         return !p.categoryId || p.category === 'Chưa phân loại';
       }
       if (assignFilter === 'OTHER') {
-        return !isCurrentGroup;
+        return Boolean(p.categoryId) && p.category !== 'Chưa phân loại';
       }
       return true;
     });
@@ -1676,7 +1679,7 @@ export const CategoryManagement: React.FC = () => {
                       : 'text-slate-600 hover:text-slate-900'
                       }`}
                   >
-                    Chưa thuộc nhóm này
+                    Đang ở nhóm khác
                   </button>
                   <button
                     type="button"
@@ -1693,9 +1696,7 @@ export const CategoryManagement: React.FC = () => {
 
               {/* Thông tin chọn nhanh */}
               {(() => {
-                const selectableIds = filteredSystemProducts
-                  .filter((p) => p.categoryId !== selectedCategory.id)
-                  .map((p) => p.id);
+                const selectableIds = filteredSystemProducts.map((p) => p.id);
                 const isAllSelected =
                   selectableIds.length > 0 && selectableIds.every((id) => selectedProductIdsToAssign.has(id));
 
@@ -1709,7 +1710,7 @@ export const CategoryManagement: React.FC = () => {
                         disabled={selectableIds.length === 0}
                         className="rounded text-orange-600 focus:ring-orange-500 cursor-pointer"
                       />
-                      <span>Chọn tất cả các sản phẩm có thể gán ({selectableIds.length})</span>
+                      <span>Chọn tất cả các sản phẩm trên trang ({selectableIds.length})</span>
                     </label>
 
                     <span>
@@ -1734,30 +1735,22 @@ export const CategoryManagement: React.FC = () => {
               ) : (
                 <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
                   {filteredSystemProducts.map((p) => {
-                    const isAlreadyInCurrent = p.categoryId === selectedCategory.id;
                     const isSelected = selectedProductIdsToAssign.has(p.id);
 
                     return (
                       <div
                         key={p.id}
-                        onClick={() => {
-                          if (!isAlreadyInCurrent) handleToggleSelectProduct(p.id);
-                        }}
-                        className={`p-3 flex items-center gap-3 transition-colors ${isAlreadyInCurrent
-                          ? 'bg-slate-50/70 cursor-not-allowed opacity-75'
-                          : isSelected
-                            ? 'bg-orange-50/50 hover:bg-orange-50 cursor-pointer'
-                            : 'bg-white hover:bg-slate-50/80 cursor-pointer'
+                        onClick={() => handleToggleSelectProduct(p.id)}
+                        className={`p-3 flex items-center gap-3 transition-colors ${isSelected
+                          ? 'bg-orange-50/50 hover:bg-orange-50 cursor-pointer'
+                          : 'bg-white hover:bg-slate-50/80 cursor-pointer'
                           }`}
                       >
                         <input
                           type="checkbox"
-                          checked={isSelected || isAlreadyInCurrent}
-                          disabled={isAlreadyInCurrent}
-                          onChange={() => {
-                            if (!isAlreadyInCurrent) handleToggleSelectProduct(p.id);
-                          }}
-                          className="rounded text-orange-600 focus:ring-orange-500 cursor-pointer disabled:opacity-50"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelectProduct(p.id)}
+                          className="rounded text-orange-600 focus:ring-orange-500 cursor-pointer"
                         />
 
                         <div className="flex-1 min-w-0">
@@ -1772,12 +1765,7 @@ export const CategoryManagement: React.FC = () => {
                           </div>
 
                           <div className="mt-1 flex items-center gap-2 text-[11px]">
-                            {isAlreadyInCurrent ? (
-                              <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-semibold border border-emerald-200">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                Đang ở nhóm này
-                              </span>
-                            ) : p.categoryId ? (
+                            {p.categoryId ? (
                               <span className="inline-flex items-center gap-1 text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
                                 Nhóm hiện tại: <span className="font-semibold text-slate-800">{p.category}</span>
                                 <span className="text-orange-600 ml-1 font-semibold">→ Chuyển vào nhóm này</span>

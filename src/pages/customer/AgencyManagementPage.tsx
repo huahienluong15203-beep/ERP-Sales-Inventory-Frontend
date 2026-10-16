@@ -341,11 +341,6 @@ export const AgencyManagementPage: React.FC = () => {
     setRouteQuickFilter('ALL');
   };
 
-  // Mở modal tạo mới
-  const handleOpenCreate = () => {
-    setEditingAgency(null);
-    setIsFormModalOpen(true);
-  };
 
   // Mở modal sửa
   const handleOpenEdit = (item: Agency) => {

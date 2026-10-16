@@ -57,6 +57,7 @@ export function formatCurrencyVND(amount: number): string {
 export interface ProductFilterParams {
   keyword?: string;
   category?: string;
+  excludeCategory?: string;
   status?: ProductStatus | 'ALL';
   /** Trang đếm từ 0 (giống API) */
   page?: number;
@@ -183,6 +184,7 @@ export const productService = {
     const query = new URLSearchParams();
     if (params.keyword?.trim()) query.set('keyword', params.keyword.trim());
     if (params.category && params.category !== 'ALL') query.set('category', params.category);
+    if (params.excludeCategory && params.excludeCategory !== 'ALL') query.set('excludeCategory', params.excludeCategory);
     if (params.status && params.status !== 'ALL') query.set('status', params.status);
     query.set('page', String(page));
     query.set('size', String(size));
