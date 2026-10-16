@@ -11,7 +11,8 @@ import {
   Minus,
   Check,
   RefreshCw,
-  Truck
+  Truck,
+  Package
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useParams } from '../../routes/Router';
@@ -57,7 +58,6 @@ export const PickingListDetailPage: React.FC = () => {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
   const [savingItemIds, setSavingItemIds] = useState<Record<number, boolean>>({});
   const [completing, setCompleting] = useState<boolean>(false);
-  const [dispatchingAll, setDispatchingAll] = useState<boolean>(false);
 
   const loadData = async () => {
     if (!id) return;
@@ -218,40 +218,7 @@ export const PickingListDetailPage: React.FC = () => {
     }
   };
 
-  // Xuất kho toàn bộ đơn hàng trong phiếu
-  const handleDispatchAllOrders = async () => {
-    const ordersToDispatch = pickingList?.orders || [];
-    if (ordersToDispatch.length === 0) {
-      showToast('Thông báo', 'Không tìm thấy danh sách đơn hàng trong phiếu này', 'info');
-      return;
-    }
 
-    setDispatchingAll(true);
-    let count = 0;
-    try {
-      for (const ord of ordersToDispatch) {
-        const ordId = (ord as any).orderId || ord.id;
-        if (ordId) {
-          try {
-            await updateOrderStatus(ordId, 'DISPATCHED', `Xuất kho đợt soạn ${pickingList?.code}`);
-            count++;
-          } catch (e: any) {
-            console.warn(`Lỗi xuất kho đơn ${ord.code}:`, e);
-          }
-        }
-      }
-      if (count > 0) {
-        showToast('Thành công', `Đã xác nhận xuất kho thành công ${count} đơn hàng để xếp chuyến xe!`, 'success');
-      } else {
-        showToast('Thông báo', 'Các đơn hàng đã ở trạng thái xuất kho hoặc đã xử lý', 'info');
-      }
-      loadData();
-    } catch (err: any) {
-      showToast('Lỗi xuất kho', err.message || 'Không thể xuất kho', 'error');
-    } finally {
-      setDispatchingAll(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -368,15 +335,17 @@ export const PickingListDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Progress Sticky Header */}
-      <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white p-4 rounded-2xl shadow-md">
+      {/* Progress Sticky Header (Nền trắng, thanh cam nhẹ theo yêu cầu) */}
+      <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <div className="text-xs text-orange-100 uppercase tracking-wider font-semibold">
-              Tiến độ soạn hàng theo đường đi trong kho (Route Sequence)
+            <div className="text-xs text-gray-500 uppercase tracking-wider font-bold flex items-center gap-1.5">
+              <Package className="w-4 h-4 text-[#F85606]" />
+              <span>Tiến độ soạn hàng</span>
             </div>
-            <div className="text-lg font-black mt-0.5">
-              {pickingList.completedItems} / {pickingList.totalItems} mặt hàng đã gom xong ({percent}%)
+            <div className="text-lg font-black text-gray-900 mt-1">
+              {pickingList.completedItems} / {pickingList.totalItems} mặt hàng đã gom xong{' '}
+              <span className="text-[#F85606]">({percent}%)</span>
             </div>
           </div>
 
@@ -384,12 +353,12 @@ export const PickingListDetailPage: React.FC = () => {
             <button
               onClick={handleCompletePicking}
               disabled={completing}
-              className="px-5 py-2.5 bg-white text-orange-600 hover:bg-orange-50 font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+              className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
             >
               {completing ? (
-                <RefreshCw className="w-4 h-4 animate-spin text-orange-600" />
+                <RefreshCw className="w-4 h-4 animate-spin text-white" />
               ) : (
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <CheckCircle2 className="w-4 h-4 text-white" />
               )}
               Chốt hoàn thành đợt soạn
             </button>
@@ -399,35 +368,20 @@ export const PickingListDetailPage: React.FC = () => {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={handleDispatchAllOrders}
-                disabled={dispatchingAll}
-                className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
-                title="Đảm bảo tất cả các đơn hàng đều đã chuyển sang trạng thái Đã xuất kho để xếp xe"
-              >
-                {dispatchingAll ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-                )}
-                <span>Xuất kho các đơn</span>
-              </button>
-
-              <button
-                type="button"
                 onClick={() => navigate('/inventory/delivery-trips/create')}
-                className="px-4 py-2 bg-white text-[#F85606] hover:bg-orange-50 font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
+                className="px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
               >
-                <Truck className="w-4 h-4 text-[#F85606]" />
+                <Truck className="w-4 h-4 text-white" />
                 <span>Xếp chuyến xe ngay →</span>
               </button>
             </div>
           )}
         </div>
 
-        {/* Progress Bar */}
-        <div className="w-full bg-black/20 rounded-full h-2.5 mt-3 overflow-hidden">
+        {/* Progress Bar (Nền nhạt, thanh cam nhẹ) */}
+        <div className="w-full bg-orange-100/60 rounded-full h-2.5 mt-3.5 overflow-hidden">
           <div
-            className="bg-white h-2.5 rounded-full transition-all duration-300"
+            className="bg-gradient-to-r from-orange-400 to-amber-400 h-2.5 rounded-full transition-all duration-300"
             style={{ width: `${percent}%` }}
           />
         </div>

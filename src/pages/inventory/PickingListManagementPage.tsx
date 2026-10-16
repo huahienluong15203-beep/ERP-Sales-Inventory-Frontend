@@ -328,7 +328,7 @@ export const PickingListManagementPage: React.FC = () => {
                   <th className="py-3 px-4">Mã phiếu</th>
                   <th className="py-3 px-4">Kho xuất</th>
                   <th className="py-3 px-4">Người soạn</th>
-                  <th className="py-3 px-4 text-center">Số đơn</th>
+                  <th className="py-3 px-3 text-center w-24">Số đơn</th>
                   <th className="py-3 px-4">Tiến độ soạn hàng</th>
                   <th className="py-3 px-4 text-center">Trạng thái</th>
                   <th className="py-3 px-4">Ngày tạo</th>
@@ -359,28 +359,10 @@ export const PickingListManagementPage: React.FC = () => {
                           <span>{list.pickerName || 'Chưa gán'}</span>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3.5 px-3 text-center w-24 whitespace-nowrap">
                         <span className="inline-block px-2.5 py-0.5 rounded-full bg-gray-100 font-bold text-gray-800 text-xs">
                           {list.orderCount} đơn
                         </span>
-                        {list.orders && list.orders.length > 0 && (
-                          <div className="mt-1.5 flex flex-wrap justify-center gap-1 max-w-[200px] mx-auto">
-                            {list.orders.slice(0, 3).map((ord, idx) => (
-                              <span
-                                key={idx}
-                                className="font-mono text-[10px] text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200 font-semibold"
-                                title={`Đơn hàng: ${ord.code || (ord as any).orderCode}`}
-                              >
-                                {ord.code || (ord as any).orderCode}
-                              </span>
-                            ))}
-                            {list.orders.length > 3 && (
-                              <span className="text-[10px] text-gray-400 font-semibold self-center">
-                                +{list.orders.length - 3}
-                              </span>
-                            )}
-                          </div>
-                        )}
                       </td>
                       <td className="py-3.5 px-4 w-48">
                         <div className="space-y-1">
