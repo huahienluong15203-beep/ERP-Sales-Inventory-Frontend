@@ -9,7 +9,10 @@ import {
   CheckCircle2,
   ListOrdered,
   ShieldAlert,
-  Search
+  Search,
+  Camera,
+  Trash2,
+  Clock
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatCurrencyVND } from '../../services/orderService';
@@ -17,7 +20,8 @@ import { numberToVietnameseWords } from '../../utils/numberToVietnameseWords';
 import {
   fetchCustomerInvoicesForDebt,
   fetchCustomerCreditStatus,
-  createPaymentReceipt
+  createPaymentReceipt,
+  submitRouteCashCollection
 } from '../../services/paymentApi';
 import { fetchAgencies } from '../../services/agencyApi';
 import type { Agency, CreditStatusResponse } from '../../types/agency';
@@ -80,6 +84,26 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // S7-05: Chế độ thu tiền theo tuyến kèm ảnh biên lai (Chờ nộp quỹ)
+  const isSalesRep = user?.role === 'ROLE_SALES_REP';
+  const [isRouteCashMode, setIsRouteCashMode] = useState<boolean>(isSalesRep);
+  const [receiptImage, setReceiptImage] = useState<string>('');
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setValidationError('Kích thước ảnh biên lai không được vượt quá 5MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      setReceiptImage(String(uploadEvent.target?.result || ''));
+      setValidationError(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Modal in phiếu thu sau khi lưu thành công
   const [savedReceiptForPrint, setSavedReceiptForPrint] = useState<PaymentReceipt | null>(null);
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
@@ -87,6 +111,9 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   // Tải danh sách đại lý khi modal mở
   useEffect(() => {
     if (!isOpen) return;
+    setIsRouteCashMode(user?.role === 'ROLE_SALES_REP');
+    setReceiptImage('');
+    setValidationError(null);
 
     if (initialCustomerId) {
       setSelectedCustomerId(String(initialCustomerId));
@@ -248,8 +275,8 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
       return;
     }
 
-    // Nếu chọn chỉ định: kiểm tra tổng phân bổ có khớp với số tiền thu không
-    if (allocationType === 'SPECIFIC') {
+    // Nếu chọn chỉ định: kiểm tra tổng phân bổ có khớp với số tiền thu không (chỉ khi không ở chế độ thu tiền theo tuyến)
+    if (!isRouteCashMode && allocationType === 'SPECIFIC') {
       if (totalSpecificAllocated !== amount) {
         setValidationError(
           `Tổng số tiền phân bổ vào các hoá đơn (${formatCurrencyVND(totalSpecificAllocated)}) chưa khớp với tổng số tiền thu (${formatCurrencyVND(amount)})`
@@ -262,42 +289,68 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     setValidationError(null);
 
     try {
-      const specificArray =
-        allocationType === 'SPECIFIC'
-          ? Object.entries(specificAllocations)
+      const selectedAgency = agencies.find((a) => String(a.id) === String(selectedCustomerId));
+      let created: PaymentReceipt;
+
+      if (isRouteCashMode) {
+        created = await submitRouteCashCollection(
+          {
+            customerId: Number(selectedCustomerId),
+            amount,
+            paymentMethod,
+            paymentDate,
+            notes: notes.trim(),
+            receiptImageUrl: receiptImage.startsWith('http') ? receiptImage : undefined,
+            receiptImageBase64: receiptImage.startsWith('data:') ? receiptImage : (receiptImage || undefined)
+          },
+          {
+            code: selectedAgency?.code || `DL-${selectedCustomerId}`,
+            name: selectedAgency?.name || `Đại lý #${selectedCustomerId}`,
+            address: selectedAgency?.address,
+            phone: selectedAgency?.phone
+          },
+          {
+            username: user?.username || 'sales_rep',
+            fullName: user?.fullName || collectorName.trim() || 'Nhân viên kinh doanh'
+          }
+        );
+        showToast('Ghi nhận thu tiền tại tuyến thành công! Trạng thái: Chờ nộp quỹ.', 'success');
+      } else {
+        const specificArray =
+          allocationType === 'SPECIFIC'
+            ? Object.entries(specificAllocations)
               .filter(([, val]) => val > 0)
               .map(([idStr, val]) => ({
                 invoiceId: Number(idStr),
                 amount: val
               }))
-          : undefined;
+            : undefined;
 
-      const selectedAgency = agencies.find((a) => String(a.id) === String(selectedCustomerId));
+        created = await createPaymentReceipt(
+          {
+            customerId: Number(selectedCustomerId),
+            amount,
+            paymentMethod,
+            paymentDate,
+            collectorName: collectorName.trim() || 'Kế toán công nợ',
+            notes: notes.trim(),
+            allocationType,
+            specificAllocations: specificArray
+          },
+          {
+            code: selectedAgency?.code || `DL-${selectedCustomerId}`,
+            name: selectedAgency?.name || `Đại lý #${selectedCustomerId}`,
+            address: selectedAgency?.address,
+            phone: selectedAgency?.phone
+          },
+          {
+            username: user?.username || 'accountant',
+            fullName: user?.fullName || 'Kế toán'
+          }
+        );
+        showToast('Ghi nhận phiếu thu và đối trừ công nợ thành công!', 'success');
+      }
 
-      const created = await createPaymentReceipt(
-        {
-          customerId: Number(selectedCustomerId),
-          amount,
-          paymentMethod,
-          paymentDate,
-          collectorName: collectorName.trim() || 'Kế toán công nợ',
-          notes: notes.trim(),
-          allocationType,
-          specificAllocations: specificArray
-        },
-        {
-          code: selectedAgency?.code || `DL-${selectedCustomerId}`,
-          name: selectedAgency?.name || `Đại lý #${selectedCustomerId}`,
-          address: selectedAgency?.address,
-          phone: selectedAgency?.phone
-        },
-        {
-          username: user?.username || 'accountant',
-          fullName: user?.fullName || 'Kế toán'
-        }
-      );
-
-      showToast('Ghi nhận phiếu thu và đối trừ công nợ thành công!', 'success');
       if (onSuccess) {
         onSuccess(created);
       }
@@ -516,6 +569,76 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               </div>
             </div>
 
+            {/* S7-05: Chế độ thu tiền theo tuyến kèm ảnh biên lai */}
+            <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isRouteCashMode}
+                    onChange={(e) => {
+                      setIsRouteCashMode(e.target.checked);
+                      if (e.target.checked) {
+                        setAllocationType('FIFO');
+                      }
+                    }}
+                    className="rounded border-amber-400 text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer"
+                  />
+                  <div>
+                    <span className="font-bold text-xs text-amber-950 uppercase tracking-wide flex items-center gap-1.5">
+                      <Clock size={14} className="text-amber-600" />
+                      <span>Thu tiền theo tuyến (Chờ nộp quỹ)</span>
+                    </span>
+                    <span className="text-[11px] text-amber-800 block mt-0.5">
+                      Ghi nhận thu tiền tại cửa hàng kèm ảnh biên lai, khoản thu chờ kế toán xác nhận nộp quỹ
+                    </span>
+                  </div>
+                </label>
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-200/80 text-amber-900 border border-amber-300">
+                  {isRouteCashMode ? 'Chờ nộp quỹ' : 'Ghi nhận trực tiếp'}
+                </span>
+              </div>
+
+              {isRouteCashMode && (
+                <div className="space-y-2 pt-2 border-t border-amber-200">
+                  <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                    <Camera size={14} className="text-amber-700" />
+                    <span>Ảnh biên lai thu tiền chụp tại cửa hàng *</span>
+                  </label>
+
+                  {receiptImage ? (
+                    <div className="relative inline-block border-2 border-emerald-500 rounded-xl overflow-hidden shadow-sm">
+                      <img src={receiptImage} alt="Ảnh biên lai" className="h-32 w-auto object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setReceiptImage('')}
+                        className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white hover:bg-black transition cursor-pointer"
+                        title="Xoá ảnh biên lai"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="px-3.5 py-2 rounded-xl bg-white border border-amber-300 hover:bg-amber-100 text-amber-900 font-semibold text-xs flex items-center gap-2 transition cursor-pointer shadow-xs">
+                        <Camera size={15} className="text-amber-700" />
+                        <span>Chụp hoặc chọn ảnh biên lai</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="hidden"
+                        />
+                      </label>
+                      <span className="text-[11px] text-amber-700 italic">
+                        (Lưu vết ảnh biên lai để đối chiếu tiền đã thu với tiền đã nộp không tranh cãi)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Khối 3: Cơ chế đối trừ công nợ (FIFO hoặc Chỉ định cụ thể) */}
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
@@ -528,11 +651,10 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label
                   onClick={() => setAllocationType('FIFO')}
-                  className={`p-3.5 rounded-xl border-2 flex items-start gap-3 cursor-pointer transition ${
-                    allocationType === 'FIFO'
+                  className={`p-3.5 rounded-xl border-2 flex items-start gap-3 cursor-pointer transition ${allocationType === 'FIFO'
                       ? 'border-emerald-600 bg-emerald-50/60 text-emerald-950 shadow-xs'
                       : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
-                  }`}
+                    }`}
                 >
                   <input
                     type="radio"
@@ -551,11 +673,10 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
                 <label
                   onClick={() => setAllocationType('SPECIFIC')}
-                  className={`p-3.5 rounded-xl border-2 flex items-start gap-3 cursor-pointer transition ${
-                    allocationType === 'SPECIFIC'
+                  className={`p-3.5 rounded-xl border-2 flex items-start gap-3 cursor-pointer transition ${allocationType === 'SPECIFIC'
                       ? 'border-emerald-600 bg-emerald-50/60 text-emerald-950 shadow-xs'
                       : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
-                  }`}
+                    }`}
                 >
                   <input
                     type="radio"
@@ -583,11 +704,10 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   </span>
                   {allocationType === 'SPECIFIC' && (
                     <span
-                      className={`text-xs font-bold font-mono px-2 py-0.5 rounded ${
-                        totalSpecificAllocated === amount
+                      className={`text-xs font-bold font-mono px-2 py-0.5 rounded ${totalSpecificAllocated === amount
                           ? 'bg-emerald-100 text-emerald-800'
                           : 'bg-amber-100 text-amber-800'
-                      }`}
+                        }`}
                     >
                       {totalSpecificAllocated === amount ? 'Đã phân bổ khớp 100%' : 'Chưa phân bổ khớp'}
                     </span>
@@ -677,39 +797,39 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                                   <td className="px-3 py-2 text-right font-mono text-rose-600 font-bold">
                                     {formatCurrencyVND(inv.remainingAmount)}
                                   </td>
-                                <td className="px-3 py-2 text-right">
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    max={inv.remainingAmount}
-                                    value={curVal || ''}
-                                    placeholder="0"
-                                    onChange={(e) =>
-                                      handleSpecificAmountChange(
-                                        inv.id,
-                                        Number(e.target.value) || 0,
-                                        inv.remainingAmount
-                                      )
-                                    }
-                                    className="w-full px-2 py-1 text-right font-mono font-bold text-xs bg-white border border-gray-300 rounded focus:ring-1 focus:ring-emerald-500"
-                                  />
-                                </td>
-                                <td className="px-3 py-2 text-center">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAllocateMaxForInvoice(inv)}
-                                    className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded transition cursor-pointer"
-                                  >
-                                    Điền hết
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                                  <td className="px-3 py-2 text-right">
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={inv.remainingAmount}
+                                      value={curVal || ''}
+                                      placeholder="0"
+                                      onChange={(e) =>
+                                        handleSpecificAmountChange(
+                                          inv.id,
+                                          Number(e.target.value) || 0,
+                                          inv.remainingAmount
+                                        )
+                                      }
+                                      className="w-full px-2 py-1 text-right font-mono font-bold text-xs bg-white border border-gray-300 rounded focus:ring-1 focus:ring-emerald-500"
+                                    />
+                                  </td>
+                                  <td className="px-3 py-2 text-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAllocateMaxForInvoice(inv)}
+                                      className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded transition cursor-pointer"
+                                    >
+                                      Điền hết
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               </div>
@@ -739,7 +859,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                 ) : (
                   <>
                     <CheckCircle2 size={16} />
-                    <span>Xác nhận thu tiền & In phiếu</span>
+                    <span>{isRouteCashMode ? 'Ghi nhận thu tiền tại tuyến' : 'Xác nhận thu tiền & In phiếu'}</span>
                   </>
                 )}
               </button>

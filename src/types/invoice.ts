@@ -26,6 +26,7 @@ export interface InvoiceSummaryResponse {
   totalAmount: number;
   paidAmount?: number;
   remainingAmount?: number;
+  paymentStatus?: InvoiceStatus;
   status: InvoiceStatus;
   items?: InvoiceItem[];
   pdfUrl?: string;

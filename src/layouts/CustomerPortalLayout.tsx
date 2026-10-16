@@ -19,6 +19,7 @@ import type { Agency, CreditStatusResponse } from '../types/agency';
 import { formatCurrencyVND } from '../services/orderService';
 import { getAvatarFullUrl } from '../services/api';
 import { SearchSelect } from '../components/common/SearchSelect';
+import { AgencyNotificationBell } from '../components/common/AgencyNotificationBell';
 
 interface CustomerPortalLayoutProps {
   children: ReactNode;
@@ -160,6 +161,17 @@ export const CustomerPortalLayout: React.FC<CustomerPortalLayoutProps> = ({
                   )}
                 </button>
               )}
+
+              {/* Chuông Thông Báo Nhắc Nợ & Hạn Thanh Toán (S7-08) */}
+              <AgencyNotificationBell
+                onNavigateToDebt={() => {
+                  if (onChangeTab) {
+                    onChangeTab('debt');
+                  } else {
+                    navigate('/portal?tab=debt');
+                  }
+                }}
+              />
 
               {/* Menu Tài khoản */}
               <div className="relative">

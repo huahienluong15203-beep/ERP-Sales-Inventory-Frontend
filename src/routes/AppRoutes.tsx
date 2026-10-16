@@ -48,7 +48,10 @@ import { DeliveryTripManagementPage } from '../pages/inventory/DeliveryTripManag
 import { DeliveryTripCreatePage } from '../pages/inventory/DeliveryTripCreatePage';
 import { DeliveryTripDetailPage } from '../pages/inventory/DeliveryTripDetailPage';
 import { DebtAdjustmentPage } from '../pages/payment/DebtAdjustmentPage';
+import { PaymentReconciliationPage } from '../pages/payment/PaymentReconciliationPage';
 import { ProductLotManagementPage } from '../pages/inventory/ProductLotManagementPage';
+import { InventoryAgingReportPage } from '../pages/inventory/InventoryAgingReportPage';
+import { InTransitDashboardPage } from '../pages/inventory/InTransitDashboardPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -518,6 +521,28 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* Báo cáo luân chuyển kho & tuổi hàng (S8-07) */}
+        <Route
+          path="/inventory/aging"
+        {/* Theo dõi hàng đi đường & tiến độ giao hàng (S6-07) */}
+        <Route
+          path="/inventory/in-transit"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <InventoryAgingReportPage />
+              <InTransitDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* S6-03: Phiếu soạn hàng (Wave Picking) */}
         <Route
           path="/inventory/picking-lists"
@@ -768,6 +793,23 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <DebtAdjustmentPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Đối chiếu thu tiền theo tuyến & nộp quỹ (S7-05) */}
+        <Route
+          path="/payments/reconciliation"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <PaymentReconciliationPage />
             </ProtectedRoute>
           }
         />

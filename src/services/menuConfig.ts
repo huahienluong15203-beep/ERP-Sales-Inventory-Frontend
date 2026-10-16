@@ -73,6 +73,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Đối chiếu thu tiền tuyến',
+    path: '/payments/reconciliation',
+    group: 'Bán hàng',
+    icon: 'Receipt',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: 'Đối chiếu tiền đã thu trên tuyến với tiền đã nộp về công ty mà không tranh cãi ',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
+  },
+
+  {
     title: 'Danh mục sản phẩm',
     path: '/products',
     group: 'Sản phẩm & Kho',
@@ -208,6 +218,28 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     icon: 'Boxes',
     epic: 'Sản phẩm & Tồn kho',
     description: 'Theo dõi lô sản xuất, hạn sử dụng, cảnh báo cận date và quy tắc xuất FEFO',
+    allowedRoles: [
+      'ROLE_WAREHOUSE',
+      'ROLE_WH_MANAGER',
+      'ROLE_ADMIN',
+      'ROLE_ACCOUNTANT',
+      'ROLE_SALES_MANAGER'
+    ]
+  },
+
+  {
+    title: 'Luân chuyển kho & Tuổi hàng',
+    path: '/inventory/aging',
+    group: 'Sản phẩm & Kho',
+    icon: 'Clock',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Báo cáo vòng quay hàng tồn, số ngày lưu kho bình quân và cảnh báo hàng chậm luân chuyển',
+    title: 'Hàng đang đi đường',
+    path: '/inventory/in-transit',
+    group: 'Sản phẩm & Kho',
+    icon: 'Truck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Theo dõi hàng đã xuất kho nhưng đang trên đường giao, cảnh báo giao trễ',
     allowedRoles: [
       'ROLE_WAREHOUSE',
       'ROLE_WH_MANAGER',
