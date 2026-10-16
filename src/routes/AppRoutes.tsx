@@ -51,6 +51,7 @@ import { DebtAdjustmentPage } from '../pages/payment/DebtAdjustmentPage';
 import { PaymentReconciliationPage } from '../pages/payment/PaymentReconciliationPage';
 import { ProductLotManagementPage } from '../pages/inventory/ProductLotManagementPage';
 import { InventoryAgingReportPage } from '../pages/inventory/InventoryAgingReportPage';
+import { InTransitDashboardPage } from '../pages/inventory/InTransitDashboardPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -523,6 +524,9 @@ export const AppRoutes: React.FC = () => {
         {/* Báo cáo luân chuyển kho & tuổi hàng (S8-07) */}
         <Route
           path="/inventory/aging"
+        {/* Theo dõi hàng đi đường & tiến độ giao hàng (S6-07) */}
+        <Route
+          path="/inventory/in-transit"
           element={
             <ProtectedRoute
               allowedRoles={[
@@ -534,6 +538,7 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <InventoryAgingReportPage />
+              <InTransitDashboardPage />
             </ProtectedRoute>
           }
         />
