@@ -50,6 +50,7 @@ import { DeliveryTripDetailPage } from '../pages/inventory/DeliveryTripDetailPag
 import { DebtAdjustmentPage } from '../pages/payment/DebtAdjustmentPage';
 import { PaymentReconciliationPage } from '../pages/payment/PaymentReconciliationPage';
 import { ProductLotManagementPage } from '../pages/inventory/ProductLotManagementPage';
+import { SalesTargetManagementPage } from '../pages/kpi/SalesTargetManagementPage';
 import { InventoryAgingReportPage } from '../pages/inventory/InventoryAgingReportPage';
 import { InTransitDashboardPage } from '../pages/inventory/InTransitDashboardPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
@@ -810,6 +811,22 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <PaymentReconciliationPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Chỉ tiêu doanh số (KPI) & Tiến độ (S8-04) */}
+        <Route
+          path="/kpi/targets"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <SalesTargetManagementPage />
             </ProtectedRoute>
           }
         />
