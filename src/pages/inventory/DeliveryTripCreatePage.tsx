@@ -216,7 +216,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
           >
             {SYSTEM_WAREHOUSES.map((wh) => (
               <option key={wh.id} value={wh.id}>
-                📍 {wh.name}
+                {wh.name}
               </option>
             ))}
           </select>
@@ -254,7 +254,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
                   onChange={(e) => setDistrictFilter(e.target.value)}
                   className="w-full text-xs font-medium border border-gray-300 rounded-lg px-2.5 py-1.5 bg-gray-50 focus:ring-2 focus:ring-orange-200 outline-none"
                 >
-                  <option value="ALL">📍 Tất cả khu vực</option>
+                  <option value="ALL">Tất cả khu vực</option>
                   {districts.map((dist, idx) => (
                     <option key={idx} value={dist}>
                       {dist}

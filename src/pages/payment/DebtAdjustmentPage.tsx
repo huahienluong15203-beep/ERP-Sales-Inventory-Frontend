@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  FileCheck,
   CheckCircle2,
   Clock,
   Search,
   RefreshCw,
   Eye,
-  DollarSign
+  DollarSign,
+  ArrowLeft
 } from 'lucide-react';
+import { useNavigate } from '../../routes/Router';
 import { formatCurrencyVND } from '../../services/orderService';
 import { fetchDebtAdjustments } from '../../services/debtAdjustmentApi';
 import { fetchAgencies } from '../../services/agencyApi';
@@ -17,6 +18,7 @@ import { SearchSelect } from '../../components/common/SearchSelect';
 import { DebtAdjustmentModal } from '../../components/payment/DebtAdjustmentModal';
 
 export const DebtAdjustmentPage: React.FC = () => {
+  const navigate = useNavigate();
   const [adjustments, setAdjustments] = useState<DebtAdjustment[]>([]);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -70,27 +72,23 @@ export const DebtAdjustmentPage: React.FC = () => {
 
   return (
     <div className="space-y-4 antialiased p-4 sm:p-6 bg-slate-50/50 min-h-screen">
-      {/* 1. Header Trang */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4.5 rounded-2xl border border-gray-200/80 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
-            <FileCheck size={20} />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">
-              Chứng từ Giảm trừ Công nợ khi Trả hàng
-            </h1>
-            <p className="text-xs text-gray-500">
-              Xử lý và duyệt giảm trừ công nợ đại lý từ phiếu trả hàng nhập lại kho theo đúng giá hoá đơn gốc
-            </p>
-          </div>
-        </div>
+      {/* 1. Header Trang - Tinh gọn chỉ nút Quay lại và Làm mới */}
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => navigate('/invoices')}
+          className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+          title="Quay lại danh sách hoá đơn"
+        >
+          <ArrowLeft size={16} />
+          <span>Quay lại</span>
+        </button>
 
         <button
           type="button"
           onClick={() => loadData()}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-gray-200 text-gray-700 hover:text-blue-600 hover:border-blue-300 rounded-xl text-xs font-semibold transition cursor-pointer shadow-2xs self-end sm:self-auto"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-gray-200 text-gray-700 hover:text-[#F85606] hover:border-orange-300 rounded-xl text-xs font-semibold transition cursor-pointer shadow-2xs"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           <span>Làm mới</span>
@@ -123,10 +121,10 @@ export const DebtAdjustmentPage: React.FC = () => {
 
         <div className="p-4 rounded-2xl bg-white border border-gray-200 shadow-2xs space-y-1">
           <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-            <DollarSign size={13} className="text-blue-600" />
+            <DollarSign size={13} className="text-[#F85606]" />
             <span>Tổng tiền đã cấn trừ nợ</span>
           </span>
-          <div className="text-2xl font-black text-blue-700 font-mono">
+          <div className="text-2xl font-black text-[#F85606] font-mono">
             {formatCurrencyVND(totalApprovedAmount)}
           </div>
           <div className="text-[11px] text-gray-500">Giảm trừ theo giá gốc bán hàng</div>
@@ -144,7 +142,7 @@ export const DebtAdjustmentPage: React.FC = () => {
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               placeholder="Tìm mã chứng từ, mã trả hàng, hoá đơn gốc..."
-              className="w-full pl-9 pr-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition min-h-[38px]"
+              className="w-full pl-9 pr-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606] transition min-h-[38px]"
             />
           </div>
 
@@ -154,7 +152,7 @@ export const DebtAdjustmentPage: React.FC = () => {
               value={selectedCustomerId}
               onChange={(e) => setSelectedCustomerId(e.target.value)}
               searchPlaceholder="Gõ để tìm đại lý..."
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
             >
               <option value="ALL">Tất cả đại lý / Khách hàng</option>
               {agencies.map((ag) => (
@@ -178,7 +176,7 @@ export const DebtAdjustmentPage: React.FC = () => {
                 onClick={() => setStatusFilter(f.key)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
                   statusFilter === f.key
-                    ? 'bg-blue-600 text-white shadow-xs'
+                    ? 'bg-[#F85606] text-white shadow-xs'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -209,7 +207,7 @@ export const DebtAdjustmentPage: React.FC = () => {
                 <tr>
                   <td colSpan={7} className="py-14 text-center text-gray-400">
                     <div className="flex flex-col items-center gap-2">
-                      <RefreshCw size={20} className="animate-spin text-blue-600" />
+                      <RefreshCw size={20} className="animate-spin text-[#F85606]" />
                       <span>Đang tải danh sách chứng từ điều chỉnh...</span>
                     </div>
                   </td>
@@ -222,7 +220,7 @@ export const DebtAdjustmentPage: React.FC = () => {
                 </tr>
               ) : (
                 adjustments.map((adj) => (
-                  <tr key={adj.id} className="hover:bg-blue-50/20 transition">
+                  <tr key={adj.id} className="hover:bg-orange-50/20 transition">
                     <td className="py-3 px-4 font-mono font-bold text-gray-900 whitespace-nowrap">
                       {adj.adjustmentCode}
                       <span className="text-[10px] text-gray-400 block font-normal">{adj.createdAt}</span>
@@ -234,7 +232,7 @@ export const DebtAdjustmentPage: React.FC = () => {
                     <td className="py-3 px-4 font-mono font-bold text-gray-700 whitespace-nowrap">
                       {adj.returnOrderCode}
                     </td>
-                    <td className="py-3 px-4 font-mono font-bold text-indigo-700 whitespace-nowrap">
+                    <td className="py-3 px-4 font-mono font-bold text-[#F85606] whitespace-nowrap">
                       {adj.originalInvoiceCode}
                     </td>
                     <td className="py-3 px-4 text-right font-mono font-bold text-rose-700 whitespace-nowrap">
@@ -259,7 +257,7 @@ export const DebtAdjustmentPage: React.FC = () => {
                         onClick={() => openReviewModal(adj)}
                         className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                           adj.status === 'PENDING_APPROVAL'
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
+                            ? 'bg-[#F85606] hover:bg-orange-600 text-white shadow-xs'
                             : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                         }`}
                       >

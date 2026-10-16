@@ -73,6 +73,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Hóa đơn bán hàng',
+    path: '/invoices',
+    group: 'Bán hàng',
+    icon: 'Receipt',
+    epic: 'Bán hàng & Hóa đơn',
+    description: 'Phát hành hoá đơn từ phiếu đã giao (POD), gộp nhiều phiếu, xuất mẫu in A4',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
+  },
+
+  {
     title: 'Đối chiếu thu tiền tuyến',
     path: '/payments/reconciliation',
     group: 'Bán hàng',
@@ -244,6 +254,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     icon: 'Clock',
     epic: 'Sản phẩm & Tồn kho',
     description: 'Báo cáo vòng quay hàng tồn, số ngày lưu kho bình quân và cảnh báo hàng chậm luân chuyển',
+    allowedRoles: [
+      'ROLE_WAREHOUSE',
+      'ROLE_WH_MANAGER',
+      'ROLE_ADMIN',
+      'ROLE_ACCOUNTANT',
+      'ROLE_SALES_MANAGER'
+    ]
+  },
+
+  {
     title: 'Hàng đang đi đường',
     path: '/inventory/in-transit',
     group: 'Sản phẩm & Kho',
