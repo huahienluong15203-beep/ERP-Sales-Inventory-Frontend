@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  FileCheck,
   CheckCircle2,
   Clock,
   Search,
@@ -73,31 +72,23 @@ export const DebtAdjustmentPage: React.FC = () => {
 
   return (
     <div className="space-y-4 antialiased p-4 sm:p-6 bg-slate-50/50 min-h-screen">
-      {/* 1. Header Trang - Tinh gọn theo yêu cầu */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4.5 rounded-2xl border border-gray-200/80 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/invoices')}
-            className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
-            title="Quay lại danh sách hoá đơn"
-          >
-            <ArrowLeft size={16} />
-            <span>Quay lại</span>
-          </button>
-          <div className="w-10 h-10 rounded-xl bg-orange-100 text-[#F85606] flex items-center justify-center font-bold shadow-xs">
-            <FileCheck size={20} />
-          </div>
-          <h1 className="text-lg font-bold text-gray-900">
-            Chứng từ giảm trừ công nợ khi trả hàng
-          </h1>
-        </div>
+      {/* 1. Header Trang - Tinh gọn chỉ nút Quay lại và Làm mới */}
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => navigate('/invoices')}
+          className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+          title="Quay lại danh sách hoá đơn"
+        >
+          <ArrowLeft size={16} />
+          <span>Quay lại</span>
+        </button>
 
         <button
           type="button"
           onClick={() => loadData()}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-gray-200 text-gray-700 hover:text-[#F85606] hover:border-orange-300 rounded-xl text-xs font-semibold transition cursor-pointer shadow-2xs self-end sm:self-auto"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-gray-200 text-gray-700 hover:text-[#F85606] hover:border-orange-300 rounded-xl text-xs font-semibold transition cursor-pointer shadow-2xs"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           <span>Làm mới</span>

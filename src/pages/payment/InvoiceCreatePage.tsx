@@ -208,25 +208,17 @@ export const InvoiceCreatePage: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20 antialiased">
-      {/* 1. Header tinh gọn có nút Quay lại kèm chữ và icon màu cam */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4.5 rounded-2xl border border-gray-200/80 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/invoices')}
-            className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
-            title="Quay lại danh sách hoá đơn"
-          >
-            <ArrowLeft size={16} />
-            <span>Quay lại</span>
-          </button>
-          <div className="w-10 h-10 rounded-xl bg-orange-100 text-[#F85606] flex items-center justify-center font-bold shadow-xs">
-            <Receipt size={20} />
-          </div>
-          <h1 className="text-lg font-bold text-gray-900">
-            Lập hoá đơn bán hàng từ phiếu đã giao
-          </h1>
-        </div>
+      {/* 1. Header tinh gọn chỉ nút Quay lại */}
+      <div>
+        <button
+          type="button"
+          onClick={() => navigate('/invoices')}
+          className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+          title="Quay lại danh sách hoá đơn"
+        >
+          <ArrowLeft size={16} />
+          <span>Quay lại</span>
+        </button>
       </div>
 
       {/* 2. Hai cột nằm ngang cao bằng nhau */}
