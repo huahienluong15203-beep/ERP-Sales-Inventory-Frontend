@@ -386,9 +386,9 @@ export const DeliveryTripDetailPage: React.FC = () => {
               />
             </div>
             <div className="flex justify-between text-xs text-gray-600">
-              <span>Đã giao: <strong>{trip.deliveredStops}</strong></span>
-              <span>Còn lại: <strong>{trip.remainingStops}</strong></span>
-              <span>Thất bại: <strong className="text-red-600">{trip.failedStops}</strong></span>
+              <span>Đã giao: <strong>{trip.deliveredStops} đơn</strong></span>
+              <span>Còn lại: <strong>{trip.remainingStops} đơn</strong></span>
+              <span>Thất bại: <strong className="text-red-600">{trip.failedStops} đơn</strong></span>
             </div>
             <div className="pt-2 text-xs space-y-1.5 border-t border-gray-100">
               <div className="flex justify-between items-center">
@@ -421,7 +421,7 @@ export const DeliveryTripDetailPage: React.FC = () => {
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
             <MapPin className="w-4 h-4 text-[#F85606]" />
-            Danh Sách Điểm Giao Của Chuyến ({sortedStops.length} điểm)
+            Danh Sách Đơn Hàng Của Chuyến ({sortedStops.length} đơn hàng)
           </h2>
           <span className="text-xs text-gray-400 italic">
             Liệt kê theo thứ tự xe ghé giao kèm địa chỉ và số điện thoại người nhận

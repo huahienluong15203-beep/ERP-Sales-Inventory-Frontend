@@ -206,7 +206,8 @@ export const DeliveryTripManagementPage: React.FC = () => {
                 <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-700 font-bold uppercase text-[11px] tracking-wider">
                   <th className="py-3 px-4">Mã chuyến</th>
                   <th className="py-3 px-4">Kho xuất phát</th>
-                  <th className="py-3 px-4 text-center">Tiến độ điểm giao</th>
+                  <th className="py-3 px-3 text-center w-24">Số đơn</th>
+                  <th className="py-3 px-4 text-center">Tiến độ giao đơn</th>
                   <th className="py-3 px-4 text-right">Tiền hàng / Trên xe</th>
                   <th className="py-3 px-4">Thời gian</th>
                   <th className="py-3 px-4 text-center">Trạng thái</th>
@@ -232,11 +233,16 @@ export const DeliveryTripManagementPage: React.FC = () => {
                       <td className="py-3.5 px-4 font-medium text-gray-800">
                         {trip.warehouseName}
                       </td>
+                      <td className="py-3.5 px-3 text-center w-24 whitespace-nowrap">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full bg-gray-100 font-bold text-gray-800 text-xs">
+                          {trip.totalStops} đơn
+                        </span>
+                      </td>
                       <td className="py-3.5 px-4 text-center w-44">
                         <div className="space-y-1">
                           <div className="flex justify-between text-[11px]">
                             <span className="font-semibold text-gray-700">
-                              {trip.deliveredStops}/{trip.totalStops} điểm
+                              {trip.deliveredStops}/{trip.totalStops} đơn
                             </span>
                             <span className="font-bold text-[#F85606]">{percent}%</span>
                           </div>
