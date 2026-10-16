@@ -554,6 +554,7 @@ export const Search = Icons.Search;
 export const Plus = Icons.Plus;
 export const Phone = Icons.Phone;
 export const Edit = Icons.Edit;
+export const Edit3 = Icons.Edit;
 export const Filter = Icons.Filter;
 export const Info = Icons.Info;
 export const FileSpreadsheet = Icons.FileSpreadsheet;

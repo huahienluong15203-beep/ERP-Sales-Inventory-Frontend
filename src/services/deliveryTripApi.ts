@@ -298,9 +298,47 @@ function saveStoredDispatchedOrders(orders: DeliveryTripStop[]): void {
 }
 
 /**
- * 1. Lấy danh sách phiếu xuất / đơn hàng đã xuất kho (DISPATCHED) sẵn sàng gom chuyến
+ * 1. Lấy danh sách phiếu xuất / đơn hàng đã xuất kho (DISPATCHED) sẵn sàng gom chuyến theo khu vực
  */
-export async function fetchDispatchedOrdersForRouting(_warehouseId?: number): Promise<DeliveryTripStop[]> {
+export async function fetchDispatchedOrdersForRouting(
+  warehouseId?: number,
+  regionId?: number,
+  search?: string
+): Promise<DeliveryTripStop[]> {
+  try {
+    const q = new URLSearchParams();
+    if (warehouseId) q.set('warehouseId', String(warehouseId));
+    if (regionId) q.set('regionId', String(regionId));
+    if (search) q.set('search', search);
+
+    const candUrl = `${API_BASE_URL}/api/delivery-trips/candidate-orders?${q.toString()}`;
+    const candRes = await authFetch(candUrl);
+    if (candRes.ok) {
+      const candidates = await candRes.json();
+      if (Array.isArray(candidates)) {
+        return candidates.map((c: any, idx: number) => ({
+          orderId: c.orderId,
+          orderCode: c.orderCode,
+          customerId: c.customerId,
+          customerCode: c.customerCode,
+          customerName: c.customerName,
+          deliveryAddress: c.deliveryAddress || 'Tại địa chỉ khách hàng',
+          receiverName: c.receiverName || c.customerName || 'Người nhận hàng',
+          receiverPhone: c.receiverPhone || '',
+          district: c.district || extractDistrict(c.deliveryAddress),
+          province: c.province || 'Hà Nội',
+          status: c.status || 'DISPATCHED',
+          totalAmount: Number(c.totalAmount || 0),
+          valueOnRoad: Number(c.totalAmount || 0),
+          stockReturned: false,
+          stopSequence: idx + 1
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn('Backend candidate-orders API failed, falling back to legacy/local flow:', err);
+  }
+
   try {
     const url = `${API_BASE_URL}/api/orders?status=DISPATCHED&size=100`;
     const res = await authFetch(url);
@@ -762,3 +800,19 @@ export async function completeTripWithAutoResolve(
   // Kết thúc chuyến xe về kho
   return await completeDeliveryTrip(tripId, { note });
 }
+
+/**
+ * 10. AC3: In bảng kê điểm giao (Delivery Manifest) kèm địa chỉ và số điện thoại người nhận
+ */
+export async function fetchDeliveryTripManifest(tripId: number): Promise<any> {
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/delivery-trips/${tripId}/manifest`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('Backend fetch delivery manifest failed:', err);
+  }
+  return null;
+}
+

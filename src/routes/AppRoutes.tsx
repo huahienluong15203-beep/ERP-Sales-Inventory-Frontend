@@ -8,6 +8,8 @@ import { ProfilePage } from '../pages/profile/ProfilePage';
 import { UserManagementPage } from '../pages/admin/UserManagementPage';
 import { UserImportPage } from '../pages/admin/UserImportPage';
 import { AgencyManagementPage } from '../pages/customer/AgencyManagementPage';
+import { CreateAgencyPage } from '../pages/customer/CreateAgencyPage';
+import { TransferTerritoryPage } from '../pages/customer/TransferTerritoryPage';
 import { ProductManagementPage } from '../pages/product/ProductManagementPage';
 import { ProductImportPage } from '../pages/product/ProductImportPage';
 import { PriceListPage } from '../pages/pricing/PriceListPage';
@@ -18,6 +20,7 @@ import { OrderCreatePage } from '../pages/order/OrderCreatePage';
 import { OrderListPage } from '../pages/order/OrderListPage';
 import { OrderDetailPage } from '../pages/order/OrderDetailPage';
 import { SupplierManagementPage } from '../pages/supplier/SupplierManagementPage';
+import { CreateSupplierPage } from '../pages/supplier/CreateSupplierPage';
 import { SystemLogPage } from '../pages/system-log/SystemLogPage';
 import { ModulePage } from '../pages/common/ModulePage';
 import { ForbiddenPage } from '../pages/common/ForbiddenPage';
@@ -45,9 +48,13 @@ import { DeliveryTripManagementPage } from '../pages/inventory/DeliveryTripManag
 import { DeliveryTripCreatePage } from '../pages/inventory/DeliveryTripCreatePage';
 import { DeliveryTripDetailPage } from '../pages/inventory/DeliveryTripDetailPage';
 import { DebtAdjustmentPage } from '../pages/payment/DebtAdjustmentPage';
+import { PaymentReconciliationPage } from '../pages/payment/PaymentReconciliationPage';
 import { ProductLotManagementPage } from '../pages/inventory/ProductLotManagementPage';
 import { InvoiceManagementPage } from '../pages/payment/InvoiceManagementPage';
 import { InvoiceCreatePage } from '../pages/payment/InvoiceCreatePage';
+import { SalesTargetManagementPage } from '../pages/kpi/SalesTargetManagementPage';
+import { InventoryAgingReportPage } from '../pages/inventory/InventoryAgingReportPage';
+import { InTransitDashboardPage } from '../pages/inventory/InTransitDashboardPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -139,6 +146,37 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* Khai báo hồ sơ đại lý mới (Trang riêng) */}
+        <Route
+          path="/customers/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <CreateAgencyPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Chuyển giao địa bàn hàng loạt (Trang riêng) */}
+        <Route
+          path="/customers/transfer"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <TransferTerritoryPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Quản lý danh mục sản phẩm (Sprint 2: S2-05) */}
         <Route
           path="/products"
@@ -182,6 +220,24 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <SupplierManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Khai báo đối tác cung ứng mới (Trang riêng) */}
+        <Route
+          path="/suppliers/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ADMIN',
+                'ROLE_WH_MANAGER',
+                'ROLE_WAREHOUSE',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <CreateSupplierPage />
             </ProtectedRoute>
           }
         />
@@ -464,6 +520,43 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <ProductLotManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Báo cáo luân chuyển kho & tuổi hàng (S8-07) */}
+        <Route
+          path="/inventory/aging"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <InventoryAgingReportPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Theo dõi hàng đi đường & tiến độ giao hàng (S6-07) */}
+        <Route
+          path="/inventory/in-transit"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <InventoryAgingReportPage />
+              <InTransitDashboardPage />
             </ProtectedRoute>
           }
         />
@@ -763,6 +856,39 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <InvoiceManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Đối chiếu thu tiền theo tuyến & nộp quỹ (S7-05) */}
+        <Route
+          path="/payments/reconciliation"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <PaymentReconciliationPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Chỉ tiêu doanh số (KPI) & Tiến độ (S8-04) */}
+        <Route
+          path="/kpi/targets"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <SalesTargetManagementPage />
             </ProtectedRoute>
           }
         />

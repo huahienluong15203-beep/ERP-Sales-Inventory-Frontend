@@ -41,6 +41,9 @@ export interface PaymentReceipt {
   receiptImageUrl?: string;
   confirmedAt?: string;
   confirmedByUsername?: string;
+  rejectedAt?: string;
+  rejectedByUsername?: string;
+  rejectionReason?: string;
   allocationType: AllocationType;
   allocations: InvoicePaymentAllocation[];
   createdAt: string;
@@ -66,7 +69,49 @@ export interface RouteCashCollectionRequest {
   paymentMethod: PaymentMethod;
   paymentDate: string;
   notes?: string;
+  receiptImageUrl?: string;
   receiptImageBase64?: string;
+}
+
+export interface PaymentRejectRequest {
+  reason: string;
+}
+
+export interface PaymentReconciliationItem {
+  id: number;
+  code: string;
+  customerId: number;
+  customerCode: string;
+  customerName: string;
+  amount: number;
+  paymentMethod: string;
+  paymentDate: string;
+  notes?: string;
+  receiptImageUrl?: string;
+  status: PaymentStatus;
+  createdAt: string;
+  confirmedAt?: string;
+  confirmedByUsername?: string;
+  rejectedAt?: string;
+  rejectedByUsername?: string;
+  rejectionReason?: string;
+}
+
+export interface PaymentReconciliationResponse {
+  fromDate: string;
+  toDate: string;
+  collectorId?: number;
+  collectorName?: string;
+  collectorUsername?: string;
+  totalCollectedAmount: number;
+  pendingAmount: number;
+  confirmedAmount: number;
+  rejectedAmount: number;
+  totalCount: number;
+  pendingCount: number;
+  confirmedCount: number;
+  rejectedCount: number;
+  items: PaymentReconciliationItem[];
 }
 
 export interface PaymentFilterParams {

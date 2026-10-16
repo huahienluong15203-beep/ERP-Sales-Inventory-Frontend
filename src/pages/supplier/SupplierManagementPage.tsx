@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Supplier, SupplierStatus } from '../../types/supplier';
 import {
@@ -17,6 +18,7 @@ import { Icons } from '../../components/common/Icons';
 import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 
 export const SupplierManagementPage: React.FC = () => {
+  const navigate = useNavigate();
   const { currentRole, user, showToast } = useAuth();
 
   // Quyền quản lý nhà cung cấp: Chỉ ADMIN và Quản lý kho (WH_MANAGER). Thủ kho (ROLE_WAREHOUSE) chỉ có quyền tra cứu/xem phục vụ nhập kho (S2-09 / S5-04)
@@ -110,10 +112,9 @@ export const SupplierManagementPage: React.FC = () => {
     }
   };
 
-  // Mở modal tạo mới
+  // Điều hướng sang trang riêng Khai báo đối tác cung ứng mới
   const handleOpenCreate = () => {
-    setEditingSupplier(null);
-    setIsFormOpen(true);
+    navigate('/suppliers/create');
   };
 
   // Mở modal sửa

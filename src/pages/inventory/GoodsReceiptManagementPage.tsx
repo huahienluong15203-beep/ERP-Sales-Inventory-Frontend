@@ -7,22 +7,22 @@ import {
   Clock,
   RefreshCw,
   Eye,
-  Check,
   Package
 } from 'lucide-react';
 import type { GoodsReceipt } from '../../types/inventory';
 import { SYSTEM_WAREHOUSES } from '../../types/inventory';
 import {
   fetchGoodsReceipts,
-  confirmGoodsReceipt
+  deleteGoodsReceipt
 } from '../../services/inventoryReceiptApi';
 import { formatQuantity } from '../../services/orderService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocation, useNavigate } from '../../routes/Router';
 import { SearchSelect } from '../../components/common/SearchSelect';
+import { GoodsReceiptDraftsModal } from '../../components/inventory/GoodsReceiptDraftsModal';
 
 export const GoodsReceiptManagementPage: React.FC = () => {
-  const { user, showToast, currentRole } = useAuth();
+  const { showToast, currentRole } = useAuth();
 
   // Mục 12 (góp ý GV): chặn ở cả FE và BE - chỉ NV kho, QL kho, Admin được lập / xác nhận / sửa;
   // Kế toán, QL kinh doanh chỉ xem.
@@ -31,13 +31,11 @@ export const GoodsReceiptManagementPage: React.FC = () => {
 
   const [receipts, setReceipts] = useState<GoodsReceipt[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isDraftsModalOpen, setIsDraftsModalOpen] = useState<boolean>(false);
 
   // Bộ lọc
   const [keyword, setKeyword] = useState<string>('');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
-
-  const [confirmingId, setConfirmingId] = useState<number | string | null>(null);
 
   const navigate = useNavigate();
 
@@ -55,8 +53,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
     try {
       const data = await fetchGoodsReceipts({
         keyword,
-        warehouseCode: selectedWarehouse,
-        status: selectedStatus
+        warehouseCode: selectedWarehouse
       });
       setReceipts(data);
     } catch (err) {
@@ -64,41 +61,35 @@ export const GoodsReceiptManagementPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [keyword, selectedWarehouse, selectedStatus]);
+  }, [keyword, selectedWarehouse]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // Xác nhận phiếu nhập kho trực tiếp từ danh sách (AC4: Cộng tồn kho khi xác nhận)
-  const handleConfirmDirect = async (receiptId: number | string) => {
-    setConfirmingId(receiptId);
+  // Xóa phiếu nhập kho nháp
+  const handleDeleteDraft = async (receiptId: number | string) => {
     try {
-      const confirmed = await confirmGoodsReceipt(receiptId, user?.username || 'wh_manager');
-      showToast(
-        'Đã xác nhận nhập kho',
-        `Phiếu [${confirmed.code}] đã được ghi sổ thành công. Tồn kho đã được cộng thêm theo đơn vị cơ sở!`,
-        'success',
-        5000
-      );
+      await deleteGoodsReceipt(receiptId);
+      showToast('Đã xóa phiếu nháp', 'Phiếu nhập kho nháp đã được xóa thành công.', 'success');
       loadData();
     } catch (err: unknown) {
-      console.error('Lỗi xác nhận phiếu nhập kho:', err);
-      showToast('Lỗi xác nhận', err instanceof Error ? err.message : 'Không thể xác nhận phiếu', 'error');
-    } finally {
-      setConfirmingId(null);
+      console.error('Lỗi xóa phiếu nhập kho nháp:', err);
+      showToast('Lỗi xóa phiếu nháp', err instanceof Error ? err.message : 'Không thể xóa phiếu nháp', 'error');
+      throw err;
     }
   };
 
-  const draftCount = receipts.filter((r) => r.status === 'DRAFT').length;
-  const confirmedCount = receipts.filter((r) => r.status === 'CONFIRMED').length;
-  const totalBaseUnits = receipts
-    .filter((r) => r.status === 'CONFIRMED')
-    .reduce((s, r) => s + r.totalBaseQuantity, 0);
+  // Phân loại: Phiếu nháp đưa vào nút / modal; Bảng chính chỉ hiển thị phiếu đã xác nhận (không hiển thị phiếu nháp)
+  const draftReceipts = receipts.filter((r) => r.status === 'DRAFT');
+  const confirmedReceipts = receipts.filter((r) => r.status === 'CONFIRMED');
+  const draftCount = draftReceipts.length;
+  const confirmedCount = confirmedReceipts.length;
+  const totalBaseUnits = confirmedReceipts.reduce((s, r) => s + r.totalBaseQuantity, 0);
 
   return (
     <div className="space-y-3.5 antialiased">
-      {/* Tiêu đề trang & Nút thao tác chính (Tinh gọn giống Danh mục nhà cung cấp) */}
+      {/* Tiêu đề trang & Nút thao tác chính */}
       <div className="flex items-center justify-end gap-2">
         <button
           type="button"
@@ -110,6 +101,24 @@ export const GoodsReceiptManagementPage: React.FC = () => {
           <RefreshCw size={14} />
           <span>Làm mới</span>
         </button>
+
+        {/* Nút xem danh sách phiếu nháp (tương tự nút Đơn nháp) */}
+        {canEditInventory && (
+          <button
+            type="button"
+            onClick={() => setIsDraftsModalOpen(true)}
+            title="Xem danh sách phiếu nhập kho nháp"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-orange-50 hover:text-[#F85606] hover:border-orange-200 text-xs font-semibold transition-colors cursor-pointer shadow-2xs h-9"
+          >
+            <Clock size={14} className="text-gray-500" />
+            <span>Phiếu nháp</span>
+            {draftCount > 0 && (
+              <span className="w-5 h-5 rounded-full bg-[#F85606] text-white text-[10px] font-bold flex items-center justify-center">
+                {draftCount}
+              </span>
+            )}
+          </button>
+        )}
 
         {canEditInventory && (
           <button
@@ -131,8 +140,8 @@ export const GoodsReceiptManagementPage: React.FC = () => {
             <FileText size={18} />
           </div>
           <div>
-            <div className="text-[11px] font-bold text-gray-400 uppercase">Tổng số phiếu</div>
-            <div className="text-lg font-black text-gray-900 font-mono">{receipts.length}</div>
+            <div className="text-[11px] font-bold text-gray-400 uppercase">Tổng số phiếu chính thức</div>
+            <div className="text-lg font-black text-gray-900 font-mono">{confirmedCount}</div>
           </div>
         </div>
 
@@ -148,14 +157,23 @@ export const GoodsReceiptManagementPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-2xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center font-bold">
-            <Clock size={20} />
+        <div
+          onClick={() => setIsDraftsModalOpen(true)}
+          title="Bấm để xem danh sách phiếu nháp"
+          className="bg-white p-4 rounded-2xl border border-gray-200/80 hover:border-orange-300 shadow-2xs flex items-center justify-between gap-3 cursor-pointer transition hover:bg-orange-50/20"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center font-bold">
+              <Clock size={20} />
+            </div>
+            <div>
+              <div className="text-[11px] font-bold text-gray-400 uppercase">Phiếu nháp (Chưa cộng tồn)</div>
+              <div className="text-lg font-black text-gray-700 font-mono">{draftCount}</div>
+            </div>
           </div>
-          <div>
-            <div className="text-[11px] font-bold text-gray-400 uppercase">Phiếu nháp (Chưa cộng tồn)</div>
-            <div className="text-lg font-black text-gray-700 font-mono">{draftCount}</div>
-          </div>
+          <span className="text-[11px] font-bold text-[#F85606] bg-orange-50 px-2 py-1 rounded-lg border border-orange-200">
+            Xem nháp →
+          </span>
         </div>
       </div>
 
@@ -185,20 +203,10 @@ export const GoodsReceiptManagementPage: React.FC = () => {
               </option>
             ))}
           </SearchSelect>
-
-          <SearchSelect
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="text-xs font-semibold border border-gray-200 rounded-xl p-2.5 bg-white"
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="CONFIRMED">Đã xác nhận (Đã cộng tồn)</option>
-            <option value="DRAFT">Phiếu nháp (Chưa cộng tồn)</option>
-          </SearchSelect>
         </div>
       </div>
 
-      {/* 4. BẢNG DANH SÁCH PHIẾU NHẬP KHO */}
+      {/* 4. BẢNG DANH SÁCH PHIẾU NHẬP KHO (CHỈ HIỂN THỊ PHIẾU ĐÃ XÁC NHẬN) */}
       <div className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
@@ -223,18 +231,18 @@ export const GoodsReceiptManagementPage: React.FC = () => {
                     <span>Đang tải danh sách phiếu nhập kho...</span>
                   </td>
                 </tr>
-              ) : receipts.length === 0 ? (
+              ) : confirmedReceipts.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-16 text-center text-gray-400 space-y-2">
                     <Package size={36} className="mx-auto text-gray-300" />
-                    <p className="font-bold text-gray-700 text-sm">Chưa có phiếu nhập kho nào</p>
+                    <p className="font-bold text-gray-700 text-sm">Chưa có phiếu nhập kho chính thức nào</p>
                     <p className="text-xs text-gray-500">
-                      Hãy bấm &quot;Lập Phiếu Nhập Kho&quot; để ghi nhận hàng về kho từ nhà cung cấp.
+                      Các phiếu nháp đang chờ được lưu trữ trong mục &quot;Phiếu nháp&quot; ở trên.
                     </p>
                   </td>
                 </tr>
               ) : (
-                receipts.map((r) => (
+                confirmedReceipts.map((r) => (
                   <tr key={r.id} className="hover:bg-orange-50/20 transition-colors">
                     <td className="py-3 px-4 font-mono font-bold text-[#F85606]">
                       <button
@@ -266,17 +274,10 @@ export const GoodsReceiptManagementPage: React.FC = () => {
                       {formatQuantity(r.totalBaseQuantity)}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      {r.status === 'CONFIRMED' ? (
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 inline-flex items-center gap-1">
-                          <CheckCircle2 size={11} />
-                          <span>Đã cộng tồn</span>
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 inline-flex items-center gap-1">
-                          <Clock size={11} />
-                          <span>Phiếu nháp</span>
-                        </span>
-                      )}
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 inline-flex items-center gap-1">
+                        <CheckCircle2 size={11} />
+                        <span>Đã cộng tồn</span>
+                      </span>
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
@@ -288,19 +289,6 @@ export const GoodsReceiptManagementPage: React.FC = () => {
                         >
                           <Eye size={15} />
                         </button>
-
-                        {/* AC4: Nút xác nhận cộng tồn đối với phiếu nháp */}
-                        {r.status === 'DRAFT' && canEditInventory && (
-                          <button
-                            type="button"
-                            onClick={() => handleConfirmDirect(r.id)}
-                            disabled={confirmingId === r.id}
-                            className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition cursor-pointer"
-                            title="Xác nhận nhập kho & cộng tồn kho"
-                          >
-                            <Check size={15} className={confirmingId === r.id ? 'animate-spin' : ''} />
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -310,6 +298,16 @@ export const GoodsReceiptManagementPage: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Modal Quản lý Phiếu Nhập Kho Nháp */}
+      <GoodsReceiptDraftsModal
+        isOpen={isDraftsModalOpen}
+        onClose={() => setIsDraftsModalOpen(false)}
+        drafts={draftReceipts}
+        onEdit={(id) => navigate(`/inventory/receipts/${id}`)}
+        onDeleteDraft={handleDeleteDraft}
+        canEdit={canEditInventory}
+      />
     </div>
   );
 };

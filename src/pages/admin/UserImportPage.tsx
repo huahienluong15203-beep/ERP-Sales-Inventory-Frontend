@@ -233,9 +233,21 @@ export const UserImportPage: React.FC = () => {
     );
 
   return (
-    <div className="w-full min-w-0 space-y-5">
+    <div className="w-full min-w-0 space-y-4">
+      {/* Nút quay lại ở góc trên bên trái */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => navigate('/users')}
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-700 hover:text-[#F85606] hover:bg-orange-50 hover:border-orange-200 transition cursor-pointer shadow-2xs active:scale-95"
+        >
+          <Icons.ChevronLeft size={16} />
+          <span>Về quản lý tài khoản</span>
+        </button>
+      </div>
+
       {/* Tiêu đề trang */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs">
+      <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs">
         <div className="flex items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-[#F85606] border border-orange-200/60">
             <Icons.Users size={22} />
@@ -249,14 +261,6 @@ export const UserImportPage: React.FC = () => {
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate('/users')}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 min-h-[44px] shrink-0"
-        >
-          <Icons.ChevronLeft size={16} />
-          <span>Về quản lý tài khoản</span>
-        </button>
       </div>
 
       {/* Các bước */}

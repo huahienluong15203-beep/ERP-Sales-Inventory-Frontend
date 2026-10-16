@@ -3,6 +3,19 @@
  * Phân hệ: Kế toán công nợ & Quản lý bán hàng
  */
 
+export type InvoiceStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED';
+
+export interface InvoiceItem {
+  id: number;
+  productId: number;
+  productCode: string;
+  productName: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
 export interface InvoiceLineResponse {
   lineNo: number;
   orderId: number;
@@ -27,12 +40,23 @@ export interface InvoiceSummaryResponse {
   invoiceDate: string; // YYYY-MM-DD
   status: string; // ISSUED
   customerId: number;
-  customerCode: string;
-  customerName: string;
-  lineCount: number;
+  customerCode?: string;
+  customerName?: string;
+  orderId?: number;
+  orderCodes?: string[];
+  lineCount?: number;
+  dueDate?: string;
+  subtotalAmount?: number;
+  vatAmount?: number;
   totalAmount: number;
-  issuedAt: string;
-  issuedByUsername: string;
+  paidAmount?: number;
+  remainingAmount?: number;
+  paymentStatus?: InvoiceStatus;
+  items?: InvoiceItem[];
+  pdfUrl?: string;
+  notes?: string;
+  issuedAt?: string;
+  issuedByUsername?: string;
 }
 
 export interface InvoiceResponse {

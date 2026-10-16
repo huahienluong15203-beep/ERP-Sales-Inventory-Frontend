@@ -123,6 +123,23 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
                 <span>Nợ: 1111 / 1121</span>
                 <span>Có: 131</span>
               </div>
+              <div className="mt-2.5 flex justify-center">
+                {receipt.status === 'PENDING_SUBMISSION' && (
+                  <span className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-amber-100 text-amber-800 border border-amber-300">
+                    Trạng thái: Chờ nộp quỹ (Kế toán chưa duyệt)
+                  </span>
+                )}
+                {receipt.status === 'CONFIRMED' && (
+                  <span className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Trạng thái: Đã nộp quỹ & đối trừ nợ
+                  </span>
+                )}
+                {receipt.status === 'REJECTED' && (
+                  <span className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-rose-100 text-rose-800 border border-rose-300">
+                    Trạng thái: Từ chối nhận tiền {receipt.rejectionReason ? `(${receipt.rejectionReason})` : ''}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Nội dung thông tin thu tiền */}
@@ -216,6 +233,18 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* Ảnh biên lai nếu có */}
+            {receipt.receiptImageUrl && (
+              <div className="mb-6 p-3 bg-gray-50 border border-gray-300 rounded-lg">
+                <p className="font-bold text-xs uppercase text-gray-700 mb-2">Ảnh biên lai thu tiền tại điểm bán:</p>
+                <img
+                  src={receipt.receiptImageUrl}
+                  alt="Biên lai"
+                  className="max-h-48 w-auto rounded border border-gray-200 shadow-xs"
+                />
               </div>
             )}
 

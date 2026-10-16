@@ -364,3 +364,82 @@ export async function fetchPortalOrders(criteria: PortalOrderFilterCriteria = {}
   return portalJson<OrderPageResponse>(`/orders?${query.toString()}`, 'Không tải được lịch sử đơn hàng của đại lý');
 }
 
+export interface PortalTimelineStepDetail {
+  statusKey: string;
+  label: string;
+  subLabel?: string;
+  completed: boolean;
+  current: boolean;
+  time?: string | null;
+  actor?: string | null;
+  note?: string | null;
+}
+
+export interface PortalDeliveryTripInfo {
+  tripId?: number;
+  tripCode?: string;
+  vehiclePlate?: string;
+  driverName?: string;
+  driverPhone?: string;
+  stopSequence?: number;
+  status?: string;
+  departedAt?: string;
+  expectedReturnAt?: string;
+}
+
+export interface PortalDeliveryLineItem {
+  lineId?: number;
+  lineNo?: number;
+  productId?: number;
+  productSku?: string;
+  productName?: string;
+  unitName?: string;
+  conversionFactor?: number;
+  orderedQuantity?: number;
+  dispatchedQuantity?: number;
+  deliveredQuantity?: number;
+  shortageQuantity?: number;
+  isShortage: boolean;
+  shortageReason?: string;
+}
+
+export interface PortalDeliveryTimelineResponse {
+  orderId: number;
+  orderCode: string;
+  status: string;
+  statusLabel?: string;
+  currentStep: number;
+  customerId?: number;
+  customerCode?: string;
+  customerName?: string;
+  deliveryAddress?: string;
+  receiverName?: string;
+  receiverPhone?: string;
+  warehouseCode?: string;
+  warehouseName?: string;
+  hasShortage: boolean;
+  shortageLineCount: number;
+  totalAmount?: number;
+  steps: {
+    approved: PortalTimelineStepDetail;
+    picking: PortalTimelineStepDetail;
+    dispatched: PortalTimelineStepDetail;
+    shipping: PortalTimelineStepDetail;
+    delivered: PortalTimelineStepDetail;
+  };
+  tripInfo?: PortalDeliveryTripInfo | null;
+  lines: PortalDeliveryLineItem[];
+}
+
+/**
+ * S6-09: Tải dữ liệu mốc thời gian và chi tiết số lượng thực giao cho đại lý
+ * GET /api/portal/orders/{id}/delivery-timeline
+ */
+export async function fetchPortalDeliveryTimeline(orderId: number | string): Promise<PortalDeliveryTimelineResponse> {
+  return portalJson<PortalDeliveryTimelineResponse>(
+    `/orders/${orderId}/delivery-timeline`,
+    'Không tải được tiến độ giao hàng của đơn'
+  );
+}
+
+

@@ -71,7 +71,12 @@ export const CategoryManagement: React.FC = () => {
   const [systemProducts, setSystemProducts] = useState<Product[]>([]);
   const [loadingSystemProducts, setLoadingSystemProducts] = useState<boolean>(false);
   const [assignSearch, setAssignSearch] = useState<string>('');
+  const [debouncedAssignSearch, setDebouncedAssignSearch] = useState<string>('');
   const [assignFilter, setAssignFilter] = useState<'ALL' | 'UNASSIGNED' | 'OTHER'>('ALL');
+  const [assignPage, setAssignPage] = useState<number>(0);
+  const [assignPageSize, setAssignPageSize] = useState<number>(30);
+  const [assignTotalElements, setAssignTotalElements] = useState<number>(0);
+  const [assignTotalPages, setAssignTotalPages] = useState<number>(1);
   const [selectedProductIdsToAssign, setSelectedProductIdsToAssign] = useState<Set<string>>(new Set());
 
   // Modal chuyển sản phẩm sang nhóm khác
@@ -322,45 +327,69 @@ export const CategoryManagement: React.FC = () => {
     }
   };
 
-  // Mở modal gán sản phẩm vào nhóm đang chọn
-  const handleOpenAssignModal = async () => {
-    if (!selectedCategory || !canManage) return;
-    setIsAssignModalOpen(true);
-    setSelectedProductIdsToAssign(new Set());
-    setAssignSearch('');
-    setAssignFilter('ALL');
+  // Debounce tìm kiếm sản phẩm trong modal để truy vấn máy chủ
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedAssignSearch(assignSearch);
+      setAssignPage(0);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [assignSearch]);
+
+  // Tải danh sách sản phẩm từ hệ thống (Server-side search + phân trang toàn diện, trừ các sản phẩm đã có trong nhóm)
+  const loadSystemProducts = useCallback(async (page: number, size: number, search: string, excludeCatId?: string) => {
     setLoadingSystemProducts(true);
     try {
-      const res = await productService.getProducts({ page: 0, size: 50 });
+      const res = await productService.getProducts({
+        keyword: search.trim() || undefined,
+        excludeCategory: excludeCatId,
+        page,
+        size,
+        status: 'ALL'
+      });
       setSystemProducts(res.products || []);
+      setAssignTotalElements(res.totalElements);
+      setAssignTotalPages(res.totalPages || Math.ceil(res.totalElements / size) || 1);
     } catch (err) {
       showToast(errMsg(err, 'Không tải được danh sách sản phẩm hệ thống.'), 'error');
     } finally {
       setLoadingSystemProducts(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (isAssignModalOpen && selectedCategory) {
+      loadSystemProducts(assignPage, assignPageSize, debouncedAssignSearch, selectedCategory.id);
+    }
+  }, [isAssignModalOpen, assignPage, assignPageSize, debouncedAssignSearch, selectedCategory, loadSystemProducts]);
+
+  // Mở modal gán sản phẩm vào nhóm đang chọn
+  const handleOpenAssignModal = () => {
+    if (!selectedCategory || !canManage) return;
+    setIsAssignModalOpen(true);
+    setSelectedProductIdsToAssign(new Set());
+    setAssignSearch('');
+    setDebouncedAssignSearch('');
+    setAssignFilter('ALL');
+    setAssignPage(0);
+    setAssignPageSize(30);
   };
 
-  // Lọc sản phẩm hệ thống theo từ khóa và trạng thái nhóm
+  // Lọc sản phẩm theo trạng thái nhóm (đã loại trừ toàn bộ sản phẩm đang thuộc nhóm này)
   const filteredSystemProducts = useMemo(() => {
-    const q = assignSearch.trim().toLowerCase();
     return systemProducts.filter((p) => {
-      const matchesSearch =
-        !q ||
-        p.sku.toLowerCase().includes(q) ||
-        p.name.toLowerCase().includes(q) ||
-        (p.category && p.category.toLowerCase().includes(q));
-      if (!matchesSearch) return false;
-
-      const isCurrentGroup = p.categoryId === selectedCategory?.id;
+      if (selectedCategory && p.categoryId === selectedCategory.id) {
+        return false;
+      }
       if (assignFilter === 'UNASSIGNED') {
         return !p.categoryId || p.category === 'Chưa phân loại';
       }
       if (assignFilter === 'OTHER') {
-        return !isCurrentGroup;
+        return Boolean(p.categoryId) && p.category !== 'Chưa phân loại';
       }
       return true;
     });
-  }, [systemProducts, assignSearch, assignFilter, selectedCategory]);
+  }, [systemProducts, assignFilter, selectedCategory]);
 
   const handleToggleSelectProduct = (id: string) => {
     setSelectedProductIdsToAssign((prev) => {
@@ -1283,20 +1312,27 @@ export const CategoryManagement: React.FC = () => {
       {/* MODAL 1: CHUYỂN SẢN PHẨM GIỮA CÁC NHÓM */}
       {canManage && movingProduct && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] overflow-y-auto animate-fadeIn">
-          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 relative">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-full max-w-xl sm:max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 sm:p-7 relative transition-all">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-100 text-[#F85606] flex items-center justify-center font-bold shadow-xs">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                   </svg>
                 </div>
-                Chuyển Nhóm Hàng Cho Sản Phẩm
-              </h3>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800 leading-tight">
+                    Chuyển Nhóm Hàng Cho Sản Phẩm
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Điều chuyển mặt hàng sang nhóm ngành hàng mới trong hệ thống phân cấp
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setMovingProduct(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
               >
                 ✕
               </button>
@@ -1304,18 +1340,22 @@ export const CategoryManagement: React.FC = () => {
 
             <form onSubmit={handleExecuteMoveProduct} className="space-y-4 pt-4">
               {/* Thông tin sản phẩm đang chuyển */}
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Mã SKU:</span>
-                  <span className="font-mono font-bold text-slate-800">{movingProduct.sku}</span>
+              <div className="p-4 bg-orange-50/60 rounded-xl border border-orange-200/80 space-y-2.5 text-xs">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-slate-500 font-medium">Mã SKU:</span>
+                  <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                    {movingProduct.sku}
+                  </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Tên sản phẩm:</span>
-                  <span className="font-semibold text-slate-800 text-right max-w-[220px] truncate">{movingProduct.name}</span>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-slate-500 font-medium shrink-0">Tên sản phẩm:</span>
+                  <span className="font-bold text-slate-900 text-right text-xs sm:text-sm">
+                    {movingProduct.name}
+                  </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Nhóm hiện tại:</span>
-                  <span className="text-orange-700 font-medium">
+                <div className="flex items-center justify-between gap-3 pt-2 border-t border-orange-200/50">
+                  <span className="text-slate-500 font-medium">Nhóm hiện tại:</span>
+                  <span className="text-orange-700 font-bold bg-white px-2.5 py-0.5 rounded-full border border-orange-200 shadow-2xs">
                     {categories.find((c) => c.id === movingProduct.categoryId)?.name || 'Chưa rõ'}
                   </span>
                 </div>
@@ -1323,46 +1363,47 @@ export const CategoryManagement: React.FC = () => {
 
               {/* Chọn nhóm hàng đích */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Chọn Nhóm Hàng Đích Đến <span className="text-red-500">*</span>
                 </label>
                 <SearchSelect
                   value={targetCategoryId}
                   onChange={(e) => setTargetCategoryId(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200 bg-white"
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 bg-white font-medium shadow-2xs"
                   required
                 >
-                  <option value="" disabled>-- Chọn nhóm hàng đích --</option>
+                  <option value="" disabled>-- Chọn nhóm hàng đích đến --</option>
                   {categories.map((c) => {
-                    const indent = '—'.repeat(c.level - 1);
+                    const indent = '— '.repeat(c.level - 1);
                     return (
                       <option
                         key={c.id}
                         value={c.id}
                         disabled={c.id === movingProduct.categoryId}
                       >
-                        {indent} Cấp {c.level}: {c.name} ({c.code}) {c.id === movingProduct.categoryId ? '(Hiện tại)' : ''}
+                        {indent}Cấp {c.level}: {c.name} ({c.code}) {c.id === movingProduct.categoryId ? '(Hiện tại)' : ''}
                       </option>
                     );
                   })}
                 </SearchSelect>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Sau khi chuyển, số mã hàng của nhóm cũ và nhóm mới sẽ được cập nhật từ máy chủ.
+                <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
+                  <span>💡</span>
+                  <span>Sau khi xác nhận, toàn bộ đơn vị tính và số liệu của sản phẩm sẽ thuộc về nhóm hàng mới.</span>
                 </p>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setMovingProduct(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold cursor-pointer transition"
                 >
                   Huỷ Bỏ
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-md shadow-orange-500/20 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                  disabled={saving || !targetCategoryId || targetCategoryId === String(movingProduct.categoryId)}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-[#F85606] hover:opacity-95 text-white font-bold text-xs shadow-md shadow-orange-500/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   {saving ? 'Đang chuyển...' : 'Xác Nhận Chuyển Nhóm'}
                 </button>
@@ -1562,7 +1603,7 @@ export const CategoryManagement: React.FC = () => {
       {/* MODAL 5: THÊM / GÁN SẢN PHẨM VÀO NHÓM */}
       {canManage && isAssignModalOpen && selectedCategory && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-[9999] overflow-y-auto animate-fadeIn">
-          <div className="w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden relative">
+          <div className="w-full max-w-3xl sm:max-w-4xl lg:max-w-5xl bg-white rounded-2xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden relative transition-all">
             {/* Header Modal */}
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-orange-50/70 to-white shrink-0">
               <div className="flex items-center gap-3">
@@ -1592,13 +1633,13 @@ export const CategoryManagement: React.FC = () => {
             {/* Filter & Search Bar */}
             <div className="p-4 border-b border-slate-100 bg-slate-50/50 space-y-3 shrink-0">
               <div className="flex flex-wrap items-center gap-2.5">
-                <div className="relative w-full sm:w-72">
+                <div className="relative w-full sm:w-80">
                   <input
                     type="text"
                     value={assignSearch}
                     onChange={(e) => setAssignSearch(e.target.value)}
-                    placeholder="Tìm theo mã SKU, tên hàng hoặc nhóm hiện tại..."
-                    className="w-full h-9 pl-8 pr-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200"
+                    placeholder="Tìm theo mã SKU, tên hàng trên toàn hệ thống..."
+                    className="w-full h-9 pl-8 pr-7 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-200"
                   />
                   <svg
                     className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2"
@@ -1608,6 +1649,15 @@ export const CategoryManagement: React.FC = () => {
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
+                  {assignSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setAssignSearch('')}
+                      className="text-slate-400 hover:text-slate-600 absolute right-2.5 top-1/2 -translate-y-1/2 text-xs"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
 
                 <div className="inline-flex rounded-xl bg-white p-0.5 border border-slate-200 text-xs font-medium">
@@ -1619,7 +1669,7 @@ export const CategoryManagement: React.FC = () => {
                       : 'text-slate-600 hover:text-slate-900'
                       }`}
                   >
-                    Tất cả ({systemProducts.length})
+                    Tất cả ({assignTotalElements.toLocaleString('vi-VN')})
                   </button>
                   <button
                     type="button"
@@ -1629,7 +1679,7 @@ export const CategoryManagement: React.FC = () => {
                       : 'text-slate-600 hover:text-slate-900'
                       }`}
                   >
-                    Chưa thuộc nhóm này
+                    Đang ở nhóm khác
                   </button>
                   <button
                     type="button"
@@ -1646,9 +1696,7 @@ export const CategoryManagement: React.FC = () => {
 
               {/* Thông tin chọn nhanh */}
               {(() => {
-                const selectableIds = filteredSystemProducts
-                  .filter((p) => p.categoryId !== selectedCategory.id)
-                  .map((p) => p.id);
+                const selectableIds = filteredSystemProducts.map((p) => p.id);
                 const isAllSelected =
                   selectableIds.length > 0 && selectableIds.every((id) => selectedProductIdsToAssign.has(id));
 
@@ -1662,7 +1710,7 @@ export const CategoryManagement: React.FC = () => {
                         disabled={selectableIds.length === 0}
                         className="rounded text-orange-600 focus:ring-orange-500 cursor-pointer"
                       />
-                      <span>Chọn tất cả các sản phẩm có thể gán ({selectableIds.length})</span>
+                      <span>Chọn tất cả các sản phẩm trên trang ({selectableIds.length})</span>
                     </label>
 
                     <span>
@@ -1687,30 +1735,22 @@ export const CategoryManagement: React.FC = () => {
               ) : (
                 <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
                   {filteredSystemProducts.map((p) => {
-                    const isAlreadyInCurrent = p.categoryId === selectedCategory.id;
                     const isSelected = selectedProductIdsToAssign.has(p.id);
 
                     return (
                       <div
                         key={p.id}
-                        onClick={() => {
-                          if (!isAlreadyInCurrent) handleToggleSelectProduct(p.id);
-                        }}
-                        className={`p-3 flex items-center gap-3 transition-colors ${isAlreadyInCurrent
-                          ? 'bg-slate-50/70 cursor-not-allowed opacity-75'
-                          : isSelected
-                            ? 'bg-orange-50/50 hover:bg-orange-50 cursor-pointer'
-                            : 'bg-white hover:bg-slate-50/80 cursor-pointer'
+                        onClick={() => handleToggleSelectProduct(p.id)}
+                        className={`p-3 flex items-center gap-3 transition-colors ${isSelected
+                          ? 'bg-orange-50/50 hover:bg-orange-50 cursor-pointer'
+                          : 'bg-white hover:bg-slate-50/80 cursor-pointer'
                           }`}
                       >
                         <input
                           type="checkbox"
-                          checked={isSelected || isAlreadyInCurrent}
-                          disabled={isAlreadyInCurrent}
-                          onChange={() => {
-                            if (!isAlreadyInCurrent) handleToggleSelectProduct(p.id);
-                          }}
-                          className="rounded text-orange-600 focus:ring-orange-500 cursor-pointer disabled:opacity-50"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelectProduct(p.id)}
+                          className="rounded text-orange-600 focus:ring-orange-500 cursor-pointer"
                         />
 
                         <div className="flex-1 min-w-0">
@@ -1725,12 +1765,7 @@ export const CategoryManagement: React.FC = () => {
                           </div>
 
                           <div className="mt-1 flex items-center gap-2 text-[11px]">
-                            {isAlreadyInCurrent ? (
-                              <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-semibold border border-emerald-200">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                Đang ở nhóm này
-                              </span>
-                            ) : p.categoryId ? (
+                            {p.categoryId ? (
                               <span className="inline-flex items-center gap-1 text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
                                 Nhóm hiện tại: <span className="font-semibold text-slate-800">{p.category}</span>
                                 <span className="text-orange-600 ml-1 font-semibold">→ Chuyển vào nhóm này</span>
@@ -1748,6 +1783,25 @@ export const CategoryManagement: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Phân trang trong Modal */}
+            {!loadingSystemProducts && assignTotalElements > 0 && (
+              <div className="px-4 py-2 border-t border-slate-100 bg-white shrink-0">
+                <Pagination
+                  page={assignPage}
+                  totalPages={assignTotalPages}
+                  totalElements={assignTotalElements}
+                  size={assignPageSize}
+                  onPageChange={(newPage) => setAssignPage(newPage)}
+                  onSizeChange={(newSize) => {
+                    setAssignPageSize(newSize);
+                    setAssignPage(0);
+                  }}
+                  sizeOptions={[20, 30, 50, 100]}
+                  itemLabel="sản phẩm"
+                />
+              </div>
+            )}
 
             {/* Footer Modal */}
             <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
