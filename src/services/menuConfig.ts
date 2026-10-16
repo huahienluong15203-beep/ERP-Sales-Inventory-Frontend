@@ -73,6 +73,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Đối chiếu thu tiền tuyến',
+    path: '/payments/reconciliation',
+    group: 'Bán hàng',
+    icon: 'Receipt',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: 'Đối chiếu tiền đã thu trên tuyến với tiền đã nộp về công ty mà không tranh cãi (S7-05)',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
+  },
+
+  {
     title: 'Danh mục sản phẩm',
     path: '/products',
     group: 'Sản phẩm & Kho',

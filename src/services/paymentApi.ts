@@ -5,10 +5,12 @@ import type {
   PaymentReceipt,
   PaymentReceiptCreateRequest,
   RouteCashCollectionRequest,
+  PaymentRejectRequest,
   PaymentFilterParams,
   PaymentReceiptPageResponse,
   CustomerInvoiceDebtItem,
-  InvoicePaymentAllocation
+  InvoicePaymentAllocation,
+  PaymentReconciliationResponse
 } from '../types/payment';
 import type { InvoiceSummaryResponse } from '../types/invoice';
 
@@ -372,7 +374,7 @@ export async function createPaymentReceipt(
 }
 
 /**
- * 4. NVKD ghi nhận thu tiền tại tuyến (kèm ảnh biên lai, trạng thái Chờ nộp)
+ * 4. NVKD ghi nhận thu tiền tại tuyến (kèm ảnh biên lai, trạng thái Chờ nộp - S7-05)
  */
 export async function submitRouteCashCollection(
   request: RouteCashCollectionRequest,
@@ -387,13 +389,19 @@ export async function submitRouteCashCollection(
     if (res.ok) {
       return await res.json();
     }
-  } catch {
-    // Fallback sang local storage
+    const errData = await res.json().catch(() => null);
+    if (errData?.message) {
+      throw new Error(errData.message);
+    }
+  } catch (err: unknown) {
+    if (err instanceof Error && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
   }
 
   const localList = getLocalReceipts();
   const nextSeq = localList.length + 1;
-  const code = `TT2026-${String(nextSeq).padStart(6, '0')}`;
+  const code = `PT2026-${String(nextSeq).padStart(6, '0')}`;
 
   const newCollection: PaymentReceipt = {
     id: Date.now(),
@@ -410,7 +418,7 @@ export async function submitRouteCashCollection(
     collectorUsername: currentUser.username,
     notes: request.notes,
     status: 'PENDING_SUBMISSION',
-    receiptImageUrl: request.receiptImageBase64 || '',
+    receiptImageUrl: request.receiptImageUrl || request.receiptImageBase64 || '',
     allocationType: 'FIFO',
     allocations: [],
     createdAt: new Date().toISOString()
@@ -440,7 +448,7 @@ export async function createRouteCashCollection(
 }
 
 /**
- * 5. Kế toán xác nhận đã nhận tiền nộp quỹ từ NVKD
+ * 5. Kế toán xác nhận đã nhận tiền nộp quỹ từ NVKD (chuyển sang CONFIRMED và cấn trừ FIFO - S7-05)
  */
 export async function confirmRouteCashCollection(
   receiptId: number | string,
@@ -453,8 +461,14 @@ export async function confirmRouteCashCollection(
     if (res.ok) {
       return await res.json();
     }
-  } catch {
-    // Fallback
+    const errData = await res.json().catch(() => null);
+    if (errData?.message) {
+      throw new Error(errData.message);
+    }
+  } catch (err: unknown) {
+    if (err instanceof Error && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
   }
 
   const localList = getLocalReceipts();
@@ -495,4 +509,148 @@ export async function confirmRouteCashCollection(
   saveLocalReceipts(localList);
 
   return item;
+}
+
+/**
+ * 6. Kế toán từ chối nhận tiền nộp quỹ từ NVKD (S7-05)
+ */
+export async function rejectRouteCashCollection(
+  receiptId: number | string,
+  reason: string,
+  rejectedBy: { username: string; fullName: string }
+): Promise<PaymentReceipt> {
+  try {
+    const payload: PaymentRejectRequest = { reason };
+    const res = await authFetch(`${API_BASE_URL}/api/payments/${receiptId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const errData = await res.json().catch(() => null);
+    if (errData?.message) {
+      throw new Error(errData.message);
+    }
+  } catch (err: unknown) {
+    if (err instanceof Error && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
+  }
+
+  const localList = getLocalReceipts();
+  const index = localList.findIndex((r) => String(r.id) === String(receiptId));
+  if (index === -1) {
+    throw new Error('Không tìm thấy khoản thu để từ chối');
+  }
+
+  const item = localList[index];
+  item.status = 'REJECTED';
+  item.rejectedAt = new Date().toISOString();
+  item.rejectedByUsername = rejectedBy.username;
+  item.rejectionReason = reason;
+
+  localList[index] = item;
+  saveLocalReceipts(localList);
+
+  return item;
+}
+
+/**
+ * 7. Bảng đối chiếu tiền thu theo từng nhân viên và từng ngày (S7-05)
+ */
+export async function fetchPaymentReconciliation(params: {
+  fromDate?: string;
+  toDate?: string;
+  collectorId?: number | string;
+}): Promise<PaymentReconciliationResponse> {
+  try {
+    const query = new URLSearchParams();
+    if (params.fromDate) query.set('fromDate', params.fromDate);
+    if (params.toDate) query.set('toDate', params.toDate);
+    if (params.collectorId) query.set('collectorId', String(params.collectorId));
+
+    const res = await authFetch(`${API_BASE_URL}/api/payments/reconciliation?${query.toString()}`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fallback sang tính toán từ local storage
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const from = params.fromDate || today;
+  const to = params.toDate || today;
+
+  let receipts = getLocalReceipts();
+  receipts = receipts.filter((r) => {
+    const d = r.paymentDate || r.createdAt.slice(0, 10);
+    return d >= from && d <= to;
+  });
+
+  if (params.collectorId) {
+    receipts = receipts.filter((r) => String(r.collectorId) === String(params.collectorId));
+  }
+
+  let totalCollectedAmount = 0;
+  let pendingAmount = 0;
+  let confirmedAmount = 0;
+  let rejectedAmount = 0;
+
+  let pendingCount = 0;
+  let confirmedCount = 0;
+  let rejectedCount = 0;
+
+  const items = receipts.map((r) => {
+    const amt = Number(r.amount || 0);
+    totalCollectedAmount += amt;
+
+    if (r.status === 'PENDING_SUBMISSION') {
+      pendingAmount += amt;
+      pendingCount++;
+    } else if (r.status === 'CONFIRMED') {
+      confirmedAmount += amt;
+      confirmedCount++;
+    } else if (r.status === 'REJECTED') {
+      rejectedAmount += amt;
+      rejectedCount++;
+    }
+
+    return {
+      id: Number(r.id),
+      code: r.code,
+      customerId: r.customerId,
+      customerCode: r.customerCode,
+      customerName: r.customerName,
+      amount: amt,
+      paymentMethod: r.paymentMethod,
+      paymentDate: r.paymentDate,
+      notes: r.notes,
+      receiptImageUrl: r.receiptImageUrl,
+      status: r.status,
+      createdAt: r.createdAt,
+      confirmedAt: r.confirmedAt,
+      confirmedByUsername: r.confirmedByUsername,
+      rejectedAt: r.rejectedAt,
+      rejectedByUsername: r.rejectedByUsername,
+      rejectionReason: r.rejectionReason
+    };
+  });
+
+  return {
+    fromDate: from,
+    toDate: to,
+    collectorId: params.collectorId ? Number(params.collectorId) : undefined,
+    collectorName: receipts[0]?.collectorName,
+    collectorUsername: receipts[0]?.collectorUsername,
+    totalCollectedAmount,
+    pendingAmount,
+    confirmedAmount,
+    rejectedAmount,
+    totalCount: items.length,
+    pendingCount,
+    confirmedCount,
+    rejectedCount,
+    items
+  };
 }
