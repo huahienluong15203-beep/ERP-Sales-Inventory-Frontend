@@ -93,6 +93,26 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Sổ công nợ & Tuổi nợ',
+    path: '/debts/ledger',
+    group: 'Bán hàng',
+    icon: 'Table',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: 'Sổ công nợ theo đại lý với phân tích tuổi nợ 0-30, 31-60, 61-90, trên 90 ngày',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
+  },
+
+  {
+    title: 'Đối chiếu công nợ',
+    path: '/debts/reconciliation',
+    group: 'Bán hàng',
+    icon: 'FileText',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: 'Biên bản đối chiếu công nợ định kỳ với đại lý, chốt số dư và xuất mẫu A4',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_CUSTOMER']
+  },
+
+  {
     title: 'Chỉ tiêu doanh số (KPI)',
     path: '/kpi/targets',
     group: 'Bán hàng',

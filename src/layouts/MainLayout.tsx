@@ -356,7 +356,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
                 location.pathname !== '/inventory/delivery-trips/create' && (
                   <h1 className="erp-page-heading">{pageTitle}</h1>
                 )}
-              {!['/categories', '/invoices', '/invoices/create', '/payments/adjustments'].includes(location.pathname) &&
+              {!['/categories', '/invoices', '/invoices/create', '/payments/adjustments', '/debts/ledger', '/debts/reconciliation'].includes(location.pathname) &&
                 !location.pathname.startsWith('/inventory/delivery-trips') &&
                 Boolean(pageSubtitle) && (
                   <span className="erp-page-subheading">{pageSubtitle}</span>
