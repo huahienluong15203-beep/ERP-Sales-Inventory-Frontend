@@ -319,11 +319,11 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
         const specificArray =
           allocationType === 'SPECIFIC'
             ? Object.entries(specificAllocations)
-                .filter(([, val]) => val > 0)
-                .map(([idStr, val]) => ({
-                  invoiceId: Number(idStr),
-                  amount: val
-                }))
+              .filter(([, val]) => val > 0)
+              .map(([idStr, val]) => ({
+                invoiceId: Number(idStr),
+                amount: val
+              }))
             : undefined;
 
         created = await createPaymentReceipt(
@@ -587,7 +587,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   <div>
                     <span className="font-bold text-xs text-amber-950 uppercase tracking-wide flex items-center gap-1.5">
                       <Clock size={14} className="text-amber-600" />
-                      <span>Thu tiền theo tuyến (Chờ nộp quỹ - S7-05)</span>
+                      <span>Thu tiền theo tuyến (Chờ nộp quỹ)</span>
                     </span>
                     <span className="text-[11px] text-amber-800 block mt-0.5">
                       Ghi nhận thu tiền tại cửa hàng kèm ảnh biên lai, khoản thu chờ kế toán xác nhận nộp quỹ
@@ -651,11 +651,10 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label
                   onClick={() => setAllocationType('FIFO')}
-                  className={`p-3.5 rounded-xl border-2 flex items-start gap-3 cursor-pointer transition ${
-                    allocationType === 'FIFO'
+                  className={`p-3.5 rounded-xl border-2 flex items-start gap-3 cursor-pointer transition ${allocationType === 'FIFO'
                       ? 'border-emerald-600 bg-emerald-50/60 text-emerald-950 shadow-xs'
                       : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
-                  }`}
+                    }`}
                 >
                   <input
                     type="radio"
@@ -674,11 +673,10 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
                 <label
                   onClick={() => setAllocationType('SPECIFIC')}
-                  className={`p-3.5 rounded-xl border-2 flex items-start gap-3 cursor-pointer transition ${
-                    allocationType === 'SPECIFIC'
+                  className={`p-3.5 rounded-xl border-2 flex items-start gap-3 cursor-pointer transition ${allocationType === 'SPECIFIC'
                       ? 'border-emerald-600 bg-emerald-50/60 text-emerald-950 shadow-xs'
                       : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
-                  }`}
+                    }`}
                 >
                   <input
                     type="radio"
@@ -706,11 +704,10 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   </span>
                   {allocationType === 'SPECIFIC' && (
                     <span
-                      className={`text-xs font-bold font-mono px-2 py-0.5 rounded ${
-                        totalSpecificAllocated === amount
+                      className={`text-xs font-bold font-mono px-2 py-0.5 rounded ${totalSpecificAllocated === amount
                           ? 'bg-emerald-100 text-emerald-800'
                           : 'bg-amber-100 text-amber-800'
-                      }`}
+                        }`}
                     >
                       {totalSpecificAllocated === amount ? 'Đã phân bổ khớp 100%' : 'Chưa phân bổ khớp'}
                     </span>
@@ -800,39 +797,39 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                                   <td className="px-3 py-2 text-right font-mono text-rose-600 font-bold">
                                     {formatCurrencyVND(inv.remainingAmount)}
                                   </td>
-                                <td className="px-3 py-2 text-right">
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    max={inv.remainingAmount}
-                                    value={curVal || ''}
-                                    placeholder="0"
-                                    onChange={(e) =>
-                                      handleSpecificAmountChange(
-                                        inv.id,
-                                        Number(e.target.value) || 0,
-                                        inv.remainingAmount
-                                      )
-                                    }
-                                    className="w-full px-2 py-1 text-right font-mono font-bold text-xs bg-white border border-gray-300 rounded focus:ring-1 focus:ring-emerald-500"
-                                  />
-                                </td>
-                                <td className="px-3 py-2 text-center">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAllocateMaxForInvoice(inv)}
-                                    className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded transition cursor-pointer"
-                                  >
-                                    Điền hết
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                                  <td className="px-3 py-2 text-right">
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={inv.remainingAmount}
+                                      value={curVal || ''}
+                                      placeholder="0"
+                                      onChange={(e) =>
+                                        handleSpecificAmountChange(
+                                          inv.id,
+                                          Number(e.target.value) || 0,
+                                          inv.remainingAmount
+                                        )
+                                      }
+                                      className="w-full px-2 py-1 text-right font-mono font-bold text-xs bg-white border border-gray-300 rounded focus:ring-1 focus:ring-emerald-500"
+                                    />
+                                  </td>
+                                  <td className="px-3 py-2 text-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAllocateMaxForInvoice(inv)}
+                                      className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded transition cursor-pointer"
+                                    >
+                                      Điền hết
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               </div>
