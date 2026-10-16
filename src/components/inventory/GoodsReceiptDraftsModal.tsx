@@ -12,8 +12,7 @@ import {
   Search,
   Warehouse,
   ChevronLeft,
-  ChevronRight,
-  ArrowRight
+  ChevronRight
 } from '../../components/common/Icons';
 
 const PAGE_SIZE = 10;

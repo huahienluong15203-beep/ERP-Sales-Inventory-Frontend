@@ -7,7 +7,6 @@ import {
   Clock,
   RefreshCw,
   Eye,
-  Check,
   Package
 } from 'lucide-react';
 import type { GoodsReceipt } from '../../types/inventory';
@@ -37,8 +36,6 @@ export const GoodsReceiptManagementPage: React.FC = () => {
   // Bộ lọc
   const [keyword, setKeyword] = useState<string>('');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
-
-  const [confirmingId, setConfirmingId] = useState<number | string | null>(null);
 
   const navigate = useNavigate();
 
@@ -72,7 +69,6 @@ export const GoodsReceiptManagementPage: React.FC = () => {
 
   // Xác nhận phiếu nhập kho trực tiếp từ danh sách hoặc modal nháp (AC4: Cộng tồn kho khi xác nhận)
   const handleConfirmDirect = async (receiptId: number | string) => {
-    setConfirmingId(receiptId);
     try {
       const confirmed = await confirmGoodsReceipt(receiptId, user?.username || 'wh_manager');
       showToast(
@@ -85,8 +81,6 @@ export const GoodsReceiptManagementPage: React.FC = () => {
     } catch (err: unknown) {
       console.error('Lỗi xác nhận phiếu nhập kho:', err);
       showToast('Lỗi xác nhận', err instanceof Error ? err.message : 'Không thể xác nhận phiếu', 'error');
-    } finally {
-      setConfirmingId(null);
     }
   };
 
