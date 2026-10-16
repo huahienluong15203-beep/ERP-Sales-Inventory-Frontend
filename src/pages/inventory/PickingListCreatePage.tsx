@@ -195,7 +195,7 @@ export const PickingListCreatePage: React.FC = () => {
                 >
                   {allowedWarehouses.map((wh) => (
                     <option key={wh.id} value={wh.id}>
-                      📍 {wh.name}
+                      {wh.name}
                     </option>
                   ))}
                 </select>

@@ -282,7 +282,7 @@ export const PickingListManagementPage: React.FC = () => {
                 type="text"
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
-                placeholder="Tìm mã phiếu, người soạn..."
+                placeholder="Tìm mã phiếu, mã đơn hàng, người soạn..."
                 className="w-full text-xs pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 outline-none"
               />
             </div>
@@ -360,9 +360,27 @@ export const PickingListManagementPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        <span className="inline-block px-2 py-0.5 rounded-full bg-gray-100 font-semibold text-gray-800">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full bg-gray-100 font-bold text-gray-800 text-xs">
                           {list.orderCount} đơn
                         </span>
+                        {list.orders && list.orders.length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap justify-center gap-1 max-w-[200px] mx-auto">
+                            {list.orders.slice(0, 3).map((ord, idx) => (
+                              <span
+                                key={idx}
+                                className="font-mono text-[10px] text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200 font-semibold"
+                                title={`Đơn hàng: ${ord.code || (ord as any).orderCode}`}
+                              >
+                                {ord.code || (ord as any).orderCode}
+                              </span>
+                            ))}
+                            {list.orders.length > 3 && (
+                              <span className="text-[10px] text-gray-400 font-semibold self-center">
+                                +{list.orders.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3.5 px-4 w-48">
                         <div className="space-y-1">
