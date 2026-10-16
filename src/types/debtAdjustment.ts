@@ -7,13 +7,13 @@ export interface DebtAdjustmentItem {
   baseUnit: string;
   returnQuantity: number;
   originalSoldPrice: number; // Giá bán thực tế trên hoá đơn gốc (AC2)
-  currentCatalogPrice: number; // Giá niêm yết hiện hành
+  currentCatalogPrice: number | null; // Giá niêm yết hiện hành (null nếu SKU không còn trong bảng giá)
   adjustmentAmount: number; // returnQuantity * originalSoldPrice
 }
 
 export interface DebtAdjustment {
   id: number;
-  adjustmentCode: string; // VD: CT-DC-202610-01
+  adjustmentCode: string | null; // Số chứng từ (GG2026-000001), chỉ có sau khi duyệt
   returnOrderCode: string; // Phiếu trả hàng đã xác nhận nhập kho (AC1)
   originalInvoiceId: number;
   originalInvoiceCode: string; // Hoá đơn gốc giữ nguyên (AC4)
