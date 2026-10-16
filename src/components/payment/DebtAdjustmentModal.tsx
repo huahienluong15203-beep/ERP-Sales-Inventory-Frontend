@@ -90,10 +90,8 @@ export const DebtAdjustmentModal: React.FC<DebtAdjustmentModalProps> = ({
               <h2 className="text-base sm:text-lg font-bold text-white">
                 Duyệt Chứng từ Giảm trừ Công nợ khi Trả hàng
               </h2>
-              <p className="text-xs text-blue-100">
-                Mã chứng từ: <span className="font-mono font-bold text-white">{adjustment.adjustmentCode || 'Chưa cấp số (chờ duyệt)'}</span>
               <p className="text-xs text-orange-100">
-                Mã chứng từ: <span className="font-mono font-bold text-white">{adjustment.adjustmentCode}</span>
+                Mã chứng từ: <span className="font-mono font-bold text-white">{adjustment.adjustmentCode || 'Chưa cấp số (chờ duyệt)'}</span>
               </p>
             </div>
           </div>
