@@ -97,26 +97,15 @@ export const InvoiceManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6 antialiased max-w-7xl mx-auto pb-16">
-      {/* 1. Header & Actions - Tinh gọn theo yêu cầu */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-2xl bg-orange-100 text-[#F85606] flex items-center justify-center font-black">
-            <Receipt className="w-5 h-5" />
-          </div>
-          <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-            Quản lý hoá đơn bán hàng
-          </h1>
-        </div>
-
-        {/* Nút hành động cùng hàng: Tải lại, Lập chứng từ điều chỉnh, Lập HĐ mới */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={() => loadInvoices(page)}
-            className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-2xs transition cursor-pointer"
-            title="Tải lại danh sách"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+      {/* 1. Header & Actions - Tinh gọn chỉ nút thao tác */}
+      <div className="flex items-center justify-end gap-2.5 flex-wrap">
+        <button
+          onClick={() => loadInvoices(page)}
+          className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-2xs transition cursor-pointer"
+          title="Tải lại danh sách"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
 
           {isAccountantOrAdmin && (
             <>
@@ -138,7 +127,6 @@ export const InvoiceManagementPage: React.FC = () => {
               </button>
             </>
           )}
-        </div>
       </div>
 
       {/* 3. KPI Statistics Cards */}
