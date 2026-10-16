@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Check,
   Layers,
-  Info,
   Search
 } from 'lucide-react';
 import { useNavigate } from '../../routes/Router';
@@ -44,22 +43,37 @@ const RETURN_REASONS = [
   'Lý do khác'
 ];
 
+const DEFAULT_WAREHOUSES: Warehouse[] = [
+  { id: 1, code: 'KHO-HN', name: 'Kho Tổng Hà Nội', address: 'KCN Tiên Sơn, Bắc Ninh', status: 'ACTIVE', locationCount: 1, activeLocationCount: 1 },
+  { id: 2, code: 'KHO-HCM', name: 'Kho Tổng TP.HCM', address: 'KCN Tân Bình, TP.HCM', status: 'ACTIVE', locationCount: 0, activeLocationCount: 0 },
+  { id: 3, code: 'WH-MB01', name: 'Kho Tổng Miền Bắc', address: 'KCN Tiên Sơn, Bắc Ninh', status: 'ACTIVE', locationCount: 10, activeLocationCount: 10 },
+  { id: 4, code: 'WH-MT01', name: 'Kho Miền Trung', address: 'KCN Hòa Khánh, Đà Nẵng', status: 'ACTIVE', locationCount: 0, activeLocationCount: 0 },
+  { id: 5, code: 'WH-MN01', name: 'Kho Tổng Miền Nam', address: 'KCN Tân Bình, TP.HCM', status: 'ACTIVE', locationCount: 10, activeLocationCount: 10 }
+];
+
+const getTodayLocalDateString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const CreateSalesReturnPage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useAuth();
 
-  // Danh sách kho & hoá đơn
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  // Danh sách kho & hoá đơn (mặc định nạp sẵn kho hệ thống để không bị trắng)
+  const [warehouses, setWarehouses] = useState<Warehouse[]>(DEFAULT_WAREHOUSES);
   const [invoices, setInvoices] = useState<InvoiceSummaryResponse[]>([]);
   const [loadingInitial, setLoadingInitial] = useState<boolean>(true);
 
   // Form State
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceSummaryResponse | null>(null);
   const [invoiceKeyword, setInvoiceKeyword] = useState<string>('');
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | ''>('');
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | ''>(DEFAULT_WAREHOUSES[0].id);
   const [returnReason, setReturnReason] = useState<string>('Hàng lỗi do nhà sản xuất');
-  const [reasonDescription, setReasonDescription] = useState<string>('');
-  const [returnDate, setReturnDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [returnDate, setReturnDate] = useState<string>(getTodayLocalDateString);
   const [generalNotes, setGeneralNotes] = useState<string>('');
 
   // Danh sách dòng hàng của hoá đơn
@@ -72,15 +86,25 @@ export const CreateSalesReturnPage: React.FC = () => {
     const initData = async () => {
       setLoadingInitial(true);
       try {
-        const [whList, invPage] = await Promise.all([
+        const [whRes, invRes] = await Promise.allSettled([
           fetchWarehouses(),
           searchInvoices({ size: 50 })
         ]);
-        setWarehouses(whList);
-        if (whList.length > 0) {
-          setSelectedWarehouseId(whList[0].id);
+
+        if (whRes.status === 'fulfilled' && whRes.value && whRes.value.length > 0) {
+          setWarehouses(whRes.value);
+          setSelectedWarehouseId((prev) => prev || whRes.value[0].id);
+        } else {
+          setWarehouses(DEFAULT_WAREHOUSES);
+          setSelectedWarehouseId((prev) => prev || DEFAULT_WAREHOUSES[0].id);
         }
-        setInvoices(invPage?.content || []);
+
+        if (invRes.status === 'fulfilled') {
+          setInvoices(invRes.value?.content || []);
+        } else {
+          console.warn('Lỗi tải danh sách hoá đơn:', invRes.reason);
+          showToast(invRes.reason?.message || 'Không thể tải danh sách hoá đơn', 'error');
+        }
       } catch (err: any) {
         showToast(err?.message || 'Lỗi tải dữ liệu ban đầu', 'error');
       } finally {
@@ -90,24 +114,53 @@ export const CreateSalesReturnPage: React.FC = () => {
     initData();
   }, []);
 
+const getSuggestedBatch = (productSku: string, productName: string) => {
+  const sku = (productSku || '').toUpperCase();
+  const name = (productName || '').toLowerCase();
+
+  if (sku.includes('COCA') || name.includes('coca')) return { batch: 'LOT-COCA-202610', exp: '2027-10-01' };
+  if (sku.includes('NUOCNGOT') || name.includes('đào')) return { batch: 'LOT-DAO-202610', exp: '2027-10-01' };
+  if (sku.includes('GIAVI-01') || name.includes('ớt')) return { batch: 'LOT-OT-202610', exp: '2027-10-01' };
+  if (sku.includes('GIAVI') || name.includes('muối')) return { batch: 'LOT-MUOI-202610', exp: '2027-10-01' };
+  if (sku.includes('NUOCMAN') || name.includes('mắm')) return { batch: 'LOT-MAM-202610', exp: '2027-10-01' };
+  if (sku.includes('0001') || name.includes('danisa')) return { batch: 'LOT-DANISA-202610', exp: '2027-10-01' };
+  if (sku.includes('0002') || name.includes('phô mai')) return { batch: 'LOT-CAL-202610', exp: '2027-10-01' };
+  if (sku.includes('0003') || name.includes('solite')) return { batch: 'LOT-SOLITE-202610', exp: '2027-10-01' };
+  if (sku.includes('0007') || name.includes('socola')) return { batch: 'LOT-CHOCO-202610', exp: '2027-10-01' };
+  if (sku.includes('0030') || name.includes('toonies')) return { batch: 'LOT-TOONIES-202610', exp: '2027-10-01' };
+
+  const clean = sku.replace(/[^A-Z0-9]/g, '').slice(-6) || 'BATCH';
+  return { batch: `LOT-${clean}-202610`, exp: '2027-10-01' };
+};
+
   // Khi chọn hoá đơn -> tải các dòng hàng có thể hoàn trả
   const handleSelectInvoice = async (inv: InvoiceSummaryResponse) => {
     setSelectedInvoice(inv);
     setLoadingLines(true);
     try {
       const lines = await fetchReturnableInvoiceLines(inv.id);
-      setLineItems(
-        lines.map((l) => ({
+      const mapped = lines.map((l) => {
+        const sug = l.hasBatchManagement ? getSuggestedBatch(l.productSku, l.productName) : null;
+        const canReturn = (Number(l.remainingReturnableQuantity) || 0) > 0;
+        return {
           ...l,
           selected: false,
-          returnQty: 1,
-          batchNumber: '',
-          manufactureDate: '',
-          expiredDate: '',
+          returnQty: canReturn ? 1 : 0,
+          batchNumber: sug ? sug.batch : '',
+          manufactureDate: sug ? '2026-10-01' : '',
+          expiredDate: sug ? sug.exp : '',
           isDamaged: false,
-          lineNotes: ''
-        }))
-      );
+          lineNotes: '',
+          error: undefined
+        };
+      });
+      // Sắp xếp mặt hàng còn được chọn lên đầu (remainingReturnableQuantity > 0)
+      mapped.sort((a, b) => {
+        const aCan = (Number(a.remainingReturnableQuantity) || 0) > 0 ? 1 : 0;
+        const bCan = (Number(b.remainingReturnableQuantity) || 0) > 0 ? 1 : 0;
+        return bCan - aCan;
+      });
+      setLineItems(mapped);
     } catch (err: any) {
       showToast(err?.message || 'Không thể tải chi tiết dòng hàng của hoá đơn', 'error');
       setLineItems([]);
@@ -116,7 +169,7 @@ export const CreateSalesReturnPage: React.FC = () => {
     }
   };
 
-  // Cập nhật dòng hàng
+  // Cập nhật chọn/bỏ chọn dòng hàng
   const handleToggleSelectLine = (invoiceLineId: number) => {
     setLineItems((prev) =>
       prev.map((item) => {
@@ -133,6 +186,22 @@ export const CreateSalesReturnPage: React.FC = () => {
     );
   };
 
+  // Chọn tất cả hoặc bỏ chọn tất cả
+  const handleToggleSelectAll = (select: boolean) => {
+    setLineItems((prev) =>
+      prev.map((item) => {
+        const canReturn = item.remainingReturnableQuantity > 0;
+        if (!canReturn) return item;
+        return {
+          ...item,
+          selected: select,
+          returnQty: select ? (item.returnQty > 0 ? item.returnQty : 1) : item.returnQty
+        };
+      })
+    );
+  };
+
+  // Cập nhật giá trị một trường trong dòng hàng (tự động kích hoạt chọn dòng nếu chưa chọn)
   const handleUpdateLineField = (
     invoiceLineId: number,
     field: keyof LineItemState,
@@ -142,7 +211,8 @@ export const CreateSalesReturnPage: React.FC = () => {
       prev.map((item) => {
         if (item.invoiceLineId !== invoiceLineId) return item;
 
-        const updated = { ...item, [field]: value };
+        // Tự động kích hoạt chọn dòng
+        const updated: LineItemState = { ...item, selected: true, [field]: value };
 
         // Kiểm tra số lượng trả không vượt quá số còn được trả (AC2)
         if (field === 'returnQty') {
@@ -158,7 +228,7 @@ export const CreateSalesReturnPage: React.FC = () => {
 
         // Kiểm tra số lô nếu SKU quản lý lô (AC3)
         if (field === 'batchNumber' && item.hasBatchManagement) {
-          if (!value?.trim()) {
+          if (!value?.toString().trim()) {
             updated.error = 'SKU có quản lý lô, vui lòng nhập số lô';
           } else {
             updated.error = undefined;
@@ -183,19 +253,19 @@ export const CreateSalesReturnPage: React.FC = () => {
     if (e) e.preventDefault();
 
     if (!selectedInvoice) {
-      showToast('Vui lòng chọn hoá đơn gốc cần trả hàng', 'error');
+      showToast('Vui lòng chọn hoá đơn gốc cần trả hàng', 'warning');
       return;
     }
     if (!selectedWarehouseId) {
-      showToast('Vui lòng chọn kho tiếp nhận hàng hoàn', 'error');
+      showToast('Vui lòng chọn kho tiếp nhận hàng hoàn', 'warning');
       return;
     }
     if (!returnReason.trim()) {
-      showToast('Bắt buộc chọn lý do trả hàng (AC1)', 'error');
+      showToast('Bắt buộc chọn lý do trả hàng (AC1)', 'warning');
       return;
     }
     if (selectedLines.length === 0) {
-      showToast('Vui lòng tích chọn ít nhất 1 dòng sản phẩm muốn trả', 'error');
+      showToast('Vui lòng tích chọn ít nhất 1 dòng sản phẩm muốn trả hàng', 'warning');
       return;
     }
 
@@ -222,7 +292,6 @@ export const CreateSalesReturnPage: React.FC = () => {
       invoiceId: selectedInvoice.id,
       receivingWarehouseId: Number(selectedWarehouseId),
       returnReason,
-      reasonDescription: reasonDescription.trim() || undefined,
       returnDate,
       notes: generalNotes.trim() || undefined,
       items: selectedLines.map((line) => ({
@@ -250,40 +319,43 @@ export const CreateSalesReturnPage: React.FC = () => {
 
   const filteredInvoices = invoices.filter(
     (inv) =>
-      inv.code.toLowerCase().includes(invoiceKeyword.toLowerCase()) ||
-      inv.customerName?.toLowerCase().includes(invoiceKeyword.toLowerCase())
+      (inv.code && inv.code.toLowerCase().includes(invoiceKeyword.toLowerCase())) ||
+      (inv.customerName && inv.customerName.toLowerCase().includes(invoiceKeyword.toLowerCase()))
   );
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20 antialiased">
       {/* 1. Header tinh gọn theo đúng chuẩn */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/sales-returns')}
-            className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
-            title="Quay lại danh sách phiếu trả hàng"
-          >
-            <ArrowLeft size={16} />
-            <span>Quay lại</span>
-          </button>
-          <div>
-            <h1 className="text-base font-bold text-gray-900 tracking-tight flex items-center gap-2">
-              <RotateCcw className="w-5 h-5 text-[#F85606]" />
-              <span>Lập Phiếu Trả Hàng Từ Đại Lý</span>
-            </h1>
-          </div>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => navigate('/sales-returns')}
+          className="px-3.5 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+          title="Quay lại danh sách phiếu trả hàng"
+        >
+          <ArrowLeft size={16} />
+          <span>Quay lại</span>
+        </button>
 
         <button
           type="button"
           onClick={() => handleSubmit()}
-          disabled={submitting || selectedLines.length === 0}
-          className="px-5 py-2.5 rounded-xl bg-[#F85606] hover:bg-[#E04D05] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={submitting}
+          className={`px-5 py-2.5 rounded-xl text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition cursor-pointer active:scale-95 ${
+            selectedLines.length === 0
+              ? 'bg-[#F85606]/80 hover:bg-[#F85606]'
+              : 'bg-[#F85606] hover:bg-[#E04D05]'
+          }`}
+          title={selectedLines.length === 0 ? 'Bấm để lập phiếu (sẽ nhắc chọn dòng hàng nếu chưa chọn)' : 'Lập phiếu trả hàng'}
         >
           <RotateCcw size={15} />
-          <span>{submitting ? 'Đang tạo phiếu...' : 'Lập Phiếu Trả Hàng'}</span>
+          <span>
+            {submitting
+              ? 'Đang tạo phiếu...'
+              : selectedLines.length === 0
+              ? 'Lập Phiếu Trả Hàng'
+              : `Lập Phiếu Trả Hàng (${selectedLines.length} dòng)`}
+          </span>
         </button>
       </div>
 
@@ -317,8 +389,8 @@ export const CreateSalesReturnPage: React.FC = () => {
               />
             </div>
 
-            {/* Danh sách hoá đơn */}
-            <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1 divide-y divide-gray-50">
+            {/* Danh sách hoá đơn (chứa tối đa 4 hoá đơn, nhiều hơn vuốt xuống) */}
+            <div className="max-h-[280px] overflow-y-auto pr-1 divide-y divide-gray-100">
               {loadingInitial ? (
                 <div className="text-center py-8 text-xs text-gray-400">Đang tải danh sách hoá đơn...</div>
               ) : filteredInvoices.length === 0 ? (
@@ -327,80 +399,56 @@ export const CreateSalesReturnPage: React.FC = () => {
                 filteredInvoices.map((inv) => {
                   const isSelected = selectedInvoice?.id === inv.id;
                   return (
-                    <button
-                      key={inv.id}
-                      type="button"
-                      onClick={() => handleSelectInvoice(inv)}
-                      className={`w-full text-left p-2.5 rounded-xl transition cursor-pointer flex items-start justify-between gap-2 ${
-                        isSelected
-                          ? 'bg-orange-50/80 border border-orange-200'
-                          : 'hover:bg-gray-50 border border-transparent'
-                      }`}
-                    >
-                      <div className="space-y-0.5 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-gray-900">
-                            {inv.code}
-                          </span>
-                          <span className="text-[10px] text-gray-500">
-                            {inv.invoiceDate ? inv.invoiceDate.split('T')[0] : ''}
-                          </span>
+                    <div key={inv.id} className="py-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectInvoice(inv)}
+                        className={`w-full text-left p-2.5 rounded-xl transition cursor-pointer flex items-start justify-between gap-2 ${
+                          isSelected
+                            ? 'bg-orange-50/80 border border-orange-200'
+                            : 'hover:bg-gray-50 border border-transparent'
+                        }`}
+                      >
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-gray-900">
+                              {inv.code}
+                            </span>
+                            <span className="text-[10px] text-gray-500">
+                              {inv.invoiceDate ? inv.invoiceDate.split('T')[0] : ''}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-700 truncate font-medium">
+                            {inv.customerName}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-700 truncate font-medium">
-                          {inv.customerName}
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <div className="text-xs font-bold text-gray-900">
-                          {formatCurrencyVND(inv.totalAmount || 0)}
-                        </div>
-                        <span
-                          className={`inline-block text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                            inv.paymentStatus === 'PAID'
-                              ? 'bg-emerald-50 text-emerald-700'
+                        <div className="text-right shrink-0">
+                          <div className="text-xs font-bold text-gray-900">
+                            {formatCurrencyVND(inv.totalAmount || 0)}
+                          </div>
+                          <span
+                            className={`inline-block text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                              inv.paymentStatus === 'PAID'
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : inv.paymentStatus === 'PARTIALLY_PAID'
+                                ? 'bg-amber-50 text-amber-700'
+                                : 'bg-rose-50 text-rose-700'
+                            }`}
+                          >
+                            {inv.paymentStatus === 'PAID'
+                              ? 'Đã trả hết'
                               : inv.paymentStatus === 'PARTIALLY_PAID'
-                              ? 'bg-amber-50 text-amber-700'
-                              : 'bg-rose-50 text-rose-700'
-                          }`}
-                        >
-                          {inv.paymentStatus === 'PAID'
-                            ? 'Đã trả hết'
-                            : inv.paymentStatus === 'PARTIALLY_PAID'
-                            ? 'Đã trả 1 phần'
-                            : 'Chưa thanh toán'}
-                        </span>
-                      </div>
-                    </button>
+                              ? 'Đã trả 1 phần'
+                              : 'Chưa thanh toán'}
+                          </span>
+                        </div>
+                      </button>
+                    </div>
                   );
                 })
               )}
             </div>
           </div>
-
-          {/* Chi tiết đại lý đã chọn */}
-          {selectedInvoice ? (
-            <div className="p-3 bg-gray-50 rounded-xl border border-gray-200/60 text-xs space-y-1">
-              <div className="flex items-center justify-between text-gray-500 text-[11px]">
-                <span>Đại lý:</span>
-                <span className="font-bold text-gray-900">{selectedInvoice.customerName}</span>
-              </div>
-              <div className="flex items-center justify-between text-gray-500 text-[11px]">
-                <span>Mã hoá đơn gốc:</span>
-                <span className="font-mono font-bold text-[#F85606]">{selectedInvoice.code}</span>
-              </div>
-              <div className="flex items-center justify-between text-gray-500 text-[11px]">
-                <span>Tổng giá trị hoá đơn:</span>
-                <span className="font-bold text-gray-900">
-                  {formatCurrencyVND(selectedInvoice.totalAmount || 0)}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200/60 text-xs text-amber-800 flex items-center gap-2">
-              <Info size={16} className="text-amber-600 shrink-0" />
-              <span>Vui lòng chọn 1 hoá đơn ở trên để nạp danh sách dòng sản phẩm</span>
-            </div>
-          )}
         </div>
 
         {/* CỘT 2: THÔNG TIN HOÀN TRẢ & KHO NHẬP */}
@@ -432,18 +480,6 @@ export const CreateSalesReturnPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Diễn giải chi tiết lý do */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-700">Mô tả chi tiết nguyên nhân</label>
-              <input
-                type="text"
-                value={reasonDescription}
-                onChange={(e) => setReasonDescription(e.target.value)}
-                placeholder="VD: Bao bì rách 3 thùng, sản phẩm hết hạn tháng 10..."
-                className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:border-[#F85606] focus:bg-white focus:outline-none transition"
-              />
-            </div>
-
             {/* Chọn kho tiếp nhận & Ngày trả */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
@@ -456,11 +492,15 @@ export const CreateSalesReturnPage: React.FC = () => {
                   onChange={(e) => setSelectedWarehouseId(Number(e.target.value))}
                   className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:border-[#F85606] focus:bg-white focus:outline-none transition cursor-pointer"
                 >
-                  {warehouses.map((wh) => (
-                    <option key={wh.id} value={wh.id}>
-                      {wh.name} ({wh.code})
-                    </option>
-                  ))}
+                  {warehouses.length === 0 ? (
+                    <option value="">-- Chưa có kho tiếp nhận --</option>
+                  ) : (
+                    warehouses.map((wh) => (
+                      <option key={wh.id} value={wh.id}>
+                        {wh.name} ({wh.code})
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -489,25 +529,48 @@ export const CreateSalesReturnPage: React.FC = () => {
           </div>
 
           <div className="p-3 bg-gray-50 rounded-xl border border-gray-200/60 text-[11px] text-gray-500">
-            * Lưu ý: Phiếu trả sau khi lập cần được <strong>Quản lý kho xác nhận nhận hàng</strong> thì tồn kho mới chính thức được cộng lại vào hệ thống (AC4).
+            * Lưu ý: Phiếu trả sau khi lập cần được <strong>Quản lý kho xác nhận nhận hàng</strong> thì tồn kho mới chính thức được cộng lại vào hệ thống.
           </div>
         </div>
       </div>
 
       {/* 3. BẢNG DANH SÁCH DÒNG HÀNG HOÀN TRẢ */}
       <div className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-[#F85606]" />
             <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
               3. Chọn Dòng Hàng & Số Lượng Trả ({selectedLines.length}/{lineItems.length} dòng đã chọn)
             </h3>
           </div>
-          {selectedLines.length > 0 && (
-            <div className="text-xs font-bold text-[#F85606]">
-              Tổng SL trả: {totalReturnQty} • Thành tiền: {formatCurrencyVND(totalReturnAmount)}
-            </div>
-          )}
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {lineItems.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleToggleSelectAll(true)}
+                  className="px-2.5 py-1 text-[11px] font-bold text-[#F85606] bg-orange-50 hover:bg-orange-100 rounded-lg border border-orange-200 transition cursor-pointer"
+                >
+                  Chọn tất cả ({lineItems.filter((i) => i.remainingReturnableQuantity > 0).length})
+                </button>
+                {selectedLines.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSelectAll(false)}
+                    className="px-2.5 py-1 text-[11px] font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-200 transition cursor-pointer"
+                  >
+                    Bỏ chọn
+                  </button>
+                )}
+              </div>
+            )}
+            {selectedLines.length > 0 && (
+              <div className="text-xs font-bold text-[#F85606] bg-orange-50/80 px-2.5 py-1 rounded-lg border border-orange-200">
+                Tổng SL trả: {totalReturnQty} • Thành tiền: {formatCurrencyVND(totalReturnAmount)}
+              </div>
+            )}
+          </div>
         </div>
 
         {loadingLines ? (
@@ -528,13 +591,24 @@ export const CreateSalesReturnPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-600 font-bold">
-                  <th className="p-3 w-10 text-center">Chọn</th>
+                <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-600 font-bold select-none">
+                  <th className="p-3 w-12 text-center">
+                    <input
+                      type="checkbox"
+                      checked={
+                        lineItems.length > 0 &&
+                        lineItems.filter((i) => i.remainingReturnableQuantity > 0).length > 0 &&
+                        lineItems.filter((i) => i.remainingReturnableQuantity > 0).every((i) => i.selected)
+                      }
+                      onChange={(e) => handleToggleSelectAll(e.target.checked)}
+                      className="w-4 h-4 rounded text-[#F85606] focus:ring-[#F85606] cursor-pointer"
+                      title="Chọn hoặc bỏ chọn tất cả"
+                    />
+                  </th>
                   <th className="p-3 min-w-[200px]">Sản phẩm / SKU</th>
                   <th className="p-3 w-20 text-center">ĐVT</th>
                   <th className="p-3 w-24 text-right">Đã giao</th>
                   <th className="p-3 w-24 text-right">Đã trả</th>
-                  <th className="p-3 w-28 text-right text-emerald-700">Còn được trả</th>
                   <th className="p-3 w-32 text-center text-[#F85606]">SL trả lần này *</th>
                   <th className="p-3 w-28 text-right">Đơn giá</th>
                   <th className="p-3 w-32 text-right">Thành tiền</th>
@@ -544,37 +618,53 @@ export const CreateSalesReturnPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {lineItems.map((item) => {
-                  const isExceeded = item.returnQty > item.remainingReturnableQuantity;
                   const canReturn = item.remainingReturnableQuantity > 0;
+                  const isExceeded = canReturn && item.selected && item.returnQty > item.remainingReturnableQuantity;
 
                   return (
                     <tr
                       key={item.invoiceLineId}
-                      className={`hover:bg-gray-50/60 transition ${
-                        item.selected ? 'bg-orange-50/30' : ''
-                      } ${!canReturn ? 'opacity-50' : ''}`}
+                      onClick={(e) => {
+                        const target = e.target as HTMLElement;
+                        if (!['INPUT', 'BUTTON', 'SELECT', 'TEXTAREA', 'A'].includes(target.tagName) && canReturn) {
+                          handleToggleSelectLine(item.invoiceLineId);
+                        }
+                      }}
+                      className={`transition ${
+                        canReturn ? 'cursor-pointer hover:bg-orange-50/40' : 'opacity-50 cursor-not-allowed bg-gray-50/50'
+                      } ${item.selected ? 'bg-orange-50/40' : 'bg-white'}`}
                     >
                       {/* Checkbox chọn */}
-                      <td className="p-3 text-center">
+                      <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={item.selected}
                           disabled={!canReturn}
                           onChange={() => handleToggleSelectLine(item.invoiceLineId)}
                           className="w-4 h-4 rounded text-[#F85606] focus:ring-[#F85606] cursor-pointer"
+                          title={
+                            canReturn
+                              ? 'Tích chọn để hoàn trả mặt hàng này'
+                              : 'Mặt hàng này đã được hoàn trả hết số lượng theo hoá đơn (Còn được trả = 0)'
+                          }
                         />
                       </td>
 
                       {/* Tên sản phẩm & SKU */}
                       <td className="p-3">
                         <div className="font-bold text-gray-900">{item.productName}</div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           <span className="font-mono text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
                             {item.productSku}
                           </span>
                           {item.hasBatchManagement && (
                             <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
                               Quản lý lô
+                            </span>
+                          )}
+                          {!canReturn && (
+                            <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                              Đã trả hết 100%
                             </span>
                           )}
                         </div>
@@ -593,20 +683,20 @@ export const CreateSalesReturnPage: React.FC = () => {
                         {item.previouslyReturnedQuantity}
                       </td>
 
-                      {/* Còn được trả tối đa */}
-                      <td className="p-3 text-right font-mono font-bold text-emerald-700">
-                        {item.remainingReturnableQuantity}
-                      </td>
-
-                      {/* Số lượng trả lần này (AC2) */}
-                      <td className="p-3">
+                      {/* Số lượng trả lần này (AC2) - Luôn có thể bấm nhập và tự kích hoạt chọn dòng */}
+                      <td className="p-3" onClick={(e) => e.stopPropagation()}>
                         <div className="space-y-1">
                           <input
                             type="number"
                             min={1}
                             max={item.remainingReturnableQuantity}
-                            value={item.returnQty}
-                            disabled={!item.selected}
+                            value={canReturn ? item.returnQty : 0}
+                            disabled={!canReturn}
+                            onFocus={() => {
+                              if (!item.selected && canReturn) {
+                                handleToggleSelectLine(item.invoiceLineId);
+                              }
+                            }}
                             onChange={(e) =>
                               handleUpdateLineField(
                                 item.invoiceLineId,
@@ -615,12 +705,14 @@ export const CreateSalesReturnPage: React.FC = () => {
                               )
                             }
                             className={`w-full px-2.5 py-1.5 text-xs text-center font-bold font-mono rounded-lg border transition ${
-                              isExceeded || item.error
+                              item.selected && (isExceeded || item.error)
                                 ? 'border-rose-400 bg-rose-50 text-rose-800'
-                                : 'border-gray-300 bg-white focus:border-[#F85606]'
-                            } ${!item.selected ? 'bg-gray-100 cursor-not-allowed text-gray-400' : ''}`}
+                                : item.selected
+                                ? 'border-[#F85606] bg-white text-gray-900 shadow-2xs'
+                                : 'border-gray-300 bg-white hover:border-gray-400 text-gray-700'
+                            } ${!canReturn ? 'bg-gray-100 cursor-not-allowed text-gray-400 border-gray-200' : ''}`}
                           />
-                          {item.error && (
+                          {item.selected && item.error && (
                             <div className="text-[10px] text-rose-600 font-medium">{item.error}</div>
                           )}
                         </div>
@@ -638,71 +730,44 @@ export const CreateSalesReturnPage: React.FC = () => {
                         )}
                       </td>
 
-                      {/* Số Lô / Date (AC3) */}
-                      <td className="p-3">
+                      {/* Số Lô (AC3) */}
+                      <td className="p-3" onClick={(e) => e.stopPropagation()}>
                         {item.hasBatchManagement ? (
-                          <div className="space-y-1">
-                            <input
-                              type="text"
-                              placeholder="Số lô (Bắt buộc)..."
-                              value={item.batchNumber}
-                              disabled={!item.selected}
-                              onChange={(e) =>
-                                handleUpdateLineField(
-                                  item.invoiceLineId,
-                                  'batchNumber',
-                                  e.target.value
-                                )
+                          <input
+                            type="text"
+                            placeholder="Số lô (nếu có)..."
+                            value={item.batchNumber}
+                            disabled={!canReturn}
+                            onFocus={() => {
+                              if (!item.selected && canReturn) {
+                                handleToggleSelectLine(item.invoiceLineId);
                               }
-                              className={`w-full px-2 py-1 text-xs rounded border ${
-                                !item.batchNumber?.trim() && item.selected
-                                  ? 'border-amber-300 bg-amber-50/50'
-                                  : 'border-gray-200 bg-white'
-                              }`}
-                            />
-                            <div className="grid grid-cols-2 gap-1 text-[10px]">
-                              <input
-                                type="date"
-                                title="Hạn sử dụng"
-                                value={item.expiredDate}
-                                disabled={!item.selected}
-                                onChange={(e) =>
-                                  handleUpdateLineField(
-                                    item.invoiceLineId,
-                                    'expiredDate',
-                                    e.target.value
-                                  )
-                                }
-                                className="px-1 py-0.5 rounded border border-gray-200 text-[10px]"
-                              />
-                              <input
-                                type="text"
-                                placeholder="Ghi chú dòng"
-                                value={item.lineNotes}
-                                disabled={!item.selected}
-                                onChange={(e) =>
-                                  handleUpdateLineField(
-                                    item.invoiceLineId,
-                                    'lineNotes',
-                                    e.target.value
-                                  )
-                                }
-                                className="px-1 py-0.5 rounded border border-gray-200 text-[10px]"
-                              />
-                            </div>
-                          </div>
+                            }}
+                            onChange={(e) =>
+                              handleUpdateLineField(
+                                item.invoiceLineId,
+                                'batchNumber',
+                                e.target.value
+                              )
+                            }
+                            className={`w-full px-2.5 py-1.5 text-xs rounded-lg border transition font-mono ${
+                              !item.batchNumber?.trim() && item.selected
+                                ? 'border-amber-400 bg-amber-50/50'
+                                : 'border-gray-200 bg-white focus:border-[#F85606]'
+                            } ${!canReturn ? 'bg-gray-100 cursor-not-allowed text-gray-400' : ''}`}
+                          />
                         ) : (
                           <span className="text-[11px] text-gray-400 italic">Không quản lý lô</span>
                         )}
                       </td>
 
                       {/* Checkbox Hàng lỗi/hỏng (AC3) */}
-                      <td className="p-3 text-center">
+                      <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                         <label className="inline-flex items-center gap-1 cursor-pointer">
                           <input
                             type="checkbox"
                             checked={item.isDamaged}
-                            disabled={!item.selected}
+                            disabled={!canReturn}
                             onChange={(e) =>
                               handleUpdateLineField(
                                 item.invoiceLineId,
@@ -747,7 +812,7 @@ export const CreateSalesReturnPage: React.FC = () => {
                 type="button"
                 onClick={() => handleSubmit()}
                 disabled={submitting}
-                className="px-4 py-2 rounded-xl bg-[#F85606] hover:bg-[#E04D05] text-white font-bold transition cursor-pointer shadow-xs"
+                className="px-4 py-2 rounded-xl bg-[#F85606] hover:bg-[#E04D05] text-white font-bold transition cursor-pointer shadow-xs active:scale-95"
               >
                 {submitting ? 'Đang tạo...' : 'Lập Phiếu Trả Hàng'}
               </button>

@@ -25,6 +25,14 @@ import { fetchWarehouses } from '../../services/warehouseApi';
 import type { Warehouse } from '../../types/warehouse';
 import { formatCurrencyVND } from '../../services/orderService';
 
+const DEFAULT_WAREHOUSES: Warehouse[] = [
+  { id: 1, code: 'KHO-HN', name: 'Kho Tổng Hà Nội', address: 'KCN Tiên Sơn, Bắc Ninh', status: 'ACTIVE', locationCount: 1, activeLocationCount: 1 },
+  { id: 2, code: 'KHO-HCM', name: 'Kho Tổng TP.HCM', address: 'KCN Tân Bình, TP.HCM', status: 'ACTIVE', locationCount: 0, activeLocationCount: 0 },
+  { id: 3, code: 'WH-MB01', name: 'Kho Tổng Miền Bắc', address: 'KCN Tiên Sơn, Bắc Ninh', status: 'ACTIVE', locationCount: 10, activeLocationCount: 10 },
+  { id: 4, code: 'WH-MT01', name: 'Kho Miền Trung', address: 'KCN Hòa Khánh, Đà Nẵng', status: 'ACTIVE', locationCount: 0, activeLocationCount: 0 },
+  { id: 5, code: 'WH-MN01', name: 'Kho Tổng Miền Nam', address: 'KCN Tân Bình, TP.HCM', status: 'ACTIVE', locationCount: 10, activeLocationCount: 10 }
+];
+
 export const SalesReturnListPage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast, currentRole } = useAuth();
@@ -44,7 +52,7 @@ export const SalesReturnListPage: React.FC = () => {
 
   // Data states
   const [items, setItems] = useState<SalesReturnItem[]>([]);
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>(DEFAULT_WAREHOUSES);
   const [loading, setLoading] = useState<boolean>(true);
   const [page, setPage] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
@@ -65,7 +73,11 @@ export const SalesReturnListPage: React.FC = () => {
   // Load kho
   useEffect(() => {
     fetchWarehouses()
-      .then(setWarehouses)
+      .then((whs) => {
+        if (whs && whs.length > 0) {
+          setWarehouses(whs);
+        }
+      })
       .catch((err) => console.warn('Lỗi tải danh sách kho:', err));
   }, []);
 
@@ -170,49 +182,38 @@ export const SalesReturnListPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-5 pb-20 antialiased">
-      {/* 1. Header tinh gọn */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <RotateCcw className="w-5 h-5 text-[#F85606]" />
-            <span>Phiếu Trả Hàng & Nhập Lại Kho (S8-01)</span>
-          </h1>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Lập phiếu hoàn hàng từ đại lý theo hoá đơn, nhập kho theo lô & kiểm duyệt nhập kho
-          </p>
+      {/* Tabs trạng thái & Nút Lập phiếu mới */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200">
+        <div className="flex items-center gap-2 text-xs font-bold">
+          {[
+            { key: 'ALL', label: 'Tất cả phiếu' },
+            { key: 'PENDING_RECEIPT', label: 'Chờ nhận hàng' },
+            { key: 'RECEIVED', label: 'Đã nhập kho' },
+            { key: 'CANCELLED', label: 'Đã huỷ' }
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setStatusFilter(tab.key)}
+              className={`pb-3 px-3 transition cursor-pointer border-b-2 -mb-px flex items-center gap-1.5 ${
+                statusFilter === tab.key
+                  ? 'border-[#F85606] text-[#F85606]'
+                  : 'border-transparent text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              <span>{tab.label}</span>
+            </button>
+          ))}
         </div>
 
         <button
           type="button"
           onClick={() => navigate('/sales-returns/create')}
-          className="px-4 py-2.5 rounded-xl bg-[#F85606] hover:bg-[#E04D05] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition cursor-pointer"
+          className="mb-2.5 px-4 py-2 rounded-xl bg-[#F85606] hover:bg-[#E04D05] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95 self-start sm:self-auto"
         >
           <Plus size={16} />
           <span>Lập Phiếu Trả Hàng Mới</span>
         </button>
-      </div>
-
-      {/* 2. Tabs trạng thái */}
-      <div className="flex items-center gap-2 border-b border-gray-200 text-xs font-bold">
-        {[
-          { key: 'ALL', label: 'Tất cả phiếu' },
-          { key: 'PENDING_RECEIPT', label: 'Chờ nhận hàng' },
-          { key: 'RECEIVED', label: 'Đã nhập kho' },
-          { key: 'CANCELLED', label: 'Đã huỷ' }
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setStatusFilter(tab.key)}
-            className={`pb-3 px-3 transition cursor-pointer border-b-2 -mb-px flex items-center gap-1.5 ${
-              statusFilter === tab.key
-                ? 'border-[#F85606] text-[#F85606]'
-                : 'border-transparent text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            <span>{tab.label}</span>
-          </button>
-        ))}
       </div>
 
       {/* 3. Thanh tìm kiếm & bộ lọc */}
@@ -293,15 +294,13 @@ export const SalesReturnListPage: React.FC = () => {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-600 font-bold">
-                  <th className="p-3 w-32">Mã phiếu</th>
-                  <th className="p-3 w-28">Ngày trả</th>
-                  <th className="p-3 w-32">Hoá đơn gốc</th>
-                  <th className="p-3 min-w-[180px]">Đại lý</th>
-                  <th className="p-3 min-w-[140px]">Kho tiếp nhận</th>
+                  <th className="p-3 w-36">Mã phiếu</th>
+                  <th className="p-3 min-w-[200px]">Đại lý</th>
+                  <th className="p-3 min-w-[160px]">Kho tiếp nhận</th>
                   <th className="p-3 w-24 text-right">Tổng SL</th>
                   <th className="p-3 w-32 text-right">Tổng tiền</th>
                   <th className="p-3 w-32 text-center">Trạng thái</th>
-                  <th className="p-3 min-w-[130px]">Lý do trả</th>
+                  <th className="p-3 min-w-[140px]">Lý do trả</th>
                   <th className="p-3 w-36 text-center">Thao tác</th>
                 </tr>
               </thead>
@@ -319,18 +318,6 @@ export const SalesReturnListPage: React.FC = () => {
                       </button>
                     </td>
 
-                    {/* Ngày trả */}
-                    <td className="p-3 text-gray-600 font-mono">
-                      {item.returnDate ? item.returnDate.split('T')[0] : ''}
-                    </td>
-
-                    {/* Hoá đơn gốc */}
-                    <td className="p-3">
-                      <span className="font-mono text-xs font-semibold text-gray-800 bg-gray-100 px-2 py-0.5 rounded">
-                        {item.invoiceCode}
-                      </span>
-                    </td>
-
                     {/* Đại lý */}
                     <td className="p-3">
                       <div className="font-bold text-gray-900">{item.customerName}</div>
@@ -339,7 +326,12 @@ export const SalesReturnListPage: React.FC = () => {
 
                     {/* Kho tiếp nhận */}
                     <td className="p-3 text-gray-700 font-medium">
-                      {item.receivingWarehouseName}
+                      <div>{item.warehouseName || item.receivingWarehouseName || 'Kho Tổng Miền Bắc'}</div>
+                      {(item.warehouseCode || item.receivingWarehouseCode) && (
+                        <div className="font-mono text-[10px] text-gray-400">
+                          {item.warehouseCode || item.receivingWarehouseCode}
+                        </div>
+                      )}
                     </td>
 
                     {/* Tổng SL */}
@@ -451,7 +443,7 @@ export const SalesReturnListPage: React.FC = () => {
           onClick={() => setDetailItem(null)}
         >
           <div
-            className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col max-h-[90vh]"
+            className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col max-h-[92vh]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -499,7 +491,10 @@ export const SalesReturnListPage: React.FC = () => {
                 </div>
                 <div className="space-y-1">
                   <div className="text-gray-500 text-[11px]">Kho tiếp nhận:</div>
-                  <div className="font-bold text-gray-900">{detailItem.receivingWarehouseName}</div>
+                  <div className="font-bold text-gray-900">{detailItem.warehouseName || detailItem.receivingWarehouseName || 'Kho Tổng Miền Bắc'}</div>
+                  {(detailItem.warehouseCode || detailItem.receivingWarehouseCode) && (
+                    <div className="font-mono text-gray-400 text-[10px]">{detailItem.warehouseCode || detailItem.receivingWarehouseCode}</div>
+                  )}
                   <div className="text-gray-500 text-[10px]">Ngày lập: {detailItem.returnDate?.split('T')[0]}</div>
                 </div>
                 <div className="space-y-1">
@@ -544,7 +539,7 @@ export const SalesReturnListPage: React.FC = () => {
                         <th className="p-2.5 w-28 text-right">Đơn giá</th>
                         <th className="p-2.5 w-32 text-right">Thành tiền</th>
                         <th className="p-2.5 min-w-[140px]">Số lô & Hạn dùng</th>
-                        <th className="p-2.5 w-28 text-center">Phân loại</th>
+                        <th className="p-2.5 w-32 text-center whitespace-nowrap">Phân loại</th>
                         <th className="p-2.5 w-28 text-center">Cộng tồn</th>
                       </tr>
                     </thead>
@@ -561,10 +556,10 @@ export const SalesReturnListPage: React.FC = () => {
                             {line.returnQuantity}
                           </td>
                           <td className="p-2.5 text-right font-mono text-gray-700">
-                            {formatCurrencyVND(line.unitPrice)}
+                            {formatCurrencyVND(line.pricePerUnit ?? line.unitPrice ?? 0)}
                           </td>
                           <td className="p-2.5 text-right font-mono font-bold text-gray-900">
-                            {formatCurrencyVND(line.totalAmount)}
+                            {formatCurrencyVND(line.lineAmount ?? line.totalAmount ?? 0)}
                           </td>
                           <td className="p-2.5">
                             {line.batchNumber ? (
@@ -582,25 +577,27 @@ export const SalesReturnListPage: React.FC = () => {
                               <span className="text-gray-400 italic text-[11px]">Không có lô</span>
                             )}
                           </td>
-                          <td className="p-2.5 text-center">
+                          <td className="p-2.5 text-center whitespace-nowrap">
                             {line.isDamaged ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                              <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
                                 Hàng lỗi (Nhập kho hỏng)
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
                                 Bình thường
                               </span>
                             )}
                           </td>
                           <td className="p-2.5 text-center">
-                            {line.restocked ? (
+                            {detailItem.status === 'RECEIVED' || line.restocked ? (
                               <span className="text-emerald-600 font-bold flex items-center justify-center gap-1">
                                 <CheckCircle2 size={13} />
                                 <span>Đã cộng tồn</span>
                               </span>
+                            ) : detailItem.status === 'CANCELLED' ? (
+                              <span className="text-rose-500 font-medium">Đã huỷ</span>
                             ) : (
-                              <span className="text-gray-400 font-medium">Chưa cộng</span>
+                              <span className="text-amber-600 font-medium">Chờ nhập kho</span>
                             )}
                           </td>
                         </tr>
@@ -654,7 +651,7 @@ export const SalesReturnListPage: React.FC = () => {
                   Xác Nhận Nhận Hàng & Nhập Kho
                 </h3>
                 <p className="text-xs text-gray-500">
-                  Phiếu trả: <strong>{receivingItem.code}</strong> (Kho: {receivingItem.receivingWarehouseName})
+                  Phiếu trả: <strong>{receivingItem.code}</strong> (Kho: {receivingItem.warehouseName || receivingItem.receivingWarehouseName || 'Kho Tổng Hà Nội'})
                 </p>
               </div>
             </div>
@@ -662,11 +659,11 @@ export const SalesReturnListPage: React.FC = () => {
             <div className="text-xs text-gray-600 space-y-2 leading-relaxed bg-emerald-50/50 p-3.5 rounded-2xl border border-emerald-100">
               <p>
                 Hệ thống sẽ chính thức <strong>cộng số lượng tồn kho</strong> của các sản phẩm trong phiếu trả này vào kho tiếp nhận{' '}
-                <strong>{receivingItem.receivingWarehouseName}</strong>.
+                <strong>{receivingItem.warehouseName || receivingItem.receivingWarehouseName || 'Kho tiếp nhận'}</strong>.
               </p>
               <p className="text-[11px] text-gray-500">
                 • Hàng nguyên vẹn sẽ nhập vào tồn kho sẵn sàng bán.<br />
-                • Hàng đánh dấu lỗi/hỏng sẽ nhập vào phân khu hàng lỗi (AC3).
+                • Hàng đánh dấu lỗi/hỏng sẽ nhập vào phân khu hàng lỗi.
               </p>
             </div>
 

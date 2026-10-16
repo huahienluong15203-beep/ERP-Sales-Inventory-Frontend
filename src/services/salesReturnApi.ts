@@ -44,13 +44,15 @@ export interface SalesReturnLineItem {
   productName: string;
   unitName: string;
   returnQuantity: number;
-  unitPrice: number;
-  totalAmount: number;
+  pricePerUnit?: number;
+  unitPrice?: number;
+  lineAmount?: number;
+  totalAmount?: number;
   batchNumber?: string;
   manufactureDate?: string;
   expiredDate?: string;
   isDamaged: boolean;
-  restocked: boolean;
+  restocked?: boolean;
   lineNotes?: string;
 }
 
@@ -63,8 +65,10 @@ export interface SalesReturnItem {
   customerCode: string;
   customerName: string;
   receivingWarehouseId: number;
-  receivingWarehouseCode: string;
-  receivingWarehouseName: string;
+  receivingWarehouseCode?: string;
+  receivingWarehouseName?: string;
+  warehouseCode?: string;
+  warehouseName?: string;
   status: 'PENDING_RECEIPT' | 'RECEIVED' | 'CANCELLED';
   returnReason: string;
   reasonDescription?: string;
