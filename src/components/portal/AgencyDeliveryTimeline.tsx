@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   CheckCircle2,
   Clock,
@@ -6,9 +6,11 @@ import {
   Truck,
   CheckCheck,
   AlertTriangle,
-  MapPin
+  MapPin,
+  Phone
 } from 'lucide-react';
 import type { OrderBackendResponse, OrderApprovalHistoryResponse } from '../../types/order';
+import { fetchPortalDeliveryTimeline, type PortalDeliveryTimelineResponse } from '../../services/portalApi';
 
 interface AgencyDeliveryTimelineProps {
   order: OrderBackendResponse;
@@ -31,9 +33,31 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
   approvalHistory = [],
   className = ''
 }) => {
+  const [timelineData, setTimelineData] = useState<PortalDeliveryTimelineResponse | null>(null);
+
+  // Tự động tải dữ liệu timeline chuyên dụng từ Backend GET /api/portal/orders/{id}/delivery-timeline (S6-09)
+  useEffect(() => {
+    if (!order?.id) return;
+    let cancelled = false;
+    fetchPortalDeliveryTimeline(order.id)
+      .then((data) => {
+        if (!cancelled && data) {
+          setTimelineData(data);
+        }
+      })
+      .catch(() => {
+        // Fallback dùng order prop bình thường
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [order?.id]);
   // Mapping chỉ số bước hiện tại của đơn hàng đối với Đại lý (1 -> 5)
   // 1: Đã duyệt, 2: Đang soạn, 3: Đã xuất, 4: Đang giao, 5: Đã giao
   const currentStep = useMemo(() => {
+    if (timelineData?.currentStep) {
+      return timelineData.currentStep;
+    }
     switch (order.status?.toUpperCase()) {
       case 'APPROVED':
         return 1;
@@ -52,47 +76,66 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
       default:
         return 0; // Chưa duyệt (DRAFT / PENDING_APPROVAL)
     }
-  }, [order.status]);
+  }, [order.status, timelineData?.currentStep]);
+
+  const formatTime = (iso?: string | null) => {
+    if (!iso) return null;
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return iso;
+    }
+  };
 
   // Trích xuất mốc thời gian và người xử lý cho từng bước
   const stepDetails = useMemo(() => {
-    const formatTime = (iso?: string | null) => {
-      if (!iso) return null;
-      try {
-        const d = new Date(iso);
-        return d.toLocaleString('vi-VN', {
-          hour: '2-digit',
-          minute: '2-digit',
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
-        });
-      } catch {
-        return iso;
-      }
-    };
-
     // 1. Mốc Đã duyệt
     const approveEvent = approvalHistory.find((h) => h.toStatus === 'APPROVED' || h.action === 'APPROVE');
-    const approveTime = formatTime(order.approvedAt || approveEvent?.createdAt);
-    const approveActor = order.approvedByUsername || approveEvent?.actorFullName || approveEvent?.actorUsername;
+    const approveTime =
+      formatTime(timelineData?.steps?.approved?.time) ||
+      formatTime(order.approvedAt || approveEvent?.createdAt);
+    const approveActor =
+      timelineData?.steps?.approved?.actor ||
+      order.approvedByUsername ||
+      approveEvent?.actorFullName ||
+      approveEvent?.actorUsername;
 
     // 2. Mốc Đang soạn hàng
     const pickingEvent = approvalHistory.find((h) => h.toStatus === 'PICKING' || h.action === 'PICKING');
-    const pickingTime = formatTime(pickingEvent?.createdAt);
+    const pickingTime =
+      formatTime(timelineData?.steps?.picking?.time) ||
+      formatTime(pickingEvent?.createdAt);
 
     // 3. Mốc Đã xuất kho
-    const dispatchTime = formatTime(order.fulfillment?.dispatchedAt);
-    const dispatchActor = order.fulfillment?.dispatchedByUsername;
-    const dispatchNote = order.fulfillment?.dispatchNote;
+    const dispatchTime =
+      formatTime(timelineData?.steps?.dispatched?.time) ||
+      formatTime(order.fulfillment?.dispatchedAt);
+    const dispatchActor =
+      timelineData?.steps?.dispatched?.actor ||
+      order.fulfillment?.dispatchedByUsername;
+    const dispatchNote =
+      timelineData?.steps?.dispatched?.note ||
+      order.fulfillment?.dispatchNote;
 
     // 4. Mốc Đang giao hàng
-    // Đang giao sau khi đã xuất kho
-    const shippingTime = dispatchTime;
+    const shippingTime =
+      formatTime(timelineData?.steps?.shipping?.time) ||
+      dispatchTime;
 
     // 5. Mốc Đã giao hàng
-    const deliverTime = formatTime(order.fulfillment?.deliveredAt || order.fulfillment?.deliveryConfirmedAt);
-    const receiver = order.fulfillment?.receiverName;
+    const deliverTime =
+      formatTime(timelineData?.steps?.delivered?.time) ||
+      formatTime(order.fulfillment?.deliveredAt || order.fulfillment?.deliveryConfirmedAt);
+    const receiver =
+      timelineData?.receiverName ||
+      order.fulfillment?.receiverName;
 
     return {
       approveTime,
@@ -105,7 +148,7 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
       deliverTime,
       receiver
     };
-  }, [order, approvalHistory]);
+  }, [order, approvalHistory, timelineData]);
 
   const steps: TimelineStep[] = [
     {
@@ -274,6 +317,51 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
         </div>
       </div>
 
+      {/* THÔNG TIN CHUYẾN XE VẬN CHUYỂN (S6-09: Giúp đại lý chủ động bố trí người nhận đúng lúc xe tới) */}
+      {timelineData?.tripInfo && (
+        <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 text-xs text-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Truck size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-gray-900 text-sm">
+                  {timelineData.tripInfo.vehiclePlate || 'Xe giao hàng'}
+                </span>
+                {timelineData.tripInfo.tripCode && (
+                  <span className="font-mono text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold border border-blue-300">
+                    {timelineData.tripInfo.tripCode}
+                  </span>
+                )}
+                <span className="text-[11px] text-blue-700 bg-blue-100/60 px-2 py-0.5 rounded font-medium border border-blue-200">
+                  {timelineData.tripInfo.status === 'IN_PROGRESS' ? 'Xe đang di chuyển giao hàng' : 'Đã hoàn tất chuyến'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-600 mt-1">
+                Tài xế: <strong className="text-gray-900">{timelineData.tripInfo.driverName || 'Đang cập nhật'}</strong>
+                {timelineData.tripInfo.departedAt && (
+                  <span className="text-gray-500 ml-2">
+                    • Khởi hành: {formatTime(timelineData.tripInfo.departedAt)}
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {timelineData.tripInfo.driverPhone && (
+            <a
+              href={`tel:${timelineData.tripInfo.driverPhone}`}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors shrink-0"
+              title="Gọi tài xế để chủ động bố trí người nhận hàng đúng lúc xe tới"
+            >
+              <Phone size={14} />
+              <span>Gọi tài xế: {timelineData.tripInfo.driverPhone}</span>
+            </a>
+          )}
+        </div>
+      )}
+
       {/* THÔNG TIN BIÊN BẢN GIAO HÀNG / NGƯỜI NHẬN NẾU ĐÃ GIAO */}
       {order.fulfillment && (order.fulfillment.receiverName || order.fulfillment.dispatchedByUsername) && (
         <div className="p-3.5 rounded-xl bg-orange-50/40 border border-orange-200/80 text-xs text-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -310,7 +398,7 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
             <Package size={14} className="text-orange-500" />
             <span>Chi tiết số lượng thực giao từng mặt hàng</span>
           </h5>
-          {order.hasShortage && (
+          {(timelineData?.hasShortage ?? order.hasShortage) && (
             <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
               <AlertTriangle size={12} />
               Đơn hàng có mặt hàng giao thiếu
@@ -333,86 +421,105 @@ export const AgencyDeliveryTimeline: React.FC<AgencyDeliveryTimelineProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {(order.lines || []).map((line, idx) => {
-                  const orderedQty = Number(line.quantity) || 0;
-                  const deliveredQty =
-                    line.deliveredQuantity !== undefined && line.deliveredQuantity !== null
-                      ? Number(line.deliveredQuantity)
-                      : currentStep >= 3
-                      ? orderedQty // Nếu đã xuất mà chưa ghi nhận số riêng thì coi như theo số xuất
-                      : null;
+                {(timelineData?.lines && timelineData.lines.length > 0
+                  ? timelineData.lines.map((l, idx) => ({
+                      id: l.lineId || idx,
+                      productSku: l.productSku || '',
+                      productName: l.productName || '',
+                      unitName: l.unitName || '',
+                      orderedQty: Number(l.orderedQuantity) || 0,
+                      deliveredQty: l.deliveredQuantity !== undefined && l.deliveredQuantity !== null ? Number(l.deliveredQuantity) : null,
+                      shortageQty: Number(l.shortageQuantity) || 0,
+                      isShortage: Boolean(l.isShortage),
+                      shortageReason: l.shortageReason || ''
+                    }))
+                  : (order.lines || []).map((line, idx) => {
+                      const orderedQty = Number(line.quantity) || 0;
+                      const deliveredQty =
+                        line.deliveredQuantity !== undefined && line.deliveredQuantity !== null
+                          ? Number(line.deliveredQuantity)
+                          : currentStep >= 3
+                          ? orderedQty
+                          : null;
+                      const shortageQty =
+                        line.shortageQuantity !== undefined && Number(line.shortageQuantity) > 0
+                          ? Number(line.shortageQuantity)
+                          : deliveredQty !== null && deliveredQty < orderedQty
+                          ? orderedQty - deliveredQty
+                          : 0;
+                      return {
+                        id: line.id || idx,
+                        productSku: line.productSku || '',
+                        productName: line.productName || '',
+                        unitName: line.unitName || '',
+                        orderedQty,
+                        deliveredQty,
+                        shortageQty,
+                        isShortage: shortageQty > 0,
+                        shortageReason: line.shortageReason || ''
+                      };
+                    })
+                ).map((line, idx) => (
+                  <tr
+                    key={line.id || idx}
+                    className={`hover:bg-orange-50/20 transition-colors ${
+                      line.isShortage ? 'bg-amber-50/30' : ''
+                    }`}
+                  >
+                    <td className="py-2.5 px-3 text-center text-gray-400 font-mono">
+                      {idx + 1}
+                    </td>
 
-                  const shortageQty =
-                    line.shortageQuantity !== undefined && Number(line.shortageQuantity) > 0
-                      ? Number(line.shortageQuantity)
-                      : deliveredQty !== null && deliveredQty < orderedQty
-                      ? orderedQty - deliveredQty
-                      : 0;
+                    <td className="py-2.5 px-3 font-semibold text-gray-900">
+                      <div>{line.productName}</div>
+                      <div className="font-mono text-[10px] text-orange-700">{line.productSku}</div>
+                    </td>
 
-                  const isShortage = shortageQty > 0;
+                    <td className="py-2.5 px-3 text-center text-gray-600">
+                      {line.unitName}
+                    </td>
 
-                  return (
-                    <tr
-                      key={line.id || idx}
-                      className={`hover:bg-orange-50/20 transition-colors ${
-                        isShortage ? 'bg-amber-50/30' : ''
-                      }`}
-                    >
-                      <td className="py-2.5 px-3 text-center text-gray-400 font-mono">
-                        {idx + 1}
-                      </td>
+                    <td className="py-2.5 px-3 text-right font-mono font-bold text-gray-900">
+                      {line.orderedQty}
+                    </td>
 
-                      <td className="py-2.5 px-3 font-semibold text-gray-900">
-                        <div>{line.productName}</div>
-                        <div className="font-mono text-[10px] text-orange-700">{line.productSku}</div>
-                      </td>
+                    <td className="py-2.5 px-3 text-right font-mono font-bold">
+                      {line.deliveredQty !== null ? (
+                        <span className={line.isShortage ? 'text-amber-800' : 'text-emerald-700'}>
+                          {line.deliveredQty}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 italic font-normal">Chờ xuất</span>
+                      )}
+                    </td>
 
-                      <td className="py-2.5 px-3 text-center text-gray-600">
-                        {line.unitName}
-                      </td>
+                    <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                      {line.isShortage ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                          <AlertTriangle size={11} className="text-amber-600" />
+                          <span>Thiếu {line.shortageQty}</span>
+                        </span>
+                      ) : line.deliveredQty !== null ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          <CheckCircle2 size={11} className="text-emerald-600" />
+                          <span>Giao đủ</span>
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-[10px] italic">Chờ xuất kho</span>
+                      )}
+                    </td>
 
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-gray-900">
-                        {orderedQty}
-                      </td>
-
-                      <td className="py-2.5 px-3 text-right font-mono font-bold">
-                        {deliveredQty !== null ? (
-                          <span className={isShortage ? 'text-amber-800' : 'text-emerald-700'}>
-                            {deliveredQty}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 italic font-normal">Chờ xuất</span>
-                        )}
-                      </td>
-
-                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                        {isShortage ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                            <AlertTriangle size={11} className="text-amber-600" />
-                            <span>Thiếu {shortageQty}</span>
-                          </span>
-                        ) : deliveredQty !== null ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                            <CheckCircle2 size={11} className="text-emerald-600" />
-                            <span>Giao đủ</span>
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 text-[10px] italic">Chờ xuất kho</span>
-                        )}
-                      </td>
-
-                      <td className="py-2.5 px-3 text-gray-600 text-[11px]">
-                        {line.shortageReason ? (
-                          <span className="text-amber-900 italic font-medium">
-                            {line.shortageReason}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                    <td className="py-2.5 px-3 text-gray-600 text-[11px]">
+                      {line.shortageReason ? (
+                        <span className="text-amber-900 italic font-medium">
+                          {line.shortageReason}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
