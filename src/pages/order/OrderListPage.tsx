@@ -38,7 +38,8 @@ import {
   setActiveDraft,
   getActiveDraft,
   clearActiveDraft,
-  cancelOrder
+  cancelOrder,
+  fetchBackorders
 } from '../../services/orderService';
 import { fetchAgencies, fetchAgencyFormOptions } from '../../services/agencyApi';
 import type { Agency, RegionOption, SalesRepOption } from '../../types/agency';
@@ -62,6 +63,9 @@ const STATUS_TABS = [
   { label: 'Tất cả trạng thái', value: '' },
   { label: 'Chờ duyệt', value: 'PENDING_APPROVAL', badgeColor: 'bg-amber-100 text-amber-800' },
   { label: 'Đã duyệt', value: 'APPROVED', badgeColor: 'bg-emerald-100 text-emerald-800' },
+  { label: 'Đang soạn hàng', value: 'PICKING', badgeColor: 'bg-blue-100 text-blue-800' },
+  { label: 'Đã xuất kho', value: 'DISPATCHED', badgeColor: 'bg-indigo-100 text-indigo-800' },
+  { label: 'Đơn nợ hàng (Backorder)', value: 'BACKORDER', badgeColor: 'bg-amber-100 text-amber-900 border-amber-300' },
   { label: 'Đơn nháp', value: 'DRAFT', badgeColor: 'bg-gray-100 text-gray-700' },
   { label: 'Từ chối / Hủy', value: 'REJECTED,CANCELLED', badgeColor: 'bg-rose-100 text-rose-800' }
 ];
@@ -82,7 +86,7 @@ export const OrderListPage: React.FC = () => {
     );
   }, [user, currentRole]);
 
-  // S4-05: Chỉ Quản lý kinh doanh được duyệt đơn (bám sát S4-02 & S4-05, không cho Admin duyệt đè)
+  // Chỉ Quản lý kinh doanh được duyệt đơn
   const isSalesManager = useMemo(() => {
     const roles = user?.roles || [];
     return currentRole === 'ROLE_SALES_MANAGER' || roles.includes('ROLE_SALES_MANAGER');
@@ -171,7 +175,7 @@ export const OrderListPage: React.FC = () => {
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
 
-  // S4-05: Modal duyệt / từ chối / trả lại sửa
+  // Modal duyệt / từ chối / trả lại sửa
   const [approvalModalOrder, setApprovalModalOrder] = useState<PendingOrderResponse | null>(null);
   const [approvalModalAction, setApprovalModalAction] = useState<ApprovalActionType>('APPROVE');
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState<boolean>(false);
@@ -228,7 +232,7 @@ export const OrderListPage: React.FC = () => {
     }
   };
 
-  // S4-05: Mở modal Duyệt / Trả lại / Từ chối từ menu thao tác của dòng đơn
+  // Mở modal Duyệt / Trả lại / Từ chối từ menu thao tác của dòng đơn
   const openApprovalModal = (o: OrderSummaryItem, action: ApprovalActionType) => {
     setApprovalModalOrder({
       id: Number(o.id),
@@ -303,7 +307,7 @@ export const OrderListPage: React.FC = () => {
     }
   };
 
-  // S4-08: Modal xem trước và in PDF đơn hàng
+  // Modal xem trước và in PDF đơn hàng
   const [pdfPreviewOrder, setPdfPreviewOrder] = useState<OrderBackendResponse | null>(null);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
   const [loadingPdfId, setLoadingPdfId] = useState<number | string | null>(null);
@@ -322,7 +326,7 @@ export const OrderListPage: React.FC = () => {
     }
   };
 
-  // S4-09: Sao chép đơn cũ thành đơn mới cho khách quen trong vài giây
+  // Sao chép đơn cũ thành đơn mới cho khách quen trong vài giây
   const handleCloneOrder = async (orderId: number | string) => {
     try {
       setCloningOrderId(orderId);
@@ -371,7 +375,7 @@ export const OrderListPage: React.FC = () => {
     return null;
   }, [fromDate, toDate]);
 
-  // Tải dữ liệu danh sách đơn hàng & tổng tiền (S4-07)
+  // Tải dữ liệu danh sách đơn hàng & tổng tiền
   useEffect(() => {
     if (dateError) return;
 
@@ -424,33 +428,63 @@ export const OrderListPage: React.FC = () => {
           : undefined
     };
 
-    // Khi ở tab "Tất cả trạng thái", tính tổng tiền các đơn chính thức (loại trừ đơn nháp DRAFT, đơn hủy CANCELLED và đơn từ chối REJECTED)
-    const totalsCriteria: OrderFilterCriteria = {
-      ...criteria,
-      statuses: selectedStatusTab ? selectedStatusTab.split(',') : OFFICIAL_ORDER_STATUSES
-    };
-
-    Promise.all([
-      fetchOrders(criteria),
-      fetchOrderTotals(totalsCriteria)
-    ])
-      .then(([pageRes, totalsRes]) => {
-        if (isSubscribed) {
-          setOrders(pageRes.content || []);
-          setSelectedIds(new Set());
-          setTotalPages(pageRes.totalPages || 1);
-          setTotalElements(pageRes.totalElements || 0);
-          setTotals(totalsRes || { orderCount: 0, totalAmount: 0 });
-          setLoading(false);
-        }
+    if (selectedStatusTab === 'BACKORDER') {
+      fetchBackorders({
+        customerId: selectedAgencyId ? Number(selectedAgencyId) : undefined,
+        keyword: keyword.trim() || undefined,
+        page,
+        size: pageSize
       })
-      .catch((err: unknown) => {
-        if (isSubscribed) {
-          console.error('Lỗi khi tải dữ liệu đơn hàng:', err);
-          setError(err instanceof Error ? err.message : 'Không thể tải danh sách đơn hàng');
-          setLoading(false);
-        }
-      });
+        .then((pageRes) => {
+          if (isSubscribed) {
+            setOrders(pageRes.content || []);
+            setSelectedIds(new Set());
+            setTotalPages(pageRes.totalPages || 1);
+            setTotalElements(pageRes.totalElements || 0);
+            const totalBackorderAmount = (pageRes.content || []).reduce((acc, o) => acc + Number(o.totalAmount || 0), 0);
+            setTotals({
+              orderCount: pageRes.totalElements || (pageRes.content || []).length,
+              totalAmount: totalBackorderAmount
+            });
+            setLoading(false);
+          }
+        })
+        .catch((err: unknown) => {
+          if (isSubscribed) {
+            console.error('Lỗi khi tải đơn nợ hàng:', err);
+            setError(err instanceof Error ? err.message : 'Không thể tải danh sách đơn nợ hàng');
+            setLoading(false);
+          }
+        });
+    } else {
+      // Khi ở tab "Tất cả trạng thái", tính tổng tiền các đơn chính thức (loại trừ đơn nháp DRAFT, đơn hủy CANCELLED và đơn từ chối REJECTED)
+      const totalsCriteria: OrderFilterCriteria = {
+        ...criteria,
+        statuses: selectedStatusTab ? selectedStatusTab.split(',') : OFFICIAL_ORDER_STATUSES
+      };
+
+      Promise.all([
+        fetchOrders(criteria),
+        fetchOrderTotals(totalsCriteria)
+      ])
+        .then(([pageRes, totalsRes]) => {
+          if (isSubscribed) {
+            setOrders(pageRes.content || []);
+            setSelectedIds(new Set());
+            setTotalPages(pageRes.totalPages || 1);
+            setTotalElements(pageRes.totalElements || 0);
+            setTotals(totalsRes || { orderCount: 0, totalAmount: 0 });
+            setLoading(false);
+          }
+        })
+        .catch((err: unknown) => {
+          if (isSubscribed) {
+            console.error('Lỗi khi tải dữ liệu đơn hàng:', err);
+            setError(err instanceof Error ? err.message : 'Không thể tải danh sách đơn hàng');
+            setLoading(false);
+          }
+        });
+    }
 
     return () => {
       isSubscribed = false;
@@ -630,7 +664,7 @@ export const OrderListPage: React.FC = () => {
         )}
       </div>
 
-      {/* 2. S4-07 AC2: KHỐI THẺ THỐNG KÊ KẾT QUẢ ĐANG LỌC (LIVE AGGREGATED TOTALS) */}
+      {/* Khối thẻ thống kê kết quả đang lọc */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Card 1: Tổng số đơn hàng */}
         <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-gray-200/90 shadow-2xs flex items-center justify-between">
@@ -650,7 +684,7 @@ export const OrderListPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 2: Tổng tiền toàn bộ kết quả lọc (Điểm nhấn S4-07) */}
+        {/* Card 2: Tổng tiền toàn bộ kết quả lọc */}
         <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-br from-orange-50/80 via-white to-amber-50/50 border border-orange-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-0.5">
             <span className="text-[11px] font-bold text-[#F85606] uppercase tracking-wider flex items-center gap-1">
@@ -707,7 +741,7 @@ export const OrderListPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. S4-07 AC1: BỘ LỌC ĐA CHIỀU (MULTI-CRITERIA FILTERS) */}
+      {/* Bộ lọc đa chiều */}
       <div className="bg-white rounded-xl border border-gray-200/90 shadow-2xs p-3.5 sm:p-4 space-y-3">
         {/* Hàng 1: Tabs Trạng thái nhanh */}
         <div className="flex items-center justify-between border-b border-gray-100 pb-3 flex-wrap gap-2">
@@ -917,7 +951,7 @@ export const OrderListPage: React.FC = () => {
         )}
       </div>
 
-      {/* 4. S4-07 BẢNG DỮ LIỆU DANH SÁCH ĐƠN HÀNG (DATA TABLE) */}
+      {/* Bảng dữ liệu danh sách đơn hàng (Data Table) */}
       <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs overflow-hidden">
         {/* Thông báo lỗi tải dữ liệu nếu có */}
         {error && (
@@ -1050,14 +1084,32 @@ export const OrderListPage: React.FC = () => {
                     )}
                     {/* Mã đơn */}
                     <td className="py-3 px-4">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/orders/${o.id}`)}
-                        className="font-mono font-bold text-[#F85606] hover:underline cursor-pointer"
-                        title="Xem chi tiết đơn hàng"
-                      >
-                        {o.code}
-                      </button>
+                      <div className="flex flex-col gap-1 items-start">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/orders/${o.id}`)}
+                          className="font-mono font-bold text-[#F85606] hover:underline cursor-pointer"
+                          title="Xem chi tiết đơn hàng"
+                        >
+                          {o.code}
+                        </button>
+                        {o.backorder && (
+                          <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300"
+                            title={`Đơn nợ hàng tự động tách từ đơn gốc ${o.parentOrderCode || ''}`}
+                          >
+                            Đơn nợ hàng {o.parentOrderCode ? `(từ ${o.parentOrderCode})` : ''}
+                          </span>
+                        )}
+                        {o.hasShortage && !o.backorder && (
+                          <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200"
+                            title="Đã từng xuất thiếu hàng trong quá trình giao"
+                          >
+                            Xuất thiếu
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Ngày tạo */}
@@ -1117,7 +1169,7 @@ export const OrderListPage: React.FC = () => {
                           <Eye size={16} />
                         </button>
 
-                        {/* Thao tác phụ gom vào menu "⋯" cho gọn: Chỉnh sửa nháp, Sao chép (S4-09), In/PDF (S4-08), Duyệt/Trả lại/Từ chối (S4-05) */}
+                        {/* Thao tác phụ gom vào menu "⋯" cho gọn: Chỉnh sửa nháp, Sao chép, In/PDF, Duyệt/Trả lại/Từ chối */}
                         <RowActionMenu
                           items={[
                             {
@@ -1277,7 +1329,7 @@ export const OrderListPage: React.FC = () => {
         }}
       />
 
-      {/* 7. S4-05: MODAL DUYỆT / TỪ CHỐI / TRẢ LẠI SỬA TỪ DANH SÁCH */}
+      {/* Modal duyệt / từ chối / trả lại sửa từ danh sách */}
       <OrderApprovalActionModal
         isOpen={isApprovalModalOpen}
         order={approvalModalOrder}
@@ -1289,7 +1341,7 @@ export const OrderListPage: React.FC = () => {
         onSuccess={() => setRefreshKey((k) => k + 1)}
       />
 
-      {/* 8. S4-08: MODAL XEM TRƯỚC VÀ IN PDF ĐƠN HÀNG */}
+      {/* Modal xem trước và in PDF đơn hàng */}
       <OrderPdfPreviewModal
         isOpen={isPdfModalOpen}
         order={pdfPreviewOrder}

@@ -238,6 +238,28 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Luân chuyển kho & Tuổi hàng',
+    path: '/inventory/aging',
+    group: 'Sản phẩm & Kho',
+    icon: 'Clock',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Báo cáo vòng quay hàng tồn, số ngày lưu kho bình quân và cảnh báo hàng chậm luân chuyển',
+    title: 'Hàng đang đi đường',
+    path: '/inventory/in-transit',
+    group: 'Sản phẩm & Kho',
+    icon: 'Truck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Theo dõi hàng đã xuất kho nhưng đang trên đường giao, cảnh báo giao trễ',
+    allowedRoles: [
+      'ROLE_WAREHOUSE',
+      'ROLE_WH_MANAGER',
+      'ROLE_ADMIN',
+      'ROLE_ACCOUNTANT',
+      'ROLE_SALES_MANAGER'
+    ]
+  },
+
+  {
     title: 'Bảng giá sản phẩm',
     path: '/pricing',
     group: 'Giá & Chiết khấu',
