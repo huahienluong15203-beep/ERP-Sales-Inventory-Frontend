@@ -632,7 +632,7 @@ export const StockAdjustmentListPage: React.FC = () => {
 
       {/* ================= MODAL XEM CHI TIẾT PHIẾU ĐIỀU CHỈNH ================= */}
       {detailItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/10 animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
@@ -824,8 +824,8 @@ export const StockAdjustmentListPage: React.FC = () => {
 
       {/* ================= MODAL PHÊ DUYỆT (AC3) ================= */}
       {approvingItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-md p-5 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/10 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                 <CheckCircle size={22} />
@@ -836,7 +836,7 @@ export const StockAdjustmentListPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
               <strong className="block font-bold">Xác nhận xuất kho xử lý hao hụt:</strong>
               <p>
                 - Tổng giá trị tổn thất: <strong className="text-rose-600">{formatVnd(approvingItem.totalLossValue)}</strong>
@@ -845,14 +845,14 @@ export const StockAdjustmentListPage: React.FC = () => {
               <p>- Mọi thay đổi sẽ tự động ghi nhận vào Thẻ kho (Stock Movement).</p>
             </div>
 
-            <div className="space-y-1 text-xs">
-              <label className="font-bold text-gray-700">Ghi chú duyệt (không bắt buộc)</label>
+            <div className="space-y-1.5 text-xs">
+              <label className="font-bold text-gray-800 text-sm">Ghi chú duyệt (không bắt buộc)</label>
               <textarea
                 value={approveNotes}
                 onChange={(e) => setApproveNotes(e.target.value)}
-                rows={2}
+                rows={4}
                 placeholder="Ví dụ: Đã kiểm tra thực tế hàng vỡ tại kho, đồng ý duyệt..."
-                className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:border-emerald-500 focus:bg-white focus:outline-none transition"
+                className="w-full px-3.5 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:border-emerald-500 focus:bg-white focus:outline-none transition min-h-[96px]"
               />
             </div>
 
@@ -879,8 +879,8 @@ export const StockAdjustmentListPage: React.FC = () => {
 
       {/* ================= MODAL TỪ CHỐI DUYỆT ================= */}
       {rejectingItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-md p-5 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/10 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
                 <XCircle size={22} />
@@ -891,17 +891,17 @@ export const StockAdjustmentListPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-1 text-xs">
-              <label className="font-bold text-gray-700 flex items-center gap-1">
+            <div className="space-y-1.5 text-xs">
+              <label className="font-bold text-gray-800 text-sm flex items-center gap-1">
                 <span>Lý do từ chối</span>
                 <span className="text-rose-500">*</span>
               </label>
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                rows={3}
+                rows={5}
                 placeholder="Nhập lý do không đồng ý duyệt phiếu điều chỉnh..."
-                className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:border-rose-500 focus:bg-white focus:outline-none transition"
+                className="w-full px-3.5 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:border-rose-500 focus:bg-white focus:outline-none transition min-h-[120px]"
               />
             </div>
 
@@ -928,8 +928,8 @@ export const StockAdjustmentListPage: React.FC = () => {
 
       {/* ================= MODAL HUỶ PHIẾU ================= */}
       {cancellingItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-md p-5 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/10 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-gray-100 text-gray-700 flex items-center justify-center shrink-0">
                 <Trash2 size={22} />
@@ -940,17 +940,17 @@ export const StockAdjustmentListPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-1 text-xs">
-              <label className="font-bold text-gray-700 flex items-center gap-1">
+            <div className="space-y-1.5 text-xs">
+              <label className="font-bold text-gray-800 text-sm flex items-center gap-1">
                 <span>Lý do huỷ phiếu</span>
                 <span className="text-rose-500">*</span>
               </label>
               <textarea
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
-                rows={3}
+                rows={5}
                 placeholder="Nhập lý do huỷ phiếu này..."
-                className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:border-gray-500 focus:bg-white focus:outline-none transition"
+                className="w-full px-3.5 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:border-gray-500 focus:bg-white focus:outline-none transition min-h-[120px]"
               />
             </div>
 
