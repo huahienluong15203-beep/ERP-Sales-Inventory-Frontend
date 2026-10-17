@@ -701,18 +701,18 @@ export const StockAdjustmentCreatePage: React.FC = () => {
           )}
 
           {/* Table */}
-          <div className="border border-gray-200 rounded-2xl overflow-hidden">
-            <table className="w-full text-left text-xs border-collapse">
+          <div className="border border-gray-200 rounded-2xl overflow-x-auto shadow-2xs">
+            <table className="w-full text-left text-xs border-collapse min-w-[1100px]">
               <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-bold">
                 <tr>
                   <th className="py-3 px-3.5 w-10 text-left">#</th>
-                  <th className="py-3 px-3 text-left">Sản Phẩm</th>
-                  <th className="py-3 px-3 w-72 text-left">Số Lô Hàng</th>
+                  <th className="py-3 px-3 text-left min-w-[200px]">Sản Phẩm</th>
+                  <th className="py-3 px-3 w-80 text-left">Số Lô Hàng</th>
                   <th className="py-3 px-3 text-right w-24">Tồn Kho</th>
                   <th className="py-3 px-3 text-center w-28">SL Giảm</th>
                   <th className="py-3 px-3 text-right w-28">Giá Vốn</th>
                   <th className="py-3 px-3 text-right w-36">Thành Tiền</th>
-                  <th className="py-3 px-3 text-left">Ghi Chú</th>
+                  <th className="py-3 px-3 text-left min-w-[240px]">Ghi Chú</th>
                   <th className="py-3 px-3 w-12 text-center">Xóa</th>
                 </tr>
               </thead>
@@ -733,7 +733,7 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                       <td className="py-3 px-3.5 text-gray-400 font-medium">{idx + 1}</td>
 
                       {/* Thông tin sản phẩm */}
-                      <td className="py-3 px-3">
+                      <td className="py-3 px-3 min-w-[200px]">
                         <div className="font-mono font-bold text-gray-900">{line.productSku}</div>
                         <div className="text-xs text-gray-700 font-medium truncate max-w-[220px]">
                           {line.productName}
@@ -741,8 +741,8 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                         <div className="text-[10px] text-gray-400">ĐVT: {line.baseUnit}</div>
                       </td>
 
-                      {/* Số lô: chỉ 1 dòng duy nhất, ô nhập rộng rãi hiển thị trọn vẹn mã lô */}
-                      <td className="py-3 px-3 w-72">
+                      {/* Số lô: chỉ 1 dòng duy nhất, ô nhập dài rộng rãi w-80 để hiển thị trọn vẹn mã lô */}
+                      <td className="py-3 px-3 w-80">
                         {line.hasBatchManagement ? (
                           line.lotLoading ? (
                             <div className="flex items-center gap-1 text-[11px] text-gray-400">
@@ -757,7 +757,7 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                                 value={line.batchNumber || ''}
                                 onChange={(e) => handleLotChange(line.id, e.target.value)}
                                 placeholder="Nhập hoặc chọn số lô..."
-                                className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-mono font-bold text-gray-900 focus:border-orange-500 focus:outline-none placeholder:text-gray-400 placeholder:font-sans placeholder:font-normal"
+                                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-mono font-bold text-gray-900 focus:border-orange-500 focus:outline-none placeholder:text-gray-400 placeholder:font-sans placeholder:font-normal"
                               />
                               <datalist id={`lot-datalist-${line.id}`}>
                                 {line.availableLots.map((lot) => (
@@ -787,7 +787,7 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                           max={line.currentStock}
                           value={line.adjustmentQuantity || ''}
                           onChange={(e) => handleQuantityChange(line.id, e.target.value)}
-                          className={`w-20 mx-auto px-2 py-1 text-center font-bold text-xs rounded-lg border focus:outline-none transition ${
+                          className={`w-20 mx-auto px-2 py-1.5 text-center font-bold text-xs rounded-xl border focus:outline-none transition ${
                             line.adjustmentQuantity > line.currentStock
                               ? 'border-rose-500 bg-rose-50 text-rose-700'
                               : 'border-gray-200 bg-white focus:border-orange-500 text-gray-900'
@@ -805,8 +805,8 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                         {formatVnd(line.lossValue)}
                       </td>
 
-                      {/* Ghi chú */}
-                      <td className="py-3 px-3">
+                      {/* Ghi chú: mở rộng rộng rãi min-w-[240px] */}
+                      <td className="py-3 px-3 min-w-[240px]">
                         <input
                           type="text"
                           value={line.lineNotes || ''}
@@ -816,8 +816,8 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                               prev.map((l) => (l.id === line.id ? { ...l, lineNotes: val } : l))
                             );
                           }}
-                          placeholder="Chi tiết hỏng..."
-                          className="w-full px-2 py-1 text-[11px] bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-orange-500 focus:outline-none"
+                          placeholder="Chi tiết lý do hỏng, vỡ, mất..."
+                          className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:outline-none transition placeholder:text-gray-400"
                         />
                       </td>
 
