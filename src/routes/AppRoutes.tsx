@@ -60,9 +60,11 @@ import { StockAdjustmentListPage } from '../pages/inventory/StockAdjustmentListP
 import { StockAdjustmentCreatePage } from '../pages/inventory/StockAdjustmentCreatePage';
 import { DebtAgingLedgerPage } from '../pages/debt/DebtAgingLedgerPage';
 import { DebtReconciliationPage } from '../pages/debt/DebtReconciliationPage';
+import { CustomerDebtStatementPage } from '../pages/debt/CustomerDebtStatementPage';
 import { SalesReturnListPage } from '../pages/salesreturn/SalesReturnListPage';
 import { CreateSalesReturnPage } from '../pages/salesreturn/CreateSalesReturnPage';
 import { MultidimensionalSalesReportPage } from '../pages/report/MultidimensionalSalesReportPage';
+import { OverdueDebtReportPage } from '../pages/report/OverdueDebtReportPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -995,6 +997,41 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <DebtReconciliationPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S8-10: Sổ chi tiết công nợ đại lý */}
+        <Route
+          path="/debts/statement"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP',
+                'ROLE_CUSTOMER'
+              ]}
+            >
+              <CustomerDebtStatementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S8-09: Báo cáo công nợ quá hạn theo tuổi nợ & đại lý rủi ro */}
+        <Route
+          path="/reports/overdue-debts"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <OverdueDebtReportPage />
             </ProtectedRoute>
           }
         />

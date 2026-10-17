@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  FileText
+  FileText,
+  BookOpenCheck
 } from 'lucide-react';
 import { useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
@@ -130,6 +131,16 @@ export const DebtAgingLedgerPage: React.FC = () => {
           >
             <Clock size={15} />
             <span>Nhắc nợ</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/reports/overdue-debts')}
+            className="px-3.5 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+            title="Xem Báo cáo công nợ quá hạn theo tuổi nợ (S8-09)"
+          >
+            <AlertTriangle size={15} className="text-rose-600" />
+            <span>Báo cáo nợ quá hạn</span>
           </button>
 
           <button
@@ -387,15 +398,25 @@ export const DebtAgingLedgerPage: React.FC = () => {
                       </td>
 
                       {/* Thao tác */}
-                      <td className="py-3 px-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/debts/reconciliation?customerId=${row.customerId}`)}
-                          className="p-1.5 hover:bg-orange-50 text-[#F85606] rounded-lg transition cursor-pointer"
-                          title="Lập biên bản đối chiếu công nợ cho đại lý này"
-                        >
-                          <FileText size={15} />
-                        </button>
+                      <td className="py-3 px-2 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/debts/statement?customerId=${row.customerId}`)}
+                            className="p-1.5 hover:bg-orange-50 text-[#F85606] rounded-lg transition cursor-pointer"
+                            title="Xem và xuất sổ chi tiết công nợ (S8-10)"
+                          >
+                            <BookOpenCheck size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/debts/reconciliation?customerId=${row.customerId}`)}
+                            className="p-1.5 hover:bg-gray-100 text-gray-600 rounded-lg transition cursor-pointer"
+                            title="Lập biên bản đối chiếu công nợ cho đại lý này"
+                          >
+                            <FileText size={15} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

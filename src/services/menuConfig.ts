@@ -113,6 +113,26 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Sổ chi tiết công nợ',
+    path: '/debts/statement',
+    group: 'Bán hàng',
+    icon: 'BookOpenCheck',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: '',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP', 'ROLE_CUSTOMER']
+  },
+
+  {
+    title: 'Báo cáo nợ quá hạn',
+    path: '/reports/overdue-debts',
+    group: 'Bán hàng',
+    icon: 'AlertTriangle',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: '',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
+  },
+
+  {
     title: 'Đối chiếu công nợ',
     path: '/debts/reconciliation',
     group: 'Bán hàng',
