@@ -226,6 +226,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Điều chỉnh tồn kho',
+    path: '/inventory/stock-adjustments',
+    group: 'Sản phẩm & Kho',
+    icon: 'FileText',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Xử lý hàng hỏng, mất hoặc hết hạn huỷ bỏ có quy trình 2 bước phê duyệt minh bạch (S8-03)',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
+  },
+
+  {
     title: 'Phiếu soạn hàng',
     path: '/inventory/picking-lists',
     group: 'Sản phẩm & Kho',

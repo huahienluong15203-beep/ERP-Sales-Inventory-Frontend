@@ -11,13 +11,17 @@ export type StockMovementType =
   | 'DELIVERY_RETURN'
   | 'TRANSFER_OUT'
   | 'TRANSFER_IN'
-  | 'STOCKTAKE_ADJUST';
+  | 'STOCKTAKE_ADJUST'
+  | 'SALES_RETURN'
+  | 'STOCK_ADJUSTMENT';
 
 export type StockDocType =
   | 'GOODS_RECEIPT'
   | 'SALES_ORDER'
   | 'STOCK_TRANSFER'
-  | 'STOCK_TAKE';
+  | 'STOCK_TAKE'
+  | 'SALES_RETURN'
+  | 'STOCK_ADJUSTMENT';
 
 export interface StockCardRow {
   id: number;
@@ -101,8 +105,8 @@ export const MOVEMENT_TYPES_MAP: Record<string, MovementTypeConfig> = {
   },
   DELIVERY_RETURN: {
     code: 'DELIVERY_RETURN',
-    label: 'Hàng giao không thành công nhập lại',
-    shortLabel: 'Nhập hoàn trả',
+    label: 'Nhập hàng hoàn',
+    shortLabel: 'Hàng hoàn',
     badgeClass: 'bg-purple-50 text-purple-700 border-purple-200/80',
     dotColor: '#7c3aed',
     direction: 'IN'
@@ -130,6 +134,22 @@ export const MOVEMENT_TYPES_MAP: Record<string, MovementTypeConfig> = {
     badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
     dotColor: '#4f46e5',
     direction: 'ADJUST'
+  },
+  SALES_RETURN: {
+    code: 'SALES_RETURN',
+    label: 'Nhập hàng trả',
+    shortLabel: 'Hàng trả',
+    badgeClass: 'bg-teal-50 text-teal-700 border-teal-200/80',
+    dotColor: '#0d9488',
+    direction: 'IN'
+  },
+  STOCK_ADJUSTMENT: {
+    code: 'STOCK_ADJUSTMENT',
+    label: 'Xuất hủy hao hụt',
+    shortLabel: 'Xuất hủy',
+    badgeClass: 'bg-rose-50 text-rose-700 border-rose-200/80',
+    dotColor: '#e11d48',
+    direction: 'OUT'
   }
 };
 
@@ -154,5 +174,15 @@ export const DOC_TYPES_MAP: Record<string, { label: string; prefix: string; path
     label: 'Phiếu kiểm kê',
     prefix: 'PKK',
     path: (id) => `/inventory/stocktakes/${id}`
+  },
+  SALES_RETURN: {
+    label: 'Phiếu trả hàng bán',
+    prefix: 'SR',
+    path: (id) => `/sales-returns/${id}`
+  },
+  STOCK_ADJUSTMENT: {
+    label: 'Phiếu điều chỉnh tồn kho',
+    prefix: 'ADJ',
+    path: (id) => `/inventory/stock-adjustments?id=${id}`
   }
 };

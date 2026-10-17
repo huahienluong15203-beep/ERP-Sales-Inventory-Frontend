@@ -126,10 +126,10 @@ export const DebtAgingLedgerPage: React.FC = () => {
             type="button"
             onClick={() => setShowReminderModal(true)}
             className="px-3.5 py-2 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 text-[#F85606] font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
-            title="Xem danh sách thông báo nhắc nợ tự động (S7-08)"
+            title="Xem danh sách nhắc nợ đại lý"
           >
             <Clock size={15} />
-            <span>Nhắc nợ (S7-08)</span>
+            <span>Nhắc nợ</span>
           </button>
 
           <button
@@ -471,10 +471,11 @@ export const DebtAgingLedgerPage: React.FC = () => {
         )}
       </div>
 
-      {/* S7-08: Modal Popup Nhắc Hạn Thanh Toán Tự Động */}
+      {/* Modal Popup Nhắc Hạn Thanh Toán Tự Động */}
       <PaymentReminderPopupModal
         isOpen={showReminderModal}
         onClose={() => setShowReminderModal(false)}
+        activeDebtRows={data?.rows?.filter((r) => r.outstanding > 0)}
       />
     </div>
   );

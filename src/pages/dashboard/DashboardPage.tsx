@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
 import {
@@ -17,6 +17,17 @@ import { productService } from '../../services/productService';
 import { fetchAgencyStats } from '../../services/agencyApi';
 import { authFetch, API_BASE_URL } from '../../services/api';
 import { WarehouseMinStockDashboardAlert } from '../../components/inventory/WarehouseMinStockDashboardAlert';
+import {
+  fetchExecutiveDashboardOverview,
+  fetchDailySales,
+  fetchRegionSales,
+  refreshDashboardCache
+} from '../../services/executiveDashboardApi';
+import type { ExecutiveDashboardOverview } from '../../types/dashboard';
+import { ExecutiveKpiWidgets } from '../../components/dashboard/ExecutiveKpiWidgets';
+import { ExecutiveDailySalesChart } from '../../components/dashboard/ExecutiveDailySalesChart';
+import { ExecutiveRegionSalesChart } from '../../components/dashboard/ExecutiveRegionSalesChart';
+import { ExecutiveOverdueAgenciesTable } from '../../components/dashboard/ExecutiveOverdueAgenciesTable';
 
 interface RecentOrderItem {
   id: string | number;
@@ -32,6 +43,18 @@ export const DashboardPage: React.FC = () => {
   const { user, currentRole } = useAuth();
   const navigate = useNavigate();
 
+  // Quyền truy cập Dashboard điều hành (S8-05): Quản lý kinh doanh, Quản lý kho, Admin, Kế toán
+  const isExecutiveRole =
+    currentRole === 'ROLE_SALES_MANAGER' ||
+    currentRole === 'ROLE_ADMIN' ||
+    currentRole === 'ROLE_WH_MANAGER' ||
+    currentRole === 'ROLE_ACCOUNTANT' ||
+    Boolean(
+      user?.roles?.some((r) =>
+        ['ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_WH_MANAGER', 'ROLE_ACCOUNTANT'].includes(r)
+      )
+    );
+
   // Giá vốn và biên lợi nhuận chỉ lộ ra với vai trò Quản lý kinh doanh (ROLE_SALES_MANAGER) và Quản trị viên
   const canViewCostAndMargin =
     currentRole === 'ROLE_SALES_MANAGER' ||
@@ -43,10 +66,21 @@ export const DashboardPage: React.FC = () => {
     currentRole === 'ROLE_SALES_REP' ||
     currentRole === 'ROLE_SALES_MANAGER' ||
     currentRole === 'ROLE_ADMIN' ||
-    Boolean(user?.roles?.some((r) => r === 'ROLE_SALES_REP' || r === 'ROLE_SALES_MANAGER' || r === 'ROLE_ADMIN'));
+    Boolean(
+      user?.roles?.some((r) =>
+        ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN'].includes(r)
+      )
+    );
 
+  // S8-05 Executive Dashboard States
+  const [executiveOverview, setExecutiveOverview] = useState<ExecutiveDashboardOverview | null>(null);
+  const [executiveLoading, setExecutiveLoading] = useState<boolean>(false);
+  const [refreshingCache, setRefreshingCache] = useState<boolean>(false);
+  const [chartMonth, setChartMonth] = useState<number>(new Date().getMonth() + 1);
+  const [chartYear, setChartYear] = useState<number>(new Date().getFullYear());
+  const [dailySalesLoading, setDailySalesLoading] = useState<boolean>(false);
 
-  // State lưu trữ dữ liệu thật từ Backend
+  // Operational Dashboard States
   const [productCount, setProductCount] = useState<number>(0);
   const [agencyCount, setAgencyCount] = useState<number>(0);
   const [activeAgenciesCount, setActiveAgenciesCount] = useState<number>(0);
@@ -56,13 +90,96 @@ export const DashboardPage: React.FC = () => {
   const [recentOrders, setRecentOrders] = useState<RecentOrderItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  // Tải dữ liệu Executive Dashboard (AC 4: Tải tổng hợp nhanh < 2 giây)
+  const loadExecutiveData = useCallback(
+    async (m?: number, y?: number, refresh: boolean = false) => {
+      if (!isExecutiveRole) return;
+      setExecutiveLoading(true);
+      try {
+        const data = await fetchExecutiveDashboardOverview(m ?? chartMonth, y ?? chartYear, 10, refresh);
+        setExecutiveOverview(data);
+      } catch (err) {
+        console.warn('Lỗi tải dữ liệu Executive Dashboard:', err);
+      } finally {
+        setExecutiveLoading(false);
+      }
+    },
+    [isExecutiveRole, chartMonth, chartYear]
+  );
+
+  useEffect(() => {
+    loadExecutiveData();
+  }, [loadExecutiveData]);
+
+  // Bộ lọc tháng trên biểu đồ (AC 2 & TEST FE)
+  const handleMonthChange = async (newMonth: number) => {
+    setChartMonth(newMonth);
+    setDailySalesLoading(true);
+    try {
+      const [daily, region] = await Promise.all([
+        fetchDailySales(newMonth, chartYear),
+        fetchRegionSales(newMonth, chartYear)
+      ]);
+      setExecutiveOverview((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          dailySales: daily,
+          regionSales: region
+        };
+      });
+    } catch (err) {
+      console.warn('Lỗi đổi tháng biểu đồ:', err);
+    } finally {
+      setDailySalesLoading(false);
+    }
+  };
+
+  // Bộ lọc năm trên biểu đồ (AC 2 & TEST FE)
+  const handleYearChange = async (newYear: number) => {
+    setChartYear(newYear);
+    setDailySalesLoading(true);
+    try {
+      const [daily, region] = await Promise.all([
+        fetchDailySales(chartMonth, newYear),
+        fetchRegionSales(chartMonth, newYear)
+      ]);
+      setExecutiveOverview((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          dailySales: daily,
+          regionSales: region
+        };
+      });
+    } catch (err) {
+      console.warn('Lỗi đổi năm biểu đồ:', err);
+    } finally {
+      setDailySalesLoading(false);
+    }
+  };
+
+  // Làm mới bộ đệm Cache thủ công
+  const handleRefreshCache = async () => {
+    setRefreshingCache(true);
+    try {
+      await refreshDashboardCache();
+      await loadExecutiveData(chartMonth, chartYear, true);
+    } catch (err) {
+      console.warn('Lỗi làm mới cache:', err);
+    } finally {
+      setRefreshingCache(false);
+    }
+  };
+
+  // Tải dữ liệu hoạt động chung
   useEffect(() => {
     let isMounted = true;
 
-    async function loadDashboardData() {
+    async function loadOperationalData() {
       setIsLoading(true);
       try {
-        // 1. Lấy dữ liệu sản phẩm thật từ API Backend
+        // 1. Lấy dữ liệu sản phẩm
         try {
           const prodRes = await productService.getProducts({ page: 0, size: 1 });
           if (isMounted) {
@@ -72,13 +189,17 @@ export const DashboardPage: React.FC = () => {
           console.warn('Không tải được danh mục sản phẩm từ backend:', err);
         }
 
-        // 2. Lấy dữ liệu đại lý thật từ API Backend (chỉ với vai trò có quyền xem đại lý)
+        // 2. Lấy dữ liệu đại lý
         const canViewCustomers =
           currentRole === 'ROLE_ADMIN' ||
           currentRole === 'ROLE_SALES_MANAGER' ||
           currentRole === 'ROLE_ACCOUNTANT' ||
           currentRole === 'ROLE_SALES_REP' ||
-          Boolean(user?.roles?.some((r) => ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_ACCOUNTANT', 'ROLE_SALES_REP'].includes(r)));
+          Boolean(
+            user?.roles?.some((r) =>
+              ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_ACCOUNTANT', 'ROLE_SALES_REP'].includes(r)
+            )
+          );
 
         if (canViewCustomers) {
           try {
@@ -92,7 +213,7 @@ export const DashboardPage: React.FC = () => {
           }
         }
 
-        // 3. Lấy dữ liệu đơn hàng thật từ Backend kết hợp đơn đã chốt (chỉ với vai trò có quyền xem đơn hàng)
+        // 3. Lấy dữ liệu đơn hàng gần đây
         const canViewOrders =
           currentRole === 'ROLE_ADMIN' ||
           currentRole === 'ROLE_SALES_MANAGER' ||
@@ -100,11 +221,21 @@ export const DashboardPage: React.FC = () => {
           currentRole === 'ROLE_SALES_REP' ||
           currentRole === 'ROLE_WAREHOUSE' ||
           currentRole === 'ROLE_WH_MANAGER' ||
-          Boolean(user?.roles?.some((r) => ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_ACCOUNTANT', 'ROLE_SALES_REP', 'ROLE_WAREHOUSE', 'ROLE_WH_MANAGER'].includes(r)));
+          Boolean(
+            user?.roles?.some((r) =>
+              [
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_REP',
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER'
+              ].includes(r)
+            )
+          );
 
         if (canViewOrders) {
           try {
-            // 1. Tải danh sách đơn gần đây để hiển thị bảng tiến độ
             const res = await authFetch(`${API_BASE_URL}/api/orders?page=0&size=10`);
             let backendOrders: any[] = [];
             if (res.ok) {
@@ -112,7 +243,6 @@ export const DashboardPage: React.FC = () => {
               backendOrders = data.content || [];
             }
 
-            // 2. Tải tổng tiền doanh thu thực tế từ Backend (chỉ đơn đã xuất kho / đã giao / đóng đơn)
             let backendRevenue = 0;
             let backendOfficialOrdersCount = 0;
             let hasBackendTotals = false;
@@ -120,7 +250,9 @@ export const DashboardPage: React.FC = () => {
             try {
               const [revTotalsRes, officialTotalsRes] = await Promise.all([
                 authFetch(`${API_BASE_URL}/api/orders/totals?status=DISPATCHED,DELIVERED,CLOSED`),
-                authFetch(`${API_BASE_URL}/api/orders/totals?status=PENDING_APPROVAL,APPROVED,PICKING,DISPATCHED,DELIVERED,CLOSED`)
+                authFetch(
+                  `${API_BASE_URL}/api/orders/totals?status=PENDING_APPROVAL,APPROVED,PICKING,DISPATCHED,DELIVERED,CLOSED`
+                )
               ]);
 
               if (revTotalsRes.ok) {
@@ -134,85 +266,40 @@ export const DashboardPage: React.FC = () => {
                 backendOfficialOrdersCount = Number(officialData.orderCount) || 0;
               }
             } catch (errTotals) {
-              console.warn('Không tải được totals từ backend, fallback tính từ danh sách đơn:', errTotals);
+              console.warn('Fallback tính từ danh sách đơn:', errTotals);
             }
 
-            // Lấy đơn hàng đã chốt từ localStorage nếu có (hỗ trợ chế độ demo/offline)
-            let localConfirmedOrders: any[] = [];
-            try {
-              const raw = localStorage.getItem('erp_confirmed_orders_v1');
-              if (raw) localConfirmedOrders = JSON.parse(raw);
-            } catch {
-              // ignore
-            }
+            const REVENUE_ELIGIBLE_STATUSES = ['DISPATCHED', 'DELIVERED', 'CLOSED', 'COMPLETED'];
+            const OFFICIAL_ORDER_STATUSES = [
+              'PENDING_APPROVAL',
+              'APPROVED',
+              'CONFIRMED',
+              'PICKING',
+              'PREPARING',
+              'DISPATCHED',
+              'DELIVERED',
+              'CLOSED',
+              'COMPLETED'
+            ];
 
-            const combinedOrders = [...backendOrders];
-            localConfirmedOrders.forEach((lo: any) => {
-              if (!combinedOrders.some((bo: any) => bo.code === lo.orderNumber || bo.id === lo.id)) {
-                combinedOrders.push({
-                  id: lo.id || lo.orderNumber,
-                  code: lo.orderNumber || lo.code,
-                  customerName: lo.agencyName || lo.customerName || 'Đại lý',
-                  status: lo.status || 'CONFIRMED',
-                  totalAmount: lo.totalPayable || lo.totalAmount || 0,
-                  desiredDeliveryDate: lo.expectedDeliveryDate || lo.updatedAt
-                });
-              }
-            });
-
-            if (isMounted) {
-              // Trạng thái đơn hàng đủ điều kiện ghi nhận doanh thu thực tế:
-              // Hàng đã rời kho hoặc đại lý đã nhận hàng hoàn tất (DISPATCHED, DELIVERED, CLOSED, COMPLETED).
-              // Tuyệt đối KHÔNG tính: DRAFT (nháp), PENDING_APPROVAL (chờ duyệt), APPROVED (mới duyệt chưa xuất), CANCELLED (hủy), REJECTED (từ chối).
-              const REVENUE_ELIGIBLE_STATUSES = ['DISPATCHED', 'DELIVERED', 'CLOSED', 'COMPLETED'];
-
-              // Trạng thái đơn hàng chính thức phát sinh trong kỳ:
-              // Loại trừ đơn nháp (DRAFT), đơn hủy (CANCELLED) và đơn từ chối (REJECTED).
-              const OFFICIAL_ORDER_STATUSES = [
-                'PENDING_APPROVAL',
-                'APPROVED',
-                'CONFIRMED',
-                'PICKING',
-                'PREPARING',
-                'DISPATCHED',
-                'DELIVERED',
-                'CLOSED',
-                'COMPLETED'
-              ];
-
-              // Tính tổng doanh thu thực tế:
-              let finalRevenue = 0;
-              if (hasBackendTotals) {
-                finalRevenue = backendRevenue;
-                // Cộng thêm từ local nếu có đơn local thỏa mãn tiêu chuẩn doanh thu
-                const extraLocalRevenue = localConfirmedOrders
-                  .filter((lo: any) => REVENUE_ELIGIBLE_STATUSES.includes(String(lo.status || '').toUpperCase()))
-                  .reduce((sum: number, o: any) => sum + (Number(o.totalPayable || o.totalAmount) || 0), 0);
-                finalRevenue += extraLocalRevenue;
-              } else {
-                finalRevenue = combinedOrders
+            let finalRevenue = hasBackendTotals
+              ? backendRevenue
+              : backendOrders
                   .filter((o: any) => REVENUE_ELIGIBLE_STATUSES.includes(String(o.status || '').toUpperCase()))
                   .reduce((sum: number, o: any) => sum + (Number(o.totalAmount) || 0), 0);
-              }
+
+            if (isMounted) {
               setTotalRevenue(finalRevenue);
+              setOrdersCount(
+                hasBackendTotals && backendOfficialOrdersCount > 0
+                  ? backendOfficialOrdersCount
+                  : backendOrders.filter((o: any) =>
+                      OFFICIAL_ORDER_STATUSES.includes(String(o.status || '').toUpperCase())
+                    ).length
+              );
+              setTotalCogs(Math.round(finalRevenue * 0.7));
 
-              // Số đơn hàng chính thức trong kỳ:
-              let finalCount = 0;
-              if (hasBackendTotals && backendOfficialOrdersCount > 0) {
-                finalCount = backendOfficialOrdersCount;
-              } else {
-                finalCount = combinedOrders.filter((o: any) =>
-                  OFFICIAL_ORDER_STATUSES.includes(String(o.status || '').toUpperCase())
-                ).length;
-              }
-              setOrdersCount(finalCount);
-
-              // Ước tính giá vốn hàng bán tương ứng
-              const cogs = Math.round(finalRevenue * 0.7);
-              setTotalCogs(cogs);
-
-              // Chuyển đổi danh sách 10 đơn gần đây hiển thị theo chuẩn 7 nấc vòng đời đơn hàng
-              const formattedRecent: RecentOrderItem[] = combinedOrders.slice(0, 10).map((o) => {
+              const formattedRecent: RecentOrderItem[] = backendOrders.slice(0, 10).map((o) => {
                 const status = String(o.status || 'DRAFT').toUpperCase();
                 let step = '1/7 bước (Đơn nháp)';
                 let percent = 14;
@@ -250,14 +337,19 @@ export const DashboardPage: React.FC = () => {
                   totalAmount: Number(o.totalAmount || 0),
                   step,
                   percent,
-                  path: status === 'DRAFT' && o.id && canCreateOrder ? `/orders/create?draftId=${o.id}` : (o.id ? `/orders/${o.id}` : '/orders')
+                  path:
+                    status === 'DRAFT' && o.id && canCreateOrder
+                      ? `/orders/create?draftId=${o.id}`
+                      : o.id
+                      ? `/orders/${o.id}`
+                      : '/orders'
                 };
               });
 
               setRecentOrders(formattedRecent);
             }
           } catch (err) {
-            console.warn('Không tải được đơn hàng từ backend:', err);
+            console.warn('Lỗi tải đơn hàng:', err);
           }
         }
       } finally {
@@ -265,11 +357,11 @@ export const DashboardPage: React.FC = () => {
       }
     }
 
-    loadDashboardData();
+    loadOperationalData();
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [currentRole, user, canCreateOrder]);
 
   const formatCurrency = (val: number) => {
     return val.toLocaleString('vi-VN') + ' đ';
@@ -282,11 +374,55 @@ export const DashboardPage: React.FC = () => {
   const grossProfit = totalRevenue - totalCogs;
 
   return (
-    <div className="erp-fade-in space-y-3.5">
-      {/* CẢNH BÁO TỒN KHO DƯỚI ĐỊNH MỨC TỐI THIỂU CHO CÁC VAI TRÒ QUẢN LÝ KHO & ADMIN */}
+    <div className="erp-fade-in space-y-4">
+      {/* CẢNH BÁO TỒN KHO DƯỚI ĐỊNH MỨC CHO KHO & ADMIN */}
       <WarehouseMinStockDashboardAlert />
 
-      {/* 1. HÀNG 4 STAT CARDS HOẠT ĐỘNG CHUNG (DỮ LIỆU THẬT) */}
+      {/* ================= S8-05 EXECUTIVE SALES & INVENTORY DASHBOARD ================= */}
+      {isExecutiveRole && (
+        <div className="space-y-4">
+          {/* 1. THẺ CHỈ SỐ ĐIỀU HÀNH (AC 1 & AC 4 TẢI NHANH < 2 GIÂY) */}
+          <ExecutiveKpiWidgets
+            summary={executiveOverview?.summary || null}
+            responseTimeMs={executiveOverview?.responseTimeMs}
+            fromCache={executiveOverview?.fromCache}
+            onRefreshCache={handleRefreshCache}
+            refreshing={refreshingCache}
+            loading={executiveLoading}
+          />
+
+          {/* 2. BIỂU ĐỒ DOANH SỐ THEO NGÀY (CHART.JS) & CƠ CẤU KHU VỰC (AC 2) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+            <div className="lg:col-span-7 flex flex-col">
+              <ExecutiveDailySalesChart
+                data={executiveOverview?.dailySales || null}
+                selectedMonth={chartMonth}
+                selectedYear={chartYear}
+                onMonthChange={handleMonthChange}
+                onYearChange={handleYearChange}
+                onRefresh={handleRefreshCache}
+                refreshing={refreshingCache}
+                loading={dailySalesLoading || executiveLoading}
+              />
+            </div>
+
+            <div className="lg:col-span-5 flex flex-col">
+              <ExecutiveRegionSalesChart
+                data={executiveOverview?.regionSales || null}
+                loading={dailySalesLoading || executiveLoading}
+              />
+            </div>
+          </div>
+
+          {/* 3. DANH SÁCH ĐẠI LÝ QUÁ HẠN CÔNG NỢ XẾP THEO SỐ TIỀN NỢ (AC 3) */}
+          <ExecutiveOverdueAgenciesTable
+            data={executiveOverview?.overdueAgencies || null}
+            loading={executiveLoading}
+          />
+        </div>
+      )}
+
+      {/* ================= OPERATIONAL & INVENTORY SUMMARY CARDS ================= */}
       <div className="erp-stat-grid">
         {/* Thẻ 1: Tổng Doanh Thu */}
         <div className="erp-stat-card">
@@ -378,7 +514,7 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. CHỈ SỐ GIÁ VỐN & BIÊN LỢI NHUẬN GỘP (Story S1-05: Chỉ Quản lý kinh doanh được phép xem) */}
+      {/* CHỈ SỐ GIÁ VỐN & BIÊN LỢI NHUẬN GỘP */}
       <div style={{ marginTop: '20px', marginBottom: '20px' }}>
         <div
           style={{
@@ -387,8 +523,11 @@ export const DashboardPage: React.FC = () => {
             gap: '16px'
           }}
         >
-          {/* Card Giá vốn hàng bán */}
-          <div className="erp-stat-card" style={{ borderLeft: canViewCostAndMargin ? '4px solid #F85606' : '4px solid #CBD5E1' }}>
+          {/* Card Giá vốn */}
+          <div
+            className="erp-stat-card"
+            style={{ borderLeft: canViewCostAndMargin ? '4px solid #F85606' : '4px solid #CBD5E1' }}
+          >
             <div className="erp-stat-card-top">
               <span className="erp-stat-label">GIÁ VỐN HÀNG BÁN (COGS)</span>
               <div
@@ -402,15 +541,15 @@ export const DashboardPage: React.FC = () => {
               </div>
             </div>
             <div className="erp-stat-value" style={{ letterSpacing: canViewCostAndMargin ? 'normal' : '3px' }}>
-              {canViewCostAndMargin
-                ? (isLoading ? '...' : formatCurrency(totalCogs))
-                : '•••••••••••• đ'}
+              {canViewCostAndMargin ? (isLoading ? '...' : formatCurrency(totalCogs)) : '•••••••••••• đ'}
             </div>
             <div className="erp-stat-subtext">
               {canViewCostAndMargin ? (
                 <span style={{ color: '#64748B' }}>
                   {totalRevenue > 0 ? (
-                    <>Tỷ trọng vốn: <strong>70.00%</strong> tổng doanh thu</>
+                    <>
+                      Tỷ trọng vốn: <strong>70.00%</strong> tổng doanh thu
+                    </>
                   ) : (
                     'Chưa phát sinh giá vốn'
                   )}
@@ -424,8 +563,11 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Card Biên lợi nhuận gộp */}
-          <div className="erp-stat-card" style={{ borderLeft: canViewCostAndMargin ? '4px solid #10B981' : '4px solid #CBD5E1' }}>
+          {/* Card Biên lợi nhuận */}
+          <div
+            className="erp-stat-card"
+            style={{ borderLeft: canViewCostAndMargin ? '4px solid #10B981' : '4px solid #CBD5E1' }}
+          >
             <div className="erp-stat-card-top">
               <span className="erp-stat-label">BIÊN LỢI NHUẬN GỘP (GROSS MARGIN)</span>
               <div
@@ -460,7 +602,7 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2b. PHÂN HỆ QUẢN LÝ BẢNG GIÁ & LỊCH SỬ THAY ĐỔI GIÁ (S3-02 / SCRUM-13) */}
+      {/* PHÂN HỆ LỊCH SỬ THAY ĐỔI GIÁ (S3-02) */}
       {canViewCostAndMargin && (
         <div
           onClick={() => navigate('/logs?tab=price')}
@@ -494,13 +636,9 @@ export const DashboardPage: React.FC = () => {
               <History size={22} />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '15px', fontWeight: 700, color: '#1E3A8A' }}>
-                  Lịch Sử Thay Đổi Giá Sản Phẩm
-                </span>
-
-
-              </div>
+              <span style={{ fontSize: '15px', fontWeight: 700, color: '#1E3A8A' }}>
+                Lịch Sử Thay Đổi Giá Sản Phẩm
+              </span>
               <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#1E40AF' }}>
                 Cơ sở giải thích biến động giá tháng này so với tháng trước cho Đại lý • Xem giá cũ, giá mới, người sửa và căn cứ áp dụng
               </p>
@@ -523,73 +661,66 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* 2c. PHÂN HỆ NHẬT KÝ THAO TÁC & KIỂM TOÁN TỒN KHO - CÔNG NỢ (S2-04) */}
-      {(currentRole === 'ROLE_ADMIN' ||
-        currentRole === 'ROLE_ACCOUNTANT' ||
-        currentRole === 'ROLE_WH_MANAGER' ||
-        currentRole === 'ROLE_SALES_MANAGER') && (
-          <div
-            onClick={() => navigate('/logs?tab=audit')}
-            style={{
-              cursor: 'pointer',
-              marginBottom: '20px',
-              padding: '16px 20px',
-              background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
-              borderRadius: '16px',
-              border: '1px solid #FED7AA',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '16px'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div
-                style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '12px',
-                  background: '#EA580C',
-                  color: '#FFFFFF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}
-              >
-                <ShieldCheck size={22} />
-              </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#9A3412' }}>
-                    Nhật Ký Thao Tác Tồn Kho & Công Nợ
-                  </span>
-
-
-                </div>
-                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#9A3412' }}>
-                  Tra cứu ai đã điều chỉnh tồn kho, kiểm kê cuối tháng bị lệch, thay đổi hạn mức công nợ và giá niêm yết
-                </p>
-              </div>
-            </div>
+      {/* PHÂN HỆ NHẬT KÝ THAO TÁC & KIỂM TOÁN TỒN KHO - CÔNG NỢ (S2-04) */}
+      {isExecutiveRole && (
+        <div
+          onClick={() => navigate('/logs?tab=audit')}
+          style={{
+            cursor: 'pointer',
+            marginBottom: '20px',
+            padding: '16px 20px',
+            background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
+            borderRadius: '16px',
+            border: '1px solid #FED7AA',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <div
               style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: '#EA580C',
+                color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                color: '#EA580C',
-                fontSize: '13px',
-                fontWeight: 600,
-                whiteSpace: 'nowrap'
+                justifyContent: 'center',
+                flexShrink: 0
               }}
             >
-              <span>Vào sổ nhật ký</span>
-              <ChevronRight size={16} />
+              <ShieldCheck size={22} />
+            </div>
+            <div>
+              <span style={{ fontSize: '15px', fontWeight: 700, color: '#9A3412' }}>
+                Nhật Ký Thao Tác Tồn Kho & Công Nợ
+              </span>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#9A3412' }}>
+                Tra cứu ai đã điều chỉnh tồn kho, kiểm kê cuối tháng bị lệch, thay đổi hạn mức công nợ và giá niêm yết
+              </p>
             </div>
           </div>
-        )}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: '#EA580C',
+              fontSize: '13px',
+              fontWeight: 600,
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <span>Vào sổ nhật ký</span>
+            <ChevronRight size={16} />
+          </div>
+        </div>
+      )}
 
-      {/* 3. KHU VỰC TIẾN ĐỘ ĐƠN HÀNG (FULL WIDTH, ĐÃ BỎ PHẦN TỶ LỆ ĐẠT KẾ HOẠCH) */}
+      {/* TIẾN ĐỘ CÁC ĐƠN HÀNG GẦN ĐÂY */}
       <div style={{ width: '100%', marginBottom: '24px' }}>
         <div className="erp-card" style={{ width: '100%' }}>
           <div className="erp-card-header">
@@ -708,17 +839,12 @@ export const DashboardPage: React.FC = () => {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <span style={{ fontSize: '12px', color: '#6B7280' }}>{order.step}</span>
-                      <span className="erp-progress-action">
-                        Xem ĐH &gt;
-                      </span>
+                      <span className="erp-progress-action">Xem ĐH &gt;</span>
                     </div>
                   </div>
 
                   <div className="erp-progress-bar-bg">
-                    <div
-                      className="erp-progress-bar-fill"
-                      style={{ width: `${order.percent}%` }}
-                    />
+                    <div className="erp-progress-bar-fill" style={{ width: `${order.percent}%` }} />
                   </div>
                 </div>
               ))}
