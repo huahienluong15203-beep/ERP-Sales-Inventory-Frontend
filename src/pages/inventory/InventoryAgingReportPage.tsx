@@ -114,41 +114,27 @@ export const InventoryAgingReportPage: React.FC = () => {
 
   return (
     <div className="space-y-4 antialiased p-4 sm:p-6 bg-slate-50/50 min-h-screen">
-      {/* 1. Header Trang */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4.5 rounded-2xl border border-gray-200/80 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-xs">
-            <Clock size={20} />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">Báo cáo Luân chuyển Kho & Tuổi hàng</h1>
-            <p className="text-xs text-gray-500">
-              Phân tích vòng quay tồn kho, số ngày lưu kho bình quân và cảnh báo hàng chậm luân chuyển chôn vốn
-            </p>
-          </div>
-        </div>
+      {/* 1. Header tác vụ tinh gọn */}
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={handleExportExcel}
+          disabled={exporting || loading || items.length === 0}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs disabled:opacity-50"
+        >
+          <Download size={14} className={exporting ? 'animate-bounce' : ''} />
+          <span>{exporting ? 'Đang xuất Excel...' : 'Xuất Excel'}</span>
+        </button>
 
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          <button
-            type="button"
-            onClick={handleExportExcel}
-            disabled={exporting || loading || items.length === 0}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs disabled:opacity-50"
-          >
-            <Download size={14} className={exporting ? 'animate-bounce' : ''} />
-            <span>{exporting ? 'Đang xuất Excel...' : 'Xuất Excel'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => loadData()}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-700 hover:text-orange-600 hover:border-orange-300 rounded-xl text-xs font-semibold transition cursor-pointer shadow-2xs"
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            <span>Làm mới</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => loadData()}
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-700 hover:text-orange-600 hover:border-orange-300 rounded-xl text-xs font-semibold transition cursor-pointer shadow-2xs"
+        >
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          <span>Làm mới</span>
+        </button>
       </div>
 
       {/* 2. Thẻ Thống kê Tổng quan (KPI Cards) */}

@@ -105,28 +105,12 @@ export const InTransitDashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6 antialiased max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">
-      {/* 1. Tiêu đề Dashboard */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
-              <Truck size={22} />
-            </div>
-            <div>
-              <h1 className="text-xl font-black text-gray-900 tracking-tight">
-                Dashboard Theo dõi Hàng đi đường
-              </h1>
-              <p className="text-xs text-gray-500">
-                Theo dõi các chuyến giao hàng đã rời kho, quản lý tiền hàng trên đường và cảnh báo trễ hẹn
-              </p>
-            </div>
-          </div>
-        </div>
-
+      {/* 1. Header tác vụ tinh gọn */}
+      <div className="flex items-center justify-end">
         <button
           type="button"
           onClick={loadInTransitOrders}
-          className="p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-2xs transition cursor-pointer self-start sm:self-auto flex items-center gap-1.5 text-xs font-semibold"
+          className="p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-2xs transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
           title="Tải lại dữ liệu"
         >
           <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />

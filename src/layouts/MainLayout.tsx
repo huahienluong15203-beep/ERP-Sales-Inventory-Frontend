@@ -356,7 +356,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
                 location.pathname !== '/inventory/delivery-trips/create' && (
                   <h1 className="erp-page-heading">{pageTitle}</h1>
                 )}
-              {!['/', '/dashboard', '/categories', '/invoices', '/invoices/create', '/payments/adjustments', '/debts/ledger', '/debts/reconciliation', '/debts/statement', '/reports/overdue-debts', '/sales-returns', '/sales-returns/create', '/inventory/stock-adjustments', '/inventory/stock-adjustments/create', '/reports/sales', '/payments/reconciliation', '/inventory/warehouses', '/inventory/lots'].includes(location.pathname) &&
+              {!['/', '/dashboard', '/categories', '/invoices', '/invoices/create', '/payments/adjustments', '/debts/ledger', '/debts/reconciliation', '/debts/statement', '/reports/overdue-debts', '/sales-returns', '/sales-returns/create', '/inventory/stock-adjustments', '/inventory/stock-adjustments/create', '/reports/sales', '/payments/reconciliation', '/inventory/warehouses', '/inventory/lots', '/inventory/aging', '/inventory/in-transit', '/inventory/stock-ledger', '/inventory/stock-card', '/orders'].includes(location.pathname) &&
                 !location.pathname.startsWith('/inventory/delivery-trips') &&
                 Boolean(pageSubtitle) && (
                   <span className="erp-page-subheading">{pageSubtitle}</span>
