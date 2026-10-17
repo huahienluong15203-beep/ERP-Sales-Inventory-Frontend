@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
-import { createProductLot } from '../../services/productLotApi';
+import { createProductLot, toggleProductBatchManagement } from '../../services/productLotApi';
 import { productService } from '../../services/productService';
 import { fetchWarehouses } from '../../services/warehouseApi';
 import { fetchSuppliers } from '../../services/supplierApi';
@@ -124,6 +124,16 @@ export const ProductLotCreatePage: React.FC = () => {
 
     try {
       setSubmitting(true);
+
+      // S6-01: Nếu sản phẩm chưa bật quản lý lô, tự động kích hoạt trước khi tạo lô
+      if (selectedProduct && !selectedProduct.hasBatchManagement) {
+        try {
+          await toggleProductBatchManagement(Number(productId), true);
+        } catch (toggleErr) {
+          console.warn('Không thể tự động bật quản lý lô:', toggleErr);
+        }
+      }
+
       const payload: ProductLotCreateRequest = {
         productId: Number(productId),
         warehouseId: Number(warehouseId),
@@ -135,11 +145,25 @@ export const ProductLotCreatePage: React.FC = () => {
         notes: notes.trim() || null
       };
 
-      await createProductLot(payload);
+      try {
+        await createProductLot(payload);
+      } catch (createErr: any) {
+        // Nếu lỗi trả về báo chưa bật quản lý lô, kích hoạt và thử lại một lần nữa
+        if (createErr?.message && createErr.message.includes('chưa được bật quản lý theo lô hàng')) {
+          await toggleProductBatchManagement(Number(productId), true);
+          await createProductLot(payload);
+        } else {
+          throw createErr;
+        }
+      }
+
       showToast?.('Khai báo lô hàng mới thành công', 'success');
       navigate('/inventory/lots');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Khai báo lô hàng thất bại';
+      let msg = err instanceof Error ? err.message : 'Khai báo lô hàng thất bại';
+      if (msg.includes('ACCESS_DENIED') || msg.includes('không có quyền thao tác')) {
+        msg = 'Bạn không có quyền thao tác trên kho hàng đã chọn. Vui lòng chọn kho hàng bạn được phân quyền phụ trách.';
+      }
       setError(msg);
       showToast?.(msg, 'error');
     } finally {
@@ -251,6 +275,14 @@ export const ProductLotCreatePage: React.FC = () => {
                 placeholder="-- Chọn sản phẩm --"
                 loading={loadingOptions}
               />
+              {selectedProduct && !selectedProduct.hasBatchManagement && (
+                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2 animate-in fade-in">
+                  <Info size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-[11px] leading-relaxed">
+                    Sản phẩm <strong>{selectedProduct.sku}</strong> chưa kích hoạt cờ quản lý theo lô. Hệ thống sẽ <strong>tự động kích hoạt</strong> quản lý lô cho sản phẩm này khi bạn bấm "Khai báo lô hàng".
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Kho lưu trữ */}
