@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  BarChart3,
   Download,
   RefreshCw,
   TrendingUp,
   TrendingDown,
   Lock,
-  ShieldCheck,
   Users,
   MapPin,
   Building2,
@@ -232,65 +230,11 @@ export const MultidimensionalSalesReportPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* ================= HEADER ================= */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-sm">
-              <BarChart3 size={22} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-gray-900">
-                  Báo Cáo Doanh Số Đa Chiều
-                </h1>
-                {/* AC3 Badge: Phân quyền xem Biên lợi nhuận */}
-                {marginVisible ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <ShieldCheck size={13} />
-                    <span>Quyền Quản Lý: Hiển thị Biên LN gộp</span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                    <Lock size={13} />
-                    <span>Chế độ xem Doanh số & Sản lượng</span>
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Nút hành động */}
-        <div className="flex items-center gap-2.5 self-start lg:self-auto">
-          <button
-            type="button"
-            onClick={loadReport}
-            disabled={loading}
-            className="px-3.5 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            <span>Làm mới</span>
-          </button>
-
-          {/* AC4: Nút xuất Excel */}
-          <button
-            type="button"
-            onClick={handleExportExcel}
-            disabled={exporting || loading}
-            className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-          >
-            <Download size={14} className={exporting ? 'animate-bounce' : ''} />
-            <span>{exporting ? 'Đang xuất tệp...' : 'Xuất Excel'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ================= BỘ LỌC ĐA CHIỀU (AC1, AC4) ================= */}
+      {/* ================= BỘ LỌC ĐA CHIỀU (AC1, AC4) & THAO TÁC ================= */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-2xs space-y-4">
-        {/* Hàng 1: Chiều phân tích (Group By - AC1) */}
-        <div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+        {/* Hàng 1: Chiều phân tích (Group By - AC1) + Nút thao tác Làm mới / Xuất Excel */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 flex-1">
             {GROUP_OPTIONS.map((opt) => {
               const active = groupBy === opt.id;
               return (
@@ -298,24 +242,43 @@ export const MultidimensionalSalesReportPage: React.FC = () => {
                   key={opt.id}
                   type="button"
                   onClick={() => setGroupBy(opt.id)}
-                  className={`p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                  className={`py-2 px-3 rounded-xl border text-left transition cursor-pointer flex items-center gap-2 font-bold text-xs ${
                     active
-                      ? 'bg-orange-50/70 border-orange-500 text-orange-950 ring-2 ring-orange-400/20 shadow-xs'
-                      : 'bg-gray-50/50 hover:bg-gray-100/70 border-gray-200 text-gray-700'
+                      ? 'bg-orange-50/80 border-orange-500 text-orange-950 ring-2 ring-orange-400/20 shadow-xs'
+                      : 'bg-gray-50/60 hover:bg-gray-100/80 border-gray-200 text-gray-700'
                   }`}
                 >
-                  <div className="flex items-center gap-2 font-bold text-xs">
-                    <span className={active ? 'text-orange-600' : 'text-gray-500'}>
-                      {opt.icon}
-                    </span>
-                    <span>{opt.label}</span>
-                  </div>
-                  <span className="text-[11px] text-gray-500 mt-1 line-clamp-1">
-                    {opt.desc}
+                  <span className={active ? 'text-orange-600' : 'text-gray-500'}>
+                    {opt.icon}
                   </span>
+                  <span>{opt.label}</span>
                 </button>
               );
             })}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 self-end lg:self-center">
+            <button
+              type="button"
+              onClick={loadReport}
+              disabled={loading}
+              className="px-3 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Tải lại dữ liệu"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              <span>Làm mới</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportExcel}
+              disabled={exporting || loading}
+              className="px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Xuất bảng Excel báo cáo"
+            >
+              <Download size={14} className={exporting ? 'animate-bounce' : ''} />
+              <span>{exporting ? 'Đang xuất tệp...' : 'Xuất Excel'}</span>
+            </button>
           </div>
         </div>
 
