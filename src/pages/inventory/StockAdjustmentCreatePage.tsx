@@ -707,7 +707,7 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                 <tr>
                   <th className="py-3 px-3.5 w-10 text-left">#</th>
                   <th className="py-3 px-3 text-left">Sản Phẩm</th>
-                  <th className="py-3 px-3 w-56 text-left">Số Lô Hàng</th>
+                  <th className="py-3 px-3 w-72 text-left">Số Lô Hàng</th>
                   <th className="py-3 px-3 text-right w-24">Tồn Kho</th>
                   <th className="py-3 px-3 text-center w-28">SL Giảm</th>
                   <th className="py-3 px-3 text-right w-28">Giá Vốn</th>
@@ -741,8 +741,8 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                         <div className="text-[10px] text-gray-400">ĐVT: {line.baseUnit}</div>
                       </td>
 
-                      {/* Số lô: căn thẳng lề trái, cho phép nhập thủ công hoặc chọn từ danh sách */}
-                      <td className="py-3 px-3 w-56">
+                      {/* Số lô: chỉ 1 dòng duy nhất, ô nhập rộng rãi hiển thị trọn vẹn mã lô */}
+                      <td className="py-3 px-3 w-72">
                         {line.hasBatchManagement ? (
                           line.lotLoading ? (
                             <div className="flex items-center gap-1 text-[11px] text-gray-400">
@@ -757,7 +757,7 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                                 value={line.batchNumber || ''}
                                 onChange={(e) => handleLotChange(line.id, e.target.value)}
                                 placeholder="Nhập hoặc chọn số lô..."
-                                className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-mono font-bold text-gray-900 focus:border-orange-500 focus:outline-none placeholder:text-gray-400 placeholder:font-sans placeholder:font-normal"
+                                className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-mono font-bold text-gray-900 focus:border-orange-500 focus:outline-none placeholder:text-gray-400 placeholder:font-sans placeholder:font-normal"
                               />
                               <datalist id={`lot-datalist-${line.id}`}>
                                 {line.availableLots.map((lot) => (
@@ -766,30 +766,6 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                                   </option>
                                 ))}
                               </datalist>
-                              {line.availableLots.length > 0 ? (
-                                <div className="mt-1 flex flex-wrap gap-1 items-center">
-                                  <span className="text-[10px] text-gray-400">Lô có sẵn:</span>
-                                  {line.availableLots.slice(0, 2).map((lot) => (
-                                    <button
-                                      key={lot.id}
-                                      type="button"
-                                      onClick={() => handleLotChange(line.id, lot.batchNumber)}
-                                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition cursor-pointer ${
-                                        line.batchNumber === lot.batchNumber
-                                          ? 'bg-orange-50 border-orange-300 text-orange-700 font-bold'
-                                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-                                      }`}
-                                      title={`Tồn: ${lot.quantity}`}
-                                    >
-                                      {lot.batchNumber} ({lot.quantity})
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="mt-0.5 text-[10px] text-gray-400 italic">
-                                  Chưa có lô tồn tại kho - nhập số lô thủ công
-                                </div>
-                              )}
                             </div>
                           )
                         ) : (
