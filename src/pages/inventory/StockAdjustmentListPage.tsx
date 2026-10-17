@@ -5,14 +5,14 @@ import {
   Search,
   Plus,
   RefreshCw,
-  Eye,
   CheckCircle,
   XCircle,
   Trash2,
   Warehouse as WarehouseIcon,
   Filter,
   Package,
-  FileText
+  FileText,
+  ArrowRight
 } from 'lucide-react';
 import {
   fetchStockAdjustments,
@@ -412,34 +412,32 @@ export const StockAdjustmentListPage: React.FC = () => {
       {/* Main Table */}
       <div className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full text-left border-collapse text-sm">
             <thead>
-              <tr className="bg-gray-50/70 border-b border-gray-200/70 text-gray-600 font-bold">
-                <th className="py-3 px-3.5">Mã Phiếu</th>
-                <th className="py-3 px-3">Ngày Lập</th>
-                <th className="py-3 px-3">Kho Hàng</th>
-                <th className="py-3 px-3">Lý Do Hao Hụt</th>
-                <th className="py-3 px-3 text-right">Tổng SL Giảm</th>
-                <th className="py-3 px-3 text-right">Giá Trị Tổn Thất</th>
-                <th className="py-3 px-3">Người Lập</th>
-                <th className="py-3 px-3">Trạng Thái</th>
-                <th className="py-3 px-3">Người Duyệt</th>
-                <th className="py-3 px-3.5 text-center">Thao Tác</th>
+              <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-700 font-bold text-xs uppercase tracking-wider">
+                <th className="py-3.5 px-4">Mã Phiếu</th>
+                <th className="py-3.5 px-3">Kho Hàng</th>
+                <th className="py-3.5 px-3 text-right">Tổng SL Giảm</th>
+                <th className="py-3.5 px-3 text-right">Giá Trị Tổn Thất</th>
+                <th className="py-3.5 px-3">Người Lập</th>
+                <th className="py-3.5 px-3 text-center">Trạng Thái</th>
+                <th className="py-3.5 px-3">Người Duyệt</th>
+                <th className="py-3.5 px-4 text-center">Thao Tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-gray-400">
-                    <RefreshCw size={22} className="animate-spin mx-auto mb-2 text-orange-500" />
+                  <td colSpan={8} className="py-12 text-center text-gray-400">
+                    <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-orange-500" />
                     <span>Đang tải danh sách phiếu điều chỉnh tồn kho...</span>
                   </td>
                 </tr>
               ) : adjustments.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-gray-400">
-                    <Package size={32} className="mx-auto mb-2 text-gray-300" />
-                    <p className="font-bold text-gray-700">Chưa có phiếu điều chỉnh tồn kho nào</p>
+                  <td colSpan={8} className="py-12 text-center text-gray-400">
+                    <Package size={34} className="mx-auto mb-2 text-gray-300" />
+                    <p className="font-bold text-gray-700 text-sm">Chưa có phiếu điều chỉnh tồn kho nào</p>
                     <p className="text-xs text-gray-400 mt-1">
                       Các phiếu xử lý hàng hỏng, hàng mất hoặc hết hạn huỷ bỏ sẽ hiển thị tại đây.
                     </p>
@@ -452,98 +450,83 @@ export const StockAdjustmentListPage: React.FC = () => {
                   const isCreator = Boolean(user?.id && item.createdById && Number(user.id) === Number(item.createdById));
 
                   return (
-                    <tr key={item.id} className="hover:bg-orange-50/20 transition">
+                    <tr
+                      key={item.id}
+                      onClick={() => handleOpenDetail(item.id)}
+                      className="hover:bg-orange-50/50 cursor-pointer transition-colors duration-150 group"
+                      title="Bấm vào dòng để xem chi tiết phiếu điều chỉnh"
+                    >
                       {/* Mã phiếu */}
-                      <td className="py-3 px-3.5 font-bold text-orange-600 font-mono">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenDetail(item.id)}
-                          className="hover:underline cursor-pointer"
-                        >
-                          {item.code}
-                        </button>
-                      </td>
-
-                      {/* Ngày lập */}
-                      <td className="py-3 px-3 text-gray-600 whitespace-nowrap">
-                        {item.adjustmentDate}
+                      <td className="py-3.5 px-4 font-mono font-bold text-orange-600 text-sm group-hover:underline">
+                        <div className="flex items-center gap-1.5">
+                          <FileText size={15} className="text-orange-500 shrink-0" />
+                          <span>{item.code}</span>
+                        </div>
                       </td>
 
                       {/* Kho hàng */}
-                      <td className="py-3 px-3 font-medium text-gray-900">
-                        <div className="flex items-center gap-1.5">
-                          <WarehouseIcon size={13} className="text-gray-400" />
+                      <td className="py-3.5 px-3 font-semibold text-gray-900 text-sm">
+                        <div className="flex items-center gap-2">
+                          <WarehouseIcon size={15} className="text-gray-400 shrink-0" />
                           <span>{item.warehouseName}</span>
                         </div>
                       </td>
 
-                      {/* Lý do hao hụt */}
-                      <td className="py-3 px-3">
-                        {getReasonBadge(item.adjustmentReason, item.adjustmentReasonLabel)}
-                        {item.reasonDescription && (
-                          <div className="text-[11px] text-gray-400 truncate max-w-[180px] mt-0.5">
-                            {item.reasonDescription}
-                          </div>
-                        )}
-                      </td>
-
                       {/* Tổng SL giảm */}
-                      <td className="py-3 px-3 text-right font-bold text-gray-800">
+                      <td className="py-3.5 px-3 text-right font-bold text-gray-900 font-mono text-sm">
                         {item.totalQuantity?.toLocaleString('vi-VN')}
                       </td>
 
                       {/* Giá trị tổn thất */}
-                      <td className="py-3 px-3 text-right font-bold text-rose-600">
+                      <td className="py-3.5 px-3 text-right font-bold text-rose-600 font-mono text-sm whitespace-nowrap">
                         {formatVnd(item.totalLossValue)}
                       </td>
 
                       {/* Người lập */}
-                      <td className="py-3 px-3 text-gray-600">
-                        <span className="font-medium text-gray-800">{item.createdByName || '—'}</span>
+                      <td className="py-3.5 px-3 text-sm text-gray-800">
+                        <span className="font-semibold">{item.createdByName || '—'}</span>
                       </td>
 
                       {/* Trạng thái */}
-                      <td className="py-3 px-3">{getStatusBadge(item.status)}</td>
+                      <td className="py-3.5 px-3 text-center">
+                        {getStatusBadge(item.status)}
+                      </td>
 
                       {/* Người duyệt */}
-                      <td className="py-3 px-3 text-gray-500">
+                      <td className="py-3.5 px-3 text-sm text-gray-600">
                         {item.approvedByName ? (
                           <div>
                             <span className="font-semibold text-gray-800">{item.approvedByName}</span>
                             {item.approvedAt && (
-                              <div className="text-[10px] text-gray-400">
+                              <div className="text-xs text-gray-400">
                                 {new Date(item.approvedAt).toLocaleDateString('vi-VN')}
                               </div>
                             )}
                           </div>
                         ) : (
-                          <span className="text-gray-400 italic">Chưa duyệt</span>
+                          <span className="text-gray-400 italic text-xs">Chưa duyệt</span>
                         )}
                       </td>
 
                       {/* Thao tác */}
-                      <td className="py-3 px-3.5">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {/* Xem chi tiết */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenDetail(item.id)}
-                            className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition cursor-pointer"
-                            title="Xem chi tiết phiếu"
-                          >
-                            <Eye size={13} />
-                          </button>
-
+                      <td className="py-3.5 px-4 text-center">
+                        <div
+                          className="flex items-center justify-center gap-1.5"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           {/* Duyệt phiếu (AC3) */}
                           {isPending && isWhManager && (
                             <button
                               type="button"
                               disabled={isCreator}
-                              onClick={() => setApprovingItem(item)}
-                              className={`p-1.5 rounded-lg text-white font-bold transition flex items-center gap-1 ${
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setApprovingItem(item);
+                              }}
+                              className={`p-1.5 rounded-lg text-white font-bold transition flex items-center gap-1 shadow-2xs ${
                                 isCreator
                                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
-                                  : 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer active:scale-95'
                               }`}
                               title={
                                 isCreator
@@ -551,7 +534,7 @@ export const StockAdjustmentListPage: React.FC = () => {
                                   : 'Phê duyệt phiếu điều chỉnh'
                               }
                             >
-                              <CheckCircle size={13} />
+                              <CheckCircle size={15} />
                             </button>
                           )}
 
@@ -559,11 +542,14 @@ export const StockAdjustmentListPage: React.FC = () => {
                           {isPending && isWhManager && !isCreator && (
                             <button
                               type="button"
-                              onClick={() => setRejectingItem(item)}
-                              className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRejectingItem(item);
+                              }}
+                              className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition cursor-pointer active:scale-95 shadow-2xs"
                               title="Từ chối duyệt"
                             >
-                              <XCircle size={13} />
+                              <XCircle size={15} />
                             </button>
                           )}
 
@@ -571,12 +557,23 @@ export const StockAdjustmentListPage: React.FC = () => {
                           {isPending && (isCreator || isWhManager) && (
                             <button
                               type="button"
-                              onClick={() => setCancellingItem(item)}
-                              className="p-1.5 rounded-lg bg-gray-100 hover:bg-rose-50 text-gray-500 hover:text-rose-600 transition cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCancellingItem(item);
+                              }}
+                              className="p-1.5 rounded-lg bg-gray-100 hover:bg-rose-50 text-gray-500 hover:text-rose-600 border border-transparent hover:border-rose-200 transition cursor-pointer active:scale-95"
                               title="Huỷ phiếu"
                             >
-                              <Trash2 size={13} />
+                              <Trash2 size={15} />
                             </button>
+                          )}
+
+                          {/* Nếu không có nút duyệt/từ chối/hủy, hiện icon mũi tên gợi ý xem chi tiết */}
+                          {!isPending && (
+                            <span className="text-xs text-gray-400 group-hover:text-orange-600 font-semibold inline-flex items-center gap-1 transition">
+                              <span>Xem</span>
+                              <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+                            </span>
                           )}
                         </div>
                       </td>
@@ -632,31 +629,36 @@ export const StockAdjustmentListPage: React.FC = () => {
 
       {/* ================= MODAL XEM CHI TIẾT PHIẾU ĐIỀU CHỈNH ================= */}
       {detailItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white/40 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-5xl lg:max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50/80 via-white to-gray-50/80">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">
-                  <FileText size={20} />
+                <div className="w-10 h-10 rounded-xl bg-orange-100 text-[#F85606] flex items-center justify-center shadow-2xs">
+                  <FileText size={22} />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-base font-bold text-gray-900">Chi Tiết Phiếu Điều Chỉnh</h2>
-                    <span className="font-mono font-bold text-orange-600 text-sm">{detailItem.code}</span>
+                    <span className="font-mono font-bold text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-lg border border-orange-200 text-sm">
+                      {detailItem.code}
+                    </span>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    Kho: <strong>{detailItem.warehouseName}</strong> • Ngày lập: {detailItem.adjustmentDate}
+                  <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
+                    <span>Kho: <strong className="text-gray-800">{detailItem.warehouseName}</strong></span>
+                    <span>•</span>
+                    <span>Ngày lập: <strong className="text-gray-800">{detailItem.adjustmentDate}</strong></span>
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 {getStatusBadge(detailItem.status)}
                 <button
                   type="button"
                   onClick={() => setDetailItem(null)}
-                  className="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center text-gray-500 transition cursor-pointer"
+                  className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-800 transition cursor-pointer"
+                  title="Đóng modal"
                 >
                   <XCircle size={18} />
                 </button>
@@ -665,46 +667,94 @@ export const StockAdjustmentListPage: React.FC = () => {
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-4">
-              {/* Thống kê tổn thất */}
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-4 rounded-xl bg-orange-50/40 border border-orange-200/60">
-                <div>
-                  <span className="block text-[11px] font-semibold text-gray-500">Lý do điều chỉnh</span>
-                  <div className="mt-1">
-                    {getReasonBadge(detailItem.adjustmentReason, detailItem.adjustmentReasonLabel)}
+              {/* Thống kê tổn thất & Thông tin phiếu - Stat Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-2xl bg-gray-50/70 border border-gray-200/80">
+                {/* Card 1: Lý do hao hụt & Ngày lập */}
+                <div className="bg-white p-3.5 rounded-xl border border-gray-200/70 shadow-2xs flex flex-col justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                      Lý do điều chỉnh
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {getReasonBadge(detailItem.adjustmentReason, detailItem.adjustmentReasonLabel)}
+                    </div>
+                    {detailItem.reasonDescription && (
+                      <p className="text-xs text-gray-600 mt-1.5 italic bg-gray-50 p-1.5 rounded-lg border border-gray-100">
+                        "{detailItem.reasonDescription}"
+                      </p>
+                    )}
                   </div>
-                  {detailItem.reasonDescription && (
-                    <p className="text-xs text-gray-600 mt-1 italic">{detailItem.reasonDescription}</p>
-                  )}
+                  <div className="mt-2 pt-2 border-t border-gray-100 text-[11px] text-gray-500">
+                    Ngày lập: <strong className="text-gray-800">{detailItem.adjustmentDate}</strong>
+                  </div>
                 </div>
 
-                <div>
-                  <span className="block text-[11px] font-semibold text-gray-500">Người lập phiếu</span>
-                  <span className="text-xs font-bold text-gray-800 mt-1 block">
-                    {detailItem.createdByName || '—'}
-                  </span>
-                  <span className="text-[10px] text-gray-400">
-                    {detailItem.createdAt ? new Date(detailItem.createdAt).toLocaleString('vi-VN') : ''}
-                  </span>
+                {/* Card 2: Người lập phiếu */}
+                <div className="bg-white p-3.5 rounded-xl border border-gray-200/70 shadow-2xs flex flex-col justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                      Người lập phiếu
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
+                        {detailItem.createdByName ? detailItem.createdByName.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-gray-800 block">
+                          {detailItem.createdByName || '—'}
+                        </span>
+                        <span className="text-[10px] text-gray-400">
+                          {detailItem.createdAt ? new Date(detailItem.createdAt).toLocaleString('vi-VN') : ''}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-gray-100 text-[11px] text-gray-500">
+                    Kho: <strong className="text-gray-800">{detailItem.warehouseName}</strong>
+                  </div>
                 </div>
 
-                <div>
-                  <span className="block text-[11px] font-semibold text-gray-500">Người duyệt (AC3)</span>
-                  <span className="text-xs font-bold text-gray-800 mt-1 block">
-                    {detailItem.approvedByName || 'Chưa duyệt'}
-                  </span>
-                  <span className="text-[10px] text-gray-400">
-                    {detailItem.approvedAt ? new Date(detailItem.approvedAt).toLocaleString('vi-VN') : ''}
-                  </span>
+                {/* Card 3: Người duyệt */}
+                <div className="bg-white p-3.5 rounded-xl border border-gray-200/70 shadow-2xs flex flex-col justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                      Người duyệt (AC3)
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                        detailItem.approvedByName ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'
+                      }`}>
+                        {detailItem.approvedByName ? <CheckCircle size={15} /> : '—'}
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-gray-800 block">
+                          {detailItem.approvedByName || 'Chưa duyệt'}
+                        </span>
+                        <span className="text-[10px] text-gray-400">
+                          {detailItem.approvedAt ? new Date(detailItem.approvedAt).toLocaleString('vi-VN') : 'Đang chờ phê duyệt'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-gray-100 text-[11px] text-gray-500">
+                    Trạng thái: <strong className="text-gray-800">{detailItem.status}</strong>
+                  </div>
                 </div>
 
-                <div className="sm:text-right">
-                  <span className="block text-[11px] font-semibold text-gray-500">Tổng Giá Trị Tổn Thất</span>
-                  <span className="text-base font-bold text-rose-600 mt-0.5 block">
-                    {formatVnd(detailItem.totalLossValue)}
-                  </span>
-                  <span className="text-[11px] text-gray-500">
-                    Tổng giảm: <strong>{detailItem.totalQuantity?.toLocaleString('vi-VN')}</strong> SP
-                  </span>
+                {/* Card 4: Tổng tổn thất dự kiến */}
+                <div className="bg-gradient-to-br from-rose-50 to-orange-50/40 p-3.5 rounded-xl border border-rose-200 shadow-2xs flex flex-col justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold text-rose-700 uppercase tracking-wider block mb-1">
+                      Tổng Giá Trị Tổn Thất
+                    </span>
+                    <span className="text-xl font-bold font-mono text-rose-600 block whitespace-nowrap">
+                      {formatVnd(detailItem.totalLossValue)}
+                    </span>
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-rose-200/60 text-xs text-rose-800 font-semibold flex items-center justify-between">
+                    <span>Tổng số lượng giảm:</span>
+                    <span className="font-mono font-bold text-sm">{detailItem.totalQuantity?.toLocaleString('vi-VN')} SP</span>
+                  </div>
                 </div>
               </div>
 
@@ -717,90 +767,94 @@ export const StockAdjustmentListPage: React.FC = () => {
 
               {/* Bảng chi tiết mặt hàng */}
               <div>
-                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center justify-between">
+                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2.5 flex items-center justify-between">
                   <span>Danh Sách Mặt Hàng Điều Chỉnh</span>
                   <span className="text-gray-400 font-normal">
                     {detailItem.lines?.length || 0} sản phẩm
                   </span>
                 </h3>
 
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-semibold">
-                      <tr>
-                        <th className="py-2.5 px-3">#</th>
-                        <th className="py-2.5 px-3">Mã SKU</th>
-                        <th className="py-2.5 px-3">Tên Sản Phẩm</th>
-                        <th className="py-2.5 px-3">Số Lô</th>
-                        <th className="py-2.5 px-3 text-right">Tồn Khi Lập</th>
-                        <th className="py-2.5 px-3 text-right">Số Lượng Giảm</th>
-                        <th className="py-2.5 px-3 text-right">Giá Vốn</th>
-                        <th className="py-2.5 px-3 text-right">Thành Tiền</th>
-                        <th className="py-2.5 px-3 text-center">Thẻ Kho (AC4)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {detailItem.lines?.map((line, idx) => (
-                        <tr key={line.id || idx} className="hover:bg-gray-50/50">
-                          <td className="py-2.5 px-3 text-gray-400">{line.lineNo || idx + 1}</td>
-                          <td className="py-2.5 px-3 font-mono font-bold text-gray-800">{line.productSku}</td>
-                          <td className="py-2.5 px-3 text-gray-900 font-medium">
-                            {line.productName}
-                            <span className="text-[11px] text-gray-400 ml-1">({line.baseUnit})</span>
-                          </td>
-                          <td className="py-2.5 px-3">
-                            {line.hasBatchManagement ? (
-                              <span className="font-mono text-xs font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
-                                {line.batchNumber || 'Chưa gán lô'}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400 italic">Không theo lô</span>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3 text-right text-gray-500">
-                            {line.currentStock?.toLocaleString('vi-VN')}
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-bold text-gray-900">
-                            {line.adjustmentQuantity?.toLocaleString('vi-VN')}
-                          </td>
-                          <td className="py-2.5 px-3 text-right text-gray-600">
-                            {formatVnd(line.costPrice)}
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-bold text-rose-600">
-                            {formatVnd(line.lossValue)}
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setDetailItem(null);
-                                navigate(`/inventory/stock-card?productId=${line.productId}&warehouseId=${detailItem.warehouseId}`);
-                              }}
-                              className="px-2 py-1 rounded bg-orange-50 text-orange-600 hover:bg-orange-100 text-[11px] font-bold transition cursor-pointer"
-                              title="Xem biến động trên thẻ kho"
-                            >
-                              Thẻ kho &gt;
-                            </button>
-                          </td>
+                <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-2xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-bold uppercase tracking-wider text-[11px]">
+                        <tr>
+                          <th className="py-3 px-3 w-8 text-center">#</th>
+                          <th className="py-3 px-3.5 whitespace-nowrap">Mã SKU</th>
+                          <th className="py-3 px-3.5 min-w-[200px]">Tên Sản Phẩm</th>
+                          <th className="py-3 px-3.5 whitespace-nowrap">Số Lô Hàng</th>
+                          <th className="py-3 px-3.5 text-right whitespace-nowrap">Tồn Khi Lập</th>
+                          <th className="py-3 px-3.5 text-center whitespace-nowrap">Số Lượng Giảm</th>
+                          <th className="py-3 px-3.5 text-right whitespace-nowrap">Giá Vốn</th>
+                          <th className="py-3 px-3.5 text-right whitespace-nowrap">Thành Tiền</th>
+                          <th className="py-3 px-3 text-center whitespace-nowrap">Thẻ Kho (AC4)</th>
                         </tr>
-                      ))}
-                    </tbody>
-                    <tfoot className="bg-gray-50 font-bold border-t border-gray-200">
-                      <tr>
-                        <td colSpan={5} className="py-2.5 px-3 text-right text-gray-700">
-                          TỔNG CỘNG:
-                        </td>
-                        <td className="py-2.5 px-3 text-right text-gray-900">
-                          {detailItem.totalQuantity?.toLocaleString('vi-VN')}
-                        </td>
-                        <td></td>
-                        <td className="py-2.5 px-3 text-right text-rose-600 text-sm">
-                          {formatVnd(detailItem.totalLossValue)}
-                        </td>
-                        <td></td>
-                      </tr>
-                    </tfoot>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-xs">
+                        {detailItem.lines?.map((line, idx) => (
+                          <tr key={line.id || idx} className="hover:bg-gray-50/60 transition">
+                            <td className="py-3 px-3 text-center text-gray-400 font-medium">{line.lineNo || idx + 1}</td>
+                            <td className="py-3 px-3.5 font-mono font-bold text-gray-900 whitespace-nowrap">
+                              {line.productSku}
+                            </td>
+                            <td className="py-3 px-3.5 text-gray-900 min-w-[200px]">
+                              <div className="font-semibold text-gray-800">{line.productName}</div>
+                              <div className="text-[11px] text-gray-400">ĐVT: {line.baseUnit}</div>
+                            </td>
+                            <td className="py-3 px-3.5 whitespace-nowrap">
+                              {line.hasBatchManagement ? (
+                                <span className="font-mono text-xs font-bold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-200 inline-block">
+                                  {line.batchNumber || 'Chưa gán lô'}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 italic text-[11px]">Không theo lô</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3.5 text-right font-medium text-gray-600 whitespace-nowrap">
+                              {line.currentStock?.toLocaleString('vi-VN')}
+                            </td>
+                            <td className="py-3 px-3.5 text-center font-bold text-gray-900 font-mono whitespace-nowrap">
+                              {line.adjustmentQuantity?.toLocaleString('vi-VN')}
+                            </td>
+                            <td className="py-3 px-3.5 text-right font-mono text-gray-700 whitespace-nowrap">
+                              {formatVnd(line.costPrice)}
+                            </td>
+                            <td className="py-3 px-3.5 text-right font-bold text-rose-600 font-mono whitespace-nowrap">
+                              {formatVnd(line.lossValue)}
+                            </td>
+                            <td className="py-3 px-3 text-center whitespace-nowrap">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDetailItem(null);
+                                  navigate(`/inventory/stock-card?productId=${line.productId}&warehouseId=${detailItem.warehouseId}`);
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-600 hover:text-orange-700 text-xs font-bold border border-orange-200 transition cursor-pointer active:scale-95 whitespace-nowrap"
+                                title="Xem biến động trên thẻ kho"
+                              >
+                                Thẻ kho &gt;
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-gray-50/90 font-bold border-t border-gray-200 text-xs">
+                        <tr>
+                          <td colSpan={5} className="py-3 px-3.5 text-right text-gray-700 uppercase tracking-wider font-bold">
+                            TỔNG CỘNG:
+                          </td>
+                          <td className="py-3 px-3.5 text-center text-gray-900 font-mono font-bold whitespace-nowrap">
+                            {detailItem.totalQuantity?.toLocaleString('vi-VN')}
+                          </td>
+                          <td></td>
+                          <td className="py-3 px-3.5 text-right text-rose-600 font-mono font-bold whitespace-nowrap">
+                            {formatVnd(detailItem.totalLossValue)}
+                          </td>
+                          <td></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
@@ -813,7 +867,7 @@ export const StockAdjustmentListPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setDetailItem(null)}
-                className="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-xs transition cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-xs transition cursor-pointer"
               >
                 Đóng
               </button>
@@ -824,7 +878,7 @@ export const StockAdjustmentListPage: React.FC = () => {
 
       {/* ================= MODAL PHÊ DUYỆT (AC3) ================= */}
       {approvingItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white/40 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
@@ -879,7 +933,7 @@ export const StockAdjustmentListPage: React.FC = () => {
 
       {/* ================= MODAL TỪ CHỐI DUYỆT ================= */}
       {rejectingItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white/40 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
@@ -928,7 +982,7 @@ export const StockAdjustmentListPage: React.FC = () => {
 
       {/* ================= MODAL HUỶ PHIẾU ================= */}
       {cancellingItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white/40 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-gray-100 text-gray-700 flex items-center justify-center shrink-0">
