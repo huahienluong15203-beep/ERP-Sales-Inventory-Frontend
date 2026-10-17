@@ -62,6 +62,7 @@ import { DebtAgingLedgerPage } from '../pages/debt/DebtAgingLedgerPage';
 import { DebtReconciliationPage } from '../pages/debt/DebtReconciliationPage';
 import { SalesReturnListPage } from '../pages/salesreturn/SalesReturnListPage';
 import { CreateSalesReturnPage } from '../pages/salesreturn/CreateSalesReturnPage';
+import { MultidimensionalSalesReportPage } from '../pages/report/MultidimensionalSalesReportPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -1013,6 +1014,22 @@ export const AppRoutes: React.FC = () => {
             </ProtectedRoute>
           }
         />
+
+        {/* S8-06: Báo cáo doanh số đa chiều & Biên lợi nhuận gộp */}
+        <Route
+          path="/reports/sales"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <MultidimensionalSalesReportPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/sales-reports" element={<Navigate to="/reports/sales" replace />} />
 
         {/* Hồ sơ cá nhân (Mọi vai trò đều xem được) */}
         <Route path="/profile" element={<ProfilePage />} />

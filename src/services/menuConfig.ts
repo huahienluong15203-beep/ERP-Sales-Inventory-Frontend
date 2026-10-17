@@ -133,6 +133,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Báo cáo doanh số đa chiều',
+    path: '/reports/sales',
+    group: 'Bán hàng',
+    icon: 'BarChart3',
+    epic: 'Bán hàng & Doanh số',
+    description: '',
+    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+  },
+
+  {
     title: 'Danh mục sản phẩm',
     path: '/products',
     group: 'Sản phẩm & Kho',
