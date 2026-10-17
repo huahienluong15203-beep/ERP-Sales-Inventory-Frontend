@@ -83,6 +83,16 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
+    title: 'Trả hàng đại lý',
+    path: '/sales-returns',
+    group: 'Bán hàng',
+    icon: 'RotateCcw',
+    epic: 'Bán hàng & Kho vận',
+    description: 'Lập phiếu hoàn hàng từ đại lý theo hoá đơn, nhập kho theo lô & kiểm duyệt nhập kho (S8-01)',
+    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ACCOUNTANT']
+  },
+
+  {
     title: 'Đối chiếu thu tiền tuyến',
     path: '/payments/reconciliation',
     group: 'Bán hàng',
@@ -90,6 +100,26 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     epic: 'Đại lý & Hạn mức nợ',
     description: 'Đối chiếu tiền đã thu trên tuyến với tiền đã nộp về công ty mà không tranh cãi ',
     allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
+  },
+
+  {
+    title: 'Sổ công nợ & Tuổi nợ',
+    path: '/debts/ledger',
+    group: 'Bán hàng',
+    icon: 'Table',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: 'Sổ công nợ theo đại lý với phân tích tuổi nợ 0-30, 31-60, 61-90, trên 90 ngày',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
+  },
+
+  {
+    title: 'Đối chiếu công nợ',
+    path: '/debts/reconciliation',
+    group: 'Bán hàng',
+    icon: 'FileText',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: 'Biên bản đối chiếu công nợ định kỳ với đại lý, chốt số dư và xuất mẫu A4',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_CUSTOMER']
   },
 
   {
