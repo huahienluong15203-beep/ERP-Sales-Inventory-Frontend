@@ -695,10 +695,12 @@ export const StockCardPage: React.FC = () => {
                 <option value="ALL">Tất cả nghiệp vụ</option>
                 <option value="RECEIPT">🟢 Nhập kho (RECEIPT)</option>
                 <option value="SALES_DISPATCH">🟠 Xuất bán (SALES_DISPATCH)</option>
-                <option value="DELIVERY_RETURN">🟣 Nhập hoàn trả giao không thành công</option>
+                <option value="DELIVERY_RETURN">🟣 Nhập hàng hoàn (DELIVERY_RETURN)</option>
+                <option value="SALES_RETURN">🟢 Nhập trả hàng (SALES_RETURN)</option>
                 <option value="TRANSFER_OUT">🟡 Xuất chuyển kho (TRANSFER_OUT)</option>
                 <option value="TRANSFER_IN">🔵 Nhận chuyển kho (TRANSFER_IN)</option>
                 <option value="STOCKTAKE_ADJUST">🔴 Điều chỉnh kiểm kê (STOCKTAKE_ADJUST)</option>
+                <option value="STOCK_ADJUSTMENT">🔴 Xuất hủy hao hụt (STOCK_ADJUSTMENT)</option>
               </select>
             </div>
 
@@ -793,8 +795,8 @@ export const StockCardPage: React.FC = () => {
                 <col className="w-[50px]" />  {/* STT */}
                 <col className="w-[105px]" /> {/* Thời gian phát sinh (2 dòng: giờ / ngày) */}
                 <col className="w-[160px]" /> {/* Chứng từ gốc */}
-                <col className="w-[150px]" /> {/* Loại nghiệp vụ */}
-                <col className="w-[320px]" /> {/* Sản phẩm (tên & ĐVT) */}
+                <col className="w-[160px]" /> {/* Loại nghiệp vụ */}
+                <col className="w-[310px]" /> {/* Sản phẩm (tên & ĐVT) */}
                 <col className="w-[110px]" /> {/* Nhập (+) */}
                 <col className="w-[110px]" /> {/* Xuất (-) */}
                 <col className="w-[120px]" /> {/* Tồn sau phát sinh */}
@@ -873,15 +875,16 @@ export const StockCardPage: React.FC = () => {
                       </td>
 
                       {/* Loại nghiệp vụ */}
-                      <td className="py-3 px-3">
+                      <td className="py-3 px-3 overflow-hidden">
                         <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${typeCfg.badgeClass}`}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border truncate max-w-full ${typeCfg.badgeClass}`}
+                          title={typeCfg.label}
                         >
                           <span
                             className="w-1.5 h-1.5 rounded-full shrink-0"
                             style={{ backgroundColor: typeCfg.dotColor }}
                           />
-                          <span>{row.movementTypeLabel || typeCfg.label}</span>
+                          <span className="truncate">{typeCfg.label}</span>
                         </span>
                       </td>
 
