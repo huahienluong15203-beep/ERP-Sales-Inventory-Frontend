@@ -47,6 +47,8 @@ export const ExecutiveOverdueAgenciesTable: React.FC<ExecutiveOverdueAgenciesTab
     );
   };
 
+  const agencies = data?.agencies || [];
+
   return (
     <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-2xs space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -56,12 +58,9 @@ export const ExecutiveOverdueAgenciesTable: React.FC<ExecutiveOverdueAgenciesTab
               <ShieldAlert size={16} />
             </div>
             <h2 className="text-sm font-bold text-gray-900">
-              Đại Lý Quá Hạn Công Nợ (Xếp Theo Số Tiền Nợ)
+              Đại Lý Quá Hạn Công Nợ
             </h2>
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Danh sách cảnh báo các đại lý có số tiền nợ quá hạn cao nhất cần đôn đốc thu hồi
-          </p>
         </div>
 
         <button
@@ -97,7 +96,7 @@ export const ExecutiveOverdueAgenciesTable: React.FC<ExecutiveOverdueAgenciesTab
                     Đang tải danh sách đại lý nợ quá hạn...
                   </td>
                 </tr>
-              ) : !data || !data.agencies || data.agencies.length === 0 ? (
+              ) : agencies.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-gray-400">
                     <AlertCircle size={24} className="mx-auto mb-1 text-emerald-500" />
@@ -105,7 +104,7 @@ export const ExecutiveOverdueAgenciesTable: React.FC<ExecutiveOverdueAgenciesTab
                   </td>
                 </tr>
               ) : (
-                data.agencies.map((agency) => (
+                agencies.map((agency) => (
                   <tr key={agency.customerId} className="hover:bg-rose-50/20 transition">
                     {/* Hạng */}
                     <td className="py-2.5 px-3 text-center">
