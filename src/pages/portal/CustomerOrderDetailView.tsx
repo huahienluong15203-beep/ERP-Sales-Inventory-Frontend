@@ -461,7 +461,9 @@ export const CustomerOrderDetailView: React.FC<CustomerOrderDetailViewProps> = (
               {order.note ? (
                 <div className="pt-2 text-xs text-gray-600 bg-amber-50/50 p-3 rounded-2xl border border-amber-100/80">
                   <strong className="text-amber-900 block mb-0.5">Ghi chú đơn hàng:</strong>
-                  <p className="italic text-gray-700">{order.note}</p>
+                  <p className="italic text-gray-700">
+                    {order.note.replace(/\s*\(S\d+-\d+\)/gi, '').replace(/\s*\(AC\s*\d+\)/gi, '').trim()}
+                  </p>
                 </div>
               ) : null}
             </div>
