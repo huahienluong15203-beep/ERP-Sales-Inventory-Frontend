@@ -231,7 +231,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Sản phẩm & Kho',
     icon: 'Warehouse',
     epic: 'Sản phẩm & Tồn kho',
-    description: 'Sổ theo dõi nhập xuất tồn 3 cột theo kho và thời gian',
+    description: '',
     allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER']
   },
 
@@ -241,7 +241,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Sản phẩm & Kho',
     icon: 'BookOpenCheck',
     epic: 'Sản phẩm & Tồn kho',
-    description: 'Theo dõi toàn bộ phát sinh nhập, xuất, chuyển kho, điều chỉnh theo thứ tự thời gian',
+    description: '',
     allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER']
   },
 
@@ -251,7 +251,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Sản phẩm & Kho',
     icon: 'CheckSquare',
     epic: 'Sản phẩm & Tồn kho',
-    description: 'Kiểm đếm và đối soát số lượng tồn thực tế với hệ thống',
+    description: '',
     allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
   },
 
@@ -355,7 +355,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Giá & Chiết khấu',
     icon: 'Tags',
     epic: 'Sản phẩm & Bảng giá',
-    description: 'Khai báo bảng giá theo nhóm khách hàng, thời gian hiệu lực và giá sàn',
+    description: '',
     allowedRoles: ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
   },
 
@@ -365,7 +365,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Giá & Chiết khấu',
     icon: 'Percent',
     epic: 'Sản phẩm & Bảng giá',
-    description: 'Khai báo bậc chiết khấu theo số lượng SKU/nhóm hàng theo từng nhóm khách hàng',
+    description: '',
     allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
   },
 
@@ -375,7 +375,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Hệ thống',
     icon: 'Users',
     epic: 'Hệ Thống & Tài Khoản',
-    description: 'Quản lý danh sách nhân sự, phân quyền và khóa tài khoản',
+    description: '',
     allowedRoles: ['ROLE_ADMIN']
   },
 
