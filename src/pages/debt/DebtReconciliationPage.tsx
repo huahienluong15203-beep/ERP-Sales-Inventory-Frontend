@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ArrowLeft,
   Plus,
   RefreshCw,
   Printer,
@@ -226,25 +225,8 @@ export const DebtReconciliationPage: React.FC = () => {
 
   return (
     <div className="space-y-5 antialiased max-w-7xl mx-auto pb-16">
-      {/* 1. Header tinh gọn chỉ nút Quay lại và nút hành động */}
-      <div className="flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={() => {
-            if (viewMode === 'CREATE') {
-              setViewMode('LIST');
-            } else {
-              navigate('/debts/ledger');
-            }
-          }}
-          className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
-          title="Quay lại"
-        >
-          <ArrowLeft size={16} />
-          <span>Quay lại</span>
-        </button>
-
-        <div className="flex items-center gap-2.5">
+      {/* 1. Header hành động tinh gọn */}
+      <div className="flex items-center justify-end gap-2.5">
           <button
             type="button"
             onClick={() => loadStatements()}
@@ -274,7 +256,6 @@ export const DebtReconciliationPage: React.FC = () => {
             </button>
           )}
         </div>
-      </div>
 
       {/* 2. CHẾ ĐỘ FORM LẬP BIÊN BẢN MỚI (S7-06) */}
       {viewMode === 'CREATE' ? (

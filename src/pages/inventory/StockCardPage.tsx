@@ -4,7 +4,6 @@ import {
   Search,
   RefreshCw,
   Printer,
-  ArrowLeft,
   ExternalLink,
   TrendingDown,
   TrendingUp,
@@ -401,23 +400,7 @@ export const StockCardPage: React.FC = () => {
     <div className="space-y-3.5 pb-10">
       {/* Nút thao tác chính - Tinh gọn đồng bộ toàn hệ thống */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => {
-              if (window.history.length > 2) {
-                navigate(-1);
-              } else {
-                navigate('/inventory/ledger');
-              }
-            }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-lg transition cursor-pointer h-9 shadow-2xs active:scale-95"
-            title="Quay lại trang trước hoặc danh sách sổ tồn kho"
-          >
-            <ArrowLeft size={15} className="text-gray-600" />
-            <span>Về sổ tồn</span>
-          </button>
-
+        <div>
           {selectedProduct && (
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 border border-orange-200/80 rounded-lg text-xs h-9">
               <span className="font-mono font-bold text-[#F85606]">[{selectedProduct.sku}]</span>
