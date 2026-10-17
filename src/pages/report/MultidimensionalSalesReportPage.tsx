@@ -257,9 +257,6 @@ export const MultidimensionalSalesReportPage: React.FC = () => {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Phân tích doanh số, sản lượng và biên lợi nhuận gộp theo nhân viên, khu vực, đại lý, nhóm hàng hoặc SKU (S8-06)
-              </p>
             </div>
           </div>
         </div>
@@ -293,9 +290,6 @@ export const MultidimensionalSalesReportPage: React.FC = () => {
       <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-2xs space-y-4">
         {/* Hàng 1: Chiều phân tích (Group By - AC1) */}
         <div>
-          <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-2">
-            Chiều phân tích nhóm (Group By)
-          </label>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
             {GROUP_OPTIONS.map((opt) => {
               const active = groupBy === opt.id;
