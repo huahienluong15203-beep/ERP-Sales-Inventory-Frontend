@@ -43,6 +43,7 @@ export const StockAdjustmentCreatePage: React.FC = () => {
 
   // Kho hàng & Thông tin chung
   const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [loadingWarehouses, setLoadingWarehouses] = useState<boolean>(true);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | ''>('');
   const [adjustmentReason, setAdjustmentReason] = useState<string>('');
   const [reasonDescription, setReasonDescription] = useState<string>('');
@@ -58,6 +59,17 @@ export const StockAdjustmentCreatePage: React.FC = () => {
 
   // Danh mục sản phẩm & Dòng điều chỉnh
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [costMap, setCostMap] = useState<Record<number, number>>({});
+  const [warehouseStockItems, setWarehouseStockItems] = useState<{
+    productId: number;
+    sku: string;
+    name: string;
+    baseUnit: string;
+    physicalStock: number;
+    hasBatchManagement: boolean;
+    costPrice: number;
+  }[]>([]);
+  const [loadingWarehouseStock, setLoadingWarehouseStock] = useState<boolean>(false);
   const [productSearch, setProductSearch] = useState<string>('');
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState<boolean>(false);
   const [lines, setLines] = useState<AdjustmentFormLine[]>([]);
@@ -67,29 +79,119 @@ export const StockAdjustmentCreatePage: React.FC = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
 
-  // Tải danh sách kho
+  // 1. Tải danh sách kho và CHỈ giữ lại các kho có sản phẩm tồn kho thực tế (> 0)
   useEffect(() => {
-    authFetch(`${API_BASE_URL}/api/warehouses`)
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => {
+    async function loadWarehousesWithStock() {
+      setLoadingWarehouses(true);
+      try {
+        const res = await authFetch(`${API_BASE_URL}/api/warehouses`);
+        const data = res.ok ? await res.json() : [];
         const activeWarehouses = (Array.isArray(data) ? data : []).filter(
-          (w) => w.status === 'ACTIVE' || !w.status
+          (w: any) => w.status === 'ACTIVE' || !w.status
         );
-        setWarehouses(activeWarehouses);
-        if (activeWarehouses.length > 0) {
-          setSelectedWarehouseId(activeWarehouses[0].id);
+
+        // Kiểm tra từng kho xem có sản phẩm trong sổ tồn kho không
+        const checkResults = await Promise.all(
+          activeWarehouses.map(async (w: any) => {
+            try {
+              const ledgerRes = await authFetch(
+                `${API_BASE_URL}/api/inventory/stock-ledger?warehouseId=${w.id}&size=1`
+              );
+              if (ledgerRes.ok) {
+                const ledgerData = await ledgerRes.json();
+                const total = Number(ledgerData?.totalElements) || 0;
+                return { warehouse: w, hasStock: total > 0 };
+              }
+            } catch {
+              // ignore
+            }
+            return { warehouse: w, hasStock: false };
+          })
+        );
+
+        const validWarehouses = checkResults
+          .filter((r) => r.hasStock)
+          .map((r) => r.warehouse);
+
+        setWarehouses(validWarehouses);
+        if (validWarehouses.length > 0) {
+          setSelectedWarehouseId(validWarehouses[0].id);
+        } else {
+          setSelectedWarehouseId('');
         }
-      })
-      .catch((err) => console.warn('Lỗi tải danh sách kho:', err));
+      } catch (err) {
+        console.warn('Lỗi tải danh sách kho:', err);
+      } finally {
+        setLoadingWarehouses(false);
+      }
+    }
+
+    loadWarehousesWithStock();
   }, []);
 
-  // Tải danh mục sản phẩm
+  // 2. Tải bảng giá vốn (costPrice) từ backend phục vụ tính toán tổn thất
+  useEffect(() => {
+    authFetch(`${API_BASE_URL}/api/stock-adjustments/product-costs`)
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((data) => {
+        if (data && typeof data === 'object') {
+          const map: Record<number, number> = {};
+          Object.entries(data).forEach(([k, v]) => {
+            map[Number(k)] = Number(v) || 0;
+          });
+          setCostMap(map);
+        }
+      })
+      .catch((err) => console.warn('Lỗi tải bảng giá vốn:', err));
+  }, []);
+
+  // 3. Tải danh mục sản phẩm toàn hệ thống (để lấy thông tin quản lý lô)
   useEffect(() => {
     productService
       .getProducts({ page: 0, size: 300 })
       .then((res) => setAllProducts(res.products || []))
       .catch((err) => console.warn('Lỗi tải danh mục sản phẩm:', err));
   }, []);
+
+  // 4. Khi kho được chọn thay đổi: tải danh sách các mặt hàng có tồn kho > 0 tại kho đó
+  useEffect(() => {
+    if (!selectedWarehouseId) {
+      setWarehouseStockItems([]);
+      return;
+    }
+
+    setLoadingWarehouseStock(true);
+    authFetch(
+      `${API_BASE_URL}/api/inventory/stock-ledger?warehouseId=${selectedWarehouseId}&size=500`
+    )
+      .then((res) => (res.ok ? res.json() : { content: [] }))
+      .then((data) => {
+        const content = Array.isArray(data?.content) ? data.content : [];
+        const itemsWithStock = content
+          .filter((row: any) => Number(row.physicalStock) > 0)
+          .map((row: any) => {
+            const pId = Number(row.productId);
+            const globalProduct = allProducts.find((p) => Number(p.id) === pId);
+            const cost = costMap[pId] ?? (Number(globalProduct?.costPrice) || 0);
+            return {
+              productId: pId,
+              sku: row.sku,
+              name: row.productName,
+              baseUnit: row.baseUnit || 'Cái',
+              physicalStock: Number(row.physicalStock) || 0,
+              hasBatchManagement: Boolean(globalProduct?.hasBatchManagement),
+              costPrice: cost
+            };
+          });
+
+        setWarehouseStockItems(itemsWithStock);
+      })
+      .catch((err) => {
+        console.warn('Lỗi tải tồn kho của kho đã chọn:', err);
+        setWarehouseStockItems([]);
+      })
+      .finally(() => setLoadingWarehouseStock(false));
+  }, [selectedWarehouseId, allProducts, costMap]);
 
   // Xóa danh sách sản phẩm khi đổi kho để tránh lệch tồn kho
   const handleWarehouseChange = (newWarehouseId: number) => {
@@ -109,15 +211,23 @@ export const StockAdjustmentCreatePage: React.FC = () => {
     }
   };
 
-  // Chọn thêm một sản phẩm vào danh sách điều chỉnh
-  const handleAddProduct = async (product: Product) => {
+  // Chọn thêm một sản phẩm có tồn kho thực tế vào danh sách điều chỉnh
+  const handleAddStockItem = async (item: {
+    productId: number;
+    sku: string;
+    name: string;
+    baseUnit: string;
+    physicalStock: number;
+    hasBatchManagement: boolean;
+    costPrice: number;
+  }) => {
     setIsProductDropdownOpen(false);
     setProductSearch('');
     setItemsError(null);
 
     // Kiểm tra xem sản phẩm đã có trong bảng chưa
-    if (lines.some((l) => l.productId === Number(product.id))) {
-      alert(`Sản phẩm [${product.sku}] đã có trong phiếu. Vui lòng chỉnh sửa số lượng ở dòng tương ứng.`);
+    if (lines.some((l) => l.productId === item.productId)) {
+      alert(`Sản phẩm [${item.sku}] đã có trong phiếu. Vui lòng chỉnh sửa số lượng ở dòng tương ứng.`);
       return;
     }
 
@@ -126,18 +236,18 @@ export const StockAdjustmentCreatePage: React.FC = () => {
       return;
     }
 
-    const uniqueKey = `line_${product.id}_${Date.now()}`;
-    const costPrice = Number(product.costPrice) || 0;
-    const hasBatch = Boolean(product.hasBatchManagement);
+    const uniqueKey = `line_${item.productId}_${Date.now()}`;
+    const costPrice = item.costPrice || costMap[item.productId] || 0;
+    const hasBatch = item.hasBatchManagement;
 
     // Khởi tạo dòng mới
     const newLine: AdjustmentFormLine = {
       id: uniqueKey,
-      productId: Number(product.id),
-      productSku: product.sku,
-      productName: product.name,
-      baseUnit: product.baseUnit || 'Cái',
-      currentStock: 0,
+      productId: item.productId,
+      productSku: item.sku,
+      productName: item.name,
+      baseUnit: item.baseUnit,
+      currentStock: item.physicalStock,
       costPrice,
       adjustmentQuantity: 1,
       lossValue: costPrice * 1,
@@ -149,54 +259,33 @@ export const StockAdjustmentCreatePage: React.FC = () => {
 
     setLines((prev) => [...prev, newLine]);
 
-    // Tải tồn kho thực tế và lô của sản phẩm tại kho được chọn
-    try {
-      const [ledgerRes, lotData] = await Promise.all([
-        authFetch(
-          `${API_BASE_URL}/api/inventory/stock-ledger?warehouseId=${selectedWarehouseId}&keyword=${encodeURIComponent(
-            product.sku
-          )}&size=1`
-        )
-          .then((r) => (r.ok ? r.json() : null))
-          .catch(() => null),
-        hasBatch
-          ? calculateStockByLot(product.id, selectedWarehouseId).catch(() => ({ lots: [] }))
-          : Promise.resolve({ lots: [] })
-      ]);
+    // Nếu quản lý theo lô, tải danh sách lô của sản phẩm tại kho này
+    if (hasBatch) {
+      try {
+        const lotData = await calculateStockByLot(item.productId, selectedWarehouseId).catch(() => ({ lots: [] }));
+        const availableLots: ProductLotResponse[] = lotData?.lots || [];
+        const firstLot = availableLots.length > 0 ? availableLots[0] : undefined;
 
-      let physicalStock = 0;
-      if (ledgerRes?.content && ledgerRes.content.length > 0) {
-        const row = ledgerRes.content[0];
-        if (Number(row.productId) === Number(product.id)) {
-          physicalStock = Number(row.physicalStock) || 0;
-        }
+        setLines((prev) =>
+          prev.map((l) => {
+            if (l.id === uniqueKey) {
+              return {
+                ...l,
+                availableLots,
+                lotLoading: false,
+                batchNumber: firstLot ? firstLot.batchNumber : undefined,
+                lotStockMax: firstLot ? Number(firstLot.quantity) : undefined
+              };
+            }
+            return l;
+          })
+        );
+      } catch (err) {
+        console.warn('Lỗi nạp lô sản phẩm:', err);
+        setLines((prev) =>
+          prev.map((l) => (l.id === uniqueKey ? { ...l, lotLoading: false } : l))
+        );
       }
-
-      const availableLots: ProductLotResponse[] = lotData?.lots || [];
-      const firstLot = availableLots.length > 0 ? availableLots[0] : undefined;
-
-      setLines((prev) =>
-        prev.map((l) => {
-          if (l.id === uniqueKey) {
-            const batchNum = firstLot ? firstLot.batchNumber : undefined;
-            const lotStockMax = firstLot ? Number(firstLot.quantity) : undefined;
-            return {
-              ...l,
-              currentStock: physicalStock,
-              availableLots,
-              lotLoading: false,
-              batchNumber: batchNum,
-              lotStockMax
-            };
-          }
-          return l;
-        })
-      );
-    } catch (err) {
-      console.warn('Lỗi nạp thông tin tồn kho cho sản phẩm:', err);
-      setLines((prev) =>
-        prev.map((l) => (l.id === uniqueKey ? { ...l, lotLoading: false } : l))
-      );
     }
   };
 
@@ -344,14 +433,15 @@ export const StockAdjustmentCreatePage: React.FC = () => {
     }
   };
 
-  // Lọc sản phẩm tìm kiếm
-  const filteredProducts = allProducts.filter((p) => {
+  // Lọc danh sách sản phẩm hiển thị trong dropdown "+ Thêm Mặt Hàng"
+  // CHỈ hiển thị những mặt hàng có tồn kho > 0 tại kho đã chọn
+  const filteredAvailableItems = warehouseStockItems.filter((item) => {
+    if (lines.some((l) => l.productId === item.productId)) return false;
     if (!productSearch.trim()) return true;
-    const term = productSearch.toLowerCase();
+    const term = productSearch.toLowerCase().trim();
     return (
-      p.sku.toLowerCase().includes(term) ||
-      p.name.toLowerCase().includes(term) ||
-      p.category?.toLowerCase().includes(term)
+      item.sku.toLowerCase().includes(term) ||
+      item.name.toLowerCase().includes(term)
     );
   });
 
@@ -411,16 +501,25 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                 <select
                   value={selectedWarehouseId}
                   onChange={(e) => handleWarehouseChange(Number(e.target.value))}
-                  className={`w-full px-3 py-2 bg-gray-50 border rounded-xl text-xs font-medium text-gray-900 focus:bg-white focus:outline-none transition ${
+                  disabled={loadingWarehouses}
+                  className={`w-full px-3 py-2 bg-gray-50 border rounded-xl text-xs font-medium text-gray-900 focus:bg-white focus:outline-none transition appearance-none ${
                     warehouseError ? 'border-rose-500 bg-rose-50/20' : 'border-gray-200 focus:border-orange-500'
                   }`}
                 >
-                  <option value="">-- Chọn kho hàng --</option>
-                  {warehouses.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name} ({w.code})
-                    </option>
-                  ))}
+                  {loadingWarehouses ? (
+                    <option value="">-- Đang kiểm tra tồn kho các kho hàng... --</option>
+                  ) : warehouses.length === 0 ? (
+                    <option value="">-- Không có kho nào có sản phẩm tồn kho khả dụng --</option>
+                  ) : (
+                    <>
+                      <option value="">-- Chọn kho hàng --</option>
+                      {warehouses.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.name} ({w.code})
+                        </option>
+                      ))}
+                    </>
+                  )}
                 </select>
                 <WarehouseIcon size={14} className="absolute right-3 top-2.5 text-gray-400 pointer-events-none" />
               </div>
@@ -428,6 +527,12 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                 <span className="block text-[11px] text-rose-600 font-semibold mt-1">
                   {warehouseError}
                 </span>
+              )}
+              {warehouses.length === 0 && !loadingWarehouses && (
+                <div className="mt-1.5 p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[11px] flex items-center gap-1.5">
+                  <Info size={13} className="shrink-0" />
+                  <span>Không tìm thấy kho hàng nào có sản phẩm khả dụng với tài khoản hiện tại.</span>
+                </div>
               )}
             </div>
 
@@ -552,29 +657,38 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="max-h-60 overflow-y-auto divide-y divide-gray-50">
-                    {filteredProducts.length === 0 ? (
-                      <div className="p-3 text-center text-xs text-gray-400">
-                        Không tìm thấy sản phẩm phù hợp
+                  <div className="max-h-64 overflow-y-auto divide-y divide-gray-50">
+                    {loadingWarehouseStock ? (
+                      <div className="p-4 text-center text-xs text-gray-500 flex items-center justify-center gap-1.5">
+                        <Clock size={14} className="animate-spin text-orange-500" />
+                        <span>Đang tải danh sách tồn kho...</span>
+                      </div>
+                    ) : filteredAvailableItems.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-gray-400">
+                        {warehouseStockItems.length === 0
+                          ? 'Kho này hiện chưa có mặt hàng nào có tồn kho (> 0) để điều chỉnh'
+                          : 'Không tìm thấy sản phẩm phù hợp'}
                       </div>
                     ) : (
-                      filteredProducts.slice(0, 30).map((prod) => (
+                      filteredAvailableItems.slice(0, 40).map((item) => (
                         <button
-                          key={prod.id}
+                          key={item.productId}
                           type="button"
-                          onClick={() => handleAddProduct(prod)}
-                          className="w-full text-left p-2 hover:bg-orange-50/60 rounded-xl transition cursor-pointer flex flex-col gap-0.5"
+                          onClick={() => handleAddStockItem(item)}
+                          className="w-full text-left p-2.5 hover:bg-orange-50/70 rounded-xl transition cursor-pointer flex flex-col gap-0.5"
                         >
                           <div className="flex items-center justify-between">
-                            <span className="font-mono font-bold text-xs text-orange-600">{prod.sku}</span>
-                            <span className="text-[11px] font-bold text-gray-700">
-                              {formatVnd(Number(prod.costPrice) || 0)}
+                            <span className="font-mono font-bold text-xs text-orange-600">{item.sku}</span>
+                            <span className="text-[11px] font-bold text-gray-700 font-mono">
+                              {formatVnd(item.costPrice)}
                             </span>
                           </div>
-                          <span className="text-xs font-medium text-gray-900 truncate">{prod.name}</span>
-                          <div className="flex items-center gap-2 text-[10px] text-gray-400">
-                            <span>ĐVT: {prod.baseUnit}</span>
-                            {prod.hasBatchManagement && (
+                          <span className="text-xs font-medium text-gray-900 truncate">{item.name}</span>
+                          <div className="flex items-center justify-between text-[10px] text-gray-500 mt-0.5">
+                            <span className="font-semibold text-gray-600">
+                              ĐVT: {item.baseUnit} • Tồn: <span className="text-emerald-600 font-bold">{item.physicalStock.toLocaleString('vi-VN')}</span>
+                            </span>
+                            {item.hasBatchManagement && (
                               <span className="text-orange-600 font-semibold">• Theo dõi lô</span>
                             )}
                           </div>
@@ -693,23 +807,13 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                       </td>
 
                       {/* Giá vốn */}
-                      <td className="py-3 px-3 text-right font-medium text-gray-700">
-                        {line.costPrice > 0 ? (
-                          formatVnd(line.costPrice)
-                        ) : (
-                          <span className="text-[11px] text-gray-400 italic" title="Giá vốn được bảo mật theo vai trò, hệ thống tự động tính khi duyệt">
-                            Theo hệ thống
-                          </span>
-                        )}
+                      <td className="py-3 px-3 text-right font-medium text-gray-700 font-mono">
+                        {formatVnd(line.costPrice)}
                       </td>
 
                       {/* Thành tiền tổn thất */}
                       <td className="py-3 px-3 text-right font-bold text-rose-600 font-mono">
-                        {line.lossValue > 0 ? (
-                          formatVnd(line.lossValue)
-                        ) : (
-                          <span className="text-[10px] text-gray-400 font-normal">Tự động tính khi duyệt</span>
-                        )}
+                        {formatVnd(line.lossValue)}
                       </td>
 
                       {/* Ghi chú */}
