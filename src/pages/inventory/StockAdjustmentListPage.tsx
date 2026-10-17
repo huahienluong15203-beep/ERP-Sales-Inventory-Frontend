@@ -417,7 +417,7 @@ export const StockAdjustmentListPage: React.FC = () => {
               <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-700 font-bold text-xs uppercase tracking-wider">
                 <th className="py-3.5 px-4">Mã Phiếu</th>
                 <th className="py-3.5 px-3">Kho Hàng</th>
-                <th className="py-3.5 px-3 text-right">Tổng SL Giảm</th>
+                <th className="py-3.5 px-2 text-center w-20 whitespace-nowrap">Giảm</th>
                 <th className="py-3.5 px-3 text-right">Giá Trị Tổn Thất</th>
                 <th className="py-3.5 px-3">Người Lập</th>
                 <th className="py-3.5 px-3 text-center">Trạng Thái</th>
@@ -472,8 +472,8 @@ export const StockAdjustmentListPage: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Tổng SL giảm */}
-                      <td className="py-3.5 px-3 text-right font-bold text-gray-900 font-mono text-sm">
+                      {/* Số lượng giảm */}
+                      <td className="py-3.5 px-2 text-center font-bold text-gray-900 font-mono text-sm w-20 whitespace-nowrap">
                         {item.totalQuantity?.toLocaleString('vi-VN')}
                       </td>
 
@@ -492,17 +492,10 @@ export const StockAdjustmentListPage: React.FC = () => {
                         {getStatusBadge(item.status)}
                       </td>
 
-                      {/* Người duyệt */}
-                      <td className="py-3.5 px-3 text-sm text-gray-600">
+                      {/* Người duyệt (bỏ ngày tháng duyệt) */}
+                      <td className="py-3.5 px-3 text-sm">
                         {item.approvedByName ? (
-                          <div>
-                            <span className="font-semibold text-gray-800">{item.approvedByName}</span>
-                            {item.approvedAt && (
-                              <div className="text-xs text-gray-400">
-                                {new Date(item.approvedAt).toLocaleDateString('vi-VN')}
-                              </div>
-                            )}
-                          </div>
+                          <span className="font-semibold text-gray-800">{item.approvedByName}</span>
                         ) : (
                           <span className="text-gray-400 italic text-xs">Chưa duyệt</span>
                         )}
@@ -630,7 +623,7 @@ export const StockAdjustmentListPage: React.FC = () => {
       {/* ================= MODAL XEM CHI TIẾT PHIẾU ĐIỀU CHỈNH ================= */}
       {detailItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-5xl lg:max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-[96vw] xl:max-w-7xl max-h-[92vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50/80 via-white to-gray-50/80">
               <div className="flex items-center gap-3">
@@ -718,7 +711,7 @@ export const StockAdjustmentListPage: React.FC = () => {
                 <div className="bg-white p-3.5 rounded-xl border border-gray-200/70 shadow-2xs flex flex-col justify-between">
                   <div>
                     <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                      Người duyệt (AC3)
+                      Người duyệt
                     </span>
                     <div className="flex items-center gap-2">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
@@ -775,54 +768,54 @@ export const StockAdjustmentListPage: React.FC = () => {
                 </h3>
 
                 <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-2xs">
-                  <div className="overflow-x-auto">
+                  <div className="w-full">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-bold uppercase tracking-wider text-[11px]">
                         <tr>
-                          <th className="py-3 px-3 w-8 text-center">#</th>
-                          <th className="py-3 px-3.5 whitespace-nowrap">Mã SKU</th>
-                          <th className="py-3 px-3.5 min-w-[200px]">Tên Sản Phẩm</th>
-                          <th className="py-3 px-3.5 whitespace-nowrap">Số Lô Hàng</th>
-                          <th className="py-3 px-3.5 text-right whitespace-nowrap">Tồn Khi Lập</th>
-                          <th className="py-3 px-3.5 text-center whitespace-nowrap">Số Lượng Giảm</th>
-                          <th className="py-3 px-3.5 text-right whitespace-nowrap">Giá Vốn</th>
-                          <th className="py-3 px-3.5 text-right whitespace-nowrap">Thành Tiền</th>
-                          <th className="py-3 px-3 text-center whitespace-nowrap">Thẻ Kho (AC4)</th>
+                          <th className="py-2.5 px-2 w-7 text-center">#</th>
+                          <th className="py-2.5 px-2.5 whitespace-nowrap">Mã SKU</th>
+                          <th className="py-2.5 px-2.5">Tên Sản Phẩm</th>
+                          <th className="py-2.5 px-2.5 whitespace-nowrap">Số Lô Hàng</th>
+                          <th className="py-2.5 px-2 text-right whitespace-nowrap">Tồn Khi Lập</th>
+                          <th className="py-2.5 px-2 text-center whitespace-nowrap">Số Lượng Giảm</th>
+                          <th className="py-2.5 px-2.5 text-right whitespace-nowrap">Giá Vốn</th>
+                          <th className="py-2.5 px-2.5 text-right whitespace-nowrap">Thành Tiền</th>
+                          <th className="py-2.5 px-2 text-center whitespace-nowrap">Thẻ Kho</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 text-xs">
                         {detailItem.lines?.map((line, idx) => (
                           <tr key={line.id || idx} className="hover:bg-gray-50/60 transition">
-                            <td className="py-3 px-3 text-center text-gray-400 font-medium">{line.lineNo || idx + 1}</td>
-                            <td className="py-3 px-3.5 font-mono font-bold text-gray-900 whitespace-nowrap">
+                            <td className="py-2.5 px-2 text-center text-gray-400 font-medium">{line.lineNo || idx + 1}</td>
+                            <td className="py-2.5 px-2.5 font-mono font-bold text-gray-900 whitespace-nowrap">
                               {line.productSku}
                             </td>
-                            <td className="py-3 px-3.5 text-gray-900 min-w-[200px]">
+                            <td className="py-2.5 px-2.5 text-gray-900">
                               <div className="font-semibold text-gray-800">{line.productName}</div>
                               <div className="text-[11px] text-gray-400">ĐVT: {line.baseUnit}</div>
                             </td>
-                            <td className="py-3 px-3.5 whitespace-nowrap">
+                            <td className="py-2.5 px-2.5 whitespace-nowrap">
                               {line.hasBatchManagement ? (
-                                <span className="font-mono text-xs font-bold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-200 inline-block">
+                                <span className="font-mono text-xs font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded-lg border border-orange-200 inline-block">
                                   {line.batchNumber || 'Chưa gán lô'}
                                 </span>
                               ) : (
                                 <span className="text-gray-400 italic text-[11px]">Không theo lô</span>
                               )}
                             </td>
-                            <td className="py-3 px-3.5 text-right font-medium text-gray-600 whitespace-nowrap">
+                            <td className="py-2.5 px-2 text-right font-medium text-gray-600 whitespace-nowrap">
                               {line.currentStock?.toLocaleString('vi-VN')}
                             </td>
-                            <td className="py-3 px-3.5 text-center font-bold text-gray-900 font-mono whitespace-nowrap">
+                            <td className="py-2.5 px-2 text-center font-bold text-gray-900 font-mono whitespace-nowrap">
                               {line.adjustmentQuantity?.toLocaleString('vi-VN')}
                             </td>
-                            <td className="py-3 px-3.5 text-right font-mono text-gray-700 whitespace-nowrap">
+                            <td className="py-2.5 px-2.5 text-right font-mono text-gray-700 whitespace-nowrap">
                               {formatVnd(line.costPrice)}
                             </td>
-                            <td className="py-3 px-3.5 text-right font-bold text-rose-600 font-mono whitespace-nowrap">
+                            <td className="py-2.5 px-2.5 text-right font-bold text-rose-600 font-mono whitespace-nowrap">
                               {formatVnd(line.lossValue)}
                             </td>
-                            <td className="py-3 px-3 text-center whitespace-nowrap">
+                            <td className="py-2.5 px-2 text-center whitespace-nowrap">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -840,14 +833,14 @@ export const StockAdjustmentListPage: React.FC = () => {
                       </tbody>
                       <tfoot className="bg-gray-50/90 font-bold border-t border-gray-200 text-xs">
                         <tr>
-                          <td colSpan={5} className="py-3 px-3.5 text-right text-gray-700 uppercase tracking-wider font-bold">
+                          <td colSpan={5} className="py-2.5 px-2.5 text-right text-gray-700 uppercase tracking-wider font-bold">
                             TỔNG CỘNG:
                           </td>
-                          <td className="py-3 px-3.5 text-center text-gray-900 font-mono font-bold whitespace-nowrap">
+                          <td className="py-2.5 px-2 text-center text-gray-900 font-mono font-bold whitespace-nowrap">
                             {detailItem.totalQuantity?.toLocaleString('vi-VN')}
                           </td>
                           <td></td>
-                          <td className="py-3 px-3.5 text-right text-rose-600 font-mono font-bold whitespace-nowrap">
+                          <td className="py-2.5 px-2.5 text-right text-rose-600 font-mono font-bold whitespace-nowrap">
                             {formatVnd(detailItem.totalLossValue)}
                           </td>
                           <td></td>
