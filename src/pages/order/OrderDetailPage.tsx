@@ -816,7 +816,9 @@ export const OrderDetailPage: React.FC = () => {
           {order.note && (
             <div className="pt-2 border-t border-gray-100 text-xs text-gray-600 bg-gray-50/70 p-2.5 rounded-xl">
               <strong className="text-gray-700">Ghi chú đơn hàng:</strong>{' '}
-              <span className="italic">{order.note}</span>
+              <span className="italic">
+                {order.note.replace(/\s*\(S\d+-\d+\)/gi, '').replace(/\s*\(AC\s*\d+\)/gi, '').trim()}
+              </span>
             </div>
           )}
         </div>
