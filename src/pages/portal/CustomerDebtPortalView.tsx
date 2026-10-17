@@ -20,6 +20,7 @@ import {
 } from '../../services/paymentApi';
 import type { CustomerInvoiceDebtItem } from '../../types/payment';
 import type { CreditStatusResponse } from '../../types/agency';
+import { InvoicePrintModal } from '../../components/payment/InvoicePrintModal';
 
 export const CustomerDebtPortalView: React.FC = () => {
 
@@ -34,6 +35,7 @@ export const CustomerDebtPortalView: React.FC = () => {
 
   // Modal xem chi tiết hoá đơn
   const [selectedInvoice, setSelectedInvoice] = useState<CustomerInvoiceDebtItem | null>(null);
+  const [printInvoiceId, setPrintInvoiceId] = useState<number | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -104,9 +106,9 @@ export const CustomerDebtPortalView: React.FC = () => {
     };
   }, [invoices, creditStatus]);
 
-  // Hành động tải / in lại hoá đơn
-  const handlePrintInvoice = (_inv: CustomerInvoiceDebtItem) => {
-    window.print();
+  // Hành động tải / in lại hoá đơn qua InvoicePrintModal chuẩn A4
+  const handlePrintInvoice = (inv: CustomerInvoiceDebtItem) => {
+    setPrintInvoiceId(inv.id);
   };
 
   return (
@@ -421,6 +423,13 @@ export const CustomerDebtPortalView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal in hoá đơn VAT chuẩn A4 */}
+      <InvoicePrintModal
+        isOpen={Boolean(printInvoiceId)}
+        onClose={() => setPrintInvoiceId(null)}
+        invoiceId={printInvoiceId}
+      />
     </div>
   );
 };
