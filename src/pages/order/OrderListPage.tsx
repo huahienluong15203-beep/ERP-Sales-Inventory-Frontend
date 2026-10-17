@@ -65,9 +65,12 @@ const STATUS_TABS = [
   { label: 'Đã duyệt', value: 'APPROVED', badgeColor: 'bg-emerald-100 text-emerald-800' },
   { label: 'Đang soạn hàng', value: 'PICKING', badgeColor: 'bg-blue-100 text-blue-800' },
   { label: 'Đã xuất kho', value: 'DISPATCHED', badgeColor: 'bg-indigo-100 text-indigo-800' },
+  { label: 'Đã giao hàng', value: 'DELIVERED', badgeColor: 'bg-teal-100 text-teal-800' },
+  { label: 'Đã hoàn thành', value: 'COMPLETED,CLOSED', badgeColor: 'bg-emerald-100 text-emerald-800' },
   { label: 'Đơn nợ hàng (Backorder)', value: 'BACKORDER', badgeColor: 'bg-amber-100 text-amber-900 border-amber-300' },
   { label: 'Đơn nháp', value: 'DRAFT', badgeColor: 'bg-gray-100 text-gray-700' },
-  { label: 'Từ chối / Hủy', value: 'REJECTED,CANCELLED', badgeColor: 'bg-rose-100 text-rose-800' }
+  { label: 'Đã hủy', value: 'CANCELLED', badgeColor: 'bg-rose-100 text-rose-800' },
+  { label: 'Từ chối', value: 'REJECTED', badgeColor: 'bg-rose-100 text-rose-800' }
 ];
 
 export const OrderListPage: React.FC = () => {
@@ -151,6 +154,7 @@ export const OrderListPage: React.FC = () => {
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
   const [keyword, setKeyword] = useState<string>('');
+  const [activeQuickDate, setActiveQuickDate] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState<number>(0);
 
   // Góp ý GV mục 8: tick chọn nhiều đơn chờ duyệt (hoặc tick tất cả) rồi xử lý một lần
@@ -513,6 +517,7 @@ export const OrderListPage: React.FC = () => {
     setFromDate('');
     setToDate('');
     setKeyword('');
+    setActiveQuickDate(null);
     setPage(0);
   };
 
@@ -532,6 +537,7 @@ export const OrderListPage: React.FC = () => {
       fromDateObj = new Date(now.getFullYear(), now.getMonth(), 1);
     }
 
+    setActiveQuickDate(type);
     setFromDate(fromDateObj.toISOString().slice(0, 10));
     setToDate(toStr);
     setPage(0);
@@ -568,17 +574,11 @@ export const OrderListPage: React.FC = () => {
           </span>
         );
       case 'COMPLETED':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-            <CheckCircle2 size={12} />
-            <span>Hoàn thành</span>
-          </span>
-        );
       case 'CLOSED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
             <CheckCircle2 size={12} />
-            <span>Đã hoàn tất</span>
+            <span>Đã hoàn thành</span>
           </span>
         );
       case 'DELIVERED':
@@ -602,7 +602,7 @@ export const OrderListPage: React.FC = () => {
         );
       case 'CANCELLED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-zinc-100 text-zinc-700 border border-zinc-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
             <XCircle size={12} />
             <span>Đã hủy</span>
           </span>
@@ -914,28 +914,44 @@ export const OrderListPage: React.FC = () => {
             <button
               type="button"
               onClick={() => handleQuickDateSelect('today')}
-              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition cursor-pointer"
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                activeQuickDate === 'today'
+                  ? 'bg-amber-100 text-amber-900 border border-amber-400 font-bold shadow-xs'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
             >
               Hôm nay
             </button>
             <button
               type="button"
               onClick={() => handleQuickDateSelect('7days')}
-              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition cursor-pointer"
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                activeQuickDate === '7days'
+                  ? 'bg-amber-100 text-amber-900 border border-amber-400 font-bold shadow-xs'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
             >
               7 ngày qua
             </button>
             <button
               type="button"
               onClick={() => handleQuickDateSelect('30days')}
-              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition cursor-pointer"
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                activeQuickDate === '30days'
+                  ? 'bg-amber-100 text-amber-900 border border-amber-400 font-bold shadow-xs'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
             >
               30 ngày qua
             </button>
             <button
               type="button"
               onClick={() => handleQuickDateSelect('thisMonth')}
-              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition cursor-pointer"
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                activeQuickDate === 'thisMonth'
+                  ? 'bg-amber-100 text-amber-900 border border-amber-400 font-bold shadow-xs'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
             >
               Tháng này
             </button>

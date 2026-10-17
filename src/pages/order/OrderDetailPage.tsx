@@ -97,11 +97,15 @@ export const OrderDetailPage: React.FC = () => {
     currentRole === 'ROLE_ADMIN' ||
     Boolean(user?.roles?.some((r) => ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN'].includes(r)));
 
+  const isAdmin =
+    currentRole === 'ROLE_ADMIN' ||
+    Boolean(user?.roles?.includes('ROLE_ADMIN'));
+
   const isSalesRep =
     currentRole === 'ROLE_SALES_REP' || Boolean(user?.roles?.includes('ROLE_SALES_REP'));
 
   const isPortalOrder = Boolean(order?.note?.startsWith('[Đại lý tự đặt qua cổng]'));
-  const canDecideApproval = isSalesManager || (isSalesRep && isPortalOrder);
+  const canDecideApproval = isAdmin || isSalesManager || (isSalesRep && isPortalOrder);
 
   // Tải chi tiết đơn hàng & lịch sử phê duyệt
   const loadOrderDetail = useCallback(async () => {
@@ -233,9 +237,9 @@ export const OrderDetailPage: React.FC = () => {
       case 'COMPLETED':
       case 'CLOSED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
             <CheckCircle2 size={13} />
-            <span>Đã hoàn tất</span>
+            <span>Đã hoàn thành</span>
           </span>
         );
       case 'DELIVERED':
@@ -518,7 +522,7 @@ export const OrderDetailPage: React.FC = () => {
           )}
 
           {/* Nút hủy đơn hàng */}
-          {!['CANCELLED', 'REJECTED', 'CLOSED', 'DISPATCHED', 'DELIVERED'].includes(order.status) &&
+          {!['CANCELLED', 'REJECTED', 'CLOSED', 'COMPLETED', 'DISPATCHED', 'DELIVERED'].includes(order.status) &&
             (currentRole === 'ROLE_CUSTOMER'
               ? ['PENDING_APPROVAL', 'DRAFT'].includes(order.status)
               : ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP'].includes(currentRole ?? '')) && (
