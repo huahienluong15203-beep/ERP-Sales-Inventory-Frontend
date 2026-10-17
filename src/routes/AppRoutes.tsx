@@ -56,6 +56,10 @@ import { InvoiceCreatePage } from '../pages/payment/InvoiceCreatePage';
 import { SalesTargetManagementPage } from '../pages/kpi/SalesTargetManagementPage';
 import { InventoryAgingReportPage } from '../pages/inventory/InventoryAgingReportPage';
 import { InTransitDashboardPage } from '../pages/inventory/InTransitDashboardPage';
+import { DebtAgingLedgerPage } from '../pages/debt/DebtAgingLedgerPage';
+import { DebtReconciliationPage } from '../pages/debt/DebtReconciliationPage';
+import { SalesReturnListPage } from '../pages/salesreturn/SalesReturnListPage';
+import { CreateSalesReturnPage } from '../pages/salesreturn/CreateSalesReturnPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -876,6 +880,40 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* S8-01: Trả hàng nhập kho */}
+        <Route
+          path="/sales-returns"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_REP',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <SalesReturnListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sales-returns/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_REP',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <CreateSalesReturnPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Đối chiếu thu tiền theo tuyến & nộp quỹ (S7-05) */}
         <Route
           path="/payments/reconciliation"
@@ -889,6 +927,40 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <PaymentReconciliationPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S7-03: Sổ công nợ & tuổi nợ theo đại lý */}
+        <Route
+          path="/debts/ledger"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <DebtAgingLedgerPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S7-06: Đối chiếu công nợ định kỳ */}
+        <Route
+          path="/debts/reconciliation"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_CUSTOMER'
+              ]}
+            >
+              <DebtReconciliationPage />
             </ProtectedRoute>
           }
         />

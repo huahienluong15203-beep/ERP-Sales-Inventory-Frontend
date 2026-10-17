@@ -3,9 +3,7 @@ import {
   Bell,
   AlertTriangle,
   Clock,
-  CheckCircle2,
   RefreshCw,
-  ExternalLink,
   CheckCheck
 } from 'lucide-react';
 import {
@@ -189,21 +187,13 @@ export const AgencyNotificationBell: React.FC<AgencyNotificationBellProps> = ({
           {/* DANH SÁCH THÔNG BÁO */}
           <div className="max-h-[360px] overflow-y-auto divide-y divide-gray-100">
             {loading && notifications.length === 0 ? (
-              <div className="p-8 text-center text-xs text-gray-500 flex flex-col items-center justify-center gap-2">
-                <RefreshCw size={18} className="animate-spin text-orange-500" />
-                <span>Đang tải thông báo...</span>
+              <div className="p-6 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
+                <RefreshCw size={14} className="animate-spin text-orange-500" />
+                <span>Đang tải...</span>
               </div>
             ) : notifications.length === 0 ? (
-              <div className="p-8 text-center space-y-2">
-                <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center">
-                  <CheckCircle2 size={24} />
-                </div>
-                <div className="text-xs font-bold text-gray-800">
-                  Bạn không có thông báo nhắc nợ nào
-                </div>
-                <div className="text-[11px] text-gray-500 max-w-[260px] mx-auto">
-                  Tất cả hoá đơn đều thanh toán đúng hạn hoặc chưa đến kỳ nhắc hạn thanh toán.
-                </div>
+              <div className="p-6 text-center text-xs text-gray-400">
+                Không có thông báo mới
               </div>
             ) : (
               notifications.map((item) => {
@@ -214,16 +204,16 @@ export const AgencyNotificationBell: React.FC<AgencyNotificationBellProps> = ({
                   <div
                     key={item.id}
                     onClick={() => handleClickItem(item)}
-                    className={`p-3.5 transition cursor-pointer group flex items-start gap-3 ${
+                    className={`p-3 transition cursor-pointer flex items-start gap-2.5 ${
                       !item.isRead
                         ? isOverdue
-                          ? 'bg-rose-50/50 hover:bg-rose-50'
-                          : 'bg-orange-50/40 hover:bg-orange-50/70'
+                          ? 'bg-rose-50/60 hover:bg-rose-50'
+                          : 'bg-orange-50/50 hover:bg-orange-50'
                         : 'hover:bg-gray-50 opacity-80 hover:opacity-100'
                     }`}
                   >
                     <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
                         isOverdue
                           ? 'bg-rose-100 text-rose-600'
                           : isDueSoon
@@ -231,13 +221,13 @@ export const AgencyNotificationBell: React.FC<AgencyNotificationBellProps> = ({
                           : 'bg-blue-100 text-blue-600'
                       }`}
                     >
-                      {isOverdue ? <AlertTriangle size={16} /> : <Clock size={16} />}
+                      {isOverdue ? <AlertTriangle size={14} /> : <Clock size={14} />}
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                      <div className="flex items-center justify-between gap-1">
                         <span
-                          className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                          className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
                             isOverdue
                               ? 'bg-rose-100 text-rose-700'
                               : isDueSoon
@@ -247,25 +237,7 @@ export const AgencyNotificationBell: React.FC<AgencyNotificationBellProps> = ({
                         >
                           {isOverdue ? 'Quá Hạn' : isDueSoon ? 'Sắp Đến Hạn' : 'Thông Báo'}
                         </span>
-                        {!item.isRead && (
-                          <span className="w-2 h-2 rounded-full bg-orange-600 shrink-0" />
-                        )}
-                      </div>
-
-                      <div
-                        className={`text-xs font-bold leading-tight group-hover:text-orange-600 transition ${
-                          isOverdue ? 'text-rose-900' : 'text-gray-900'
-                        }`}
-                      >
-                        {item.title}
-                      </div>
-
-                      <p className="mt-1 text-[11px] text-gray-600 line-clamp-2 leading-relaxed">
-                        {item.content}
-                      </p>
-
-                      <div className="mt-1.5 flex items-center justify-between text-[10px] text-gray-400">
-                        <span>
+                        <span className="text-[10px] text-gray-400 font-mono">
                           {item.createdAt
                             ? new Date(item.createdAt).toLocaleString('vi-VN', {
                                 day: '2-digit',
@@ -275,32 +247,25 @@ export const AgencyNotificationBell: React.FC<AgencyNotificationBellProps> = ({
                               })
                             : ''}
                         </span>
-                        <span className="text-orange-600 font-semibold flex items-center gap-0.5 group-hover:underline">
-                          Xem công nợ <ExternalLink size={10} />
-                        </span>
                       </div>
+
+                      <div
+                        className={`text-xs font-bold leading-tight mt-1 ${
+                          isOverdue ? 'text-rose-900' : 'text-gray-900'
+                        }`}
+                      >
+                        {item.title}
+                      </div>
+
+                      <p className="mt-1 text-[11px] text-gray-600 leading-relaxed">
+                        {item.content}
+                      </p>
                     </div>
                   </div>
                 );
               })
             )}
           </div>
-
-          {/* FOOTER */}
-          {onNavigateToDebt && (
-            <div className="p-2.5 border-t border-gray-100 bg-gray-50/70 text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsOpen(false);
-                  onNavigateToDebt();
-                }}
-                className="text-xs font-bold text-orange-600 hover:text-orange-700 transition cursor-pointer"
-              >
-                Xem chi tiết sổ nợ & hoá đơn →
-              </button>
-            </div>
-          )}
         </div>
       )}
     </div>
