@@ -22,13 +22,16 @@ import type { PeriodicReconciliationStatement } from '../../types/debtReconcilia
 import {
   fetchReconciliationStatements,
   createReconciliationStatement,
+  previewReconciliationStatement,
   agencyRespondStatement
 } from '../../services/debtReconciliationApi';
 import { ReconciliationPrintModal } from '../../components/debt/ReconciliationPrintModal';
 
 export const DebtReconciliationPage: React.FC = () => {
   const navigate = useNavigate();
-  const { showToast } = useAuth();
+  const { showToast, currentRole } = useAuth();
+  // Đại lý chỉ xem biên bản của mình và xác nhận / phản hồi lệch; không lập biên bản
+  const isCustomer = currentRole === 'ROLE_CUSTOMER';
 
   // Tab view: 'LIST' hoặc 'CREATE'
   const [viewMode, setViewMode] = useState<'LIST' | 'CREATE'>('LIST');
@@ -75,8 +78,10 @@ export const DebtReconciliationPage: React.FC = () => {
         setLoadingAgencies(false);
       }
     };
-    loadAgencyList();
-  }, []);
+    if (!isCustomer) {
+      loadAgencyList();
+    }
+  }, [isCustomer]);
 
   // Bộ lọc theo đại lý cụ thể (khi điều hướng từ Sổ công nợ sang)
   const [filterCustomerId, setFilterCustomerId] = useState<number | null>(() => {
@@ -112,100 +117,40 @@ export const DebtReconciliationPage: React.FC = () => {
 
   const selectedAgency = agencies.find(a => Number(a.id) === selectedCustomerId);
 
-  // Tính toán số liệu chứng từ phát sinh chính xác theo đại lý được chọn
-  let simulatedOpeningBalance = 0;
-  let simulatedTransactions: {
-    id: number;
-    date: string;
-    code: string;
-    type: 'INVOICE' | 'PAYMENT';
-    typeLabel: string;
-    debit: number;
-    credit: number;
-    balance: number;
-    notes?: string;
-  }[] = [];
+  // Số liệu đối chiếu thật do backend tính (hoá đơn, phiếu thu, giảm trừ) theo đại lý và kỳ đã chọn
+  const [preview, setPreview] = useState<PeriodicReconciliationStatement | null>(null);
+  const [previewError, setPreviewError] = useState<string>('');
 
-  if (selectedCustomerId === 3) {
-    // KhoMega (DN-HN-003) - Dư nợ thực tế: 84.386.400 đ
-    simulatedOpeningBalance = 720000;
-    simulatedTransactions = [
-      {
-        id: 1,
-        date: '2026-09-15',
-        code: 'HD2026-000001',
-        type: 'INVOICE',
-        typeLabel: 'Hoá đơn bán hàng',
-        debit: 83666400,
-        credit: 0,
-        balance: 84386400,
-        notes: 'Hoá đơn GTGT số HD2026-000001'
-      }
-    ];
-  } else if (selectedCustomerId === 2) {
-    // Công ty TNHH Water (DL-TN-THANHCONG) - Dư nợ thực tế: 50.222.400 đ
-    simulatedOpeningBalance = 0;
-    simulatedTransactions = [
-      {
-        id: 1,
-        date: '2026-09-10',
-        code: 'HD2026-000002',
-        type: 'INVOICE',
-        typeLabel: 'Hoá đơn bán hàng',
-        debit: 1060800,
-        credit: 0,
-        balance: 1060800,
-        notes: 'Hoá đơn GTGT số HD2026-000002'
-      },
-      {
-        id: 2,
-        date: '2026-09-20',
-        code: 'DH-202609-002',
-        type: 'INVOICE',
-        typeLabel: 'Đơn hàng thực giao',
-        debit: 49161600,
-        credit: 0,
-        balance: 50222400,
-        notes: 'Đơn hàng giao đợt 2 theo hợp đồng'
-      }
-    ];
-  } else if (selectedCustomerId === 1) {
-    // Kho Đài Tư (DL-HN-001) - Dư nợ thực tế: 0 đ
-    simulatedOpeningBalance = 35000000;
-    simulatedTransactions = [
-      {
-        id: 1,
-        date: '2026-09-28',
-        code: 'PT2026-000001',
-        type: 'PAYMENT',
-        typeLabel: 'Phiếu thu ngân hàng',
-        debit: 0,
-        credit: 35000000,
-        balance: 0,
-        notes: 'Chuyển khoản thanh toán dứt điểm công nợ'
-      }
-    ];
-  } else if (selectedAgency) {
-    const debt = Number((selectedAgency as any).currentDebt ?? selectedAgency.totalDebt) || 0;
-    simulatedOpeningBalance = 0;
-    simulatedTransactions = [
-      {
-        id: 1,
-        date: statementDate,
-        code: `HD-2026-${String(selectedCustomerId).padStart(3, '0')}`,
-        type: 'INVOICE',
-        typeLabel: 'Hoá đơn bán hàng',
-        debit: debt,
-        credit: 0,
-        balance: debt,
-        notes: 'Phát sinh nợ luỹ kế theo kỳ'
-      }
-    ];
-  }
+  useEffect(() => {
+    if (isCustomer || !selectedCustomerId || !fromDate || !toDate) {
+      setPreview(null);
+      setPreviewError('');
+      return;
+    }
+    let cancelled = false;
+    previewReconciliationStatement({ customerId: selectedCustomerId, fromDate, toDate, statementDate })
+      .then((data) => {
+        if (!cancelled) {
+          setPreview(data);
+          setPreviewError('');
+        }
+      })
+      .catch((err: any) => {
+        if (!cancelled) {
+          setPreview(null);
+          setPreviewError(err?.message || 'Không tính được số liệu đối chiếu');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isCustomer, selectedCustomerId, fromDate, toDate, statementDate]);
 
-  const simulatedTotalDebit = simulatedTransactions.reduce((s, t) => s + t.debit, 0);
-  const simulatedTotalCredit = simulatedTransactions.reduce((s, t) => s + t.credit, 0);
-  const simulatedClosingBalance = simulatedOpeningBalance + simulatedTotalDebit - simulatedTotalCredit;
+  const simulatedOpeningBalance = Number(preview?.openingBalance ?? 0);
+  const simulatedTransactions = preview?.transactions ?? [];
+  const simulatedTotalDebit = Number(preview?.totalDebit ?? 0);
+  const simulatedTotalCredit = Number(preview?.totalCredit ?? 0);
+  const simulatedClosingBalance = Number(preview?.closingBalance ?? 0);
 
   // Lập biên bản đối chiếu mới
   const handleCreateStatement = async () => {
@@ -216,24 +161,13 @@ export const DebtReconciliationPage: React.FC = () => {
 
     setSubmitting(true);
     try {
-      const created = await createReconciliationStatement(
-        {
-          customerId: selectedCustomerId,
-          fromDate,
-          toDate,
-          statementDate,
-          notes: notes.trim()
-        },
-        {
-          code: selectedAgency.code,
-          name: selectedAgency.name,
-          address: selectedAgency.address,
-          taxCode: selectedAgency.taxCode,
-          phone: selectedAgency.phone
-        },
-        simulatedOpeningBalance,
-        simulatedTransactions
-      );
+      const created = await createReconciliationStatement({
+        customerId: selectedCustomerId,
+        fromDate,
+        toDate,
+        statementDate,
+        notes: notes.trim()
+      });
 
       showToast('Thành công', `Đã lập biên bản ${created.statementCode} thành công`, 'success');
       setSelectedStatement(created);
@@ -256,7 +190,16 @@ export const DebtReconciliationPage: React.FC = () => {
   // Giả lập đại lý xác nhận hoặc phản hồi lệch (Test tính năng portal)
   const handleSimulateAgencyAction = async (stmt: PeriodicReconciliationStatement, isAccept: boolean) => {
     try {
-      const feedback = isAccept ? undefined : 'Số liệu chênh lệch hoá đơn ngày 15, yêu cầu kế toán kiểm tra lại.';
+      let feedback: string | undefined;
+      if (!isAccept) {
+        const input = window.prompt('Ghi rõ số liệu chưa khớp để kế toán kiểm tra lại:');
+        if (input === null) return;
+        if (input.trim().length < 5) {
+          showToast('Cảnh báo', 'Vui lòng ghi rõ số liệu lệch (tối thiểu 5 ký tự)', 'info');
+          return;
+        }
+        feedback = input.trim();
+      }
       await agencyRespondStatement(
         stmt.id,
         isAccept ? 'AGENCY_ACCEPTED' : 'AGENCY_DISPUTED',
@@ -312,7 +255,7 @@ export const DebtReconciliationPage: React.FC = () => {
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
 
-          {viewMode === 'LIST' ? (
+          {isCustomer ? null : viewMode === 'LIST' ? (
             <button
               type="button"
               onClick={() => setViewMode('CREATE')}
@@ -471,6 +414,11 @@ export const DebtReconciliationPage: React.FC = () => {
           </div>
 
           {/* 3. KHỐI CHI TIẾT SỐ LIỆU ĐỐI CHIẾU: CHỈ XUẤT HIỆN KHI ĐÃ CHỌN ĐẠI LÝ */}
+          {selectedCustomerId && selectedAgency && previewError && (
+            <div className="p-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-semibold">
+              {previewError}
+            </div>
+          )}
           {selectedCustomerId && selectedAgency && (
             <div className="space-y-5 animate-fade-in">
               <div className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs overflow-hidden">
@@ -757,15 +705,25 @@ export const DebtReconciliationPage: React.FC = () => {
                               </button>
 
                               {/* Giả lập hành động đại lý ở cổng Portal */}
-                              {stmt.status === 'CONFIRMED' && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleSimulateAgencyAction(stmt, true)}
-                                  className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-bold transition cursor-pointer"
-                                  title="Giả lập đại lý xác nhận trên cổng Portal"
-                                >
-                                  Đại lý ký
-                                </button>
+                              {isCustomer && stmt.status === 'CONFIRMED' && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSimulateAgencyAction(stmt, true)}
+                                    className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-bold transition cursor-pointer"
+                                    title="Đại lý xác nhận số liệu công nợ đúng"
+                                  >
+                                    Xác nhận
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSimulateAgencyAction(stmt, false)}
+                                    className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold transition cursor-pointer"
+                                    title="Đại lý phản hồi số liệu chưa khớp"
+                                  >
+                                    Báo lệch
+                                  </button>
+                                </>
                               )}
                             </div>
                           </td>
