@@ -309,12 +309,14 @@ export const StockAdjustmentCreatePage: React.FC = () => {
     );
   };
 
-  // Chọn lô hàng cho sản phẩm theo lô
+  // Chọn hoặc nhập số lô hàng cho sản phẩm theo lô
   const handleLotChange = (lineId: string, batchNumber: string) => {
     setLines((prev) =>
       prev.map((l) => {
         if (l.id === lineId) {
-          const foundLot = l.availableLots.find((lot) => lot.batchNumber === batchNumber);
+          const foundLot = l.availableLots.find(
+            (lot) => lot.batchNumber.trim().toLowerCase() === batchNumber.trim().toLowerCase()
+          );
           return {
             ...l,
             batchNumber,
@@ -385,15 +387,8 @@ export const StockAdjustmentCreatePage: React.FC = () => {
         return;
       }
       if (l.hasBatchManagement) {
-        if (!l.batchNumber) {
-          if (l.availableLots.length === 0) {
-            const whName = warehouses.find((w) => Number(w.id) === Number(selectedWarehouseId))?.name || 'đã chọn';
-            setSubmitError(
-              `Mặt hàng [${l.productSku}] quản lý theo lô nhưng kho "${whName}" chưa có số lô hàng tồn. Vui lòng chọn kho có lô tồn hoặc bấm Xóa dòng này.`
-            );
-          } else {
-            setSubmitError(`Mặt hàng [${l.productSku}] quản lý theo lô, bắt buộc phải chọn số lô`);
-          }
+        if (!l.batchNumber || !l.batchNumber.trim()) {
+          setSubmitError(`Mặt hàng [${l.productSku}] quản lý theo lô, bắt buộc phải nhập hoặc chọn số lô`);
           return;
         }
         if (l.lotStockMax !== undefined && l.adjustmentQuantity > l.lotStockMax) {
@@ -710,14 +705,14 @@ export const StockAdjustmentCreatePage: React.FC = () => {
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-bold">
                 <tr>
-                  <th className="py-3 px-3.5 w-10">#</th>
-                  <th className="py-3 px-3">Sản Phẩm</th>
-                  <th className="py-3 px-3 w-48">Số Lô Hàng</th>
+                  <th className="py-3 px-3.5 w-10 text-left">#</th>
+                  <th className="py-3 px-3 text-left">Sản Phẩm</th>
+                  <th className="py-3 px-3 w-56 text-left">Số Lô Hàng</th>
                   <th className="py-3 px-3 text-right w-24">Tồn Kho</th>
-                  <th className="py-3 px-3 text-right w-28">SL Giảm</th>
+                  <th className="py-3 px-3 text-center w-28">SL Giảm</th>
                   <th className="py-3 px-3 text-right w-28">Giá Vốn</th>
-                  <th className="py-3 px-3 text-right w-36">Thành Tiền Tổn Thất</th>
-                  <th className="py-3 px-3">Ghi Chú</th>
+                  <th className="py-3 px-3 text-right w-36">Thành Tiền</th>
+                  <th className="py-3 px-3 text-left">Ghi Chú</th>
                   <th className="py-3 px-3 w-12 text-center">Xóa</th>
                 </tr>
               </thead>
@@ -746,35 +741,56 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                         <div className="text-[10px] text-gray-400">ĐVT: {line.baseUnit}</div>
                       </td>
 
-                      {/* Số lô */}
-                      <td className="py-3 px-3">
+                      {/* Số lô: căn thẳng lề trái, cho phép nhập thủ công hoặc chọn từ danh sách */}
+                      <td className="py-3 px-3 w-56">
                         {line.hasBatchManagement ? (
                           line.lotLoading ? (
                             <div className="flex items-center gap-1 text-[11px] text-gray-400">
                               <Clock size={12} className="animate-spin text-orange-500" />
                               <span>Tải lô...</span>
                             </div>
-                          ) : line.availableLots.length === 0 ? (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 inline-block w-fit">
-                                Không có lô tồn
-                              </span>
-                              <span className="text-[10px] text-rose-500">
-                                Kho này chưa có số lô hàng tồn
-                              </span>
-                            </div>
                           ) : (
-                            <select
-                              value={line.batchNumber || ''}
-                              onChange={(e) => handleLotChange(line.id, e.target.value)}
-                              className="w-full px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-mono font-bold text-gray-900 focus:border-orange-500 focus:outline-none"
-                            >
-                              {line.availableLots.map((lot) => (
-                                <option key={lot.id} value={lot.batchNumber}>
-                                  Lô: {lot.batchNumber} (Tồn: {lot.quantity})
-                                </option>
-                              ))}
-                            </select>
+                            <div className="relative w-full">
+                              <input
+                                type="text"
+                                list={`lot-datalist-${line.id}`}
+                                value={line.batchNumber || ''}
+                                onChange={(e) => handleLotChange(line.id, e.target.value)}
+                                placeholder="Nhập hoặc chọn số lô..."
+                                className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-mono font-bold text-gray-900 focus:border-orange-500 focus:outline-none placeholder:text-gray-400 placeholder:font-sans placeholder:font-normal"
+                              />
+                              <datalist id={`lot-datalist-${line.id}`}>
+                                {line.availableLots.map((lot) => (
+                                  <option key={lot.id} value={lot.batchNumber}>
+                                    Lô: {lot.batchNumber} (Tồn: {lot.quantity})
+                                  </option>
+                                ))}
+                              </datalist>
+                              {line.availableLots.length > 0 ? (
+                                <div className="mt-1 flex flex-wrap gap-1 items-center">
+                                  <span className="text-[10px] text-gray-400">Lô có sẵn:</span>
+                                  {line.availableLots.slice(0, 2).map((lot) => (
+                                    <button
+                                      key={lot.id}
+                                      type="button"
+                                      onClick={() => handleLotChange(line.id, lot.batchNumber)}
+                                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition cursor-pointer ${
+                                        line.batchNumber === lot.batchNumber
+                                          ? 'bg-orange-50 border-orange-300 text-orange-700 font-bold'
+                                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                                      }`}
+                                      title={`Tồn: ${lot.quantity}`}
+                                    >
+                                      {lot.batchNumber} ({lot.quantity})
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="mt-0.5 text-[10px] text-gray-400 italic">
+                                  Chưa có lô tồn tại kho - nhập số lô thủ công
+                                </div>
+                              )}
+                            </div>
                           )
                         ) : (
                           <span className="text-gray-400 italic text-[11px]">Không quản lý lô</span>
@@ -786,8 +802,8 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                         {line.currentStock.toLocaleString('vi-VN')}
                       </td>
 
-                      {/* Số lượng giảm */}
-                      <td className="py-3 px-3 text-right">
+                      {/* Số lượng giảm: căn giữa thẳng hàng tuyệt đối */}
+                      <td className="py-3 px-3 text-center">
                         <input
                           type="number"
                           min="0.01"
@@ -795,7 +811,7 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                           max={line.currentStock}
                           value={line.adjustmentQuantity || ''}
                           onChange={(e) => handleQuantityChange(line.id, e.target.value)}
-                          className={`w-24 px-2 py-1 text-right font-bold text-xs rounded-lg border focus:outline-none transition ${
+                          className={`w-20 mx-auto px-2 py-1 text-center font-bold text-xs rounded-lg border focus:outline-none transition ${
                             line.adjustmentQuantity > line.currentStock
                               ? 'border-rose-500 bg-rose-50 text-rose-700'
                               : 'border-gray-200 bg-white focus:border-orange-500 text-gray-900'
@@ -808,7 +824,7 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                         {formatVnd(line.costPrice)}
                       </td>
 
-                      {/* Thành tiền tổn thất */}
+                      {/* Thành tiền */}
                       <td className="py-3 px-3 text-right font-bold text-rose-600 font-mono">
                         {formatVnd(line.lossValue)}
                       </td>
@@ -847,13 +863,11 @@ export const StockAdjustmentCreatePage: React.FC = () => {
               {lines.length > 0 && (
                 <tfoot className="bg-gray-50/80 font-bold border-t border-gray-200">
                   <tr>
-                    <td colSpan={4} className="py-3 px-3.5 text-left text-gray-800 text-xs uppercase tracking-wider">
-                      TỔNG CỘNG HÀNG GIẢM:
+                    <td colSpan={4} className="py-3 px-3.5 text-left text-gray-800 text-xs uppercase tracking-wider font-bold">
+                      TỔNG
                     </td>
-                    <td className="py-3 px-3 text-right text-gray-900 font-mono font-bold text-xs">
-                      <div className="w-24 ml-auto px-2 text-right">
-                        {totalQuantity.toLocaleString('vi-VN')}
-                      </div>
+                    <td className="py-3 px-3 text-center text-gray-900 font-mono font-bold text-xs">
+                      {totalQuantity.toLocaleString('vi-VN')}
                     </td>
                     <td className="py-3 px-3"></td>
                     <td className="py-3 px-3 text-right text-rose-600 text-xs font-mono font-bold">

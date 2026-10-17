@@ -735,7 +735,7 @@ export const StockAdjustmentListPage: React.FC = () => {
                         <th className="py-2.5 px-3 text-right">Tồn Khi Lập</th>
                         <th className="py-2.5 px-3 text-right">Số Lượng Giảm</th>
                         <th className="py-2.5 px-3 text-right">Giá Vốn</th>
-                        <th className="py-2.5 px-3 text-right">Thành Tiền Tổn Thất</th>
+                        <th className="py-2.5 px-3 text-right">Thành Tiền</th>
                         <th className="py-2.5 px-3 text-center">Thẻ Kho (AC4)</th>
                       </tr>
                     </thead>
