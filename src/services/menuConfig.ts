@@ -38,7 +38,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Bán hàng',
     icon: 'Building2',
     epic: 'Đại lý & Hạn mức nợ',
-    description: 'Quản lý danh sách khách hàng chuẩn hóa, bảng giá và trạng thái giao dịch',
+    description: '',
     allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
   },
 
@@ -48,7 +48,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Bán hàng',
     icon: 'ShoppingCart',
     epic: 'Đặt hàng & Duyệt ngoại lệ',
-    description: 'Theo dõi tiến trình xử lý đơn hàng toàn trình, phê duyệt và trạng thái giao hàng',
+    description: '',
     allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_WAREHOUSE', 'ROLE_WH_MANAGER']
   },
 
@@ -58,7 +58,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Bán hàng',
     icon: 'ShoppingBag',
     epic: 'Đặt hàng & Duyệt ngoại lệ',
-    description: 'Lên đơn nhanh tại điểm bán, tự động áp giá & chiết khấu sản lượng',
+    description: '',
     allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
   },
 
@@ -168,7 +168,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Sản phẩm & Kho',
     icon: 'Package',
     epic: 'Sản phẩm & Tồn kho',
-    description: 'Quản lý chuẩn hóa danh mục sản phẩm, mã SKU và bảo mật giá vốn',
+    description: '',
     allowedRoles: [
       'ROLE_SALES_MANAGER',
       'ROLE_ADMIN',
@@ -195,7 +195,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Sản phẩm & Kho',
     icon: 'Truck',
     epic: 'Sản phẩm & Tồn kho',
-    description: 'Quản lý nguồn hàng và đối tác cung ứng, gắn vào phiếu nhập kho để truy nguyên lô lỗi',
+    description: '',
     allowedRoles: [
       'ROLE_ADMIN',
       'ROLE_WH_MANAGER',
@@ -211,7 +211,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Sản phẩm & Kho',
     icon: 'ClipboardList',
     epic: 'Sản phẩm & Tồn kho',
-    description: 'Lập phiếu nhập kho từ nhà cung cấp, ghi nhận số lô, hạn dùng và quy đổi đơn vị cơ sở',
+    description: '',
     allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
   },
 
@@ -221,7 +221,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Sản phẩm & Kho',
     icon: 'ArrowLeftRight',
     epic: 'Sản phẩm & Tồn kho',
-    description: 'Lập phiếu chuyển kho nội bộ, theo dõi hàng đang đi đường và xác nhận nhận đủ',
+    description: '',
     allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
   },
 
