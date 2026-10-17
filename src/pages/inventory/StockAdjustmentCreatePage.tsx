@@ -297,7 +297,14 @@ export const StockAdjustmentCreatePage: React.FC = () => {
       }
       if (l.hasBatchManagement) {
         if (!l.batchNumber) {
-          setSubmitError(`Mặt hàng [${l.productSku}] quản lý theo lô, bắt buộc phải chọn số lô`);
+          if (l.availableLots.length === 0) {
+            const whName = warehouses.find((w) => Number(w.id) === Number(selectedWarehouseId))?.name || 'đã chọn';
+            setSubmitError(
+              `Mặt hàng [${l.productSku}] quản lý theo lô nhưng kho "${whName}" chưa có số lô hàng tồn. Vui lòng chọn kho có lô tồn hoặc bấm Xóa dòng này.`
+            );
+          } else {
+            setSubmitError(`Mặt hàng [${l.productSku}] quản lý theo lô, bắt buộc phải chọn số lô`);
+          }
           return;
         }
         if (l.lotStockMax !== undefined && l.adjustmentQuantity > l.lotStockMax) {
@@ -637,9 +644,14 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                               <span>Tải lô...</span>
                             </div>
                           ) : line.availableLots.length === 0 ? (
-                            <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                              Không có lô tồn
-                            </span>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 inline-block w-fit">
+                                Không có lô tồn
+                              </span>
+                              <span className="text-[10px] text-rose-500">
+                                Kho này chưa có số lô hàng tồn
+                              </span>
+                            </div>
                           ) : (
                             <select
                               value={line.batchNumber || ''}
@@ -682,12 +694,22 @@ export const StockAdjustmentCreatePage: React.FC = () => {
 
                       {/* Giá vốn */}
                       <td className="py-3 px-3 text-right font-medium text-gray-700">
-                        {formatVnd(line.costPrice)}
+                        {line.costPrice > 0 ? (
+                          formatVnd(line.costPrice)
+                        ) : (
+                          <span className="text-[11px] text-gray-400 italic" title="Giá vốn được bảo mật theo vai trò, hệ thống tự động tính khi duyệt">
+                            Theo hệ thống
+                          </span>
+                        )}
                       </td>
 
                       {/* Thành tiền tổn thất */}
                       <td className="py-3 px-3 text-right font-bold text-rose-600 font-mono">
-                        {formatVnd(line.lossValue)}
+                        {line.lossValue > 0 ? (
+                          formatVnd(line.lossValue)
+                        ) : (
+                          <span className="text-[10px] text-gray-400 font-normal">Tự động tính khi duyệt</span>
+                        )}
                       </td>
 
                       {/* Ghi chú */}
