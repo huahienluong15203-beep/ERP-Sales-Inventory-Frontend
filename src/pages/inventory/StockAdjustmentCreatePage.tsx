@@ -628,9 +628,6 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                 <Package size={15} className="text-orange-600" />
                 <span>Danh Sách Mặt Hàng Điều Chỉnh Giảm Tồn Kho</span>
               </h2>
-              <p className="text-[11px] text-gray-500">
-                Giá trị tổn thất tự động tính dựa trên Đơn giá vốn (Cost Price) × Số lượng giảm
-              </p>
             </div>
 
             {/* Dropdown Thêm sản phẩm */}
@@ -850,14 +847,16 @@ export const StockAdjustmentCreatePage: React.FC = () => {
               {lines.length > 0 && (
                 <tfoot className="bg-gray-50/80 font-bold border-t border-gray-200">
                   <tr>
-                    <td colSpan={4} className="py-3 px-3.5 text-right text-gray-700">
+                    <td colSpan={4} className="py-3 px-3.5 text-left text-gray-800 text-xs uppercase tracking-wider">
                       TỔNG CỘNG HÀNG GIẢM:
                     </td>
-                    <td className="py-3 px-3 text-right text-gray-900">
-                      {totalQuantity.toLocaleString('vi-VN')}
+                    <td className="py-3 px-3 text-right text-gray-900 font-mono font-bold text-xs">
+                      <div className="w-24 ml-auto px-2 text-right">
+                        {totalQuantity.toLocaleString('vi-VN')}
+                      </div>
                     </td>
-                    <td></td>
-                    <td className="py-3 px-3 text-right text-rose-600 text-sm font-mono font-bold">
+                    <td className="py-3 px-3"></td>
+                    <td className="py-3 px-3 text-right text-rose-600 text-xs font-mono font-bold">
                       {formatVnd(totalLossValue)}
                     </td>
                     <td colSpan={2}></td>

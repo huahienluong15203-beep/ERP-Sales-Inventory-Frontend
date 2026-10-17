@@ -536,30 +536,23 @@ export const StockAdjustmentListPage: React.FC = () => {
 
                           {/* Duyệt phiếu (AC3) */}
                           {isPending && isWhManager && (
-                            <div className="relative group">
-                              <button
-                                type="button"
-                                disabled={isCreator}
-                                onClick={() => setApprovingItem(item)}
-                                className={`p-1.5 rounded-lg text-white font-bold transition flex items-center gap-1 ${
-                                  isCreator
-                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
-                                    : 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer'
-                                }`}
-                                title={
-                                  isCreator
-                                    ? 'Bạn là người lập phiếu. Cần Quản lý kho khác duyệt độc lập (AC3).'
-                                    : 'Phê duyệt phiếu điều chỉnh'
-                                }
-                              >
-                                <CheckCircle size={13} />
-                              </button>
-                              {isCreator && (
-                                <div className="absolute bottom-full right-0 mb-1 hidden group-hover:block z-30 w-48 p-1.5 bg-gray-900 text-white text-[10px] rounded shadow-lg">
-                                  Quy tắc S8-03: Người lập và người duyệt không được là một.
-                                </div>
-                              )}
-                            </div>
+                            <button
+                              type="button"
+                              disabled={isCreator}
+                              onClick={() => setApprovingItem(item)}
+                              className={`p-1.5 rounded-lg text-white font-bold transition flex items-center gap-1 ${
+                                isCreator
+                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer'
+                              }`}
+                              title={
+                                isCreator
+                                  ? 'Bạn là người lập phiếu này'
+                                  : 'Phê duyệt phiếu điều chỉnh'
+                              }
+                            >
+                              <CheckCircle size={13} />
+                            </button>
                           )}
 
                           {/* Từ chối duyệt */}
