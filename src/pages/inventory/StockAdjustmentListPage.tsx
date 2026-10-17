@@ -269,52 +269,37 @@ export const StockAdjustmentListPage: React.FC = () => {
         </div>
       )}
 
-      {/* Header Banner */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center font-bold">
-              <FileText size={20} />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">Phiếu Điều Chỉnh Tồn Kho</h1>
-              <p className="text-xs text-gray-500">
-                Xử lý hao hụt, hàng hỏng, mất hoặc hết hạn huỷ bỏ có quy trình 2 bước phê duyệt minh bạch (S8-03)
-              </p>
-            </div>
+      {/* Filter Bar with Action Buttons */}
+      <div className="bg-white rounded-2xl border border-gray-200/80 p-4 shadow-2xs space-y-3">
+        <div className="flex items-center justify-between text-xs font-bold text-gray-700">
+          <div className="flex items-center gap-2">
+            <Filter size={14} className="text-orange-500" />
+            <span>Bộ lọc tìm kiếm</span>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={loadAdjustments}
-            disabled={loading}
-            className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer"
-            title="Làm mới dữ liệu"
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            <span>Làm mới</span>
-          </button>
-
-          {canCreate && (
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => navigate('/inventory/stock-adjustments/create')}
-              className="px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+              onClick={loadAdjustments}
+              disabled={loading}
+              className="px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 font-medium text-xs flex items-center gap-1.5 transition cursor-pointer"
+              title="Làm mới dữ liệu"
             >
-              <Plus size={15} />
-              <span>Lập Phiếu Điều Chỉnh Mới</span>
+              <RefreshCw size={13} className={loading ? 'animate-spin text-orange-500' : ''} />
+              <span>Làm mới</span>
             </button>
-          )}
-        </div>
-      </div>
 
-      {/* Filter Bar */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 p-4 shadow-2xs space-y-3">
-        <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
-          <Filter size={14} className="text-orange-500" />
-          <span>Bộ lọc tìm kiếm</span>
+            {canCreate && (
+              <button
+                type="button"
+                onClick={() => navigate('/inventory/stock-adjustments/create')}
+                className="px-3.5 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+              >
+                <Plus size={14} />
+                <span>Lập Phiếu Điều Chỉnh Mới</span>
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5">

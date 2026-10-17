@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from '../../routes/Router';
-import { useAuth } from '../../contexts/AuthContext';
 import {
   ArrowLeft,
   Warehouse as WarehouseIcon,
@@ -9,7 +8,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   Calendar,
-  DollarSign,
   Package,
   Info,
   Clock
@@ -42,7 +40,6 @@ interface AdjustmentFormLine {
 
 export const StockAdjustmentCreatePage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   // Kho hàng & Thông tin chung
   const [warehouses, setWarehouses] = useState<any[]>([]);
@@ -364,35 +361,12 @@ export const StockAdjustmentCreatePage: React.FC = () => {
           <span>Quay lại danh sách phiếu điều chỉnh</span>
         </button>
 
-        <div className="text-right">
-          <span className="text-[11px] text-gray-400">Người lập phiếu:</span>
-          <span className="text-xs font-bold text-gray-800 ml-1.5">{user?.username || 'Thủ kho'}</span>
-        </div>
-      </div>
-
-      {/* Main Header Card */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Khai Báo Phiếu Điều Chỉnh Tồn Kho</h1>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Quy trình 2 bước phê duyệt minh bạch • Xử lý hàng hỏng, mất mát, hết hạn huỷ bỏ (S8-03)
-          </p>
-        </div>
-
-        {/* Tổng tổn thất Card */}
-        <div className="p-3.5 px-5 rounded-2xl bg-rose-50 border border-rose-200 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
-            <DollarSign size={22} />
+        {totalLossValue > 0 && (
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-xs">
+            <span className="font-semibold text-rose-700">Tổng tổn thất dự kiến:</span>
+            <span className="font-bold text-rose-700 font-mono">{formatVnd(totalLossValue)}</span>
           </div>
-          <div>
-            <span className="block text-[11px] font-bold text-rose-700 uppercase tracking-wider">
-              Tổng Giá Trị Tổn Thất
-            </span>
-            <span className="text-lg font-black text-rose-700 font-mono">
-              {formatVnd(totalLossValue)}
-            </span>
-          </div>
-        </div>
+        )}
       </div>
 
       {submitSuccess && (
