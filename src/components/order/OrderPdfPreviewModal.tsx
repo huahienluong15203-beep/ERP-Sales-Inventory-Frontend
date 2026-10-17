@@ -301,10 +301,10 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
         </div>
 
         {/* Khung nội dung in khổ A4 (Có thể cuộn xem trước, in sắc nét) */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-gray-100/60 print:p-0 print:bg-white print:overflow-visible">
+        <div className="flex-1 overflow-y-auto p-2 sm:p-4 bg-gray-100/60 print:p-0 print:bg-white print:overflow-visible flex justify-center">
           <div
             ref={printContentRef}
-            className="max-w-[760px] mx-auto bg-white p-6 sm:p-10 rounded-xl shadow-xs border border-gray-200/80 print:border-none print:shadow-none print:p-0 print:max-w-none text-gray-900 space-y-6 relative overflow-hidden"
+            className="w-full max-w-[760px] transform scale-[0.88] sm:scale-[0.92] origin-top bg-white p-6 sm:p-8 rounded-xl shadow-xs border border-gray-200/80 print:border-none print:shadow-none print:p-0 print:max-w-none print:scale-100 text-gray-900 space-y-5 relative overflow-hidden"
           >
             {/* S4-08: Dấu chìm watermark cho đơn nháp / đơn huỷ / bị từ chối */}
             {stamp && (
@@ -449,7 +449,8 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
               <div className="text-xs text-gray-500 max-w-sm space-y-1">
                 {order.note && (
                   <p className="italic text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-200">
-                    <strong>Ghi chú đơn:</strong> {order.note}
+                    <strong>Ghi chú đơn:</strong>{' '}
+                    {order.note.replace(/\s*\(S\d+-\d+\)/gi, '').replace(/\s*\(AC\s*\d+\)/gi, '').trim()}
                   </p>
                 )}
                 <p className="text-[10px] text-gray-400">

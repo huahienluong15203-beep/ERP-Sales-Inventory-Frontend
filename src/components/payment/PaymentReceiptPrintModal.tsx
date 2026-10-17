@@ -85,7 +85,7 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
         <div className="flex-1 overflow-y-auto p-6 sm:p-10 bg-slate-100/50 print:p-0 print:bg-white print:overflow-visible">
           <div
             id="payment-receipt-print-area"
-            className="w-full max-w-[800px] mx-auto bg-white p-8 sm:p-12 shadow-sm border border-gray-200 rounded-xl print:shadow-none print:border-none print:p-0 print:m-0"
+            className="w-full max-w-[800px] mx-auto bg-white p-8 sm:p-12 shadow-sm border border-gray-200 rounded-xl scale-[0.88] sm:scale-[0.92] origin-top print:scale-100 print:shadow-none print:border-none print:p-0 print:m-0"
           >
             {/* Header thông tin doanh nghiệp & mẫu số Bộ Tài Chính */}
             <div className="flex justify-between items-start border-b border-gray-300 pb-4 mb-6">

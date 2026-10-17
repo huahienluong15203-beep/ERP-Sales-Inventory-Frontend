@@ -155,6 +155,14 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
         setInvoices(invs);
         // Reset phân bổ chỉ định
         setSpecificAllocations({});
+        const remaining = invs.reduce((sum, item) => sum + (item.remainingAmount || 0), 0);
+        if (remaining > 0) {
+          setAmount(remaining);
+          setAmountInputStr(remaining.toLocaleString('vi-VN'));
+        } else {
+          setAmount(0);
+          setAmountInputStr('');
+        }
       })
       .catch((err) => {
         console.warn('Lỗi tải hoá đơn công nợ của khách hàng:', err);
@@ -314,7 +322,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             fullName: user?.fullName || collectorName.trim() || 'Nhân viên kinh doanh'
           }
         );
-        showToast('Ghi nhận thu tiền tại tuyến thành công! Trạng thái: Chờ nộp quỹ.', 'success');
+        showToast('Thành công', 'Ghi nhận thu tiền tại tuyến thành công! Trạng thái: Chờ nộp quỹ.', 'success');
       } else {
         const specificArray =
           allocationType === 'SPECIFIC'
@@ -348,7 +356,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             fullName: user?.fullName || 'Kế toán'
           }
         );
-        showToast('Ghi nhận phiếu thu và đối trừ công nợ thành công!', 'success');
+        showToast('Thành công', 'Ghi nhận phiếu thu và đối trừ công nợ thành công!', 'success');
       }
 
       if (onSuccess) {

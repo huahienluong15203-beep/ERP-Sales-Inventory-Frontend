@@ -460,9 +460,19 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
                         >
                           <Minus size={13} />
                         </button>
-                        <span className="w-10 h-full flex items-center justify-center text-xs font-bold text-gray-900 bg-white border-x border-orange-200 font-mono">
-                          {cartItem.quantity}
-                        </span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={cartItem.quantity}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val) && val > 0) {
+                              onUpdateQuantity(cartItem.id, val);
+                            }
+                          }}
+                          className="w-12 h-full text-center text-xs font-bold text-gray-900 bg-white border-x border-orange-200 font-mono focus:outline-none focus:bg-orange-50/50"
+                          title="Nhập số lượng trực tiếp"
+                        />
                         <button
                           type="button"
                           disabled={isMaxInCart}

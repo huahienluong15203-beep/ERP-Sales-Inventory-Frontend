@@ -103,7 +103,12 @@ export const OrderApprovalActionModal: React.FC<OrderApprovalActionModalProps> =
     try {
       const targetId = order.id;
       if (isApprove) {
-        await approveOrder(targetId, comment, confirmedDeliveryDate || undefined);
+        if (!confirmedDeliveryDate || !confirmedDeliveryDate.trim()) {
+          setValidationError('Bắt buộc phải nhập Ngày giao hàng xác nhận trước khi duyệt đơn!');
+          setSubmitting(false);
+          return;
+        }
+        await approveOrder(targetId, comment, confirmedDeliveryDate.trim());
         showToast(
           'Duyệt đơn thành công',
           `Đã phê duyệt đơn hàng [${order.code || targetId}]. Ngày giao xác nhận: ${formatDateVN(confirmedDeliveryDate) || 'Theo kế hoạch'}. Đơn hàng chuyển sang giữ chỗ kho để xuất hàng.`,
@@ -261,7 +266,7 @@ export const OrderApprovalActionModal: React.FC<OrderApprovalActionModalProps> =
               <label className="block text-xs font-bold text-gray-700 flex items-center justify-between">
                 <span className="flex items-center gap-1">
                   <Calendar size={13} className="text-emerald-600" />
-                  <span>Ngày giao hàng xác nhận</span>
+                  <span>Ngày giao hàng xác nhận <span className="text-rose-600">*</span></span>
                 </span>
                 <span className="text-[10px] text-gray-400 font-normal">
                   Kho và xe sẽ giao theo ngày này

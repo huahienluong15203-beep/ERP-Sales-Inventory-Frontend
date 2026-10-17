@@ -38,6 +38,47 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
   const isDecrease = log.deltaType === 'decrease';
   const isIncrease = log.deltaType === 'increase';
 
+  const STATUS_TRANSLATIONS: Record<string, string> = {
+    // Trạng thái đơn hàng
+    'PENDING_APPROVAL': 'Chờ phê duyệt',
+    'APPROVED': 'Đã duyệt',
+    'PICKING': 'Đang soạn hàng',
+    'DISPATCHED': 'Đã xuất kho',
+    'DELIVERED': 'Đã giao hàng',
+    'DELIVERY_FAILED': 'Giao thất bại',
+    'COMPLETED': 'Đã hoàn thành',
+    'CLOSED': 'Đã hoàn thành',
+    'CANCELLED': 'Đã hủy',
+    'REJECTED': 'Từ chối duyệt',
+    'DRAFT': 'Bản nháp',
+    // Trạng thái đối tượng / kho
+    'ACTIVE': 'Đang hoạt động',
+    'INACTIVE': 'Ngừng hoạt động',
+    'LOCKED': 'Đã khóa',
+    'EXPIRED': 'Đã hết hạn',
+    'SAFE': 'An toàn',
+    'NEAR_EXPIRATION': 'Cận hạn',
+    'OUT_OF_STOCK': 'Hết hàng',
+    // Loại thực thể
+    'SALES_ORDER': 'Đơn đặt hàng',
+    'CUSTOMER': 'Đại lý / Khách hàng',
+    'PRODUCT': 'Sản phẩm',
+    'PRODUCT_LOT': 'Lô sản phẩm',
+    'GOODS_RECEIPT': 'Phiếu nhập kho',
+    'STOCK_TRANSFER': 'Phiếu chuyển kho',
+    'STOCK_TAKE': 'Phiếu kiểm kê',
+    'STOCK_ADJUSTMENT': 'Phiếu điều chỉnh tồn',
+    'PRICE_LIST': 'Bảng giá',
+    'SALES_INVOICE': 'Hóa đơn bán hàng',
+    'PAYMENT_RECEIPT': 'Phiếu thu tiền',
+    'SALES_RETURN': 'Phiếu trả hàng'
+  };
+
+  const translateEnum = (val: string): string => {
+    const trimmed = val.trim();
+    return STATUS_TRANSLATIONS[trimmed] || STATUS_TRANSLATIONS[trimmed.toUpperCase()] || trimmed;
+  };
+
   // Hàm format phòng thủ bảo đảm hiển thị thân thiện tiếng Việt kể cả khi dữ liệu là JSON thô
   const formatDetailValue = (val: string | undefined): string => {
     if (!val || val === '—') return '—';
@@ -64,7 +105,7 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
         // Fallback giữ nguyên chuỗi
       }
     }
-    return val;
+    return translateEnum(val);
   };
 
   const formatDeltaValue = (delta: string | undefined): string => {
@@ -86,7 +127,15 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
         // Fallback
       }
     }
-    return delta;
+    // Dịch các mũi tên chuyển trạng thái (PENDING_APPROVAL ➔ APPROVED hoặc PENDING_APPROVAL -> APPROVED)
+    if (delta.includes('➔') || delta.includes('->')) {
+      const sep = delta.includes('➔') ? '➔' : '->';
+      const parts = delta.split(sep).map((s) => s.trim());
+      if (parts.length === 2) {
+        return `${translateEnum(parts[0])} → ${translateEnum(parts[1])}`;
+      }
+    }
+    return translateEnum(delta);
   };
 
   const displayOld = formatDetailValue(log.oldValue);
@@ -180,7 +229,7 @@ Lý Do & Căn Cứ: ${log.reason}`;
                 {log.moduleLabel}
               </span>
               <h4 className="text-base font-bold text-slate-900 mt-1.5">
-                {log.targetName || log.targetType}
+                {log.targetName ? translateEnum(log.targetName) : translateEnum(log.targetType)}
               </h4>
               <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
                 <span>
@@ -197,7 +246,7 @@ Lý Do & Căn Cứ: ${log.reason}`;
                 )}
                 <span>•</span>
                 <span>
-                  Loại thực thể: <strong className="text-slate-700">{log.targetType}</strong>
+                  Loại thực thể: <strong className="text-slate-700">{translateEnum(log.targetType)}</strong>
                 </span>
               </div>
             </div>
