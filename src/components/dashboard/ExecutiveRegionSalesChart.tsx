@@ -98,35 +98,25 @@ export const ExecutiveRegionSalesChart: React.FC<ExecutiveRegionSalesChartProps>
   }, [data]);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-2xs space-y-4">
-      <div>
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold text-gray-900">Cơ Cấu Doanh Số Theo Khu Vực</h2>
-          {data?.fromCache && (
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-              Cache Hit
-            </span>
-          )}
-        </div>
-        <p className="text-xs text-gray-500 mt-0.5">
-          Tỷ trọng phân bổ doanh thu theo từng địa bàn bán hàng
-        </p>
+    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-2xs flex flex-col justify-between h-full space-y-4">
+      <div className="flex items-center min-h-[36px]">
+        <h2 className="text-sm font-bold text-gray-900">Cơ Cấu Doanh Số Theo Khu Vực</h2>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-        {/* Doughnut Chart */}
-        <div className="sm:col-span-5 relative h-52 flex items-center justify-center">
-          {loading ? (
-            <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
-              Đang tải...
-            </div>
-          ) : !data || !data.regions || data.regions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-xs text-gray-400">
-              <MapPin size={24} className="text-gray-300 mb-1" />
-              <span>Chưa có doanh số theo khu vực</span>
-            </div>
-          ) : (
-            <>
+      <div className="relative flex-1 min-h-[280px] w-full flex flex-col justify-center">
+        {loading ? (
+          <div className="h-full min-h-[240px] flex items-center justify-center text-xs text-gray-400">
+            <span>Đang tải...</span>
+          </div>
+        ) : !data || !data.regions || data.regions.length === 0 ? (
+          <div className="h-full min-h-[240px] flex flex-col items-center justify-center text-xs text-gray-400">
+            <MapPin size={28} className="text-gray-300 mb-1.5" />
+            <span>Chưa có doanh số theo khu vực</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center w-full">
+            {/* Doughnut Chart */}
+            <div className="sm:col-span-5 relative h-56 flex items-center justify-center">
               <canvas ref={canvasRef} />
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -136,49 +126,49 @@ export const ExecutiveRegionSalesChart: React.FC<ExecutiveRegionSalesChartProps>
                   {formatVnd(data.totalSales || 0)}
                 </span>
               </div>
-            </>
-          )}
-        </div>
+            </div>
 
-        {/* Region Breakdown List */}
-        <div className="sm:col-span-7 space-y-2 max-h-56 overflow-y-auto pr-1">
-          {data?.regions?.map((r, idx) => {
-            const color = REGION_COLORS[idx % REGION_COLORS.length];
-            return (
-              <div key={r.regionId || idx} className="p-2 rounded-xl bg-gray-50/70 border border-gray-100 text-xs space-y-1">
-                <div className="flex items-center justify-between font-medium">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: color }}
-                    />
-                    <span className="font-bold text-gray-800">{r.regionName}</span>
-                    <span className="text-[10px] text-gray-400">({r.orderCount} đơn)</span>
-                  </div>
-                  <div className="font-mono font-bold text-gray-900">
-                    {formatVnd(r.amount)}
-                  </div>
-                </div>
+            {/* Region Breakdown List */}
+            <div className="sm:col-span-7 space-y-2 max-h-56 overflow-y-auto pr-1">
+              {data.regions.map((r, idx) => {
+                const color = REGION_COLORS[idx % REGION_COLORS.length];
+                return (
+                  <div key={r.regionId || idx} className="p-2 rounded-xl bg-gray-50/70 border border-gray-100 text-xs space-y-1">
+                    <div className="flex items-center justify-between font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: color }}
+                        />
+                        <span className="font-bold text-gray-800">{r.regionName}</span>
+                        <span className="text-[10px] text-gray-400">({r.orderCount} đơn)</span>
+                      </div>
+                      <div className="font-mono font-bold text-gray-900">
+                        {formatVnd(r.amount)}
+                      </div>
+                    </div>
 
-                {/* Progress bar percentage */}
-                <div className="flex items-center gap-2">
-                  <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${Math.min(100, Math.max(0, r.percentage))}%`,
-                        backgroundColor: color
-                      }}
-                    />
+                    {/* Progress bar percentage */}
+                    <div className="flex items-center gap-2">
+                      <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${Math.min(100, Math.max(0, r.percentage))}%`,
+                            backgroundColor: color
+                          }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-bold text-gray-600 shrink-0 w-10 text-right">
+                        {r.percentage.toFixed(1)}%
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-bold text-gray-600 shrink-0 w-10 text-right">
-                    {r.percentage.toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

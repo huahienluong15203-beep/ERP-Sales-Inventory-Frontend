@@ -3,7 +3,7 @@ import {
   Chart as ChartJS,
   registerables
 } from 'chart.js';
-import { Calendar, DollarSign, ShoppingCart } from 'lucide-react';
+import { Calendar, DollarSign, ShoppingCart, RefreshCw } from 'lucide-react';
 import type { ExecutiveDailySales } from '../../types/dashboard';
 
 ChartJS.register(...registerables);
@@ -15,6 +15,8 @@ interface ExecutiveDailySalesChartProps {
   onMonthChange: (month: number) => void;
   onYearChange: (year: number) => void;
   loading?: boolean;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
 export const ExecutiveDailySalesChart: React.FC<ExecutiveDailySalesChartProps> = ({
@@ -23,7 +25,9 @@ export const ExecutiveDailySalesChart: React.FC<ExecutiveDailySalesChartProps> =
   selectedYear,
   onMonthChange,
   onYearChange,
-  loading = false
+  loading = false,
+  onRefresh,
+  refreshing = false
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartInstanceRef = useRef<ChartJS | null>(null);
@@ -185,21 +189,11 @@ export const ExecutiveDailySalesChart: React.FC<ExecutiveDailySalesChartProps> =
   }, [data]);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-2xs space-y-4">
+    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-2xs flex flex-col justify-between h-full space-y-4">
       {/* Header and Filter Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-h-[36px]">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-bold text-gray-900">Doanh Số Theo Ngày Trong Tháng</h2>
-            {data?.fromCache && (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                Cache Hit
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Biểu đồ xu hướng doanh thu hàng ngày kết hợp số lượng đơn hàng phát sinh
-          </p>
+          <h2 className="text-sm font-bold text-gray-900">Doanh Số Theo Ngày Trong Tháng</h2>
         </div>
 
         {/* BỘ LỌC NGÀY THÁNG TRÊN BIỂU ĐỒ (AC 2 & TEST FE) */}
@@ -237,6 +231,18 @@ export const ExecutiveDailySalesChart: React.FC<ExecutiveDailySalesChartProps> =
               ))}
             </select>
           </div>
+
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={loading || refreshing}
+              className="p-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-gray-600 hover:text-orange-600 transition cursor-pointer disabled:opacity-50"
+              title="Làm mới dữ liệu"
+            >
+              <RefreshCw size={14} className={refreshing ? 'animate-spin text-orange-500' : ''} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -272,18 +278,18 @@ export const ExecutiveDailySalesChart: React.FC<ExecutiveDailySalesChartProps> =
       )}
 
       {/* Chart Canvas */}
-      <div className="relative h-72 w-full">
+      <div className="relative flex-1 min-h-[280px] w-full flex flex-col justify-center">
         {loading ? (
           <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-2xs z-10 text-xs font-medium text-gray-400">
             <span>Đang tải dữ liệu biểu đồ...</span>
           </div>
         ) : !data || !data.points || data.points.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-xs text-gray-400">
+          <div className="h-full min-h-[240px] flex flex-col items-center justify-center text-xs text-gray-400">
             <Calendar size={28} className="text-gray-300 mb-1.5" />
             <span>Chưa có phát sinh doanh số trong tháng {selectedMonth}/{selectedYear}</span>
           </div>
         ) : null}
-        <canvas ref={canvasRef} />
+        <canvas ref={canvasRef} className={!data || !data.points || data.points.length === 0 ? 'hidden' : 'w-full h-full'} />
       </div>
     </div>
   );

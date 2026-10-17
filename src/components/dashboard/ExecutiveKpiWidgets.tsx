@@ -6,9 +6,7 @@ import {
   Clock,
   Truck,
   AlertTriangle,
-  Boxes,
-  Zap,
-  RefreshCw
+  Boxes
 } from 'lucide-react';
 import type { ExecutiveDashboardSummary } from '../../types/dashboard';
 
@@ -23,10 +21,6 @@ interface ExecutiveKpiWidgetsProps {
 
 export const ExecutiveKpiWidgets: React.FC<ExecutiveKpiWidgetsProps> = ({
   summary,
-  responseTimeMs = 0,
-  fromCache = false,
-  onRefreshCache,
-  refreshing = false,
   loading = false
 }) => {
   const navigate = useNavigate();
@@ -37,40 +31,6 @@ export const ExecutiveKpiWidgets: React.FC<ExecutiveKpiWidgetsProps> = ({
 
   return (
     <div className="space-y-3">
-      {/* Performance & Cache Status Bar (AC 4: Tải dưới 2 giây) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200/80 text-xs text-gray-600">
-        <div className="flex items-center gap-2">
-          <Zap size={14} className="text-amber-500" />
-          <span>
-            Thời gian phản hồi:{' '}
-            <strong className={responseTimeMs > 2000 ? 'text-amber-600' : 'text-emerald-600'}>
-              {responseTimeMs} ms
-            </strong>{' '}
-            (Tiêu chí AC4 &lt; 2.0s)
-          </span>
-          <span className="text-gray-300">•</span>
-          <span className="inline-flex items-center gap-1 font-medium">
-            Bộ nhớ đệm:{' '}
-            <strong className={fromCache ? 'text-blue-600' : 'text-gray-700'}>
-              {fromCache ? 'Đã lưu Cache (Tối ưu tải nhanh)' : 'Tính toán thời gian thực'}
-            </strong>
-          </span>
-        </div>
-
-        {onRefreshCache && (
-          <button
-            type="button"
-            onClick={onRefreshCache}
-            disabled={refreshing || loading}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-700 font-bold transition cursor-pointer disabled:opacity-50 text-[11px]"
-            title="Làm mới bộ đệm dữ liệu"
-          >
-            <RefreshCw size={12} className={refreshing ? 'animate-spin text-orange-500' : ''} />
-            <span>{refreshing ? 'Đang làm mới...' : 'Làm mới Cache'}</span>
-          </button>
-        )}
-      </div>
-
       {/* 6 Thẻ chỉ số điều hành (AC 1) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         {/* 1. Doanh số hôm nay */}

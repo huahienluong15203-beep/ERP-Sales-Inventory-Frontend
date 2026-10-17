@@ -381,34 +381,6 @@ export const DashboardPage: React.FC = () => {
       {/* ================= S8-05 EXECUTIVE SALES & INVENTORY DASHBOARD ================= */}
       {isExecutiveRole && (
         <div className="space-y-4">
-          {/* Header Title Section */}
-          <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse" />
-                <h1 className="text-lg font-bold text-gray-900">
-                  Dashboard Điều Hành Bán Hàng & Tồn Kho (S8-05)
-                </h1>
-              </div>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Nắm bắt toàn cảnh bán hàng, tiến độ đơn hàng và công nợ đại lý mỗi sáng trong 2 phút
-              </p>
-            </div>
-
-            <div className="text-right text-xs text-gray-500">
-              <span className="block font-medium">Vai trò quản trị:</span>
-              <span className="font-bold text-orange-600">
-                {currentRole === 'ROLE_SALES_MANAGER'
-                  ? 'Quản lý kinh doanh'
-                  : currentRole === 'ROLE_WH_MANAGER'
-                  ? 'Quản lý kho'
-                  : currentRole === 'ROLE_ACCOUNTANT'
-                  ? 'Kế toán công nợ'
-                  : 'Quản trị viên (Admin)'}
-              </span>
-            </div>
-          </div>
-
           {/* 1. THẺ CHỈ SỐ ĐIỀU HÀNH (AC 1 & AC 4 TẢI NHANH < 2 GIÂY) */}
           <ExecutiveKpiWidgets
             summary={executiveOverview?.summary || null}
@@ -420,19 +392,21 @@ export const DashboardPage: React.FC = () => {
           />
 
           {/* 2. BIỂU ĐỒ DOANH SỐ THEO NGÀY (CHART.JS) & CƠ CẤU KHU VỰC (AC 2) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <div className="lg:col-span-7">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+            <div className="lg:col-span-7 flex flex-col">
               <ExecutiveDailySalesChart
                 data={executiveOverview?.dailySales || null}
                 selectedMonth={chartMonth}
                 selectedYear={chartYear}
                 onMonthChange={handleMonthChange}
                 onYearChange={handleYearChange}
+                onRefresh={handleRefreshCache}
+                refreshing={refreshingCache}
                 loading={dailySalesLoading || executiveLoading}
               />
             </div>
 
-            <div className="lg:col-span-5">
+            <div className="lg:col-span-5 flex flex-col">
               <ExecutiveRegionSalesChart
                 data={executiveOverview?.regionSales || null}
                 loading={dailySalesLoading || executiveLoading}
