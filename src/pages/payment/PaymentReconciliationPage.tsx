@@ -158,40 +158,26 @@ export const PaymentReconciliationPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-16">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
+      {/* Header tác vụ */}
+      <div className="flex items-center justify-end gap-2.5">
+        <button
+          type="button"
+          onClick={loadData}
+          disabled={loading}
+          className="px-3.5 py-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold text-xs flex items-center gap-2 transition active:scale-95 cursor-pointer shadow-sm"
+        >
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          <span>Làm mới</span>
+        </button>
 
-            <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white">
-              Đối chiếu thu tiền theo tuyến & Nộp quỹ
-            </h1>
-          </div>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Ghi nhận khoản thu tại cửa hàng kèm ảnh biên lai, đối chiếu tiền đã thu với tiền đã nộp mà không tranh cãi.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={loadData}
-            disabled={loading}
-            className="px-3.5 py-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold text-xs flex items-center gap-2 transition active:scale-95 cursor-pointer shadow-sm"
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            <span>Làm mới</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowCollectModal(true)}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 cursor-pointer shadow-md shadow-emerald-600/20"
-          >
-            <Plus size={16} />
-            <span>Thu tiền tại tuyến</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowCollectModal(true)}
+          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 cursor-pointer shadow-md shadow-emerald-600/20"
+        >
+          <Plus size={16} />
+          <span>Thu tiền tại tuyến</span>
+        </button>
       </div>
 
       {/* KPI Cards */}

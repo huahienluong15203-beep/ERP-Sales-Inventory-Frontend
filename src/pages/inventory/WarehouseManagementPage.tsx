@@ -274,43 +274,32 @@ export const WarehouseManagementPage: React.FC = () => {
       ========================================================================= */}
       {!selectedWarehouse ? (
         <div className="space-y-6">
-          {/* Header Trang & Nút thao tác chính */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                Danh mục kho & vị trí
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                Quản lý hệ thống kho hàng và cấu hình sơ đồ phân khu, kệ, tầng giá, ô chứa
-              </p>
-            </div>
+          {/* Header Nút thao tác tinh gọn */}
+          <div className="flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              onClick={() => loadWarehouses()}
+              disabled={loadingWarehouses}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-xs transition-all"
+              title="Làm mới dữ liệu"
+            >
+              <RefreshCw size={16} className={loadingWarehouses ? 'animate-spin' : ''} />
+              <span className="hidden sm:inline">Làm mới</span>
+            </button>
 
-            <div className="flex items-center gap-2.5 self-end sm:self-auto">
+            {canManage && (
               <button
                 type="button"
-                onClick={() => loadWarehouses()}
-                disabled={loadingWarehouses}
-                className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-xs transition-all"
-                title="Làm mới dữ liệu"
+                onClick={() => {
+                  setWarehouseToEdit(null);
+                  setIsWarehouseModalOpen(true);
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold shadow-md shadow-orange-600/20 hover:shadow-orange-600/30 transition-all active:scale-[0.98]"
               >
-                <RefreshCw size={16} className={loadingWarehouses ? 'animate-spin' : ''} />
-                <span className="hidden sm:inline">Làm mới</span>
+                <Plus size={18} />
+                <span>Thêm kho mới</span>
               </button>
-
-              {canManage && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWarehouseToEdit(null);
-                    setIsWarehouseModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold shadow-md shadow-orange-600/20 hover:shadow-orange-600/30 transition-all active:scale-[0.98]"
-                >
-                  <Plus size={18} />
-                  <span>Thêm kho mới</span>
-                </button>
-              )}
-            </div>
+            )}
           </div>
 
           {/* Thẻ KPI Thống Kê Tổng Quan */}

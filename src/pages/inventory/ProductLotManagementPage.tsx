@@ -170,47 +170,30 @@ export const ProductLotManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6 antialiased max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">
-      {/* 1. Header Trang */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-[#F85606] text-white flex items-center justify-center shadow-xs">
-              <Layers size={20} />
-            </div>
-            <h1 className="text-xl font-black text-gray-900 tracking-tight">
-              Theo dõi Lô & Hạn sử dụng
-            </h1>
-          </div>
-          <p className="text-xs text-gray-500 mt-1 pl-11">
-            Quản lý hạn sử dụng, tính tồn theo lô, cảnh báo hạn dùng và kiểm soát khóa lô xuất kho
-          </p>
-        </div>
+      {/* 1. Header tác vụ tinh gọn */}
+      <div className="flex items-center justify-end gap-2.5">
+        <button
+          type="button"
+          onClick={() => {
+            loadLots();
+            loadSummary();
+          }}
+          className="p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-2xs transition cursor-pointer"
+          title="Tải lại dữ liệu"
+        >
+          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+        </button>
 
-        {/* Nút tác vụ */}
-        <div className="flex items-center gap-2.5">
+        {isWhManagerOrAdmin && (
           <button
             type="button"
-            onClick={() => {
-              loadLots();
-              loadSummary();
-            }}
-            className="p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-2xs transition cursor-pointer"
-            title="Tải lại dữ liệu"
+            onClick={() => navigate('/inventory/lots/create')}
+            className="px-4 py-2 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer"
           >
-            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            <Plus size={15} />
+            <span>Khai báo lô mới</span>
           </button>
-
-          {isWhManagerOrAdmin && (
-            <button
-              type="button"
-              onClick={() => navigate('/inventory/lots/create')}
-              className="px-4 py-2 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer"
-            >
-              <Plus size={15} />
-              <span>Khai báo lô mới</span>
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* 2. Thẻ Thống kê Tổng quan (KPI Cards) */}

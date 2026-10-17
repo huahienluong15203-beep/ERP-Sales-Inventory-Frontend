@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ArrowLeft,
   RefreshCw,
   FileSpreadsheet,
   Search,
@@ -89,19 +88,8 @@ export const DebtAgingLedgerPage: React.FC = () => {
 
   return (
     <div className="space-y-5 antialiased max-w-7xl mx-auto pb-16">
-      {/* 1. Header tinh gọn chỉ nút Quay lại và nút thao tác */}
-      <div className="flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={() => navigate('/invoices')}
-          className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
-          title="Quay lại danh sách hoá đơn"
-        >
-          <ArrowLeft size={16} />
-          <span>Quay lại</span>
-        </button>
-
-        <div className="flex items-center gap-2.5">
+      {/* 1. Header thao tác tinh gọn */}
+      <div className="flex items-center justify-end gap-2.5">
           <button
             type="button"
             onClick={() => loadData(page)}
@@ -152,7 +140,6 @@ export const DebtAgingLedgerPage: React.FC = () => {
             <span>Đối chiếu công nợ</span>
           </button>
         </div>
-      </div>
 
       {/* 2. Thẻ thống kê KPI tổng quan công nợ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
