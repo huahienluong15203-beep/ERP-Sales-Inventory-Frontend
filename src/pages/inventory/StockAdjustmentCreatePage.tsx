@@ -441,24 +441,18 @@ export const StockAdjustmentCreatePage: React.FC = () => {
   });
 
   return (
-    <div className="erp-fade-in space-y-4 max-w-6xl mx-auto pb-12">
+    <div className="erp-fade-in space-y-4 w-full pb-12">
       {/* Top Navigation */}
       <div className="flex items-center justify-between">
         <button
           type="button"
           onClick={() => navigate('/inventory/stock-adjustments')}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-600 hover:text-orange-600 transition cursor-pointer"
+          className="px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:bg-orange-50 hover:border-orange-200 text-gray-700 hover:text-[#F85606] font-bold text-xs inline-flex items-center gap-2 transition cursor-pointer shadow-2xs active:scale-95"
+          id="stock-adjustment-back-btn"
         >
-          <ArrowLeft size={16} />
-          <span>Quay lại danh sách phiếu điều chỉnh</span>
+          <ArrowLeft className="w-4 h-4" />
+          <span>Quay lại</span>
         </button>
-
-        {totalLossValue > 0 && (
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-xs">
-            <span className="font-semibold text-rose-700">Tổng tổn thất dự kiến:</span>
-            <span className="font-bold text-rose-700 font-mono">{formatVnd(totalLossValue)}</span>
-          </div>
-        )}
       </div>
 
       {submitSuccess && (
@@ -706,14 +700,14 @@ export const StockAdjustmentCreatePage: React.FC = () => {
               <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-bold">
                 <tr>
                   <th className="py-3 px-3.5 w-10 text-left">#</th>
-                  <th className="py-3 px-3 text-left min-w-[200px]">Sản Phẩm</th>
-                  <th className="py-3 px-3 text-left" style={{ minWidth: '320px', width: '340px' }}>Số Lô Hàng</th>
-                  <th className="py-3 px-3 text-right w-24">Tồn Kho</th>
-                  <th className="py-3 px-3 text-center w-28">SL Giảm</th>
-                  <th className="py-3 px-3 text-right w-28">Giá Vốn</th>
-                  <th className="py-3 px-3 text-right w-36">Thành Tiền</th>
-                  <th className="py-3 px-3 text-left" style={{ minWidth: '260px' }}>Ghi Chú</th>
-                  <th className="py-3 px-3 w-14 text-center">Xóa</th>
+                  <th className="py-3 px-3 text-left min-w-[190px]">Sản Phẩm</th>
+                  <th className="py-3 px-3 text-left w-56 min-w-[210px]">Số Lô Hàng</th>
+                  <th className="py-3 px-3 text-right w-20 whitespace-nowrap">Tồn Kho</th>
+                  <th className="py-3 px-3 text-center w-24 whitespace-nowrap">SL Giảm</th>
+                  <th className="py-3 px-3 text-right w-32 min-w-[115px] whitespace-nowrap">Giá Vốn</th>
+                  <th className="py-3 px-3 text-right w-36 min-w-[125px] whitespace-nowrap">Thành Tiền</th>
+                  <th className="py-3 px-3 text-left min-w-[160px]">Ghi Chú</th>
+                  <th className="py-3 px-2 w-12 text-center">Xóa</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -733,7 +727,7 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                       <td className="py-3 px-3.5 text-gray-400 font-medium">{idx + 1}</td>
 
                       {/* Thông tin sản phẩm */}
-                      <td className="py-3 px-3 min-w-[200px]">
+                      <td className="py-3 px-3 min-w-[190px]">
                         <div className="font-mono font-bold text-gray-900">{line.productSku}</div>
                         <div className="text-xs text-gray-700 font-medium truncate max-w-[240px]">
                           {line.productName}
@@ -741,8 +735,8 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                         <div className="text-[10px] text-gray-400">ĐVT: {line.baseUnit}</div>
                       </td>
 
-                      {/* Số lô: chỉ 1 dòng duy nhất, ô nhập dài rộng rãi 320px+ hiển thị trọn vẹn mã lô */}
-                      <td className="py-3 px-3" style={{ minWidth: '320px', width: '340px' }}>
+                      {/* Số lô: cột vừa vặn không làm tràn bảng */}
+                      <td className="py-3 px-3 w-56 min-w-[210px]">
                         {line.hasBatchManagement ? (
                           line.lotLoading ? (
                             <div className="flex items-center gap-1 text-[11px] text-gray-400">
@@ -750,16 +744,14 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                               <span>Tải lô...</span>
                             </div>
                           ) : (
-                            <div className="relative w-full" style={{ minWidth: '320px' }}>
+                            <div className="relative w-full">
                               <input
                                 type="text"
-                                size={38}
                                 list={`lot-datalist-${line.id}`}
                                 value={line.batchNumber || ''}
                                 onChange={(e) => handleLotChange(line.id, e.target.value)}
-                                placeholder="Nhập hoặc chọn số lô..."
-                                className="w-full px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs font-mono font-bold text-gray-900 focus:border-orange-500 focus:outline-none placeholder:text-gray-400 placeholder:font-sans placeholder:font-normal transition shadow-2xs"
-                                style={{ minWidth: '320px', width: '100%' }}
+                                placeholder="Nhập / chọn số lô..."
+                                className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-mono font-bold text-gray-900 focus:border-orange-500 focus:outline-none placeholder:text-gray-400 placeholder:font-sans placeholder:font-normal transition shadow-2xs"
                               />
                               <datalist id={`lot-datalist-${line.id}`}>
                                 {line.availableLots.map((lot) => (
@@ -776,12 +768,12 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                       </td>
 
                       {/* Tồn kho thực tế */}
-                      <td className="py-3 px-3 text-right font-medium text-gray-600">
+                      <td className="py-3 px-3 text-right font-medium text-gray-600 whitespace-nowrap">
                         {line.currentStock.toLocaleString('vi-VN')}
                       </td>
 
                       {/* Số lượng giảm: căn giữa thẳng hàng tuyệt đối */}
-                      <td className="py-3 px-3 text-center">
+                      <td className="py-3 px-3 text-center whitespace-nowrap">
                         <input
                           type="number"
                           min="0.01"
@@ -797,21 +789,20 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                         />
                       </td>
 
-                      {/* Giá vốn */}
-                      <td className="py-3 px-3 text-right font-medium text-gray-700 font-mono">
+                      {/* Giá vốn: to ra và 1 hàng duy nhất */}
+                      <td className="py-3 px-3 text-right font-medium text-gray-700 font-mono whitespace-nowrap">
                         {formatVnd(line.costPrice)}
                       </td>
 
-                      {/* Thành tiền */}
-                      <td className="py-3 px-3 text-right font-bold text-rose-600 font-mono">
+                      {/* Thành tiền: to ra và 1 hàng duy nhất */}
+                      <td className="py-3 px-3 text-right font-bold text-rose-600 font-mono whitespace-nowrap">
                         {formatVnd(line.lossValue)}
                       </td>
 
-                      {/* Ghi chú: mở rộng rộng rãi 260px+ */}
-                      <td className="py-3 px-3" style={{ minWidth: '260px' }}>
+                      {/* Ghi chú: co giãn linh hoạt */}
+                      <td className="py-3 px-3 min-w-[160px]">
                         <input
                           type="text"
-                          size={35}
                           value={line.lineNotes || ''}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -820,13 +811,12 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                             );
                           }}
                           placeholder="Chi tiết lý do hỏng, vỡ, mất..."
-                          className="w-full px-3.5 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:outline-none transition placeholder:text-gray-400"
-                          style={{ minWidth: '260px', width: '100%' }}
+                          className="w-full px-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:outline-none transition placeholder:text-gray-400"
                         />
                       </td>
 
                       {/* Nút xóa */}
-                      <td className="py-3 px-3 text-center w-14">
+                      <td className="py-3 px-2 text-center w-12">
                         <button
                           type="button"
                           onClick={() => handleRemoveLine(line.id)}
@@ -846,11 +836,11 @@ export const StockAdjustmentCreatePage: React.FC = () => {
                     <td colSpan={4} className="py-3 px-3.5 text-left text-gray-800 text-xs uppercase tracking-wider font-bold">
                       TỔNG
                     </td>
-                    <td className="py-3 px-3 text-center text-gray-900 font-mono font-bold text-xs">
+                    <td className="py-3 px-3 text-center text-gray-900 font-mono font-bold text-xs whitespace-nowrap">
                       {totalQuantity.toLocaleString('vi-VN')}
                     </td>
                     <td className="py-3 px-3"></td>
-                    <td className="py-3 px-3 text-right text-rose-600 text-xs font-mono font-bold">
+                    <td className="py-3 px-3 text-right text-rose-600 text-xs font-mono font-bold whitespace-nowrap">
                       {formatVnd(totalLossValue)}
                     </td>
                     <td colSpan={2}></td>
