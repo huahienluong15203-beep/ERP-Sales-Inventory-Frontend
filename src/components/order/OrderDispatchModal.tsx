@@ -22,7 +22,7 @@ interface OrderDispatchModalProps {
 
 interface LineDispatchState {
   lineId: number;
-  dispatchedQuantity: number;
+  dispatchedQuantity: number | string;
   shortageReason: string;
   selectedBatchNumber?: string;
   lotReason?: string;
@@ -60,10 +60,21 @@ export const OrderDispatchModal: React.FC<OrderDispatchModalProps> = ({
   const hasAnyShortage = (order.lines || []).some((line) => {
     if (!line.id) return false;
     const state = lineStates[line.id];
-    return state && state.dispatchedQuantity < Number(line.quantity);
+    const num = state ? (state.dispatchedQuantity === '' ? 0 : Number(state.dispatchedQuantity)) : 0;
+    return num < Number(line.quantity);
   });
 
   const handleQuantityChange = (lineId: number, maxQty: number, val: string) => {
+    if (val === '') {
+      setLineStates((prev) => ({
+        ...prev,
+        [lineId]: {
+          ...(prev[lineId] || { lineId, shortageReason: '' }),
+          dispatchedQuantity: ''
+        }
+      }));
+      return;
+    }
     const num = parseFloat(val);
     const validNum = isNaN(num) ? 0 : Math.max(0, Math.min(num, maxQty));
     setLineStates((prev) => ({
@@ -108,7 +119,7 @@ export const OrderDispatchModal: React.FC<OrderDispatchModalProps> = ({
     for (const line of order.lines || []) {
       if (!line.id) continue;
       const state = lineStates[line.id];
-      const dispatchedQty = state ? state.dispatchedQuantity : Number(line.quantity);
+      const dispatchedQty = state ? (state.dispatchedQuantity === '' ? 0 : Number(state.dispatchedQuantity)) : Number(line.quantity);
       totalDispatched += dispatchedQty;
 
       const orderedQty = Number(line.quantity);
@@ -250,7 +261,8 @@ export const OrderDispatchModal: React.FC<OrderDispatchModalProps> = ({
                       shortageReason: ''
                     };
                     const orderedQty = Number(line.quantity);
-                    const shortageQty = Math.max(0, orderedQty - state.dispatchedQuantity);
+                    const numericDispatched = state.dispatchedQuantity === '' ? 0 : Number(state.dispatchedQuantity);
+                    const shortageQty = Math.max(0, orderedQty - numericDispatched);
                     const isShortage = shortageQty > 0;
 
                     return (
@@ -285,7 +297,7 @@ export const OrderDispatchModal: React.FC<OrderDispatchModalProps> = ({
                         <td className="py-3 px-3">
                           <LotSelectorDropdown
                             productId={line.productId}
-                            requiredQuantity={state.dispatchedQuantity}
+                            requiredQuantity={numericDispatched}
                             baseUnit={line.baseUnit}
                             selectedBatchNumber={state.selectedBatchNumber}
                             onChange={(batch, reason) => handleLotChange(lineId, batch, reason)}

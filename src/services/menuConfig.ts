@@ -29,7 +29,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     icon: 'ShoppingBag',
     epic: 'Đặt hàng & Duyệt ngoại lệ',
     description: 'Cổng đại lý tự đặt hàng trực tuyến B2B, quản lý công nợ',
-    allowedRoles: ['ROLE_CUSTOMER', 'ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+    allowedRoles: ['ROLE_CUSTOMER']
   },
 
   {

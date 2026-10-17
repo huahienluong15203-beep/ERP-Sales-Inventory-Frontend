@@ -6,7 +6,6 @@ import {
   Package,
   Truck,
   CheckCheck,
-  Archive,
   XCircle,
   AlertTriangle
 } from 'lucide-react';
@@ -68,9 +67,9 @@ const LIFECYCLE_STEPS: StepConfig[] = [
   },
   {
     key: 'CLOSED',
-    label: 'Đóng',
+    label: 'Đã hoàn thành',
     description: 'Hoàn tất đơn hàng',
-    icon: Archive
+    icon: CheckCircle2
   }
 ];
 
@@ -159,7 +158,11 @@ export const OrderLifecycleTimeline: React.FC<OrderLifecycleTimelineProps> = ({
               <span>Giao Thất Bại (Đã Quay Về Kho)</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-900 border border-orange-200">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
+              ['CLOSED', 'COMPLETED'].includes(status)
+                ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                : 'bg-orange-100 text-orange-900 border-orange-200'
+            }`}>
               <span>Đang ở khâu: </span>
               <strong>{LIFECYCLE_STEPS[currentStepIdx]?.label || status}</strong>
             </span>
@@ -245,7 +248,9 @@ export const OrderLifecycleTimeline: React.FC<OrderLifecycleTimelineProps> = ({
                     className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${isCompleted
                       ? 'bg-emerald-500 text-white shadow-xs shadow-emerald-500/30'
                       : isCurrent
-                        ? 'bg-[#F85606] text-white ring-4 ring-orange-200 shadow-md shadow-orange-500/30 scale-110'
+                        ? ['CLOSED', 'COMPLETED'].includes(status)
+                          ? 'bg-emerald-600 text-white ring-4 ring-emerald-200 shadow-md shadow-emerald-500/30 scale-110'
+                          : 'bg-[#F85606] text-white ring-4 ring-orange-200 shadow-md shadow-orange-500/30 scale-110'
                         : 'bg-gray-100 text-gray-400 border border-gray-200'
                       }`}
                   >

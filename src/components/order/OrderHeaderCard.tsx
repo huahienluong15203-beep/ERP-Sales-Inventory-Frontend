@@ -614,7 +614,7 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
               >
                 {deliveryPoints.map((pt) => (
                   <option key={pt.id} value={pt.id}>
-                    {pt.name} {pt.isDefault ? '⭐ [Kho mặc định]' : ''} — {pt.address}
+                    {pt.name} {pt.isDefault ? '(Mặc định)' : ''} — {pt.address}
                   </option>
                 ))}
               </SearchSelect>

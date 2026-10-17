@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Sparkles,
   AlertTriangle,
   Clock,
   Layers,
@@ -180,8 +179,7 @@ export const LotSelectorDropdown: React.FC<LotSelectorDropdownProps> = ({
                 <div className="flex items-center gap-1.5">
                   <span className="font-mono font-bold">{currentSelectedLot.batchNumber}</span>
                   {suggestedLot?.batchNumber === currentSelectedLot.batchNumber && (
-                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      <Sparkles size={10} />
+                    <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                       Gợi ý FEFO
                     </span>
                   )}
@@ -234,8 +232,7 @@ export const LotSelectorDropdown: React.FC<LotSelectorDropdownProps> = ({
                     <div className="flex items-center gap-1.5">
                       <span className="font-mono font-bold text-gray-900">{lot.batchNumber}</span>
                       {isSuggested && (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                          <Sparkles size={10} />
+                        <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                           Gợi ý FEFO
                         </span>
                       )}
