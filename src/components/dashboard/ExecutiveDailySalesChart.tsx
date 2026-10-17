@@ -1,30 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import {
   Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
+  registerables
 } from 'chart.js';
 import { Calendar, DollarSign, ShoppingCart } from 'lucide-react';
 import type { ExecutiveDailySales } from '../../types/dashboard';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
+ChartJS.register(...registerables);
 
 interface ExecutiveDailySalesChartProps {
   data: ExecutiveDailySales | null;

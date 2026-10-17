@@ -1,14 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import {
   Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend
+  registerables
 } from 'chart.js';
 import { MapPin } from 'lucide-react';
 import type { ExecutiveRegionSales } from '../../types/dashboard';
 
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(...registerables);
 
 interface ExecutiveRegionSalesChartProps {
   data: ExecutiveRegionSales | null;
