@@ -53,6 +53,8 @@ export interface SearchSelectProps {
   isLoading?: boolean;
   /** Chế độ tìm kiếm qua API server (không lọc lại ở client) */
   isAsync?: boolean;
+  /** Cho phép tìm kiếm bằng ô nhập (mặc định true). Khi false sẽ ẩn ô tìm kiếm bên trong dropdown */
+  searchable?: boolean;
 }
 
 /** Lấy chữ hiển thị của một <option> (children có thể là chuỗi, số, mảng hoặc phần tử lồng nhau). */
@@ -133,6 +135,7 @@ export function SearchSelect({
   hasMore = false,
   isLoading = false,
   isAsync = false,
+  searchable = true,
 }: SearchSelectProps) {
   const options = useMemo(() => {
     const list: SelectOption[] = [];
@@ -186,9 +189,9 @@ export function SearchSelect({
     const left = Math.min(Math.max(rect.left, VIEWPORT_GAP), vw - width - VIEWPORT_GAP);
     const spaceBelow = vh - rect.bottom - VIEWPORT_GAP;
     const spaceAbove = rect.top - VIEWPORT_GAP;
-    // 52px cho ô tìm kiếm phía trên danh sách
+    const headerHeight = searchable ? 52 : 0;
     const openUp = spaceBelow < 220 && spaceAbove > spaceBelow;
-    const room = (openUp ? spaceAbove : spaceBelow) - 52 - 4;
+    const room = (openUp ? spaceAbove : spaceBelow) - headerHeight - 4;
     const maxHeight = Math.max(120, Math.min(PANEL_MAX_LIST_HEIGHT, room));
     setPosition(
       openUp
@@ -271,8 +274,14 @@ export function SearchSelect({
   }, [open]);
 
   useLayoutEffect(() => {
-    if (open) searchRef.current?.focus();
-  }, [open]);
+    if (open) {
+      if (searchable) {
+        searchRef.current?.focus();
+      } else {
+        panelRef.current?.focus();
+      }
+    }
+  }, [open, searchable]);
 
   // Giữ dòng đang chọn (phím mũi tên) luôn nằm trong vùng nhìn thấy.
   useEffect(() => {
@@ -368,6 +377,8 @@ export function SearchSelect({
         createPortal(
           <div
             ref={panelRef}
+            tabIndex={-1}
+            onKeyDown={handleSearchKeyDown}
             style={{
               position: 'fixed',
               left: position.left,
@@ -376,22 +387,24 @@ export function SearchSelect({
               bottom: position.bottom,
               zIndex: 100000,
             }}
-            className="erp-search-select-panel rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden text-xs animate-in fade-in-0 zoom-in-95"
+            className="erp-search-select-panel rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden text-xs animate-in fade-in-0 zoom-in-95 outline-none"
           >
-            <div className="p-2 border-b border-gray-100">
-              <div className="relative">
-                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                <input
-                  ref={searchRef}
-                  type="text"
-                  value={query}
-                  onChange={(e) => handleQueryChange(e.target.value)}
-                  onKeyDown={handleSearchKeyDown}
-                  placeholder={searchPlaceholder}
-                  className="w-full h-8 pl-8 pr-2 rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-800 outline-none focus:border-[#F85606] focus:bg-white"
-                />
+            {searchable && (
+              <div className="p-2 border-b border-gray-100">
+                <div className="relative">
+                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <input
+                    ref={searchRef}
+                    type="text"
+                    value={query}
+                    onChange={(e) => handleQueryChange(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    placeholder={searchPlaceholder}
+                    className="w-full h-8 pl-8 pr-2 rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-800 outline-none focus:border-[#F85606] focus:bg-white"
+                  />
+                </div>
               </div>
-            </div>
+            )}
             <div
               ref={listRef}
               id={listboxId}

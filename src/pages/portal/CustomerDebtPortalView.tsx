@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   CreditCard,
   DollarSign,
@@ -10,104 +10,118 @@ import {
   FileText,
   Search,
   Printer,
-  ShieldCheck
+  ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import { formatCurrencyVND } from '../../services/orderService';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import {
-  fetchCustomerInvoicesForDebt,
-  fetchCustomerPortalCreditStatus
-} from '../../services/paymentApi';
-import type { CustomerInvoiceDebtItem } from '../../types/payment';
-import type { CreditStatusResponse } from '../../types/agency';
+  fetchPortalDebtSummary,
+  fetchPortalDebtInvoices,
+  type PortalDebtSummary,
+  type PortalInvoiceDebtItem
+} from '../../services/portalApi';
 import { InvoicePrintModal } from '../../components/payment/InvoicePrintModal';
 
 export const CustomerDebtPortalView: React.FC = () => {
+  // Dữ liệu tóm tắt công nợ & hạn mức từ Backend (/api/portal/debt)
+  const [summary, setSummary] = useState<PortalDebtSummary | null>(null);
 
-  // Dữ liệu công nợ & hoá đơn của chính đại lý
-  const [creditStatus, setCreditStatus] = useState<CreditStatusResponse | null>(null);
-  const [invoices, setInvoices] = useState<CustomerInvoiceDebtItem[]>([]);
+  // Danh sách hoá đơn theo trang (Backend phân trang & tìm kiếm)
+  const [invoices, setInvoices] = useState<PortalInvoiceDebtItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Bộ lọc & tìm kiếm
+  // Tìm kiếm và bộ lọc (lọc cả FE & BE để tối ưu tốc độ và chính xác)
   const [searchKeyword, setSearchKeyword] = useState<string>('');
+  const [debouncedKeyword, setDebouncedKeyword] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
 
-  // Modal xem chi tiết hoá đơn
-  const [selectedInvoice, setSelectedInvoice] = useState<CustomerInvoiceDebtItem | null>(null);
+  // Phân trang danh sách hoá đơn (0-indexed cho Backend)
+  const [page, setPage] = useState<number>(0);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [totalElements, setTotalElements] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+
+  // Modal xem chi tiết hoá đơn & in phiếu
+  const [selectedInvoice, setSelectedInvoice] = useState<PortalInvoiceDebtItem | null>(null);
   const [printInvoiceId, setPrintInvoiceId] = useState<number | null>(null);
 
-  const loadData = async () => {
+  // Debounce tìm kiếm từ khoá 350ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedKeyword(searchKeyword);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchKeyword]);
+
+  // Reset trang về 0 khi từ khóa debounced hoặc trạng thái thay đổi
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedKeyword, filterStatus]);
+
+  // 1. Tải tóm tắt công nợ đại lý
+  const loadSummary = useCallback(async () => {
+    try {
+      const data = await fetchPortalDebtSummary();
+      setSummary(data);
+    } catch (err) {
+      console.warn('Lỗi tải tóm tắt công nợ đại lý:', err);
+    }
+  }, []);
+
+  // 2. Tải danh sách hoá đơn có phân trang & tìm kiếm cả BE/FE
+  const loadInvoices = useCallback(async () => {
     setLoading(true);
     try {
-      const [credit, invList] = await Promise.all([
-        fetchCustomerPortalCreditStatus(),
-        fetchCustomerInvoicesForDebt('me')
-      ]);
-      setCreditStatus(credit);
-      setInvoices(invList);
+      const res = await fetchPortalDebtInvoices({
+        status: filterStatus !== 'ALL' ? filterStatus : undefined,
+        keyword: debouncedKeyword.trim() || undefined,
+        page,
+        size: pageSize,
+      });
+      setInvoices(res.content || []);
+      setTotalElements(res.totalElements ?? (res.content || []).length);
+      setTotalPages(Math.max(1, res.totalPages ?? 1));
     } catch (err) {
-      console.warn('Lỗi tải dữ liệu công nợ đại lý:', err);
+      console.warn('Lỗi tải danh sách hoá đơn công nợ:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterStatus, debouncedKeyword, page, pageSize]);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadSummary();
+  }, [loadSummary]);
 
-  // Lọc hoá đơn theo từ khoá và trạng thái
-  const filteredInvoices = useMemo(() => {
-    return invoices.filter((inv) => {
-      // Lọc trạng thái
-      if (filterStatus !== 'ALL' && inv.status !== filterStatus) {
-        return false;
-      }
+  useEffect(() => {
+    loadInvoices();
+  }, [loadInvoices]);
 
-      // Tìm kiếm từ khoá theo mã hoá đơn, mã đơn hàng
-      if (searchKeyword.trim()) {
-        const kw = searchKeyword.trim().toLowerCase();
-        const codeMatch = inv.code.toLowerCase().includes(kw);
-        const orderMatch = (inv.orderCodes || []).some((o) => o.toLowerCase().includes(kw));
-        if (!codeMatch && !orderMatch) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [invoices, searchKeyword, filterStatus]);
-
-  // Thống kê nhanh
-  const stats = useMemo(() => {
-    let totalDebt = 0;
-    let overdueDebt = 0;
-    let overdueCount = 0;
-
-    for (const inv of invoices) {
-      totalDebt += inv.remainingAmount || 0;
-      if (inv.isOverdue && inv.remainingAmount > 0) {
-        overdueDebt += inv.remainingAmount;
-        overdueCount += 1;
-      }
+  // Tính toán danh sách số trang hiển thị (chuẩn style phân trang lịch sử đơn)
+  const pageNumbers = useMemo(() => {
+    const total = totalPages;
+    const current = page + 1;
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
     }
-
-    const creditLimit = creditStatus?.creditLimit || 100000000;
-    const availableLimit = Math.max(0, creditLimit - totalDebt);
-
-    return {
-      totalDebt,
-      overdueDebt,
-      overdueCount,
-      creditLimit,
-      availableLimit,
-      totalInvoices: invoices.length
-    };
-  }, [invoices, creditStatus]);
+    const pages: (number | string)[] = [];
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+  }, [page, totalPages]);
 
   // Hành động tải / in lại hoá đơn qua InvoicePrintModal chuẩn A4
-  const handlePrintInvoice = (inv: CustomerInvoiceDebtItem) => {
+  const handlePrintInvoice = (inv: PortalInvoiceDebtItem) => {
     setPrintInvoiceId(inv.id);
   };
 
@@ -124,7 +138,7 @@ export const CustomerDebtPortalView: React.FC = () => {
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black font-mono text-rose-600">
-            {formatCurrencyVND(stats.totalDebt)}
+            {formatCurrencyVND(summary?.invoicedDebt ?? summary?.currentDebt ?? 0)}
           </div>
           <p className="text-[11px] text-gray-500 mt-1">Số tiền đại lý cần thanh toán</p>
         </div>
@@ -138,7 +152,7 @@ export const CustomerDebtPortalView: React.FC = () => {
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black font-mono text-gray-900">
-            {formatCurrencyVND(stats.creditLimit)}
+            {formatCurrencyVND(summary?.creditLimit ?? 0)}
           </div>
           <p className="text-[11px] text-gray-500 mt-1">Hạn mức tín dụng tối đa</p>
         </div>
@@ -152,7 +166,7 @@ export const CustomerDebtPortalView: React.FC = () => {
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black font-mono text-emerald-700">
-            {formatCurrencyVND(stats.availableLimit)}
+            {formatCurrencyVND(summary?.availableCredit ?? 0)}
           </div>
           <p className="text-[11px] text-emerald-600 mt-1">Hạn mức khả dụng để lên đơn mới</p>
         </div>
@@ -166,7 +180,7 @@ export const CustomerDebtPortalView: React.FC = () => {
             </div>
           </div>
           <div className="text-sm sm:text-base font-bold mt-1">
-            {stats.overdueCount > 0 ? (
+            {summary?.overdue ? (
               <span className="text-rose-600 flex items-center gap-1 font-semibold">
                 <AlertTriangle size={15} />
                 <span>Có nợ quá hạn</span>
@@ -179,7 +193,9 @@ export const CustomerDebtPortalView: React.FC = () => {
             )}
           </div>
           <p className="text-[11px] text-gray-500 mt-1">
-            {stats.overdueCount > 0 ? `${stats.overdueCount} hoá đơn quá hạn` : 'Không có nợ quá hạn'}
+            {summary?.overdue
+              ? `${summary.overdueCount ?? 0} hoá đơn quá hạn`
+              : 'Không có nợ quá hạn'}
           </p>
         </div>
       </div>
@@ -189,7 +205,7 @@ export const CustomerDebtPortalView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
           <div>
             <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-              <FileText size={18} className="text-orange-600" />
+              <FileText size={18} className="text-[#F85606]" />
               <span>Danh sách hoá đơn bán hàng</span>
             </h3>
             <p className="text-xs text-gray-500">
@@ -197,7 +213,7 @@ export const CustomerDebtPortalView: React.FC = () => {
             </p>
           </div>
 
-          {/* Ô Tìm kiếm từ khoá (Gõ để tìm mã hoá đơn, đơn hàng) */}
+          {/* Ô Tìm kiếm từ khoá (Gõ để tìm mã hoá đơn, đơn hàng) & Lọc trạng thái */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
             <div className="relative min-w-[240px]">
               <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -206,17 +222,17 @@ export const CustomerDebtPortalView: React.FC = () => {
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
                 placeholder="Gõ để tìm mã hoá đơn, đơn hàng..."
-                className="w-full pl-9 pr-3.5 py-2 bg-gray-50 hover:bg-white focus:bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 transition"
+                className="w-full pl-9 pr-3.5 py-2 bg-gray-50 hover:bg-white focus:bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#F85606] transition"
               />
             </div>
 
-            {/* Dropdown Lọc trạng thái bằng SearchSelect */}
+            {/* Dropdown Lọc trạng thái bằng SearchSelect (bỏ ô search bên trong vì các trạng thái đã cố định) */}
             <div className="min-w-[180px]">
               <SearchSelect
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                searchPlaceholder="Gõ để tìm trạng thái..."
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                searchable={false}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#F85606]"
               >
                 <option value="ALL">Tất cả trạng thái</option>
                 <option value="UNPAID">Chưa thanh toán</option>
@@ -247,18 +263,18 @@ export const CustomerDebtPortalView: React.FC = () => {
               {loading ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-10 text-center text-gray-500">
-                    <span className="inline-block w-5 h-5 border-2 border-orange-600 border-t-transparent rounded-full animate-spin mb-2" />
+                    <span className="inline-block w-5 h-5 border-2 border-[#F85606] border-t-transparent rounded-full animate-spin mb-2" />
                     <p>Đang tải danh sách hoá đơn...</p>
                   </td>
                 </tr>
-              ) : filteredInvoices.length === 0 ? (
+              ) : invoices.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-10 text-center text-gray-500">
                     Không tìm thấy hoá đơn nào phù hợp với bộ lọc.
                   </td>
                 </tr>
               ) : (
-                filteredInvoices.map((inv) => {
+                invoices.map((inv) => {
                   return (
                     <tr key={inv.id} className="hover:bg-gray-50/80 transition">
                       <td className="px-4 py-3 font-mono font-bold text-gray-900 whitespace-nowrap">
@@ -332,7 +348,7 @@ export const CustomerDebtPortalView: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handlePrintInvoice(inv)}
-                            className="p-1.5 rounded-lg border border-orange-300 hover:bg-orange-50 text-orange-700 transition cursor-pointer"
+                            className="p-1.5 rounded-lg border border-orange-300 hover:bg-orange-50 text-[#F85606] transition cursor-pointer"
                             title="In hoặc tải lại hoá đơn PDF"
                           >
                             <Download size={15} />
@@ -346,6 +362,113 @@ export const CustomerDebtPortalView: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* PHÂN TRANG DANH SÁCH HOÁ ĐƠN (CHUẨN STYLE LỊCH SỬ ĐƠN HÀNG) */}
+        {!loading && totalElements > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-2xs">
+            <div className="text-gray-500">
+              Hiển thị{' '}
+              <strong className="text-gray-800">
+                {totalElements === 0 ? 0 : page * pageSize + 1}
+              </strong>{' '}
+              -{' '}
+              <strong className="text-gray-800">
+                {Math.min((page + 1) * pageSize, totalElements)}
+              </strong>{' '}
+              trên tổng số <strong className="text-[#F85606]">{totalElements}</strong> hoá đơn
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-gray-500">
+                <span>Hiển thị:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPage(0);
+                  }}
+                  className="border border-gray-200 rounded-lg px-2 py-1 bg-white font-semibold text-gray-700 focus:outline-none focus:border-[#F85606] cursor-pointer"
+                >
+                  <option value={10}>10 hoá đơn/trang</option>
+                  <option value={20}>20 hoá đơn/trang</option>
+                  <option value={30}>30 hoá đơn/trang</option>
+                  <option value={50}>50 hoá đơn/trang</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPage(0);
+                  }}
+                  disabled={page === 0}
+                  className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                  title="Trang đầu"
+                >
+                  <ChevronsLeft size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPage((p) => Math.max(0, p - 1));
+                  }}
+                  disabled={page === 0}
+                  className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                  title="Trang trước"
+                >
+                  <ChevronLeft size={15} />
+                </button>
+
+                {pageNumbers.map((p, idx) =>
+                  typeof p === 'number' ? (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setPage(p - 1);
+                      }}
+                      className={`w-7 h-7 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        page === p - 1
+                          ? 'bg-[#F85606] text-white shadow-xs'
+                          : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ) : (
+                    <span key={idx} className="w-5 text-center text-gray-400">
+                      {p}
+                    </span>
+                  )
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPage((p) => Math.min(totalPages - 1, p + 1));
+                  }}
+                  disabled={page >= totalPages - 1}
+                  className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                  title="Trang sau"
+                >
+                  <ChevronRight size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPage(totalPages - 1);
+                  }}
+                  disabled={page >= totalPages - 1}
+                  className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                  title="Trang cuối"
+                >
+                  <ChevronsRight size={15} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modal xem chi tiết hoá đơn */}
@@ -354,7 +477,7 @@ export const CustomerDebtPortalView: React.FC = () => {
           <div className="relative max-w-lg w-full bg-white rounded-2xl p-6 shadow-2xl border border-gray-200 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-gray-200">
               <div className="flex items-center gap-2">
-                <FileText size={20} className="text-orange-600" />
+                <FileText size={20} className="text-[#F85606]" />
                 <h3 className="text-base font-bold text-gray-900">
                   Hoá đơn: <span className="font-mono">{selectedInvoice.code}</span>
                 </h3>
@@ -407,7 +530,7 @@ export const CustomerDebtPortalView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handlePrintInvoice(selectedInvoice)}
-                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                className="px-4 py-2 bg-[#F85606] hover:bg-orange-600 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <Printer size={14} />
                 <span>In / Tải PDF</span>
