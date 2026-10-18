@@ -13,6 +13,9 @@ export interface ReturnableInvoiceLine {
   remainingReturnableQuantity: number;
   pricePerUnit: number;
   hasBatchManagement: boolean;
+  batchNumber?: string;
+  manufactureDate?: string;
+  expiredDate?: string;
 }
 
 export interface SalesReturnItemPayload {

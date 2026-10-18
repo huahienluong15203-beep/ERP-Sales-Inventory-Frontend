@@ -516,39 +516,6 @@ export const StockTransferCreatePage: React.FC = () => {
             </p>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          <button
-            type="button"
-            onClick={() => {
-              try { sessionStorage.removeItem(DRAFT_STORAGE_KEY); } catch {}
-              navigate('/inventory/transfers');
-            }}
-            className="px-3.5 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer"
-          >
-            Hủy bỏ
-          </button>
-          <button
-            type="button"
-            disabled={isSubmitting}
-            onClick={() => handleSubmit('DRAFT')}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-xs cursor-pointer disabled:opacity-50"
-          >
-            {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Clock size={14} />}
-            <span>Lập phiếu chuyển (Chờ QL duyệt)</span>
-          </button>
-          {isManagerOrAdmin && (
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => handleSubmit('IN_TRANSIT')}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition shadow-xs cursor-pointer disabled:opacity-50"
-            >
-              {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-              <span>Duyệt & Xuất kho ngay</span>
-            </button>
-          )}
-        </div>
       </div>
 
       {/* CẢNH BÁO LỖI VALIDATION NẾU CÓ */}
@@ -849,21 +816,19 @@ export const StockTransferCreatePage: React.FC = () => {
               <table className="w-full text-left text-xs">
                 <thead className="bg-gray-100 text-gray-700 font-bold uppercase text-[11px] border-b border-gray-200">
                   <tr>
-                    <th className="py-2.5 px-3 w-12 text-center">STT</th>
-                    <th className="py-2.5 px-3 min-w-[220px]">Mặt hàng / Mã SKU</th>
-                    <th className="py-2.5 px-3 w-36 text-center">
+                    <th className="py-2.5 px-2.5 w-10 text-center">STT</th>
+                    <th className="py-2.5 px-3 min-w-[200px]">Mặt hàng / Mã SKU</th>
+                    <th className="py-2.5 px-2.5 w-32 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <span>Tồn khả dụng kho đi</span>
+                        <span>Tồn kho xuất</span>
                         {loadingStock && <Loader2 size={12} className="animate-spin text-blue-500" />}
                       </div>
                     </th>
-                    <th className="py-2.5 px-3 w-32 text-center">Số lượng chuyển</th>
-                    <th className="py-2.5 px-3 w-24 text-center">Đơn vị</th>
-                    <th className="py-2.5 px-3 w-36">Số lô điều chuyển</th>
-                    <th className="py-2.5 px-3 w-32">Hạn sử dụng</th>
-                    <th className="py-2.5 px-3 w-24 text-center sticky right-0 bg-gray-100 z-10 border-l border-gray-200 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]">
-                      Thao tác
-                    </th>
+                    <th className="py-2.5 px-2.5 w-28 text-center">SL chuyển</th>
+                    <th className="py-2.5 px-2 w-16 text-center">Đơn vị</th>
+                    <th className="py-2.5 px-2.5 w-32">Số lô</th>
+                    <th className="py-2.5 px-2.5 w-28">Hạn dùng</th>
+                    <th className="py-2.5 px-2.5 w-20 text-center">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -938,7 +903,7 @@ export const StockTransferCreatePage: React.FC = () => {
                             type="text"
                             value={line.batchNumber}
                             onChange={(e) => handleUpdateLine(idx, 'batchNumber', e.target.value)}
-                            placeholder="LOT-..."
+                            placeholder="Số lô (tùy chọn)..."
                             className="w-full text-xs font-mono border border-gray-200 rounded-lg p-1.5 bg-white"
                           />
                         </td>
@@ -954,7 +919,7 @@ export const StockTransferCreatePage: React.FC = () => {
                         </td>
 
                         {/* Nút Xóa */}
-                        <td className="py-2.5 px-3 text-center sticky right-0 bg-white group-hover:bg-gray-50 z-10 border-l border-gray-100 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]">
+                        <td className="py-2.5 px-2.5 text-center">
                           <button
                             type="button"
                             onClick={() => handleRemoveLine(idx)}

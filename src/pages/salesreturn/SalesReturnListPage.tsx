@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   RotateCcw,
   Plus,
@@ -25,6 +25,14 @@ import { fetchWarehouses } from '../../services/warehouseApi';
 import type { Warehouse } from '../../types/warehouse';
 import { formatCurrencyVND } from '../../services/orderService';
 
+const getTodayLocalDateString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const DEFAULT_WAREHOUSES: Warehouse[] = [
   { id: 1, code: 'KHO-HN', name: 'Kho Tổng Hà Nội', address: 'KCN Tiên Sơn, Bắc Ninh', status: 'ACTIVE', locationCount: 1, activeLocationCount: 1 },
   { id: 2, code: 'KHO-HCM', name: 'Kho Tổng TP.HCM', address: 'KCN Tân Bình, TP.HCM', status: 'ACTIVE', locationCount: 0, activeLocationCount: 0 },
@@ -37,11 +45,11 @@ export const SalesReturnListPage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast, currentRole } = useAuth();
 
-  const isWarehouseOrAdmin = [
-    'ROLE_WAREHOUSE',
-    'ROLE_WH_MANAGER',
-    'ROLE_ADMIN'
-  ].includes(currentRole ?? '');
+  const roleStr = String(currentRole || '');
+  const isWarehouseOrAdmin =
+    roleStr.includes('ADMIN') ||
+    roleStr.includes('WH_MANAGER') ||
+    roleStr.includes('WAREHOUSE');
 
   // Filter states
   const [keyword, setKeyword] = useState<string>('');
@@ -69,6 +77,195 @@ export const SalesReturnListPage: React.FC = () => {
   // Modal huỷ phiếu
   const [cancellingItem, setCancellingItem] = useState<SalesReturnItem | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
+
+  // In phiếu thông qua iframe độc lập, đảm bảo chuẩn A4 không dính giao diện hệ thống
+  const printIframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (printIframeRef.current && printIframeRef.current.parentNode) {
+        printIframeRef.current.parentNode.removeChild(printIframeRef.current);
+        printIframeRef.current = null;
+      }
+    };
+  }, []);
+
+  const handlePrintSalesReturn = (item: SalesReturnItem) => {
+    let iframe = printIframeRef.current;
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
+      printIframeRef.current = iframe;
+    }
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    const dateStr = item.returnDate ? item.returnDate.split('T')[0] : getTodayLocalDateString();
+    const dateParts = dateStr.split('-');
+    const day = dateParts[2] || '01';
+    const month = dateParts[1] || '01';
+    const year = dateParts[0] || '2026';
+
+    const linesHtml =
+      item.lines && item.lines.length > 0
+        ? item.lines
+            .map(
+              (l, idx) => `
+        <tr>
+          <td style="border: 1px solid #333; padding: 6px 8px; text-align: center;">${idx + 1}</td>
+          <td style="border: 1px solid #333; padding: 6px 8px;">
+            <strong>${l.productName}</strong><br>
+            <span style="font-size: 11px; color: #555;">SKU: ${l.productSku}</span>
+          </td>
+          <td style="border: 1px solid #333; padding: 6px 8px; text-align: center;">${l.unitName || 'Đơn vị'}</td>
+          <td style="border: 1px solid #333; padding: 6px 8px; text-align: right; font-weight: bold;">${l.returnQuantity}</td>
+          <td style="border: 1px solid #333; padding: 6px 8px; text-align: right;">${formatCurrencyVND(l.pricePerUnit || 0)}</td>
+          <td style="border: 1px solid #333; padding: 6px 8px; text-align: right; font-weight: bold;">${formatCurrencyVND(l.lineAmount || 0)}</td>
+          <td style="border: 1px solid #333; padding: 6px 8px; text-align: center; font-size: 11px;">${l.batchNumber || '—'}<br>${l.expiredDate || ''}</td>
+          <td style="border: 1px solid #333; padding: 6px 8px; text-align: center; font-size: 11px;">${l.isDamaged ? 'Hàng lỗi' : 'Hàng tốt'}</td>
+        </tr>
+      `
+            )
+            .join('')
+        : `
+        <tr>
+          <td colspan="8" style="border: 1px solid #333; padding: 12px; text-align: center;">Tổng số lượng hoàn trả: ${item.totalQuantity}</td>
+        </tr>
+      `;
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="vi">
+      <head>
+        <meta charset="utf-8">
+        <title>Phiếu Trả Hàng - ${item.code}</title>
+        <style>
+          @page { size: A4 portrait; margin: 15mm; }
+          body { font-family: "Times New Roman", Times, serif; font-size: 13px; color: #000; line-height: 1.4; margin: 0; padding: 0; }
+          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 16px; }
+          .company-name { font-weight: bold; font-size: 14px; text-transform: uppercase; }
+          .title { text-align: center; margin: 16px 0 10px 0; }
+          .title h1 { font-size: 20px; font-weight: bold; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
+          .info-table { width: 100%; margin-bottom: 14px; font-size: 13px; border-collapse: collapse; }
+          .info-table td { padding: 3px 0; vertical-align: top; }
+          .data-table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 16px; font-size: 12px; }
+          .data-table th { border: 1px solid #333; background: #f0f0f0; padding: 6px 8px; text-align: center; }
+          .signatures { display: flex; justify-content: space-between; margin-top: 28px; text-align: center; }
+          .sign-col { width: 23%; }
+          .sign-col .title { font-weight: bold; text-transform: uppercase; font-size: 12px; margin: 0; }
+          .sign-col .sub { font-style: italic; font-size: 11px; margin: 2px 0 0 0; color: #555; }
+          .sign-col .space { height: 65px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="company-name">CÔNG TY CỔ PHẦN PHÂN PHỐI NƯỚC GIẢI KHÁT TOÀN QUỐC</div>
+            <div>Địa chỉ: Số 126 Trần Đại Nghĩa, Quận Hai Bà Trưng, TP. Hà Nội</div>
+            <div>Hotline: 1900 6868 | MST: 0108998877</div>
+          </div>
+          <div style="text-align: right;">
+            <div><strong>Mẫu số: 02 - VT</strong></div>
+            <div style="font-style: italic; font-size: 11px;">(Ban hành theo TT 200/2014/TT-BTC)</div>
+            <div style="margin-top: 4px;">Số phiếu: <strong>${item.code}</strong></div>
+          </div>
+        </div>
+
+        <div class="title">
+          <h1>PHIẾU TRẢ HÀNG & NHẬP LẠI KHO</h1>
+          <div style="font-style: italic; margin-top: 4px;">Ngày ${day} tháng ${month} năm ${year}</div>
+        </div>
+
+        <table class="info-table">
+          <tr>
+            <td style="width: 140px;"><strong>Đại lý hoàn trả:</strong></td>
+            <td><strong>${item.customerName}</strong> (${item.customerCode})</td>
+            <td style="width: 130px;"><strong>Hoá đơn gốc:</strong></td>
+            <td><strong>${item.invoiceCode}</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Kho tiếp nhận:</strong></td>
+            <td>${item.warehouseName || item.receivingWarehouseName || 'Kho Tổng Miền Bắc'} (${item.warehouseCode || item.receivingWarehouseCode || 'WH-MB01'})</td>
+            <td><strong>Lý do hoàn trả:</strong></td>
+            <td>${item.returnReason || 'Hàng lỗi theo quy định'}</td>
+          </tr>
+          ${item.notes ? `<tr><td><strong>Ghi chú:</strong></td><td colspan="3">${item.notes}</td></tr>` : ''}
+        </table>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 32px;">STT</th>
+              <th>Tên hàng hoá / SKU</th>
+              <th style="width: 60px;">ĐVT</th>
+              <th style="width: 60px;">SL trả</th>
+              <th style="width: 90px;">Đơn giá</th>
+              <th style="width: 100px;">Thành tiền</th>
+              <th style="width: 110px;">Số lô / Hạn</th>
+              <th style="width: 75px;">Phân loại</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${linesHtml}
+          </tbody>
+          <tfoot>
+            <tr style="font-weight: bold; background: #fafafa;">
+              <td colspan="3" style="border: 1px solid #333; padding: 6px 8px; text-align: right;">TỔNG CỘNG:</td>
+              <td style="border: 1px solid #333; padding: 6px 8px; text-align: right;">${item.totalQuantity}</td>
+              <td style="border: 1px solid #333; padding: 6px 8px;"></td>
+              <td style="border: 1px solid #333; padding: 6px 8px; text-align: right;">${formatCurrencyVND(item.totalAmount)}</td>
+              <td colspan="2" style="border: 1px solid #333; padding: 6px 8px;"></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="signatures">
+          <div class="sign-col">
+            <p class="title">Người lập phiếu</p>
+            <p class="sub">(Ký, họ tên)</p>
+            <div class="space"></div>
+            <p style="font-weight: bold;">${item.createdByUsername || 'Nhân viên kinh doanh'}</p>
+          </div>
+          <div class="sign-col">
+            <p class="title">Đại diện đại lý</p>
+            <p class="sub">(Ký, họ tên, đóng dấu)</p>
+            <div class="space"></div>
+            <p style="font-weight: bold;">${item.customerName}</p>
+          </div>
+          <div class="sign-col">
+            <p class="title">Thủ kho nhận hàng</p>
+            <p class="sub">(Ký, họ tên)</p>
+            <div class="space"></div>
+            <p style="font-weight: bold;">${item.receivedByUsername || 'Thủ kho phụ trách'}</p>
+          </div>
+          <div class="sign-col">
+            <p class="title">Kế toán trưởng</p>
+            <p class="sub">(Ký, họ tên)</p>
+            <div class="space"></div>
+            <p style="font-weight: bold;">Kế toán công nợ</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    setTimeout(() => {
+      iframe?.contentWindow?.focus();
+      iframe?.contentWindow?.print();
+    }, 250);
+  };
 
   // Load kho
   useEffect(() => {
@@ -254,6 +451,7 @@ export const SalesReturnListPage: React.FC = () => {
             <input
               type="date"
               value={fromDate}
+              max={toDate || getTodayLocalDateString()}
               onChange={(e) => setFromDate(e.target.value)}
               className="px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs"
               title="Từ ngày"
@@ -262,9 +460,11 @@ export const SalesReturnListPage: React.FC = () => {
             <input
               type="date"
               value={toDate}
+              min={fromDate}
+              max={getTodayLocalDateString()}
               onChange={(e) => setToDate(e.target.value)}
               className="px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs"
-              title="Đến ngày"
+              title="Đến ngày (chỉ lọc từ ngày hiện tại về trước)"
             />
           </div>
 
@@ -464,8 +664,9 @@ export const SalesReturnListPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => window.print()}
+                  onClick={() => handlePrintSalesReturn(detailItem)}
                   className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                  title="In phiếu trả hàng chuẩn A4"
                 >
                   <Printer size={14} />
                   <span>In phiếu</span>
@@ -719,6 +920,40 @@ export const SalesReturnListPage: React.FC = () => {
                 <h3 className="font-bold text-sm text-gray-900">Huỷ Phiếu Trả Hàng</h3>
                 <p className="text-xs text-gray-500">Mã phiếu: {cancellingItem.code}</p>
               </div>
+            </div>
+
+            {/* THÔNG TIN ĐƠN HÀNG HUỶ (S8-01: Hiển thị thông tin đơn hàng bị huỷ) */}
+            <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-200/80 space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Đại lý hoàn trả:</span>
+                <span className="font-bold text-gray-900">{cancellingItem.customerName}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Kho tiếp nhận:</span>
+                <span className="font-semibold text-gray-800">
+                  {cancellingItem.warehouseName || cancellingItem.receivingWarehouseName || 'Kho Tổng Miền Bắc'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Hoá đơn gốc:</span>
+                <span className="font-mono font-semibold text-gray-700">{cancellingItem.invoiceCode}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Tổng số lượng hoàn trả:</span>
+                <span className="font-mono font-bold text-gray-900">{cancellingItem.totalQuantity}</span>
+              </div>
+              <div className="flex justify-between items-center border-t border-gray-200/60 pt-1.5">
+                <span className="text-gray-700 font-bold">Tổng tiền hoàn trả:</span>
+                <span className="font-mono font-black text-[#F85606] text-sm">
+                  {formatCurrencyVND(cancellingItem.totalAmount)}
+                </span>
+              </div>
+              {cancellingItem.returnReason && (
+                <div className="flex justify-between items-start pt-1 text-[11px] text-gray-500">
+                  <span>Lý do lập phiếu:</span>
+                  <span className="font-medium text-gray-700 text-right max-w-[200px] truncate">{cancellingItem.returnReason}</span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1 text-xs">

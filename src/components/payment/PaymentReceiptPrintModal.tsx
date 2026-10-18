@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Printer, Download, X, Building, CheckCircle, FileText } from 'lucide-react';
 import type { PaymentReceipt } from '../../types/payment';
 import { formatCurrencyVND } from '../../services/orderService';
@@ -16,6 +16,7 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
   receipt
 }) => {
   const printIframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [isFitPage, setIsFitPage] = useState<boolean>(true);
 
   // Dọn dẹp iframe khi unmount
   useEffect(() => {
@@ -410,9 +411,9 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
       {/* Container phiếu thu */}
-      <div className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[94vh] my-auto">
+      <div className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[95vh] my-auto">
         {/* Thanh công cụ / Action Bar - Ẩn khi In */}
-        <div className="print:hidden flex items-center justify-between px-5 sm:px-6 py-3.5 bg-slate-50 border-b border-gray-200 shrink-0">
+        <div className="print:hidden flex items-center justify-between px-5 sm:px-6 py-3 bg-slate-50 border-b border-gray-200 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
               <FileText size={20} />
@@ -426,6 +427,19 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsFitPage(!isFitPage)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                isFitPage
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                  : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+              }`}
+              title="Thu nhỏ để xem trọn vẹn 1 trang không cần cuộn"
+            >
+              {isFitPage ? '🔍 Xem vừa 1 trang' : '↔️ Kích thước 100%'}
+            </button>
+
             <button
               type="button"
               onClick={handlePrint}
@@ -456,11 +470,13 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
           </div>
         </div>
 
-        {/* VÙNG XEM TRƯỚC PHIẾU THU (Cuộn mượt mà nếu dài, ưu tiên xem toàn bộ nội dung mà không bị cắt) */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-slate-100/70 pb-16">
+        {/* VÙNG XEM TRƯỚC PHIẾU THU (Hỗ trợ thu gọn trọn vẹn 1 trang xem liền mạch) */}
+        <div className={`flex-1 overflow-y-auto p-3 sm:p-5 bg-slate-100/70 ${isFitPage ? 'flex items-center justify-center' : 'pb-12'}`}>
           <div
             id="payment-receipt-print-area"
-            className="w-full max-w-[800px] mx-auto bg-white p-6 sm:p-10 shadow-sm border border-gray-200 rounded-xl"
+            className={`w-full max-w-[800px] mx-auto bg-white p-5 sm:p-7 shadow-sm border border-gray-200 rounded-xl transition-all duration-200 ${
+              isFitPage ? 'scale-[0.92] origin-top my-auto' : ''
+            }`}
           >
             {/* Header thông tin doanh nghiệp & mẫu số Bộ Tài Chính */}
             <div className="flex justify-between items-start border-b border-gray-300 pb-4 mb-6 gap-4">
