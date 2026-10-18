@@ -122,6 +122,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     setValidationError(null);
     setAmount(0);
     setAmountInputStr('');
+    setPayerName('');
     setSpecificAllocations({});
     setNotes('');
 
@@ -135,10 +136,6 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
         setAgencies(res.content || []);
         if (!initialCustomerId && res.content?.length > 0) {
           setSelectedCustomerId(String(res.content[0].id));
-          setPayerName(res.content[0].name);
-        } else if (initialCustomerId && res.content?.length > 0) {
-          const match = res.content.find((a: Agency) => String(a.id) === String(initialCustomerId));
-          if (match) setPayerName(match.name);
         }
       })
       .catch((err) => {
@@ -198,11 +195,6 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
       .then(([credit, invs]) => {
         setCreditStatus(credit);
         setInvoices(invs);
-        // Tự động điền người nộp tiền nếu tìm thấy đại lý
-        const matchedAgency = agencies.find((a) => String(a.id) === String(selectedCustomerId));
-        if (matchedAgency) {
-          setPayerName(matchedAgency.name);
-        }
         // Reset phân bổ chỉ định
         setSpecificAllocations({});
         const remaining = invs.reduce((sum, item) => sum + (item.remainingAmount || 0), 0);
@@ -619,19 +611,19 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <User size={15} className="text-emerald-600" />
-                    <span>Người nộp tiền / Tài xế bàn giao *</span>
+                    <span>Người nộp tiền / Tài xế bàn giao</span>
                   </span>
-                  <span className="text-[10px] text-gray-500 font-normal">Họ tên đại lý hoặc tài xế</span>
+                  <span className="text-[10px] text-gray-500 font-normal">Tự nhập khi tài xế nộp thay</span>
                 </label>
                 <input
                   type="text"
                   value={payerName}
                   onChange={(e) => setPayerName(e.target.value)}
-                  placeholder="Ví dụ: Đại lý Tạp Hóa Thành Công hoặc Tài xế Nguyễn Văn A..."
+                  placeholder="Nhập tên người nộp / tài xế bàn giao (để trống sẽ tự lấy tên đại lý)..."
                   className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
                 <p className="text-[11px] text-gray-500">
-                  Mặc định theo tên đại lý. Nếu tài xế giao hàng nhận tiền mặt nộp lại cho kế toán/thủ quỹ, vui lòng ghi rõ họ tên tài xế để in lên phiếu thu.
+                  Nếu tài xế giao hàng hoặc người khác nộp thay tiền mặt, hãy nhập họ tên vào đây. Nếu để trống, hệ thống sẽ tự động ghi nhận theo tên đại lý.
                 </p>
               </div>
 
