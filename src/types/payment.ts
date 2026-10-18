@@ -49,12 +49,21 @@ export interface PaymentReceipt {
   createdAt: string;
 }
 
+export interface PaymentCollector {
+  id: number;
+  username: string;
+  fullName: string;
+  role: string;
+  phone?: string;
+}
+
 export interface PaymentReceiptCreateRequest {
   customerId: number;
   amount: number;
   paymentMethod: PaymentMethod;
   paymentDate: string;
   collectorName: string;
+  collectorId?: number;
   notes?: string;
   allocationType: AllocationType;
   specificAllocations?: {

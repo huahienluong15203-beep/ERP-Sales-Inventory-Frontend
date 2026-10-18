@@ -21,7 +21,8 @@ import {
   fetchCustomerInvoicesForDebt,
   fetchCustomerCreditStatus,
   createPaymentReceipt,
-  submitRouteCashCollection
+  submitRouteCashCollection,
+  fetchPaymentCollectors
 } from '../../services/paymentApi';
 import { fetchAgencies } from '../../services/agencyApi';
 import type { Agency, CreditStatusResponse } from '../../types/agency';
@@ -29,7 +30,8 @@ import type {
   PaymentReceipt,
   PaymentMethod,
   AllocationType,
-  CustomerInvoiceDebtItem
+  CustomerInvoiceDebtItem,
+  PaymentCollector
 } from '../../types/payment';
 import { SearchSelect } from '../common/SearchSelect';
 import { PaymentReceiptPrintModal } from './PaymentReceiptPrintModal';
@@ -71,6 +73,9 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   const [collectorName, setCollectorName] = useState<string>(
     user?.fullName || 'Kế toán công nợ'
   );
+  const [collectors, setCollectors] = useState<PaymentCollector[]>([]);
+  const [loadingCollectors, setLoadingCollectors] = useState<boolean>(false);
+  const [selectedCollectorId, setSelectedCollectorId] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
   // Cơ chế đối trừ công nợ: FIFO hoặc Chỉ định cụ thể
@@ -134,6 +139,37 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
         setLoadingAgencies(false);
       });
   }, [isOpen, initialCustomerId]);
+
+  // Tải danh sách nhân sự đủ điều kiện lập phiếu thu / thu tiền (Kế toán, Quản trị, Sales)
+  useEffect(() => {
+    if (!isOpen) return;
+    setLoadingCollectors(true);
+    fetchPaymentCollectors()
+      .then((data) => {
+        // Lọc chuẩn role hệ thống trên cả frontend: ROLE_ACCOUNTANT, ROLE_ADMIN, ROLE_SALES_MANAGER, ROLE_SALES_REP
+        const ELIGIBLE_ROLES = ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP'];
+        const filtered = (data || []).filter((c) => ELIGIBLE_ROLES.includes(c.role));
+        setCollectors(filtered);
+
+        // Tự động chọn người dùng hiện tại nếu họ đủ thẩm quyền
+        const currentMatch = filtered.find(
+          (c) => String(c.id) === String(user?.id) || c.username === user?.username
+        );
+        if (currentMatch) {
+          setSelectedCollectorId(String(currentMatch.id));
+          setCollectorName(currentMatch.fullName);
+        } else if (filtered.length > 0) {
+          setSelectedCollectorId(String(filtered[0].id));
+          setCollectorName(filtered[0].fullName);
+        }
+      })
+      .catch((err) => {
+        console.warn('Lỗi tải danh sách người lập phiếu thu:', err);
+      })
+      .finally(() => {
+        setLoadingCollectors(false);
+      });
+  }, [isOpen, user?.id, user?.username]);
 
   // Tải công nợ và hoá đơn khi đổi khách hàng
   useEffect(() => {
@@ -298,6 +334,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
     try {
       const selectedAgency = agencies.find((a) => String(a.id) === String(selectedCustomerId));
+      const selectedCollector = collectors.find((c) => String(c.id) === String(selectedCollectorId));
       let created: PaymentReceipt;
 
       if (isRouteCashMode) {
@@ -318,8 +355,8 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             phone: selectedAgency?.phone
           },
           {
-            username: user?.username || 'sales_rep',
-            fullName: user?.fullName || collectorName.trim() || 'Nhân viên kinh doanh'
+            username: selectedCollector?.username || user?.username || 'sales_rep',
+            fullName: selectedCollector?.fullName || collectorName.trim() || user?.fullName || 'Nhân viên kinh doanh'
           }
         );
         showToast('Thành công', 'Ghi nhận thu tiền tại tuyến thành công! Trạng thái: Chờ nộp quỹ.', 'success');
@@ -340,7 +377,8 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             amount,
             paymentMethod,
             paymentDate,
-            collectorName: collectorName.trim() || 'Kế toán công nợ',
+            collectorName: selectedCollector?.fullName || collectorName.trim() || 'Kế toán công nợ',
+            collectorId: selectedCollectorId ? Number(selectedCollectorId) : undefined,
             notes: notes.trim(),
             allocationType,
             specificAllocations: specificArray
@@ -352,8 +390,8 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             phone: selectedAgency?.phone
           },
           {
-            username: user?.username || 'accountant',
-            fullName: user?.fullName || 'Kế toán'
+            username: selectedCollector?.username || user?.username || 'accountant',
+            fullName: selectedCollector?.fullName || collectorName.trim() || 'Kế toán'
           }
         );
         showToast('Thành công', 'Ghi nhận phiếu thu và đối trừ công nợ thành công!', 'success');
@@ -552,13 +590,47 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   <User size={15} className="text-emerald-600" />
                   <span>Người thu tiền / Kế toán lập phiếu *</span>
                 </label>
-                <input
-                  type="text"
-                  value={collectorName}
-                  onChange={(e) => setCollectorName(e.target.value)}
-                  placeholder="Nhập họ tên người thu tiền"
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
+                <SearchSelect
+                  value={selectedCollectorId}
+                  onChange={(e) => {
+                    const newId = e.target.value;
+                    setSelectedCollectorId(newId);
+                    const c = collectors.find((item) => String(item.id) === newId);
+                    if (c) {
+                      setCollectorName(c.fullName);
+                    }
+                  }}
+                  searchPlaceholder="Tìm kiếm theo tên, mã hoặc vai trò..."
+                  isLoading={loadingCollectors}
+                  className="w-full"
+                >
+                  {collectors.length === 0 ? (
+                    <option value="" disabled>
+                      {loadingCollectors ? 'Đang tải danh sách người lập...' : 'Không có nhân sự phù hợp'}
+                    </option>
+                  ) : (
+                    collectors.map((c) => {
+                      const roleLabel =
+                        c.role === 'ROLE_ACCOUNTANT'
+                          ? 'Kế toán'
+                          : c.role === 'ROLE_ADMIN'
+                          ? 'Quản trị viên'
+                          : c.role === 'ROLE_SALES_MANAGER'
+                          ? 'Quản lý kinh doanh'
+                          : c.role === 'ROLE_SALES_REP'
+                          ? 'Nhân viên kinh doanh'
+                          : c.role;
+                      return (
+                        <option key={c.id} value={c.id}>
+                          {c.fullName} — {roleLabel} (@{c.username})
+                        </option>
+                      );
+                    })
+                  )}
+                </SearchSelect>
+                <p className="text-[11px] text-gray-500">
+                  Chỉ hiển thị các tài khoản Kế toán, Quản trị viên và Nhân viên kinh doanh được phân quyền.
+                </p>
               </div>
 
               {/* Ghi chú */}

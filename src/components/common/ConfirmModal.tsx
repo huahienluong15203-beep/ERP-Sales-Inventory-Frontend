@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { AlertTriangle, Trash2, X, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Trash2, X, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export interface ConfirmModalProps {
   open: boolean;
@@ -7,7 +7,7 @@ export interface ConfirmModalProps {
   message: React.ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
-  variant?: 'danger' | 'warning' | 'primary';
+  variant?: 'danger' | 'warning' | 'primary' | 'success';
   loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -17,7 +17,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   open,
   title,
   message,
-  confirmLabel = 'Xác nhận xóa',
+  confirmLabel,
   cancelLabel = 'Hủy bỏ',
   variant = 'danger',
   loading = false,
@@ -39,6 +39,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   const isDanger = variant === 'danger';
   const isWarning = variant === 'warning';
+  const isSuccess = variant === 'success';
+
+  const defaultConfirmLabel = confirmLabel || (isDanger ? 'Xác nhận xóa' : isSuccess ? 'Xác nhận nộp quỹ' : 'Xác nhận');
 
   return (
     <div
@@ -62,11 +65,15 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                   ? 'bg-rose-50 text-rose-600 border border-rose-200'
                   : isWarning
                   ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                  : isSuccess
+                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
                   : 'bg-blue-50 text-blue-600 border border-blue-200'
               }`}
             >
               {isDanger ? (
                 <Trash2 size={24} />
+              ) : isSuccess ? (
+                <CheckCircle2 size={24} />
               ) : (
                 <AlertTriangle size={24} />
               )}
@@ -111,6 +118,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/20'
                 : isWarning
                 ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-500/20'
+                : isSuccess
+                ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
                 : 'bg-[#F85606] hover:bg-[#E04D05] shadow-orange-500/20'
             }`}
           >
@@ -120,7 +129,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 <span>Đang xử lý...</span>
               </>
             ) : (
-              <span>{confirmLabel}</span>
+              <span>{defaultConfirmLabel}</span>
             )}
           </button>
         </div>

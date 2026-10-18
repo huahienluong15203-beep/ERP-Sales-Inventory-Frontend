@@ -4,6 +4,7 @@ import { fetchPortalCreditStatus as fetchCustomerPortalCreditStatus } from './po
 import type {
   PaymentReceipt,
   PaymentReceiptCreateRequest,
+  PaymentCollector,
   RouteCashCollectionRequest,
   PaymentRejectRequest,
   PaymentFilterParams,
@@ -653,4 +654,40 @@ export async function fetchPaymentReconciliation(params: {
     rejectedCount,
     items
   };
+}
+
+/**
+ * 7. Lấy danh sách nhân sự đủ điều kiện lập phiếu thu / thu tiền (Kế toán, Admin, Sales).
+ */
+export async function fetchPaymentCollectors(): Promise<PaymentCollector[]> {
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/payments/collectors`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('Lỗi gọi /api/payments/collectors:', err);
+  }
+
+  // Fallback demo collectors nếu offline
+  return [
+    {
+      id: 1,
+      username: 'admin',
+      fullName: 'Quản Trị Viên Hệ Thống',
+      role: 'ROLE_ADMIN'
+    },
+    {
+      id: 2,
+      username: 'ketoan',
+      fullName: 'Phạm Thị Kế Toán',
+      role: 'ROLE_ACCOUNTANT'
+    },
+    {
+      id: 3,
+      username: 'nvkd1',
+      fullName: 'Trần Văn Kinh Doanh',
+      role: 'ROLE_SALES_REP'
+    }
+  ];
 }
