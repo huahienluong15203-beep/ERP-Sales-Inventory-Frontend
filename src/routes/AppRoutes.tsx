@@ -58,6 +58,7 @@ import { InventoryAgingReportPage } from '../pages/inventory/InventoryAgingRepor
 import { InTransitDashboardPage } from '../pages/inventory/InTransitDashboardPage';
 import { StockAdjustmentListPage } from '../pages/inventory/StockAdjustmentListPage';
 import { StockAdjustmentCreatePage } from '../pages/inventory/StockAdjustmentCreatePage';
+import { StockAdjustmentDetailPage } from '../pages/inventory/StockAdjustmentDetailPage';
 import { DebtAgingLedgerPage } from '../pages/debt/DebtAgingLedgerPage';
 import { DebtReconciliationPage } from '../pages/debt/DebtReconciliationPage';
 import { CustomerDebtStatementPage } from '../pages/debt/CustomerDebtStatementPage';
@@ -709,6 +710,21 @@ export const AppRoutes: React.FC = () => {
               ]}
             >
               <StockAdjustmentCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/stock-adjustments/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockAdjustmentDetailPage />
             </ProtectedRoute>
           }
         />

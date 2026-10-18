@@ -358,6 +358,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
                 )}
               {!['/', '/dashboard', '/categories', '/invoices', '/invoices/create', '/payments/adjustments', '/debts/ledger', '/debts/reconciliation', '/debts/statement', '/reports/overdue-debts', '/sales-returns', '/sales-returns/create', '/inventory/stock-adjustments', '/inventory/stock-adjustments/create', '/reports/sales', '/payments/reconciliation', '/inventory/warehouses', '/inventory/lots', '/inventory/aging', '/inventory/in-transit', '/inventory/stock-ledger', '/inventory/ledger', '/inventory/stock-card', '/inventory/stocktakes', '/inventory/receipts', '/inventory/transfers', '/orders', '/orders/create', '/pricing', '/pricing/discounts', '/users', '/customers', '/products', '/suppliers'].includes(location.pathname) &&
                 !location.pathname.startsWith('/inventory/delivery-trips') &&
+                !location.pathname.startsWith('/inventory/stock-adjustments') &&
                 Boolean(pageSubtitle) && (
                   <span className="erp-page-subheading">{pageSubtitle}</span>
                 )}
