@@ -516,10 +516,15 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               ) : creditStatus ? (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-gray-200 text-xs">
                   <div className="bg-white p-2.5 rounded-lg border border-gray-200">
-                    <span className="text-gray-500 block text-[11px]">Tổng công nợ còn lại:</span>
+                    <span className="text-gray-500 block text-[11px]">Nợ trên hoá đơn:</span>
                     <span className="font-bold text-rose-600 font-mono text-sm">
                       {formatCurrencyVND(totalRemainingDebt)}
                     </span>
+                    {creditStatus && creditStatus.currentDebt > totalRemainingDebt && (
+                      <span className="text-[10px] text-amber-600 block mt-0.5" title="Công nợ tính từ các đơn hàng chưa lập hoá đơn">
+                        (Tổng nợ đơn: {formatCurrencyVND(creditStatus.currentDebt)})
+                      </span>
+                    )}
                   </div>
                   <div className="bg-white p-2.5 rounded-lg border border-gray-200">
                     <span className="text-gray-500 block text-[11px]">Hạn mức tín dụng:</span>
@@ -827,8 +832,18 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
                 <div className="max-h-60 overflow-y-auto">
                   {invoices.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-gray-500">
-                      Đại lý hiện không có hoá đơn nào còn nợ.
+                    <div className="p-6 text-center text-xs space-y-2">
+                      <p className="font-semibold text-gray-700">Đại lý hiện không có hoá đơn nào còn nợ.</p>
+                      {creditStatus && creditStatus.currentDebt > 0 && (
+                        <div className="text-amber-800 bg-amber-50/90 border border-amber-200 rounded-xl p-3 max-w-lg mx-auto text-left text-xs space-y-1">
+                          <p className="font-semibold text-amber-900">
+                            💡 Lưu ý về công nợ của đại lý:
+                          </p>
+                          <p className="text-[11px] text-amber-800 leading-relaxed">
+                            Đại lý đang có tổng nợ <strong>{formatCurrencyVND(creditStatus.currentDebt)}</strong> từ các đơn hàng chưa xuất hoá đơn. Để đối trừ phiếu thu vào từng khoản, vui lòng vào phân hệ <strong>Hoá đơn &gt; Lập hoá đơn</strong> để phát hành hoá đơn cho các đơn hàng đã giao trước.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ) : allocationType === 'FIFO' ? (
                     /* FIFO Table Preview */
