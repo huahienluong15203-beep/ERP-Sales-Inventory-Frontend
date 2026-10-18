@@ -442,4 +442,102 @@ export async function fetchPortalDeliveryTimeline(orderId: number | string): Pro
   );
 }
 
+// ===================== CÔNG NỢ & HOÁ ĐƠN ĐẠI LÝ (PORTAL DEBT) =====================
+
+export interface PortalDebtSummary {
+  customerId: number;
+  customerCode: string;
+  customerName: string;
+  creditLimit: number;
+  currentDebt: number;
+  availableCredit: number;
+  invoicedDebt: number;
+  uninvoicedDebt: number;
+  maxDebtDays: number | null;
+  openInvoiceCount: number;
+  overdue: boolean;
+  overdueCount: number;
+  overdueAmount: number;
+  overdueDays: number;
+  nextDueDate: string | null;
+  nextDueAmount: number;
+  message?: string | null;
+}
+
+export interface PortalInvoiceDebtItem {
+  id: number;
+  code: string;
+  invoiceDate: string;
+  dueDate: string;
+  orderCodes: string[];
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
+  status: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
+  overdue: boolean;
+  isOverdue: boolean;
+  overdueDays: number;
+}
+
+export interface PortalInvoiceDebtPageResponse {
+  content: PortalInvoiceDebtItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface PortalDebtInvoicesParams {
+  status?: string;
+  keyword?: string;
+  page?: number;
+  size?: number;
+}
+
+/**
+ * S7-07: Tóm tắt công nợ & hạn mức của chính đại lý
+ * GET /api/portal/debt
+ */
+export async function fetchPortalDebtSummary(): Promise<PortalDebtSummary> {
+  return portalJson<PortalDebtSummary>('/debt', 'Không tải được tóm tắt công nợ đại lý');
+}
+
+/**
+ * S7-07: Danh sách hoá đơn công nợ của đại lý kèm tìm kiếm và phân trang (lọc cả FE & BE)
+ * GET /api/portal/debt/invoices
+ */
+export async function fetchPortalDebtInvoices(
+  params: PortalDebtInvoicesParams = {}
+): Promise<PortalInvoiceDebtPageResponse> {
+  const query = new URLSearchParams();
+  if (params.status && params.status !== 'ALL') query.set('status', params.status);
+  if (params.keyword?.trim()) query.set('keyword', params.keyword.trim());
+  if (params.page !== undefined) query.set('page', String(params.page));
+  if (params.size !== undefined) query.set('size', String(params.size));
+
+  const qs = query.toString();
+  const raw = await portalJson<any>(`/debt/invoices${qs ? `?${qs}` : ''}`, 'Không tải được danh sách hoá đơn công nợ');
+
+  const content: PortalInvoiceDebtItem[] = (raw.content || []).map((inv: any) => ({
+    ...inv,
+    totalAmount: Number(inv.totalAmount || 0),
+    paidAmount: Number(inv.paidAmount || 0),
+    remainingAmount: Number(inv.remainingAmount || 0),
+    status: (inv.paymentStatus || inv.status || 'UNPAID') as 'UNPAID' | 'PARTIALLY_PAID' | 'PAID',
+    paymentStatus: (inv.paymentStatus || inv.status || 'UNPAID') as 'UNPAID' | 'PARTIALLY_PAID' | 'PAID',
+    isOverdue: inv.overdue ?? inv.isOverdue ?? false,
+    overdue: inv.overdue ?? inv.isOverdue ?? false,
+    overdueDays: Number(inv.overdueDays || 0)
+  }));
+
+  return {
+    content,
+    page: raw.page ?? raw.number ?? 0,
+    size: raw.size ?? 10,
+    totalElements: raw.totalElements ?? content.length,
+    totalPages: Math.max(1, raw.totalPages ?? 1)
+  };
+}
+
 

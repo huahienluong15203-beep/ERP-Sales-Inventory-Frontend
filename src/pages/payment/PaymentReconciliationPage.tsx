@@ -29,6 +29,7 @@ import type {
 } from '../../types/payment';
 import { PaymentReceiptModal } from '../../components/payment/PaymentReceiptModal';
 import { PaymentReceiptPrintModal } from '../../components/payment/PaymentReceiptPrintModal';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export const PaymentReconciliationPage: React.FC = () => {
   const { user, showToast } = useAuth();
@@ -56,6 +57,9 @@ export const PaymentReconciliationPage: React.FC = () => {
   // Modal từ chối nhận tiền
   const [rejectingItem, setRejectingItem] = useState<PaymentReconciliationItem | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('');
+
+  // Modal xác nhận nhận tiền nộp quỹ (Chuẩn style hệ thống ConfirmModal)
+  const [confirmingItem, setConfirmingItem] = useState<PaymentReconciliationItem | null>(null);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
 
   const loadData = useCallback(async () => {
@@ -79,18 +83,22 @@ export const PaymentReconciliationPage: React.FC = () => {
     loadData();
   }, [loadData]);
 
-  // Kế toán xác nhận nhận tiền nộp quỹ
-  const handleConfirm = async (item: PaymentReconciliationItem) => {
-    if (!window.confirm(`Xác nhận đã nhận tiền mặt ${formatCurrencyVND(item.amount)} cho phiếu ${item.code} từ nhân viên?`)) {
-      return;
-    }
+  // Kế toán mở popup xác nhận nhận tiền nộp quỹ (chuẩn ConfirmModal của hệ thống)
+  const handleRequestConfirm = (item: PaymentReconciliationItem) => {
+    setConfirmingItem(item);
+  };
+
+  // Thực thi xác nhận nhận tiền nộp quỹ
+  const handleExecuteConfirm = async () => {
+    if (!confirmingItem) return;
     setActionLoading(true);
     try {
-      await confirmRouteCashCollection(item.id, {
+      await confirmRouteCashCollection(confirmingItem.id, {
         username: user?.username || 'accountant',
         fullName: user?.fullName || 'Kế toán'
       });
-      showToast(`Đã duyệt nộp quỹ và cấn trừ công nợ cho phiếu ${item.code}!`, 'success');
+      showToast(`Đã duyệt nộp quỹ và cấn trừ công nợ cho phiếu ${confirmingItem.code}!`, 'success');
+      setConfirmingItem(null);
       loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Lỗi xác nhận nộp quỹ';
@@ -432,7 +440,7 @@ export const PaymentReconciliationPage: React.FC = () => {
                           <>
                             <button
                               type="button"
-                              onClick={() => handleConfirm(item)}
+                              onClick={() => handleRequestConfirm(item)}
                               disabled={actionLoading}
                               className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 font-semibold cursor-pointer transition"
                               title="Xác nhận đã nhận tiền nộp quỹ (cấn trừ nợ)"
@@ -558,6 +566,54 @@ export const PaymentReconciliationPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal Xác nhận nộp quỹ & cấn trừ công nợ chuẩn hệ thống */}
+      <ConfirmModal
+        open={!!confirmingItem}
+        variant="success"
+        title="Xác nhận nộp quỹ & cấn trừ nợ"
+        confirmLabel="Xác nhận nhận tiền"
+        cancelLabel="Hủy bỏ"
+        loading={actionLoading}
+        onConfirm={handleExecuteConfirm}
+        onCancel={() => {
+          if (!actionLoading) setConfirmingItem(null);
+        }}
+        message={
+          confirmingItem ? (
+            <div className="space-y-3">
+              <p className="text-gray-700">
+                Xác nhận đã nhận đủ số tiền mặt từ nhân viên thu tiền và đối trừ công nợ đại lý:
+              </p>
+              <div className="bg-white p-3.5 rounded-2xl border border-gray-200 text-xs space-y-1.5 shadow-2xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 font-medium">Mã phiếu thu:</span>
+                  <span className="font-mono font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded-md">
+                    {confirmingItem.code}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 font-medium">Khách hàng / Đại lý:</span>
+                  <span className="font-semibold text-gray-900">{confirmingItem.customerName}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 font-medium">Ngày thu tiền:</span>
+                  <span className="text-gray-700 font-medium">{confirmingItem.paymentDate}</span>
+                </div>
+                <div className="flex justify-between items-center pt-1 border-t border-gray-100">
+                  <span className="text-gray-600 font-semibold">Số tiền nộp quỹ:</span>
+                  <span className="font-mono font-black text-emerald-700 text-sm">
+                    {formatCurrencyVND(confirmingItem.amount)}
+                  </span>
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-500 italic">
+                Lưu ý: Sau khi xác nhận, phiếu thu sẽ chuyển sang trạng thái &ldquo;ĐÃ NỘP QUỸ&rdquo; và các hoá đơn nợ tương ứng của đại lý sẽ được tự động cấn trừ công nợ ngay lập tức.
+              </p>
+            </div>
+          ) : null
+        }
+      />
 
       {/* Modal Lập phiếu thu tiền tại tuyến */}
       <PaymentReceiptModal
