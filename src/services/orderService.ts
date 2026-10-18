@@ -413,6 +413,7 @@ export function buildBackendRequest(params: {
   agencyId: string;
   deliveryPointId?: string;
   expectedDeliveryDate?: string;
+  paymentMethod?: 'CREDIT' | 'COD' | string;
   note?: string;
   items: OrderItem[];
 }): OrderDraftBackendRequest {
@@ -422,6 +423,7 @@ export function buildBackendRequest(params: {
     deliveryAddressId:
       params.deliveryPointId && /^\d+$/.test(params.deliveryPointId) ? Number(params.deliveryPointId) : null,
     desiredDeliveryDate: params.expectedDeliveryDate || null,
+    paymentMethod: params.paymentMethod || 'CREDIT',
     note: params.note || null,
     lines: params.items.map((it) => ({
       productSku: it.sku,
@@ -870,6 +872,7 @@ export async function fetchBackendDrafts(keyword?: string): Promise<OrderDraft[]
       deliveryPointName: 'Kho đại lý',
       deliveryAddress: '',
       expectedDeliveryDate: item.desiredDeliveryDate || new Date().toISOString().slice(0, 10),
+      paymentMethod: (item.paymentMethod as 'CREDIT' | 'COD') || 'CREDIT',
       items: [],
       totalItemsCount: item.lineCount || 0,
       totalQuantity: 0,
@@ -941,6 +944,7 @@ export async function fetchBackendDraftById(id: number): Promise<OrderDraft> {
     deliveryPointName: data.deliveryAddress?.label || 'Kho chính đại lý',
     deliveryAddress: data.deliveryAddress?.address || '',
     expectedDeliveryDate: data.desiredDeliveryDate || new Date().toISOString().slice(0, 10),
+    paymentMethod: (data.paymentMethod as 'CREDIT' | 'COD') || 'CREDIT',
     note: data.note || '',
     items,
     totalItemsCount: items.length,

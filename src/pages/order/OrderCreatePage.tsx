@@ -78,6 +78,7 @@ export const OrderCreatePage: React.FC = () => {
     return d.toISOString().slice(0, 10);
   });
   const [orderNote, setOrderNote] = useState<string>('');
+  const [paymentMethod, setPaymentMethod] = useState<'CREDIT' | 'COD'>('CREDIT');
   const [items, setItems] = useState<OrderItem[]>([]);
 
   // Trạng thái giao diện
@@ -142,6 +143,7 @@ export const OrderCreatePage: React.FC = () => {
           setBackendDraftId(full.backendDraftId || null);
           setCurrentDraftId(full.id);
           setExpectedDeliveryDate(full.expectedDeliveryDate || expectedDeliveryDate);
+          setPaymentMethod(full.paymentMethod === 'COD' ? 'COD' : 'CREDIT');
           setOrderNote(full.note || '');
           setItems(full.items || []);
           await restoreAgency(full.agencyId, full.agencyCode, full.agencyName, full.deliveryPointId);
@@ -156,6 +158,7 @@ export const OrderCreatePage: React.FC = () => {
         setCurrentDraftId(active.id);
         setBackendDraftId(active.backendDraftId || null);
         setExpectedDeliveryDate(active.expectedDeliveryDate || expectedDeliveryDate);
+        setPaymentMethod(active.paymentMethod === 'COD' ? 'COD' : 'CREDIT');
         setOrderNote(active.note || '');
         setItems(active.items || []);
         restoreAgency(active.agencyId, active.agencyCode, active.agencyName, active.deliveryPointId);
@@ -185,6 +188,7 @@ export const OrderCreatePage: React.FC = () => {
       deliveryPointName: selectedDeliveryPoint?.name || '',
       deliveryAddress: selectedDeliveryPoint?.address || selectedAgency?.address || '',
       expectedDeliveryDate,
+      paymentMethod,
       note: orderNote,
       items,
       totalItemsCount: totals.totalItemsCount,
@@ -205,7 +209,7 @@ export const OrderCreatePage: React.FC = () => {
       setActiveDraft(buildDraftObj());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAgency, selectedDeliveryPoint, expectedDeliveryDate, orderNote, items, currentDraftId, backendDraftId]);
+  }, [selectedAgency, selectedDeliveryPoint, expectedDeliveryDate, paymentMethod, orderNote, items, currentDraftId, backendDraftId]);
 
   // S4-02: Lấy thông tin công nợ, hạn mức và kiểm tra vượt hạn mức / quá hạn
   useEffect(() => {
@@ -534,6 +538,7 @@ export const OrderCreatePage: React.FC = () => {
     setBackendDraftId(null);
     setSelectedAgency(null);
     setSelectedDeliveryPoint(null);
+    setPaymentMethod('CREDIT');
     setOrderNote('');
     setItems([]);
     clearActiveDraft();
@@ -550,11 +555,12 @@ export const OrderCreatePage: React.FC = () => {
         agencyId: selectedAgency.id,
         deliveryPointId: selectedDeliveryPoint?.id,
         expectedDeliveryDate,
+        paymentMethod,
         note: orderNote,
         items
       })
     );
-  }, [selectedAgency, selectedDeliveryPoint?.id, expectedDeliveryDate, orderNote, items, backendDraftId]);
+  }, [selectedAgency, selectedDeliveryPoint?.id, expectedDeliveryDate, paymentMethod, orderNote, items, backendDraftId]);
 
   // S3-09: Backend tính tiền hàng, chiết khấu, tổng phải thu ngay khi thêm / sửa dòng (chờ 350ms sau lần gõ cuối)
   const previewSeq = useRef(0);
@@ -636,6 +642,7 @@ export const OrderCreatePage: React.FC = () => {
         agencyId: selectedAgency.id,
         deliveryPointId: selectedDeliveryPoint?.id,
         expectedDeliveryDate,
+        paymentMethod,
         note: orderNote,
         items
       });
@@ -700,6 +707,7 @@ export const OrderCreatePage: React.FC = () => {
         agencyId: selectedAgency.id,
         deliveryPointId: selectedDeliveryPoint?.id,
         expectedDeliveryDate,
+        paymentMethod,
         note: orderNote,
         items
       });
@@ -754,6 +762,7 @@ export const OrderCreatePage: React.FC = () => {
       setBackendDraftId(full.backendDraftId || null);
       setCurrentDraftId(full.id);
       setExpectedDeliveryDate(full.expectedDeliveryDate || expectedDeliveryDate);
+      setPaymentMethod(full.paymentMethod === 'COD' ? 'COD' : 'CREDIT');
       setOrderNote(full.note || '');
       setItems(full.items || []);
       setSelectedAgency(null);
@@ -936,6 +945,8 @@ export const OrderCreatePage: React.FC = () => {
           onChangeExpectedDeliveryDate={setExpectedDeliveryDate}
           orderNote={orderNote}
           onChangeOrderNote={setOrderNote}
+          paymentMethod={paymentMethod}
+          onChangePaymentMethod={setPaymentMethod}
           creditStatus={creditStatus}
           loadingCreditStatus={loadingCreditStatus}
         />

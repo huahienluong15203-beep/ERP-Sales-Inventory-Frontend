@@ -307,7 +307,11 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
         <div class="info-list">
           <div class="info-row">
             <span class="info-label">Họ và tên người nộp tiền:</span>
-            <span class="info-value" style="font-weight: bold;">${escapeHtml(receipt.customerName)}</span>
+            <span class="info-value" style="font-weight: bold;">${escapeHtml(
+              receipt.payerName && receipt.payerName !== receipt.customerName
+                ? `${receipt.payerName} (Nộp thay cho: ${receipt.customerName})`
+                : (receipt.payerName || receipt.customerName)
+            )}</span>
           </div>
           <div class="info-row">
             <span class="info-label">Mã đơn vị / Đại lý:</span>
@@ -359,7 +363,7 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
             <p class="title">Người nộp tiền</p>
             <p class="sub">(Ký, họ tên)</p>
             <div class="space"></div>
-            <p class="signer-name">${escapeHtml(receipt.customerName)}</p>
+            <p class="signer-name">${escapeHtml(receipt.payerName || receipt.customerName)}</p>
           </div>
           <div class="sign-col">
             <p class="title">Người thu tiền</p>
@@ -540,7 +544,16 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
               <div className="flex">
                 <span className="w-44 sm:w-48 shrink-0 font-medium text-gray-600">Họ và tên người nộp tiền:</span>
                 <span className="flex-1 font-bold text-gray-900 border-b border-dotted border-gray-400 pb-0.5">
-                  {receipt.customerName}
+                  {receipt.payerName && receipt.payerName !== receipt.customerName ? (
+                    <span>
+                      {receipt.payerName}{' '}
+                      <span className="font-normal text-xs text-gray-500">
+                        (Nộp thay cho: {receipt.customerName})
+                      </span>
+                    </span>
+                  ) : (
+                    receipt.payerName || receipt.customerName
+                  )}
                 </span>
               </div>
 
@@ -661,7 +674,9 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
                 <p className="font-bold text-xs uppercase text-gray-900">Người nộp tiền</p>
                 <p className="text-[10px] italic text-gray-500">(Ký, họ tên)</p>
                 <div className="h-16" />
-                <p className="text-xs font-semibold text-gray-800">{receipt.customerName}</p>
+                <p className="text-xs font-semibold text-gray-800">
+                  {receipt.payerName || receipt.customerName}
+                </p>
               </div>
 
               <div>

@@ -20,6 +20,7 @@ import {
   Ban,
   Printer,
   Truck,
+  CreditCard,
   CheckCheck,
   Archive,
   Search,
@@ -559,6 +560,17 @@ export const OrderDetailPage: React.FC = () => {
                   {copiedCode ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
                 </button>
                 {renderStatusBadge(order.status)}
+                {order.paymentMethod === 'COD' ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 text-amber-900 border border-amber-300">
+                    <Truck size={13} className="text-amber-700" />
+                    <span>COD - Thu tiền khi giao</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-100 text-blue-900 border border-blue-300">
+                    <CreditCard size={13} className="text-blue-700" />
+                    <span>Mua nợ (CREDIT)</span>
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-500 flex flex-wrap items-center gap-2">
                 <span>Khách hàng: <strong>{order.customerName}</strong></span>
@@ -602,6 +614,32 @@ export const OrderDetailPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Banner hướng dẫn thu tiền cho tài xế & đại lý */}
+        {order.paymentMethod === 'COD' ? (
+          <div className="mt-4 p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 flex items-start gap-3">
+            <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-xs space-y-0.5">
+              <span className="font-bold text-amber-900 block">
+                ⚠️ HÌNH THỨC: THANH TOÁN KHI NHẬN HÀNG (COD)
+              </span>
+              <p className="text-amber-800">
+                Tài xế giao hàng có trách nhiệm thu đủ số tiền{' '}
+                <strong className="text-amber-950 font-bold font-mono">
+                  {formatCurrencyVND(Number(order.totalAmount || 0))}
+                </strong>{' '}
+                (tiền mặt hoặc chuyển khoản) trước khi bàn giao hàng. Kế toán/Thủ quỹ lập phiếu thu ghi tên tài xế nộp tiền.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-blue-950 flex items-center gap-2.5 text-xs">
+            <CreditCard size={16} className="text-blue-600 shrink-0" />
+            <span>
+              ✓ <strong>Hình thức: Công nợ (CREDIT)</strong> — Đơn hàng tính vào hạn mức công nợ đại lý. Đại lý ký biên bản giao nhận hàng.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* 3. TIMELINE HÀNH TRÌNH VÒNG ĐỜI ĐƠN HÀNG */}
@@ -809,6 +847,23 @@ export const OrderDetailPage: React.FC = () => {
               </span>
               <span className="text-[11px] text-gray-400 block">
                 {order.updatedAt ? new Date(order.updatedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}
+              </span>
+            </div>
+
+            <div>
+              <span className="text-gray-500 block">Hình thức thanh toán:</span>
+              <span className="font-bold flex items-center gap-1.5 mt-0.5">
+                {order.paymentMethod === 'COD' ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-900 border border-amber-300">
+                    <Truck size={12} className="text-amber-700" />
+                    <span>COD - Thu tiền khi giao</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-100 text-blue-900 border border-blue-300">
+                    <CreditCard size={12} className="text-blue-700" />
+                    <span>Mua nợ (CREDIT)</span>
+                  </span>
+                )}
               </span>
             </div>
           </div>

@@ -30,6 +30,7 @@ export interface PaymentReceipt {
   customerName: string;
   customerAddress?: string;
   customerPhone?: string;
+  payerName?: string;
   amount: number;
   paymentMethod: PaymentMethod;
   paymentDate: string;
@@ -64,6 +65,7 @@ export interface PaymentReceiptCreateRequest {
   paymentDate: string;
   collectorName: string;
   collectorId?: number;
+  payerName?: string;
   notes?: string;
   allocationType: AllocationType;
   specificAllocations?: {
@@ -77,6 +79,7 @@ export interface RouteCashCollectionRequest {
   amount: number;
   paymentMethod: PaymentMethod;
   paymentDate: string;
+  payerName?: string;
   notes?: string;
   receiptImageUrl?: string;
   receiptImageBase64?: string;

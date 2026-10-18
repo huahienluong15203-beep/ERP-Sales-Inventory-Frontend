@@ -73,6 +73,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   const [collectorName, setCollectorName] = useState<string>(
     user?.fullName || 'Kế toán công nợ'
   );
+  const [payerName, setPayerName] = useState<string>('');
   const [collectors, setCollectors] = useState<PaymentCollector[]>([]);
   const [loadingCollectors, setLoadingCollectors] = useState<boolean>(false);
   const [selectedCollectorId, setSelectedCollectorId] = useState<string>('');
@@ -134,6 +135,10 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
         setAgencies(res.content || []);
         if (!initialCustomerId && res.content?.length > 0) {
           setSelectedCustomerId(String(res.content[0].id));
+          setPayerName(res.content[0].name);
+        } else if (initialCustomerId && res.content?.length > 0) {
+          const match = res.content.find((a: Agency) => String(a.id) === String(initialCustomerId));
+          if (match) setPayerName(match.name);
         }
       })
       .catch((err) => {
@@ -193,6 +198,11 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
       .then(([credit, invs]) => {
         setCreditStatus(credit);
         setInvoices(invs);
+        // Tự động điền người nộp tiền nếu tìm thấy đại lý
+        const matchedAgency = agencies.find((a) => String(a.id) === String(selectedCustomerId));
+        if (matchedAgency) {
+          setPayerName(matchedAgency.name);
+        }
         // Reset phân bổ chỉ định
         setSpecificAllocations({});
         const remaining = invs.reduce((sum, item) => sum + (item.remainingAmount || 0), 0);
@@ -360,6 +370,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             amount,
             paymentMethod,
             paymentDate,
+            payerName: payerName.trim() || undefined,
             notes: notes.trim(),
             receiptImageUrl: receiptImage.startsWith('http') ? receiptImage : undefined,
             receiptImageBase64: receiptImage.startsWith('data:') ? receiptImage : (receiptImage || undefined)
@@ -395,6 +406,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             paymentDate,
             collectorName: selectedCollector?.fullName || collectorName.trim() || 'Kế toán công nợ',
             collectorId: selectedCollectorId ? Number(selectedCollectorId) : undefined,
+            payerName: payerName.trim() || undefined,
             notes: notes.trim(),
             allocationType,
             specificAllocations: specificArray
@@ -600,6 +612,27 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   onChange={(e) => setPaymentDate(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
+              </div>
+
+              {/* Người nộp tiền / Tài xế bàn giao */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <User size={15} className="text-emerald-600" />
+                    <span>Người nộp tiền / Tài xế bàn giao *</span>
+                  </span>
+                  <span className="text-[10px] text-gray-500 font-normal">Họ tên đại lý hoặc tài xế</span>
+                </label>
+                <input
+                  type="text"
+                  value={payerName}
+                  onChange={(e) => setPayerName(e.target.value)}
+                  placeholder="Ví dụ: Đại lý Tạp Hóa Thành Công hoặc Tài xế Nguyễn Văn A..."
+                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <p className="text-[11px] text-gray-500">
+                  Mặc định theo tên đại lý. Nếu tài xế giao hàng nhận tiền mặt nộp lại cho kế toán/thủ quỹ, vui lòng ghi rõ họ tên tài xế để in lên phiếu thu.
+                </p>
               </div>
 
               {/* Người thu tiền */}
