@@ -93,7 +93,7 @@ export const GoodsReceiptDraftsModal: React.FC<GoodsReceiptDraftsModalProps> = (
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-xs animate-in fade-in">
       <div
-        className="w-full max-w-4xl h-[720px] max-h-[90vh] bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="w-full max-w-5xl xl:max-w-6xl h-[720px] max-h-[90vh] bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Modal */}
@@ -131,7 +131,7 @@ export const GoodsReceiptDraftsModal: React.FC<GoodsReceiptDraftsModalProps> = (
 
         {/* Thanh tìm kiếm */}
         <div className="p-3 sm:px-6 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between gap-3 shrink-0">
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 max-w-lg">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"

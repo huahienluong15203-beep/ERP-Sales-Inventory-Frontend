@@ -20,6 +20,7 @@ export interface DebtAgingRow {
   over90: number;          // Trên 90 ngày
   overdueAmount: number;   // Quá hạn
   oldestDebtDays: number;  // Tuổi nợ lâu nhất
+  latestActivity?: string | null;
 }
 
 export interface DebtAgingTotals {
@@ -51,7 +52,7 @@ export interface DebtLedgerFilterParams {
   bucket?: 'ALL' | 'D0_30' | 'D31_60' | 'D61_90' | 'D90_PLUS';
   overdueOnly?: boolean;
   includeSettled?: boolean;
-  sort?: 'OLDEST' | 'OUTSTANDING' | 'OVERDUE' | 'CODE';
+  sort?: 'NEWEST' | 'OLDEST' | 'OUTSTANDING' | 'OVERDUE' | 'CODE';
   page?: number;
   size?: number;
 }
