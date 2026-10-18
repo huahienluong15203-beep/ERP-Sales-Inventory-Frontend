@@ -8,141 +8,79 @@ import type {
 
 /**
  * Lấy sổ chi tiết công nợ thực tế của 1 đại lý theo khoảng thời gian (S8-10)
- * Dữ liệu được tính toán 100% từ các hoá đơn bán hàng, phiếu thu và khách hàng thực tế trong hệ thống
+ * Dữ liệu được tính toán 100% từ Backend SQL theo hoá đơn bán hàng, phiếu thu và chứng từ giảm trừ
  */
 export async function fetchCustomerDebtStatement(
   params: CustomerDebtStatementFilterParams
 ): Promise<CustomerDebtStatement> {
   const cid = Number(params.customerId) || 1;
+  const query = new URLSearchParams();
+  if (params.fromDate) query.set('fromDate', params.fromDate);
+  if (params.toDate) query.set('toDate', params.toDate);
 
-  // 1. Tải thông tin đại lý / khách hàng thực tế
-  let customerInfo: any = null;
+  // 1. Gọi trực tiếp API Backend S8-10 (/api/debts/customers/{cid}/statement)
+  const res = await authFetch(`${API_BASE_URL}/api/debts/customers/${cid}/statement?${query.toString()}`);
+  if (!res.ok) {
+    const errData = await res.json().catch(() => null);
+    throw new Error(errData?.message || `Lỗi tải sổ chi tiết công nợ (mã lỗi ${res.status})`);
+  }
+  const data = await res.json();
+
+  // 2. Tải thêm thông tin hạn mức của đại lý để hiển thị đầy đủ tiêu đề mẫu biểu
+  let creditLimit = 50000000;
+  let maxDebtDays = 30;
+  let salesRepName = 'Chưa phân công';
   try {
     const cRes = await authFetch(`${API_BASE_URL}/api/customers/${cid}`);
     if (cRes.ok) {
-      customerInfo = await cRes.json();
+      const cData = await cRes.json();
+      creditLimit = Number(cData.creditLimit) || 50000000;
+      maxDebtDays = Number(cData.maxDebtDays) || 30;
+      salesRepName = cData.salesRepName || cData.salesRep?.fullName || 'Chưa phân công';
     }
-  } catch (err) {
-    console.warn('Lỗi khi tải thông tin khách hàng:', err);
+  } catch {
+    // ignore
   }
 
-  // 2. Tải danh sách hoá đơn bán hàng thực tế của đại lý
-  let realInvoices: any[] = [];
-  try {
-    const invRes = await authFetch(`${API_BASE_URL}/api/invoices?customerId=${cid}&size=100`);
-    if (invRes.ok) {
-      const invData = await invRes.json();
-      realInvoices = invData.content || [];
-    }
-  } catch (err) {
-    console.warn('Lỗi khi tải hoá đơn thực tế:', err);
-  }
-
-  // 3. Tải danh sách phiếu thu thanh toán thực tế của đại lý
-  let realPayments: any[] = [];
-  try {
-    const payRes = await authFetch(`${API_BASE_URL}/api/payments?customerId=${cid}&size=100`);
-    if (payRes.ok) {
-      const payData = await payRes.json();
-      realPayments = payData.content || [];
-    }
-  } catch (err) {
-    console.warn('Lỗi khi tải phiếu thu thực tế:', err);
-  }
-
-  // 4. Tổng hợp danh sách nghiệp vụ phát sinh thực tế
-  const allList: {
-    date: string;
-    code: string;
-    documentType: 'INVOICE' | 'PAYMENT' | 'ADJUSTMENT';
-    documentTypeLabel: string;
-    description: string;
-    debit: number;
-    credit: number;
-  }[] = [];
-
-  // Ghi nhận các hoá đơn bán hàng (Phát sinh Nợ)
-  realInvoices.forEach(inv => {
-    allList.push({
-      date: inv.invoiceDate,
-      code: inv.code || inv.invoiceCode || `HD-${inv.id}`,
-      documentType: 'INVOICE',
-      documentTypeLabel: 'Hoá đơn bán hàng',
-      description: inv.note || `Hoá đơn bán hàng xuất cho đại lý theo đơn hàng`,
-      debit: Number(inv.totalAmount) || 0,
-      credit: 0
-    });
-  });
-
-  // Ghi nhận các phiếu thu tiền (Phát sinh Có)
-  realPayments.forEach(p => {
-    allList.push({
-      date: p.paymentDate,
-      code: p.code || `PT-${p.id}`,
-      documentType: 'PAYMENT',
-      documentTypeLabel: 'Phiếu thu tiền',
-      description: p.note || `Thu tiền bán hàng (${p.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' : 'Tiền mặt'})`,
-      debit: 0,
-      credit: Number(p.amount) || 0
-    });
-  });
-
-  // Sắp xếp tăng dần theo ngày phát sinh
-  allList.sort((a, b) => a.date.localeCompare(b.date));
-
-  // 5. Tính số dư đầu kỳ (trước ngày fromDate)
-  let openingBalance = 0;
-  allList.forEach(t => {
-    if (params.fromDate && t.date < params.fromDate) {
-      openingBalance += (t.debit - t.credit);
-    }
-  });
-
-  // 6. Lọc các giao dịch trong kỳ [fromDate, toDate]
-  const inPeriod = allList.filter(t => {
-    if (params.fromDate && t.date < params.fromDate) return false;
-    if (params.toDate && t.date > params.toDate) return false;
-    return true;
-  });
-
-  // 7. Tính toán số dư luỹ kế
-  let running = openingBalance;
-  const transactions: CustomerDebtTransaction[] = inPeriod.map((t, idx) => {
-    running = running + t.debit - t.credit;
-    return {
-      id: idx + 1,
-      date: t.date,
-      code: t.code,
-      documentType: t.documentType,
-      documentTypeLabel: t.documentTypeLabel,
-      description: t.description,
-      debit: t.debit,
-      credit: t.credit,
-      balance: running
-    };
-  });
-
-  const totalDebit = transactions.reduce((s, t) => s + t.debit, 0);
-  const totalCredit = transactions.reduce((s, t) => s + t.credit, 0);
-  const closingBalance = openingBalance + totalDebit - totalCredit;
+  // 3. Map danh sách dòng nghiệp vụ từ backend sang kiểu dữ liệu frontend
+  const transactions: CustomerDebtTransaction[] = (data.entries || []).map((e: any, idx: number) => ({
+    id: idx + 1,
+    refId: e.refId,
+    date: e.date,
+    code: e.code,
+    documentType: e.type,
+    documentTypeLabel: e.typeLabel || (
+      e.type === 'INVOICE'
+        ? 'Hoá đơn bán hàng'
+        : e.type === 'PAYMENT'
+        ? 'Phiếu thu tiền'
+        : e.type === 'ADJUSTMENT'
+        ? 'Giảm trừ trả hàng'
+        : 'Chứng từ công nợ'
+    ),
+    description: e.description || '',
+    debit: Number(e.debit) || 0,
+    credit: Number(e.credit) || 0,
+    balance: Number(e.balance) || 0
+  }));
 
   return {
-    customerId: cid,
-    customerCode: customerInfo?.code || `DL-${String(cid).padStart(3, '0')}`,
-    customerName: customerInfo?.name || `Đại lý số ${cid}`,
-    customerAddress: customerInfo?.address || 'Chưa cập nhật',
-    customerTaxCode: customerInfo?.taxCode || 'Chưa cập nhật',
-    customerPhone: customerInfo?.phone || 'Chưa cập nhật',
-    salesRepName: customerInfo?.salesRepName || customerInfo?.salesRep?.fullName || 'Chưa phân công',
-    creditLimit: Number(customerInfo?.creditLimit) || 50000000,
-    maxDebtDays: Number(customerInfo?.maxDebtDays) || 30,
-    fromDate: params.fromDate,
-    toDate: params.toDate,
+    customerId: data.customerId ?? cid,
+    customerCode: data.customerCode || `DL-${String(cid).padStart(3, '0')}`,
+    customerName: data.customerName || `Đại lý số ${cid}`,
+    customerAddress: data.customerAddress || 'Chưa cập nhật',
+    customerTaxCode: data.customerTaxCode || 'Chưa cập nhật',
+    customerPhone: data.customerPhone || 'Chưa cập nhật',
+    salesRepName,
+    creditLimit,
+    maxDebtDays,
+    fromDate: data.fromDate || params.fromDate,
+    toDate: data.toDate || params.toDate,
     asOf: new Date().toISOString().slice(0, 10),
-    openingBalance,
-    totalDebit,
-    totalCredit,
-    closingBalance,
+    openingBalance: Number(data.openingBalance) || 0,
+    totalDebit: Number(data.totalDebit) || 0,
+    totalCredit: Number(data.totalCredit) || 0,
+    closingBalance: Number(data.closingBalance) || 0,
     transactions
   };
 }

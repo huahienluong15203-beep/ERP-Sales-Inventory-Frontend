@@ -8,9 +8,6 @@ import {
   Users,
   ChevronRight,
   TrendingUp,
-  Lock,
-  ShieldCheck,
-  History,
   Package
 } from '../../components/common/Icons';
 import { productService } from '../../services/productService';
@@ -55,12 +52,6 @@ export const DashboardPage: React.FC = () => {
       )
     );
 
-  // Giá vốn và biên lợi nhuận chỉ lộ ra với vai trò Quản lý kinh doanh (ROLE_SALES_MANAGER) và Quản trị viên
-  const canViewCostAndMargin =
-    currentRole === 'ROLE_SALES_MANAGER' ||
-    currentRole === 'ROLE_ADMIN' ||
-    Boolean(user?.roles?.some((r) => r === 'ROLE_SALES_MANAGER' || r === 'ROLE_ADMIN'));
-
   // Quyền khởi tạo đơn hàng mới: Chỉ Admin, Quản lý kinh doanh và Nhân viên kinh doanh
   const canCreateOrder =
     currentRole === 'ROLE_SALES_REP' ||
@@ -86,7 +77,6 @@ export const DashboardPage: React.FC = () => {
   const [activeAgenciesCount, setActiveAgenciesCount] = useState<number>(0);
   const [ordersCount, setOrdersCount] = useState<number>(0);
   const [totalRevenue, setTotalRevenue] = useState<number>(0);
-  const [totalCogs, setTotalCogs] = useState<number>(0);
   const [recentOrders, setRecentOrders] = useState<RecentOrderItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -297,7 +287,6 @@ export const DashboardPage: React.FC = () => {
                       OFFICIAL_ORDER_STATUSES.includes(String(o.status || '').toUpperCase())
                     ).length
               );
-              setTotalCogs(Math.round(finalRevenue * 0.7));
 
               const formattedRecent: RecentOrderItem[] = backendOrders.slice(0, 10).map((o) => {
                 const status = String(o.status || 'DRAFT').toUpperCase();
@@ -367,12 +356,6 @@ export const DashboardPage: React.FC = () => {
     return val.toLocaleString('vi-VN') + ' đ';
   };
 
-  const grossMarginPercent =
-    totalRevenue > 0
-      ? (((totalRevenue - totalCogs) / totalRevenue) * 100).toFixed(2) + '%'
-      : '0.00%';
-  const grossProfit = totalRevenue - totalCogs;
-
   return (
     <div className="erp-fade-in space-y-4">
       {/* CẢNH BÁO TỒN KHO DƯỚI ĐỊNH MỨC CHO KHO & ADMIN */}
@@ -414,308 +397,106 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* 3. DANH SÁCH ĐẠI LÝ QUÁ HẠN CÔNG NỢ XẾP THEO SỐ TIỀN NỢ (AC 3) */}
-          <ExecutiveOverdueAgenciesTable
-            data={executiveOverview?.overdueAgencies || null}
-            loading={executiveLoading}
-          />
-        </div>
-      )}
-
-      {/* ================= OPERATIONAL & INVENTORY SUMMARY CARDS ================= */}
-      <div className="erp-stat-grid">
-        {/* Thẻ 1: Tổng Doanh Thu */}
-        <div className="erp-stat-card">
-          <div className="erp-stat-card-top">
-            <span className="erp-stat-label">TỔNG DOANH THU THÁNG</span>
-            <div
-              className="erp-stat-icon-badge"
-              style={{ background: '#FFF2EE', color: '#F85606' }}
-            >
-              <DollarSign size={22} />
-            </div>
-          </div>
-          <div className="erp-stat-value">
-            {isLoading ? 'Đang tải...' : formatCurrency(totalRevenue)}
-          </div>
-          <div className="erp-stat-subtext" style={{ color: totalRevenue > 0 ? '#10B981' : '#64748B' }}>
-            <TrendingUp size={14} />
-            <span>
-              {totalRevenue > 0
-                ? 'Ghi nhận từ đơn xuất kho & giao hàng'
-                : 'Chưa phát sinh doanh thu trong kỳ'}
-            </span>
-          </div>
-        </div>
-
-        {/* Thẻ 2: Đơn Hàng Trong Kỳ */}
-        <div className="erp-stat-card">
-          <div className="erp-stat-card-top">
-            <span className="erp-stat-label">ĐƠN HÀNG TRONG KỲ</span>
-            <div
-              className="erp-stat-icon-badge"
-              style={{ background: '#EFF6FF', color: '#2563EB' }}
-            >
-              <ShoppingCart size={22} />
-            </div>
-          </div>
-          <div className="erp-stat-value">
-            {isLoading ? '...' : ordersCount}
-          </div>
-          <div className="erp-stat-subtext">
-            <span>
-              {ordersCount > 0
-                ? `${ordersCount} đơn hàng chính thức phát sinh`
-                : 'Chưa phát sinh đơn hàng mới'}
-            </span>
-          </div>
-        </div>
-
-        {/* Thẻ 3: Hàng Sẵn Có Trong Kho */}
-        <div className="erp-stat-card">
-          <div className="erp-stat-card-top">
-            <span className="erp-stat-label">HÀNG SẴN CÓ TRONG KHO</span>
-            <div
-              className="erp-stat-icon-badge"
-              style={{ background: '#FEF3C7', color: '#D97706' }}
-            >
-              <Boxes size={22} />
-            </div>
-          </div>
-          <div className="erp-stat-value">
-            {isLoading ? '...' : `${productCount.toLocaleString('vi-VN')} Sản phẩm`}
-          </div>
-          <div className="erp-stat-subtext" style={{ color: '#D97706' }}>
-            <span>Danh mục sản phẩm đang quản lý trên hệ thống</span>
-          </div>
-        </div>
-
-        {/* Thẻ 4: Đại Lý Phân Phối */}
-        <div className="erp-stat-card">
-          <div className="erp-stat-card-top">
-            <span className="erp-stat-label">ĐẠI LÝ HOẠT ĐỘNG</span>
-            <div
-              className="erp-stat-icon-badge"
-              style={{ background: '#ECFDF5', color: '#059669' }}
-            >
-              <Users size={22} />
-            </div>
-          </div>
-          <div className="erp-stat-value">
-            {isLoading ? '...' : activeAgenciesCount || agencyCount}
-          </div>
-          <div className="erp-stat-subtext">
-            <span>
-              {agencyCount > 0
-                ? `${activeAgenciesCount}/${agencyCount} đại lý đang hoạt động`
-                : 'Chưa có hồ sơ đại lý nào'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* CHỈ SỐ GIÁ VỐN & BIÊN LỢI NHUẬN GỘP */}
-      <div style={{ marginTop: '20px', marginBottom: '20px' }}>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '16px'
-          }}
-        >
-          {/* Card Giá vốn */}
-          <div
-            className="erp-stat-card"
-            style={{ borderLeft: canViewCostAndMargin ? '4px solid #F85606' : '4px solid #CBD5E1' }}
-          >
-            <div className="erp-stat-card-top">
-              <span className="erp-stat-label">GIÁ VỐN HÀNG BÁN (COGS)</span>
-              <div
-                className="erp-stat-icon-badge"
-                style={{
-                  background: canViewCostAndMargin ? '#FFF2EE' : '#F1F5F9',
-                  color: canViewCostAndMargin ? '#F85606' : '#94A3B8'
-                }}
-              >
-                {canViewCostAndMargin ? <DollarSign size={20} /> : <Lock size={20} />}
-              </div>
-            </div>
-            <div className="erp-stat-value" style={{ letterSpacing: canViewCostAndMargin ? 'normal' : '3px' }}>
-              {canViewCostAndMargin ? (isLoading ? '...' : formatCurrency(totalCogs)) : '•••••••••••• đ'}
-            </div>
-            <div className="erp-stat-subtext">
-              {canViewCostAndMargin ? (
-                <span style={{ color: '#64748B' }}>
-                  {totalRevenue > 0 ? (
-                    <>
-                      Tỷ trọng vốn: <strong>70.00%</strong> tổng doanh thu
-                    </>
-                  ) : (
-                    'Chưa phát sinh giá vốn'
-                  )}
-                </span>
-              ) : (
-                <span style={{ color: '#EF4444', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600 }}>
-                  <ShieldCheck size={14} />
-                  <span>Bảo mật: Chỉ Quản lý kinh doanh được phép xem</span>
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Card Biên lợi nhuận */}
-          <div
-            className="erp-stat-card"
-            style={{ borderLeft: canViewCostAndMargin ? '4px solid #10B981' : '4px solid #CBD5E1' }}
-          >
-            <div className="erp-stat-card-top">
-              <span className="erp-stat-label">BIÊN LỢI NHUẬN GỘP (GROSS MARGIN)</span>
-              <div
-                className="erp-stat-icon-badge"
-                style={{
-                  background: canViewCostAndMargin ? '#ECFDF5' : '#F1F5F9',
-                  color: canViewCostAndMargin ? '#10B981' : '#94A3B8'
-                }}
-              >
-                {canViewCostAndMargin ? <TrendingUp size={20} /> : <Lock size={20} />}
-              </div>
-            </div>
-            <div className="erp-stat-value" style={{ letterSpacing: canViewCostAndMargin ? 'normal' : '3px' }}>
-              {canViewCostAndMargin ? (isLoading ? '...' : grossMarginPercent) : '•••• %'}
-            </div>
-            <div className="erp-stat-subtext">
-              {canViewCostAndMargin ? (
-                <span style={{ color: '#10B981', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <TrendingUp size={14} />
-                  <span>
-                    Lãi gộp: <strong>{formatCurrency(grossProfit)}</strong>
-                  </span>
-                </span>
-              ) : (
-                <span style={{ color: '#EF4444', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600 }}>
-                  <ShieldCheck size={14} />
-                  <span>Bảo mật: Chỉ Quản lý kinh doanh được phép xem</span>
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* PHÂN HỆ LỊCH SỬ THAY ĐỔI GIÁ (S3-02) */}
-      {canViewCostAndMargin && (
-        <div
-          onClick={() => navigate('/logs?tab=price')}
-          style={{
-            cursor: 'pointer',
-            marginBottom: '20px',
-            padding: '16px 20px',
-            background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
-            borderRadius: '16px',
-            border: '1px solid #BFDBFE',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '16px'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '12px',
-                background: '#2563EB',
-                color: '#FFFFFF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}
-            >
-              <History size={22} />
-            </div>
-            <div>
-              <span style={{ fontSize: '15px', fontWeight: 700, color: '#1E3A8A' }}>
-                Lịch Sử Thay Đổi Giá Sản Phẩm
-              </span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#1E40AF' }}>
-                Cơ sở giải thích biến động giá tháng này so với tháng trước cho Đại lý • Xem giá cũ, giá mới, người sửa và căn cứ áp dụng
-              </p>
-            </div>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              color: '#1D4ED8',
-              fontSize: '13px',
-              fontWeight: 600,
-              whiteSpace: 'nowrap'
-            }}
-          >
-            <span>Mở tra cứu</span>
-            <ChevronRight size={16} />
+          {/* 3. BẢNG CẢNH BÁO ĐẠI LÝ QUÁ HẠN CÔNG NỢ (AC 3) */}
+          <div className="mt-4">
+            <ExecutiveOverdueAgenciesTable
+              data={executiveOverview?.overdueAgencies || null}
+              loading={executiveLoading}
+            />
           </div>
         </div>
       )}
 
-      {/* PHÂN HỆ NHẬT KÝ THAO TÁC & KIỂM TOÁN TỒN KHO - CÔNG NỢ (S2-04) */}
-      {isExecutiveRole && (
-        <div
-          onClick={() => navigate('/logs?tab=audit')}
-          style={{
-            cursor: 'pointer',
-            marginBottom: '20px',
-            padding: '16px 20px',
-            background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
-            borderRadius: '16px',
-            border: '1px solid #FED7AA',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '16px'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '12px',
-                background: '#EA580C',
-                color: '#FFFFFF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}
-            >
-              <ShieldCheck size={22} />
+      {/* ================= OPERATIONAL & INVENTORY SUMMARY CARDS (Chỉ hiển thị khi không phải vai trò điều hành) ================= */}
+      {!isExecutiveRole && (
+        <div className="erp-stat-grid">
+          {/* Thẻ 1: Tổng Doanh Thu */}
+          <div className="erp-stat-card">
+            <div className="erp-stat-card-top">
+              <span className="erp-stat-label">TỔNG DOANH THU THÁNG</span>
+              <div
+                className="erp-stat-icon-badge"
+                style={{ background: '#FFF2EE', color: '#F85606' }}
+              >
+                <DollarSign size={22} />
+              </div>
             </div>
-            <div>
-              <span style={{ fontSize: '15px', fontWeight: 700, color: '#9A3412' }}>
-                Nhật Ký Thao Tác Tồn Kho & Công Nợ
+            <div className="erp-stat-value">
+              {isLoading ? 'Đang tải...' : formatCurrency(totalRevenue)}
+            </div>
+            <div className="erp-stat-subtext" style={{ color: totalRevenue > 0 ? '#10B981' : '#64748B' }}>
+              <TrendingUp size={14} />
+              <span>
+                {totalRevenue > 0
+                  ? 'Ghi nhận từ đơn xuất kho & giao hàng'
+                  : 'Chưa phát sinh doanh thu trong kỳ'}
               </span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#9A3412' }}>
-                Tra cứu ai đã điều chỉnh tồn kho, kiểm kê cuối tháng bị lệch, thay đổi hạn mức công nợ và giá niêm yết
-              </p>
             </div>
           </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              color: '#EA580C',
-              fontSize: '13px',
-              fontWeight: 600,
-              whiteSpace: 'nowrap'
-            }}
-          >
-            <span>Vào sổ nhật ký</span>
-            <ChevronRight size={16} />
+
+          {/* Thẻ 2: Đơn Hàng Trong Kỳ */}
+          <div className="erp-stat-card">
+            <div className="erp-stat-card-top">
+              <span className="erp-stat-label">ĐƠN HÀNG TRONG KỲ</span>
+              <div
+                className="erp-stat-icon-badge"
+                style={{ background: '#EFF6FF', color: '#2563EB' }}
+              >
+                <ShoppingCart size={22} />
+              </div>
+            </div>
+            <div className="erp-stat-value">
+              {isLoading ? '...' : ordersCount}
+            </div>
+            <div className="erp-stat-subtext">
+              <span>
+                {ordersCount > 0
+                  ? `${ordersCount} đơn hàng chính thức phát sinh`
+                  : 'Chưa phát sinh đơn hàng mới'}
+              </span>
+            </div>
+          </div>
+
+          {/* Thẻ 3: Danh Mục Sản Phẩm (Sửa đúng ngữ nghĩa tổng số mặt hàng) */}
+          <div className="erp-stat-card">
+            <div className="erp-stat-card-top">
+              <span className="erp-stat-label">DANH MỤC SẢN PHẨM</span>
+              <div
+                className="erp-stat-icon-badge"
+                style={{ background: '#FEF3C7', color: '#D97706' }}
+              >
+                <Boxes size={22} />
+              </div>
+            </div>
+            <div className="erp-stat-value">
+              {isLoading ? '...' : `${productCount.toLocaleString('vi-VN')} Sản phẩm`}
+            </div>
+            <div className="erp-stat-subtext" style={{ color: '#D97706' }}>
+              <span>Tổng số mặt hàng đang quản lý trên hệ thống</span>
+            </div>
+          </div>
+
+          {/* Thẻ 4: Đại Lý Phân Phối */}
+          <div className="erp-stat-card">
+            <div className="erp-stat-card-top">
+              <span className="erp-stat-label">ĐẠI LÝ HOẠT ĐỘNG</span>
+              <div
+                className="erp-stat-icon-badge"
+                style={{ background: '#ECFDF5', color: '#059669' }}
+              >
+                <Users size={22} />
+              </div>
+            </div>
+            <div className="erp-stat-value">
+              {isLoading ? '...' : activeAgenciesCount || agencyCount}
+            </div>
+            <div className="erp-stat-subtext">
+              <span>
+                {agencyCount > 0
+                  ? `${activeAgenciesCount}/${agencyCount} đại lý đang hoạt động`
+                  : 'Chưa có hồ sơ đại lý nào'}
+              </span>
+            </div>
           </div>
         </div>
       )}

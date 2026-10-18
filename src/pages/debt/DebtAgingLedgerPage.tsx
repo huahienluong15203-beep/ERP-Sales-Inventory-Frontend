@@ -34,7 +34,7 @@ export const DebtAgingLedgerPage: React.FC = () => {
   const [bucket, setBucket] = useState<'ALL' | 'D0_30' | 'D31_60' | 'D61_90' | 'D90_PLUS'>('ALL');
   const [overdueOnly, setOverdueOnly] = useState<boolean>(false);
   const [includeSettled, setIncludeSettled] = useState<boolean>(false);
-  const [sort, setSort] = useState<'OLDEST' | 'OUTSTANDING' | 'OVERDUE' | 'CODE'>('OLDEST');
+  const [sort, setSort] = useState<'NEWEST' | 'OLDEST' | 'OUTSTANDING' | 'OVERDUE' | 'CODE'>('NEWEST');
   const [page, setPage] = useState<number>(0);
 
   const loadData = async (newPage: number = page) => {
@@ -213,7 +213,8 @@ export const DebtAgingLedgerPage: React.FC = () => {
               onChange={(e: any) => setSort(e.target.value)}
               className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 font-semibold focus:outline-none focus:border-[#F85606]"
             >
-              <option value="OLDEST">Nợ lâu nhất trước (Mặc định)</option>
+              <option value="NEWEST">Đơn mới tạo trước (Mặc định)</option>
+              <option value="OLDEST">Nợ lâu nhất trước</option>
               <option value="OUTSTANDING">Còn nợ nhiều nhất</option>
               <option value="OVERDUE">Nợ quá hạn nhiều nhất</option>
               <option value="CODE">Mã đại lý (A-Z)</option>
