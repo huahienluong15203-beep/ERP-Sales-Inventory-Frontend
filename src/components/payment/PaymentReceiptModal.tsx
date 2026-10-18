@@ -600,32 +600,20 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                       setCollectorName(c.fullName);
                     }
                   }}
-                  searchPlaceholder="Tìm kiếm theo tên, mã hoặc vai trò..."
+                  searchPlaceholder="Gõ để tìm tên người lập..."
                   isLoading={loadingCollectors}
-                  className="w-full"
+                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   {collectors.length === 0 ? (
                     <option value="" disabled>
                       {loadingCollectors ? 'Đang tải danh sách người lập...' : 'Không có nhân sự phù hợp'}
                     </option>
                   ) : (
-                    collectors.map((c) => {
-                      const roleLabel =
-                        c.role === 'ROLE_ACCOUNTANT'
-                          ? 'Kế toán'
-                          : c.role === 'ROLE_ADMIN'
-                          ? 'Quản trị viên'
-                          : c.role === 'ROLE_SALES_MANAGER'
-                          ? 'Quản lý kinh doanh'
-                          : c.role === 'ROLE_SALES_REP'
-                          ? 'Nhân viên kinh doanh'
-                          : c.role;
-                      return (
-                        <option key={c.id} value={c.id}>
-                          {c.fullName} — {roleLabel} (@{c.username})
-                        </option>
-                      );
-                    })
+                    collectors.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.fullName}
+                      </option>
+                    ))
                   )}
                 </SearchSelect>
                 <p className="text-[11px] text-gray-500">
