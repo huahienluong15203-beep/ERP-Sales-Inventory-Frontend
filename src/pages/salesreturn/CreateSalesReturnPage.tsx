@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft,
   RotateCcw,
@@ -7,7 +7,8 @@ import {
   CheckCircle2,
   Check,
   Layers,
-  Search
+  Search,
+  Building2
 } from 'lucide-react';
 import { useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
@@ -25,7 +26,7 @@ import { formatCurrencyVND } from '../../services/orderService';
 
 interface LineItemState extends ReturnableInvoiceLine {
   selected: boolean;
-  returnQty: number;
+  returnQty: number | string;
   batchNumber: string;
   manufactureDate: string;
   expiredDate: string;
@@ -99,7 +100,10 @@ const FALLBACK_RETURNABLE_LINES: ReturnableInvoiceLine[] = [
     previouslyReturnedQuantity: 0,
     remainingReturnableQuantity: 100,
     pricePerUnit: 10000,
-    hasBatchManagement: true
+    hasBatchManagement: true,
+    batchNumber: 'VNM-2611-L01',
+    manufactureDate: '2026-10-01',
+    expiredDate: '2027-10-01'
   },
   {
     invoiceLineId: 2,
@@ -128,6 +132,7 @@ export const CreateSalesReturnPage: React.FC = () => {
 
   // Form State
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceSummaryResponse | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | 'ALL'>('ALL');
   const [invoiceKeyword, setInvoiceKeyword] = useState<string>('');
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | ''>(DEFAULT_WAREHOUSES[0].id);
   const [returnReason, setReturnReason] = useState<string>('Hàng lỗi do nhà sản xuất');
@@ -171,25 +176,6 @@ export const CreateSalesReturnPage: React.FC = () => {
     initData();
   }, []);
 
-const getSuggestedBatch = (productSku: string, productName: string) => {
-  const sku = (productSku || '').toUpperCase();
-  const name = (productName || '').toLowerCase();
-
-  if (sku.includes('COCA') || name.includes('coca')) return { batch: 'LOT-COCA-202610', exp: '2027-10-01' };
-  if (sku.includes('NUOCNGOT') || name.includes('đào')) return { batch: 'LOT-DAO-202610', exp: '2027-10-01' };
-  if (sku.includes('GIAVI-01') || name.includes('ớt')) return { batch: 'LOT-OT-202610', exp: '2027-10-01' };
-  if (sku.includes('GIAVI') || name.includes('muối')) return { batch: 'LOT-MUOI-202610', exp: '2027-10-01' };
-  if (sku.includes('NUOCMAN') || name.includes('mắm')) return { batch: 'LOT-MAM-202610', exp: '2027-10-01' };
-  if (sku.includes('0001') || name.includes('danisa')) return { batch: 'LOT-DANISA-202610', exp: '2027-10-01' };
-  if (sku.includes('0002') || name.includes('phô mai')) return { batch: 'LOT-CAL-202610', exp: '2027-10-01' };
-  if (sku.includes('0003') || name.includes('solite')) return { batch: 'LOT-SOLITE-202610', exp: '2027-10-01' };
-  if (sku.includes('0007') || name.includes('socola')) return { batch: 'LOT-CHOCO-202610', exp: '2027-10-01' };
-  if (sku.includes('0030') || name.includes('toonies')) return { batch: 'LOT-TOONIES-202610', exp: '2027-10-01' };
-
-  const clean = sku.replace(/[^A-Z0-9]/g, '').slice(-6) || 'BATCH';
-  return { batch: `LOT-${clean}-202610`, exp: '2027-10-01' };
-};
-
   // Khi chọn hoá đơn -> tải các dòng hàng có thể hoàn trả
   const handleSelectInvoice = async (inv: InvoiceSummaryResponse) => {
     setSelectedInvoice(inv);
@@ -200,15 +186,14 @@ const getSuggestedBatch = (productSku: string, productName: string) => {
         lines = FALLBACK_RETURNABLE_LINES;
       }
       const mapped = lines.map((l) => {
-        const sug = l.hasBatchManagement ? getSuggestedBatch(l.productSku, l.productName) : null;
         const canReturn = (Number(l.remainingReturnableQuantity) || 0) > 0;
         return {
           ...l,
           selected: false,
           returnQty: canReturn ? 1 : 0,
-          batchNumber: sug ? sug.batch : '',
-          manufactureDate: sug ? '2026-10-01' : '',
-          expiredDate: sug ? sug.exp : '',
+          batchNumber: l.batchNumber || '',
+          manufactureDate: l.manufactureDate || '',
+          expiredDate: l.expiredDate || '',
           isDamaged: false,
           lineNotes: '',
           error: undefined
@@ -238,7 +223,7 @@ const getSuggestedBatch = (productSku: string, productName: string) => {
           return {
             ...item,
             selected: nextSelected,
-            returnQty: nextSelected ? (item.returnQty > 0 ? item.returnQty : 1) : item.returnQty
+            returnQty: nextSelected ? (Number(item.returnQty) > 0 ? item.returnQty : 1) : item.returnQty
           };
         }
         return item;
@@ -255,7 +240,7 @@ const getSuggestedBatch = (productSku: string, productName: string) => {
         return {
           ...item,
           selected: select,
-          returnQty: select ? (item.returnQty > 0 ? item.returnQty : 1) : item.returnQty
+          returnQty: select ? (Number(item.returnQty) > 0 ? item.returnQty : 1) : item.returnQty
         };
       })
     );
@@ -276,13 +261,18 @@ const getSuggestedBatch = (productSku: string, productName: string) => {
 
         // Kiểm tra số lượng trả không vượt quá số còn được trả (AC2)
         if (field === 'returnQty') {
-          const num = Number(value);
-          if (isNaN(num) || num <= 0) {
-            updated.error = 'Số lượng trả phải lớn hơn 0';
-          } else if (num > item.remainingReturnableQuantity) {
-            updated.error = `Tối đa ${item.remainingReturnableQuantity} ${item.unitName}`;
-          } else {
+          if (value === '') {
+            updated.returnQty = '';
             updated.error = undefined;
+          } else {
+            const num = Number(value);
+            if (isNaN(num) || num <= 0) {
+              updated.error = 'Số lượng trả phải lớn hơn 0';
+            } else if (num > item.remainingReturnableQuantity) {
+              updated.error = `Tối đa ${item.remainingReturnableQuantity} ${item.unitName}`;
+            } else {
+              updated.error = undefined;
+            }
           }
         }
 
@@ -331,11 +321,12 @@ const getSuggestedBatch = (productSku: string, productName: string) => {
 
     // Kiểm tra validate từng dòng
     for (const line of selectedLines) {
-      if (!line.returnQty || line.returnQty <= 0) {
-        showToast(`Số lượng trả của sản phẩm "${line.productName}" không hợp lệ`, 'error');
+      const qty = Number(line.returnQty);
+      if (isNaN(qty) || qty <= 0) {
+        showToast(`Số lượng trả của sản phẩm "${line.productName}" phải lớn hơn 0`, 'error');
         return;
       }
-      if (line.returnQty > line.remainingReturnableQuantity) {
+      if (qty > line.remainingReturnableQuantity) {
         showToast(
           `Sản phẩm "${line.productName}" vượt quá số lượng cho phép trả (${line.remainingReturnableQuantity})`,
           'error'
@@ -377,11 +368,31 @@ const getSuggestedBatch = (productSku: string, productName: string) => {
     }
   };
 
-  const filteredInvoices = invoices.filter(
-    (inv) =>
-      (inv.code && inv.code.toLowerCase().includes(invoiceKeyword.toLowerCase())) ||
-      (inv.customerName && inv.customerName.toLowerCase().includes(invoiceKeyword.toLowerCase()))
-  );
+  // Trích xuất danh sách đại lý duy nhất từ các hoá đơn hiện có
+  const customerOptions = useMemo(() => {
+    const map = new Map<number, { id: number; code: string; name: string }>();
+    invoices.forEach((inv) => {
+      if (inv.customerId && !map.has(inv.customerId)) {
+        map.set(inv.customerId, {
+          id: inv.customerId,
+          code: inv.customerCode || `DL-${inv.customerId}`,
+          name: inv.customerName || `Đại lý #${inv.customerId}`
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [invoices]);
+
+  const filteredInvoices = invoices.filter((inv) => {
+    const matchesCustomer =
+      selectedCustomerId === 'ALL' || inv.customerId === selectedCustomerId;
+    const kw = invoiceKeyword.toLowerCase().trim();
+    const matchesKeyword =
+      !kw ||
+      (inv.code && inv.code.toLowerCase().includes(kw)) ||
+      (inv.customerName && inv.customerName.toLowerCase().includes(kw));
+    return matchesCustomer && matchesKeyword;
+  });
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20 antialiased">
@@ -435,6 +446,46 @@ const getSuggestedBatch = (productSku: string, productName: string) => {
                   <span>Đã chọn</span>
                 </span>
               )}
+            </div>
+
+            {/* Bộ chọn / đổi đại lý trả hàng */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <label className="font-bold text-gray-700 flex items-center gap-1.5">
+                  <Building2 size={13} className="text-[#F85606]" />
+                  <span>Đại lý trả hàng:</span>
+                </label>
+                {selectedCustomerId !== 'ALL' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCustomerId('ALL');
+                      setSelectedInvoice(null);
+                      setLineItems([]);
+                    }}
+                    className="text-[11px] text-[#F85606] hover:underline font-semibold cursor-pointer"
+                  >
+                    Xem tất cả đại lý
+                  </button>
+                )}
+              </div>
+              <select
+                value={selectedCustomerId}
+                onChange={(e) => {
+                  const val = e.target.value === 'ALL' ? 'ALL' : Number(e.target.value);
+                  setSelectedCustomerId(val);
+                  setSelectedInvoice(null);
+                  setLineItems([]);
+                }}
+                className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:border-[#F85606] focus:bg-white focus:outline-none transition cursor-pointer font-medium"
+              >
+                <option value="ALL">-- Tất cả đại lý ({customerOptions.length} đại lý) --</option>
+                {customerOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    [{c.code}] {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Ô tìm kiếm hoá đơn */}
@@ -679,7 +730,7 @@ const getSuggestedBatch = (productSku: string, productName: string) => {
               <tbody className="divide-y divide-gray-100">
                 {lineItems.map((item) => {
                   const canReturn = item.remainingReturnableQuantity > 0;
-                  const isExceeded = canReturn && item.selected && item.returnQty > item.remainingReturnableQuantity;
+                  const isExceeded = canReturn && item.selected && Number(item.returnQty) > item.remainingReturnableQuantity;
 
                   return (
                     <tr
@@ -752,18 +803,37 @@ const getSuggestedBatch = (productSku: string, productName: string) => {
                             max={item.remainingReturnableQuantity}
                             value={canReturn ? item.returnQty : 0}
                             disabled={!canReturn}
-                            onFocus={() => {
+                            onFocus={(e) => {
+                              e.target.select();
                               if (!item.selected && canReturn) {
                                 handleToggleSelectLine(item.invoiceLineId);
                               }
                             }}
-                            onChange={(e) =>
-                              handleUpdateLineField(
-                                item.invoiceLineId,
-                                'returnQty',
-                                parseInt(e.target.value) || 0
-                              )
-                            }
+                            onBlur={() => {
+                              const num = Number(item.returnQty);
+                              if (isNaN(num) || num <= 0) {
+                                handleUpdateLineField(item.invoiceLineId, 'returnQty', 1);
+                              } else if (num > item.remainingReturnableQuantity) {
+                                handleUpdateLineField(
+                                  item.invoiceLineId,
+                                  'returnQty',
+                                  item.remainingReturnableQuantity
+                                );
+                              }
+                            }}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              if (raw === '') {
+                                handleUpdateLineField(item.invoiceLineId, 'returnQty', '');
+                              } else {
+                                const parsed = parseInt(raw, 10);
+                                handleUpdateLineField(
+                                  item.invoiceLineId,
+                                  'returnQty',
+                                  isNaN(parsed) ? '' : parsed
+                                );
+                              }
+                            }}
                             className={`w-full px-2.5 py-1.5 text-xs text-center font-bold font-mono rounded-lg border transition ${
                               item.selected && (isExceeded || item.error)
                                 ? 'border-rose-400 bg-rose-50 text-rose-800'
@@ -786,7 +856,7 @@ const getSuggestedBatch = (productSku: string, productName: string) => {
                       {/* Thành tiền hoàn */}
                       <td className="p-3 text-right font-mono font-bold text-gray-900">
                         {formatCurrencyVND(
-                          item.selected ? (item.returnQty || 0) * (item.pricePerUnit || 0) : 0
+                          item.selected ? (Number(item.returnQty) || 0) * (item.pricePerUnit || 0) : 0
                         )}
                       </td>
 

@@ -32,13 +32,20 @@ import { SearchSelect } from '../../components/common/SearchSelect';
 export const SalesTargetManagementPage: React.FC = () => {
   const { currentRole, user, showToast } = useAuth();
 
+  const isManagerOrAdmin =
+    currentRole === 'ROLE_SALES_MANAGER' ||
+    currentRole === 'ROLE_ADMIN' ||
+    Boolean(user?.roles?.some((r) => ['ROLE_SALES_MANAGER', 'ROLE_ADMIN'].includes(r)));
+
   // Tab view: 'MY_PROGRESS' (Tiến độ của tôi) vs 'ALL_TARGETS' (Quản lý chỉ tiêu toàn đội ngũ)
-  const [activeTab, setActiveTab] = useState<'MY_PROGRESS' | 'ALL_TARGETS'>('MY_PROGRESS');
+  const [activeTab, setActiveTab] = useState<'MY_PROGRESS' | 'ALL_TARGETS'>(
+    isManagerOrAdmin ? 'ALL_TARGETS' : 'MY_PROGRESS'
+  );
+
+  const currentPeriod = new Date().toISOString().slice(0, 7);
 
   // Kỳ chọn (tháng YYYY-MM)
-  const [selectedPeriod, setSelectedPeriod] = useState<string>(
-    new Date().toISOString().slice(0, 7)
-  );
+  const [selectedPeriod, setSelectedPeriod] = useState<string>(currentPeriod);
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
 
   // Dữ liệu
@@ -73,12 +80,6 @@ export const SalesTargetManagementPage: React.FC = () => {
 
   // Danh sách khu vực thị trường
   const regionOptions = ['Miền Bắc', 'Miền Trung', 'Miền Nam', 'Đồng bằng Sông Cửu Long', 'Tây Nguyên'];
-
-  // Quyền quản lý: Sales Manager hoặc Admin
-  const isManagerOrAdmin =
-    currentRole === 'ROLE_SALES_MANAGER' ||
-    currentRole === 'ROLE_ADMIN' ||
-    Boolean(user?.roles?.some((r) => ['ROLE_SALES_MANAGER', 'ROLE_ADMIN'].includes(r)));
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -123,6 +124,8 @@ export const SalesTargetManagementPage: React.FC = () => {
       showToast('Thiết lập chỉ tiêu doanh số thành công!', 'success');
       setShowCreateModal(false);
       setNewNote('');
+      // S8-04: Sau khi thiết lập chỉ tiêu, tự động chuyển sang bảng cấu hình toàn đội ngũ
+      setActiveTab('ALL_TARGETS');
       loadData();
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Lỗi khi tạo chỉ tiêu', 'error');
@@ -131,8 +134,12 @@ export const SalesTargetManagementPage: React.FC = () => {
     }
   };
 
-  // Mở modal sửa chỉ tiêu
+  // Mở modal sửa chỉ tiêu (S8-04: chỉ cho chỉnh các tháng đã qua hoặc tháng hiện tại)
   const openEditModal = (target: SalesTargetResponse) => {
+    if (target.period > currentPeriod) {
+      showToast('Chỉ được chỉnh sửa các tháng đã qua hoặc tháng hiện tại, không cho chỉnh những tháng chưa đến.', 'warning');
+      return;
+    }
     setEditingTarget(target);
     setEditAmountStr(target.targetAmount.toLocaleString('vi-VN'));
     setEditNote(target.note || '');
@@ -444,15 +451,27 @@ export const SalesTargetManagementPage: React.FC = () => {
                           )}
                         </td>
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(tgt)}
-                            title={tgt.isLocked ? 'Điều chỉnh chỉ tiêu kỳ đã khoá (cần lý do)' : 'Chỉnh sửa chỉ tiêu'}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition cursor-pointer"
-                          >
-                            <Edit3 size={12} />
-                            <span>Điều chỉnh</span>
-                          </button>
+                          {tgt.period > currentPeriod ? (
+                            <button
+                              type="button"
+                              disabled
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed opacity-60"
+                              title="Tháng chưa đến: Hệ thống không cho phép điều chỉnh chỉ tiêu của các tháng tương lai"
+                            >
+                              <Edit3 size={12} />
+                              <span>Chưa đến kỳ</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(tgt)}
+                              title={tgt.isLocked ? 'Điều chỉnh chỉ tiêu kỳ đã khoá (cần lý do)' : 'Chỉnh sửa chỉ tiêu'}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition cursor-pointer"
+                            >
+                              <Edit3 size={12} />
+                              <span>Điều chỉnh</span>
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))

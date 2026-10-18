@@ -36,6 +36,10 @@ export const InventoryAgingReportPage: React.FC = () => {
   const [agingBracket, setAgingBracket] = useState<AgingBracket>('ALL');
   const [keyword, setKeyword] = useState<string>('');
 
+  // Phân trang
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
   // Tải danh mục kho và nhóm hàng khi mở trang
   useEffect(() => {
     Promise.all([
@@ -59,6 +63,7 @@ export const InventoryAgingReportPage: React.FC = () => {
       });
       setItems(res.items);
       setSummary(res.summary);
+      setCurrentPage(1);
     } catch (err) {
       console.error('Lỗi tải báo cáo luân chuyển kho:', err);
     } finally {
@@ -69,6 +74,12 @@ export const InventoryAgingReportPage: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const totalItems = items.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const currentItems = items.slice(startIndex, endIndex);
 
   // Xuất file Excel báo cáo luân chuyển kho
   const handleExportExcel = () => {
@@ -333,7 +344,7 @@ export const InventoryAgingReportPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                items.map((item) => (
+                currentItems.map((item) => (
                   <tr key={item.id} className="hover:bg-orange-50/30 transition">
                     <td className="py-3 px-4 font-mono font-bold text-gray-900 whitespace-nowrap">
                       {item.productSku}
@@ -400,6 +411,73 @@ export const InventoryAgingReportPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Thanh phân trang ở cuối trang (S8-07: Cần có thanh này ở cuối trang vì nhiều sản phẩm) */}
+        {totalItems > 0 && (
+          <div className="p-3.5 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-600">
+            <div className="flex items-center gap-3">
+              <span>
+                Hiển thị <strong>{startIndex + 1}–{endIndex}</strong> / <strong>{totalItems}</strong> sản phẩm
+              </span>
+              <div className="flex items-center gap-1.5 text-gray-500">
+                <span>Số dòng/trang:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-orange-500 cursor-pointer"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition cursor-pointer"
+              >
+                Trước
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                .map((p, idx, arr) => {
+                  const prev = arr[idx - 1];
+                  return (
+                    <React.Fragment key={p}>
+                      {prev && p - prev > 1 && <span className="px-1 text-gray-400">...</span>}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(p)}
+                        className={`w-7 h-7 rounded-lg text-xs font-bold transition cursor-pointer ${
+                          currentPage === p
+                            ? 'bg-orange-500 text-white shadow-2xs'
+                            : 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-700'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+              <button
+                type="button"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition cursor-pointer"
+              >
+                Sau
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

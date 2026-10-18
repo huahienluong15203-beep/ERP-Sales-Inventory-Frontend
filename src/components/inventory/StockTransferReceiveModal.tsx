@@ -394,8 +394,8 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
               {submitting
                 ? 'Đang xử lý...'
                 : hasAnyDiscrepancy
-                ? 'Xác nhận giải trình & Kết thúc quy trình'
-                : 'Xác nhận kiểm tra & Nhận đủ (Kết thúc quy trình)'}
+                ? 'Xác nhận giải trình & Nhận hàng'
+                : 'Xác nhận kiểm tra & Nhận đủ'}
             </span>
           </button>
         </div>

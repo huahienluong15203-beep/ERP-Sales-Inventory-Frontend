@@ -403,8 +403,8 @@ export const TransferProductPickerPage: React.FC = () => {
           unit: prod.baseUnit || 'Thùng',
           sourceAvailableStock: availStock,
           transferQuantity: 1,
-          batchNumber: `LOT-TRF-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
-          expiredDate: new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().slice(0, 10)
+          batchNumber: '',
+          expiredDate: ''
         });
         addedCount++;
       }

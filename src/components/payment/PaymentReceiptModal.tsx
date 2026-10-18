@@ -119,6 +119,10 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     setIsRouteCashMode(user?.role === 'ROLE_SALES_REP');
     setReceiptImage('');
     setValidationError(null);
+    setAmount(0);
+    setAmountInputStr('');
+    setSpecificAllocations({});
+    setNotes('');
 
     if (initialCustomerId) {
       setSelectedCustomerId(String(initialCustomerId));
@@ -255,16 +259,28 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     );
   }, [invoices, invoiceSearchText]);
 
-  // Xử lý thay đổi số tiền nhập
+  // Xử lý thay đổi số tiền nhập (không ép format liên tục trên mỗi phím bấm để tránh nhảy con trỏ và kẹt Backspace)
+  const handleAmountFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (amount > 0) {
+      setAmountInputStr(String(amount));
+    }
+    e.target.select();
+  };
+
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value.replace(/\D/g, '');
     const num = Number(rawVal) || 0;
     setAmount(num);
-    setAmountInputStr(rawVal ? num.toLocaleString('vi-VN') : '');
+    setAmountInputStr(rawVal);
     setValidationError(null);
+  };
 
-    // Nếu đang ở chế độ FIFO và số tiền thay đổi, không cần làm gì thêm
-    // Nếu chuyển chế độ sang SPECIFIC, ta có thể gợi ý
+  const handleAmountBlur = () => {
+    if (amount > 0) {
+      setAmountInputStr(amount.toLocaleString('vi-VN'));
+    } else {
+      setAmountInputStr('');
+    }
   };
 
   // Nút điền nhanh: Thu toàn bộ công nợ
@@ -543,7 +559,9 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   inputMode="numeric"
                   placeholder="Nhập số tiền thu (Ví dụ: 20,000,000)"
                   value={amountInputStr}
+                  onFocus={handleAmountFocus}
                   onChange={handleAmountChange}
+                  onBlur={handleAmountBlur}
                   className="w-full px-4 py-3 bg-white border-2 border-emerald-500/80 rounded-xl text-lg font-black text-emerald-800 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
                 {amount > 0 && (
