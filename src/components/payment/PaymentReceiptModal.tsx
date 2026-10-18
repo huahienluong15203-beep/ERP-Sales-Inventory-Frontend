@@ -442,7 +442,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-        <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[92vh] my-auto">
+        <div className="relative w-full max-w-4xl xl:max-w-5xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[92vh] my-auto">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-emerald-600 to-teal-700 text-white">
             <div className="flex items-center gap-3">
@@ -665,7 +665,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               </div>
 
               {/* Ghi chú */}
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 sm:col-span-2">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
                   <FileText size={15} className="text-emerald-600" />
                   <span>Ghi chú / Diễn giải chứng từ</span>
