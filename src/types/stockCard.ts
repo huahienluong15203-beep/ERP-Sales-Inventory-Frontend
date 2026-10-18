@@ -183,6 +183,6 @@ export const DOC_TYPES_MAP: Record<string, { label: string; prefix: string; path
   STOCK_ADJUSTMENT: {
     label: 'Phiếu điều chỉnh tồn kho',
     prefix: 'ADJ',
-    path: (id) => `/inventory/stock-adjustments?id=${id}`
+    path: (id) => `/inventory/stock-adjustments/${id}`
   }
 };
