@@ -188,11 +188,11 @@ export const SalesTargetManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 antialiased p-4 sm:p-6 bg-slate-50/50 min-h-screen">
+    <div className="space-y-4 antialiased pb-12">
       {/* 1. Header Trang & Chọn kỳ */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4.5 rounded-2xl border border-gray-200/80 shadow-2xs">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#F85606] to-orange-500 text-white flex items-center justify-center shadow-xs shadow-orange-500/20">
             <Target size={20} />
           </div>
           <div>
@@ -205,8 +205,8 @@ export const SalesTargetManagementPage: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Chọn kỳ tháng */}
-          <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-xl">
-            <Calendar size={14} className="text-indigo-600" />
+          <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-xl hover:border-orange-200 transition">
+            <Calendar size={14} className="text-[#F85606]" />
             <span className="text-xs font-semibold text-gray-700">Kỳ tháng:</span>
             <input
               type="month"
@@ -221,7 +221,7 @@ export const SalesTargetManagementPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs shadow-orange-500/20 active:scale-95"
             >
               <Plus size={14} />
               <span>Thiết lập chỉ tiêu</span>
@@ -232,7 +232,8 @@ export const SalesTargetManagementPage: React.FC = () => {
             type="button"
             onClick={() => loadData()}
             disabled={loading}
-            className="p-2 bg-white border border-gray-200 text-gray-600 hover:text-indigo-600 rounded-xl text-xs font-semibold transition cursor-pointer shadow-2xs"
+            className="p-2 bg-white border border-gray-200 text-gray-600 hover:text-[#F85606] hover:bg-orange-50/50 rounded-xl text-xs font-semibold transition cursor-pointer shadow-2xs"
+            title="Làm mới dữ liệu"
           >
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -246,8 +247,8 @@ export const SalesTargetManagementPage: React.FC = () => {
           onClick={() => setActiveTab('MY_PROGRESS')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
             activeTab === 'MY_PROGRESS'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              ? 'bg-[#F85606] text-white shadow-xs shadow-orange-500/20'
+              : 'bg-white text-gray-600 hover:bg-orange-50/60 hover:text-[#F85606] border border-gray-200'
           }`}
         >
           <Award size={15} />
@@ -259,8 +260,8 @@ export const SalesTargetManagementPage: React.FC = () => {
           onClick={() => setActiveTab('ALL_TARGETS')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
             activeTab === 'ALL_TARGETS'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              ? 'bg-[#F85606] text-white shadow-xs shadow-orange-500/20'
+              : 'bg-white text-gray-600 hover:bg-orange-50/60 hover:text-[#F85606] border border-gray-200'
           }`}
         >
           <TrendingUp size={15} />
@@ -272,11 +273,11 @@ export const SalesTargetManagementPage: React.FC = () => {
       {activeTab === 'MY_PROGRESS' && myProgress && (
         <div className="space-y-4 animate-fade-in">
           {/* Card Hero: Progress Bar lớn */}
-          <div className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white p-6 rounded-3xl shadow-lg border border-indigo-700/40 relative overflow-hidden">
+          <div className="bg-gradient-to-br from-slate-900 via-stone-900 to-slate-950 text-white p-6 rounded-3xl shadow-lg border border-orange-500/20 relative overflow-hidden">
             <div className="relative z-10 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-700/50 pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
                 <div>
-                  <span className="text-xs font-semibold text-indigo-300 uppercase tracking-wider block">
+                  <span className="text-xs font-semibold text-orange-400 uppercase tracking-wider block">
                     Tiến độ hoàn thành chỉ tiêu tháng {myProgress.period}
                   </span>
                   <h2 className="text-xl sm:text-2xl font-black text-white mt-0.5">
@@ -284,8 +285,8 @@ export const SalesTargetManagementPage: React.FC = () => {
                   </h2>
                 </div>
 
-                <div className="flex items-center gap-2 bg-indigo-950/60 border border-indigo-700/60 px-3 py-1.5 rounded-xl self-start sm:self-auto text-xs">
-                  <Calendar size={14} className="text-amber-400" />
+                <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl self-start sm:self-auto text-xs">
+                  <Calendar size={14} className="text-orange-400" />
                   <span>Còn <strong>{myProgress.daysRemainingInMonth} ngày</strong> để về đích</span>
                 </div>
               </div>
@@ -293,19 +294,19 @@ export const SalesTargetManagementPage: React.FC = () => {
               {/* Con số thực đạt vs Chỉ tiêu */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
                 <div>
-                  <span className="text-xs text-indigo-200 block">Doanh số thực đạt:</span>
+                  <span className="text-xs text-slate-300 block">Doanh số thực đạt:</span>
                   <span className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono">
                     {formatCurrencyVND(myProgress.actualAmount)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-xs text-indigo-200 block">Mục tiêu cam kết (KPI):</span>
+                  <span className="text-xs text-slate-300 block">Mục tiêu cam kết (KPI):</span>
                   <span className="text-2xl sm:text-3xl font-black text-white font-mono">
                     {formatCurrencyVND(myProgress.targetAmount)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-xs text-indigo-200 block">Số tiền còn thiếu:</span>
+                  <span className="text-xs text-slate-300 block">Số tiền còn thiếu:</span>
                   <span className="text-2xl sm:text-3xl font-black text-amber-300 font-mono">
                     {formatCurrencyVND(myProgress.remainingAmount)}
                   </span>
@@ -320,7 +321,7 @@ export const SalesTargetManagementPage: React.FC = () => {
                     {myProgress.completionRate}%
                   </span>
                 </div>
-                <div className="w-full h-4 bg-indigo-950/80 rounded-full overflow-hidden p-0.5 border border-indigo-600/50">
+                <div className="w-full h-4 bg-slate-950/80 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
                   <div
                     className={`h-full rounded-full transition-all duration-700 ${getProgressColor(
                       myProgress.completionRate
@@ -351,8 +352,8 @@ export const SalesTargetManagementPage: React.FC = () => {
                 onClick={() => setTypeFilter(f.key)}
                 className={`px-3 py-1 rounded-xl text-xs font-semibold transition cursor-pointer ${
                   typeFilter === f.key
-                    ? 'bg-indigo-600 text-white shadow-2xs'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-[#F85606] text-white shadow-2xs shadow-orange-500/20'
+                    : 'bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-[#F85606]'
                 }`}
               >
                 {f.label}
@@ -380,7 +381,7 @@ export const SalesTargetManagementPage: React.FC = () => {
                     <tr>
                       <td colSpan={7} className="py-14 text-center text-gray-400">
                         <div className="flex flex-col items-center gap-2">
-                          <RefreshCw size={20} className="animate-spin text-indigo-600" />
+                          <RefreshCw size={20} className="animate-spin text-[#F85606]" />
                           <span>Đang tải danh sách chỉ tiêu...</span>
                         </div>
                       </td>
@@ -393,11 +394,11 @@ export const SalesTargetManagementPage: React.FC = () => {
                     </tr>
                   ) : (
                     targets.map((tgt) => (
-                      <tr key={tgt.id} className="hover:bg-indigo-50/20 transition">
+                      <tr key={tgt.id} className="hover:bg-orange-50/30 transition">
                         <td className="py-3.5 px-4 font-semibold text-gray-900">
                           {tgt.targetType === 'REP' ? (
                             <div className="flex items-center gap-2">
-                              <User size={14} className="text-indigo-600 shrink-0" />
+                              <User size={14} className="text-[#F85606] shrink-0" />
                               <div>
                                 <span>{tgt.salesRepName}</span>
                                 <span className="text-[10px] text-gray-400 font-mono block">
@@ -466,7 +467,7 @@ export const SalesTargetManagementPage: React.FC = () => {
                               type="button"
                               onClick={() => openEditModal(tgt)}
                               title={tgt.isLocked ? 'Điều chỉnh chỉ tiêu kỳ đã khoá (cần lý do)' : 'Chỉnh sửa chỉ tiêu'}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-[#F85606] bg-orange-50 hover:bg-orange-100 border border-orange-200/80 rounded-lg transition cursor-pointer"
                             >
                               <Edit3 size={12} />
                               <span>Điều chỉnh</span>
@@ -487,7 +488,7 @@ export const SalesTargetManagementPage: React.FC = () => {
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-indigo-600 text-white">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#F85606] to-orange-600 text-white">
               <div className="flex items-center gap-2">
                 <Target size={18} />
                 <h3 className="text-base font-bold text-white">Thiết lập Chỉ tiêu Doanh số Mới</h3>
@@ -511,8 +512,8 @@ export const SalesTargetManagementPage: React.FC = () => {
                     onClick={() => setNewTargetType('REP')}
                     className={`py-2 px-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
                       newTargetType === 'REP'
-                        ? 'bg-indigo-600 text-white border-indigo-600'
-                        : 'bg-white text-gray-700 border-gray-300'
+                        ? 'bg-[#F85606] text-white border-[#F85606] shadow-xs shadow-orange-500/20'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-orange-50/50'
                     }`}
                   >
                     Nhân viên kinh doanh
@@ -522,8 +523,8 @@ export const SalesTargetManagementPage: React.FC = () => {
                     onClick={() => setNewTargetType('REGION')}
                     className={`py-2 px-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
                       newTargetType === 'REGION'
-                        ? 'bg-indigo-600 text-white border-indigo-600'
-                        : 'bg-white text-gray-700 border-gray-300'
+                        ? 'bg-[#F85606] text-white border-[#F85606] shadow-xs shadow-orange-500/20'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-orange-50/50'
                     }`}
                   >
                     Toàn bộ Khu vực
@@ -541,7 +542,7 @@ export const SalesTargetManagementPage: React.FC = () => {
                     value={newSalesRepId}
                     onChange={(e) => setNewSalesRepId(e.target.value)}
                     searchPlaceholder="Gõ để tìm nhân viên kinh doanh..."
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
                   >
                     {salesRepOptions.map((rep) => (
                       <option key={rep.id} value={rep.id}>
@@ -557,7 +558,7 @@ export const SalesTargetManagementPage: React.FC = () => {
                     value={newRegion}
                     onChange={(e) => setNewRegion(e.target.value)}
                     searchPlaceholder="Gõ để tìm khu vực..."
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
                   >
                     {regionOptions.map((reg) => (
                       <option key={reg} value={reg}>
@@ -579,7 +580,7 @@ export const SalesTargetManagementPage: React.FC = () => {
                   value={newTargetAmountStr}
                   onChange={(e) => setNewTargetAmountStr(e.target.value)}
                   placeholder="Ví dụ: 500,000,000"
-                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold font-mono text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
                 />
                 {Number(newTargetAmountStr.replace(/\D/g, '')) > 0 && (
                   <p className="text-[11px] text-gray-500 italic mt-0.5">
@@ -596,7 +597,7 @@ export const SalesTargetManagementPage: React.FC = () => {
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
                   placeholder="Ví dụ: Đẩy mạnh các dòng sản phẩm bia và nước ngọt dịp Tết..."
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
                 />
               </div>
 
@@ -611,7 +612,7 @@ export const SalesTargetManagementPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={submittingCreate}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs disabled:opacity-50"
+                  className="px-5 py-2 bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs shadow-orange-500/20 disabled:opacity-50"
                 >
                   {submittingCreate ? 'Đang lưu...' : 'Lưu chỉ tiêu'}
                 </button>
@@ -625,7 +626,7 @@ export const SalesTargetManagementPage: React.FC = () => {
       {editingTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-amber-600 text-white">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#F85606] to-orange-600 text-white">
               <div className="flex items-center gap-2">
                 <Edit3 size={18} />
                 <h3 className="text-base font-bold text-white">Điều chỉnh Chỉ tiêu Doanh số</h3>
@@ -669,7 +670,7 @@ export const SalesTargetManagementPage: React.FC = () => {
                   required
                   value={editAmountStr}
                   onChange={(e) => setEditAmountStr(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm font-bold font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm font-bold font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
                 />
               </div>
 
@@ -684,7 +685,7 @@ export const SalesTargetManagementPage: React.FC = () => {
                   value={editReason}
                   onChange={(e) => setEditReason(e.target.value)}
                   placeholder="Ví dụ: Điều chỉnh tăng 15% do mở rộng thêm 5 đại lý cấp 1 tại khu vực..."
-                  className="w-full px-3 py-2 bg-white border border-rose-300 rounded-xl text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                  className="w-full px-3 py-2 bg-white border border-rose-300 rounded-xl text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
                 />
               </div>
 
@@ -699,7 +700,7 @@ export const SalesTargetManagementPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={submittingEdit}
-                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs disabled:opacity-50"
+                  className="px-5 py-2 bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs shadow-orange-500/20 disabled:opacity-50"
                 >
                   {submittingEdit ? 'Đang cập nhật...' : 'Xác nhận điều chỉnh'}
                 </button>
