@@ -101,11 +101,22 @@ export const PaymentReminderPopupModal: React.FC<PaymentReminderPopupModalProps>
   const handleSendReminder = async (customerId: number, customerName: string, amount: number) => {
     setSendingId(customerId);
     try {
-      // Kích hoạt backend trigger nhắc nợ nếu có
-      authFetch(`${API_BASE_URL}/api/payments/reminders/trigger`, { method: 'POST' }).catch(() => null);
-      await new Promise((r) => setTimeout(r, 400));
+      const res = await authFetch(`${API_BASE_URL}/api/payments/reminders/customers/${customerId}/send`, {
+        method: 'POST'
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || 'Không thể gửi nhắc nợ');
+      }
+      const data = await res.json().catch(() => ({}));
       setSentAgencyIds((prev) => new Set(prev).add(customerId));
-      setToastMessage(`Đã gửi thông báo nhắc nợ đến đại lý "${customerName}" (${formatVnd(amount)}) thành công!`);
+      setToastMessage(
+        data.message ||
+          `Đã gửi thông báo nhắc nợ đến đại lý "${customerName}" (${formatVnd(amount)}) thành công!`
+      );
+      setTimeout(() => setToastMessage(null), 4000);
+    } catch (err: any) {
+      setToastMessage(`Lỗi: ${err.message || 'Không thể gửi nhắc nợ'}`);
       setTimeout(() => setToastMessage(null), 4000);
     } finally {
       setSendingId(null);
@@ -116,11 +127,23 @@ export const PaymentReminderPopupModal: React.FC<PaymentReminderPopupModalProps>
     if (activeDebtList.length === 0) return;
     setSendingId('ALL');
     try {
-      authFetch(`${API_BASE_URL}/api/payments/reminders/trigger`, { method: 'POST' }).catch(() => null);
-      await new Promise((r) => setTimeout(r, 600));
+      const res = await authFetch(`${API_BASE_URL}/api/payments/reminders/send-all`, {
+        method: 'POST'
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || 'Không thể gửi nhắc nợ');
+      }
+      const data = await res.json().catch(() => ({}));
       const allIds = new Set(activeDebtList.map((a) => a.customerId));
       setSentAgencyIds(allIds);
-      setToastMessage(`Đã gửi thông báo nhắc nợ đến tất cả ${activeDebtList.length} đại lý thành công!`);
+      setToastMessage(
+        data.message ||
+          `Đã gửi thông báo nhắc nợ đến tất cả ${activeDebtList.length} đại lý thành công!`
+      );
+      setTimeout(() => setToastMessage(null), 4000);
+    } catch (err: any) {
+      setToastMessage(`Lỗi: ${err.message || 'Không thể gửi nhắc nợ'}`);
       setTimeout(() => setToastMessage(null), 4000);
     } finally {
       setSendingId(null);
