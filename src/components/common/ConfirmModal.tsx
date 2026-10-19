@@ -9,6 +9,7 @@ export interface ConfirmModalProps {
   cancelLabel?: string;
   variant?: 'danger' | 'warning' | 'primary' | 'success';
   loading?: boolean;
+  icon?: React.ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -21,6 +22,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   cancelLabel = 'Hủy bỏ',
   variant = 'danger',
   loading = false,
+  icon,
   onConfirm,
   onCancel
 }) => {
@@ -67,10 +69,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                   ? 'bg-amber-50 text-amber-600 border border-amber-200'
                   : isSuccess
                   ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                  : 'bg-blue-50 text-blue-600 border border-blue-200'
+                  : 'bg-orange-50 text-[#F85606] border border-orange-200'
               }`}
             >
-              {isDanger ? (
+              {icon ? (
+                icon
+              ) : isDanger ? (
                 <Trash2 size={24} />
               ) : isSuccess ? (
                 <CheckCircle2 size={24} />

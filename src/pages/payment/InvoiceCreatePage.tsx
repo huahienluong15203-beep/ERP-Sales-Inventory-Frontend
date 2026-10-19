@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ArrowLeft,
   Receipt,
@@ -10,7 +10,8 @@ import {
   Check,
   PackageCheck,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
@@ -19,16 +20,22 @@ import type { Agency } from '../../types/agency';
 import type { UninvoicedOrderResponse, InvoiceResponse } from '../../types/invoice';
 import { fetchUninvoicedOrders, previewInvoice, issueInvoice } from '../../services/invoiceApi';
 import { InvoicePrintModal } from '../../components/payment/InvoicePrintModal';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export const InvoiceCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useAuth();
 
-  // Danh sách đại lý
+  // Danh sách đại lý phân trang theo cuộn (infinite scroll) & tìm kiếm động BE/FE
   const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [agencyPage, setAgencyPage] = useState<number>(0);
+  const [hasMoreAgencies, setHasMoreAgencies] = useState<boolean>(true);
   const [loadingAgencies, setLoadingAgencies] = useState<boolean>(false);
+  const [loadingMoreAgencies, setLoadingMoreAgencies] = useState<boolean>(false);
   const [agencyKeyword, setAgencyKeyword] = useState<string>('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const selectedAgencyRef = useRef<Agency | null>(null);
+  const searchAgencyTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Bộ lọc kỳ giao hàng
   const [fromDate, setFromDate] = useState<string>(() => {
@@ -55,25 +62,76 @@ export const InvoiceCreatePage: React.FC = () => {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
   const [issuedInvoiceId, setIssuedInvoiceId] = useState<number | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
+  const [isConfirmIssueOpen, setIsConfirmIssueOpen] = useState<boolean>(false);
 
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [previewing, setPreviewing] = useState<boolean>(false);
 
-  // Tải danh sách đại lý hoạt động
-  useEffect(() => {
-    const loadAgencies = async () => {
+  // Tải danh sách đại lý (hỗ trợ phân trang vô tận khi cuộn & tìm kiếm động BE/FE)
+  const loadAgenciesData = async (targetPage: number, kw: string, isAppend: boolean) => {
+    if (isAppend) {
+      setLoadingMoreAgencies(true);
+    } else {
       setLoadingAgencies(true);
-      try {
-        const res = await fetchAgencies({ page: 0, size: 100, status: 'ACTIVE' });
-        setAgencies(res.content || []);
-      } catch (err: any) {
-        showToast('Lỗi', err.message || 'Không thể tải danh sách đại lý', 'error');
-      } finally {
-        setLoadingAgencies(false);
+    }
+    try {
+      const res = await fetchAgencies({
+        page: targetPage,
+        size: 20,
+        keyword: kw.trim() || undefined,
+        status: 'ACTIVE'
+      });
+      const items = res.content || [];
+      setAgencies((prev) => {
+        let nextList: Agency[];
+        if (!isAppend) {
+          nextList = items;
+        } else {
+          const existingIds = new Set(prev.map((a) => a.id));
+          nextList = [...prev, ...items.filter((a) => !existingIds.has(a.id))];
+        }
+        // Giữ đại lý đã chọn nếu nó không nằm trong danh sách hiện tại
+        if (selectedAgencyRef.current && !nextList.some((a) => a.id === selectedAgencyRef.current?.id)) {
+          nextList = [selectedAgencyRef.current, ...nextList];
+        }
+        return nextList;
+      });
+      setAgencyPage(targetPage);
+      setHasMoreAgencies(targetPage + 1 < res.totalPages);
+    } catch (err: any) {
+      showToast('Lỗi', err.message || 'Không thể tải danh sách đại lý', 'error');
+    } finally {
+      setLoadingAgencies(false);
+      setLoadingMoreAgencies(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAgenciesData(0, '', false);
+    return () => {
+      if (searchAgencyTimerRef.current) {
+        clearTimeout(searchAgencyTimerRef.current);
       }
     };
-    loadAgencies();
   }, []);
+
+  const handleAgencyKeywordChange = (val: string) => {
+    setAgencyKeyword(val);
+    if (searchAgencyTimerRef.current) {
+      clearTimeout(searchAgencyTimerRef.current);
+    }
+    searchAgencyTimerRef.current = setTimeout(() => {
+      loadAgenciesData(0, val, false);
+    }, 300);
+  };
+
+  const handleAgencyScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (loadingAgencies || loadingMoreAgencies || !hasMoreAgencies) return;
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight <= 40) {
+      loadAgenciesData(agencyPage + 1, agencyKeyword, true);
+    }
+  };
 
   // Tải các đơn đã giao chưa lập hoá đơn khi chọn đại lý hoặc đổi kỳ
   const loadUninvoicedOrders = async (customerId: number) => {
@@ -95,6 +153,10 @@ export const InvoiceCreatePage: React.FC = () => {
   };
 
   const handleSelectCustomer = (customerId: number) => {
+    const found = agencies.find((a) => Number(a.id) === customerId);
+    if (found) {
+      selectedAgencyRef.current = found;
+    }
     setSelectedCustomerId(customerId);
     loadUninvoicedOrders(customerId);
   };
@@ -121,6 +183,8 @@ export const InvoiceCreatePage: React.FC = () => {
   const selectedOrderedTotal = uninvoicedOrders
     .filter((o) => selectedOrderIds.includes(o.orderId))
     .reduce((sum, o) => sum + (o.orderTotalAmount || 0), 0);
+
+  const selectedAgency = agencies.find((a) => Number(a.id) === selectedCustomerId);
 
   // Xem trước hoá đơn (Preview)
   const handlePreview = async () => {
@@ -152,8 +216,8 @@ export const InvoiceCreatePage: React.FC = () => {
     }
   };
 
-  // Phát hành hoá đơn chính thức (AC2: Dãy số liên tục, AC4: Khoá chống sửa/xoá)
-  const handleIssue = async () => {
+  // Mở popup xác nhận phát hành hoá đơn chính thức (chuẩn giao diện hệ thống)
+  const handleOpenConfirmIssue = () => {
     if (!selectedCustomerId) {
       showToast('Cảnh báo', 'Vui lòng chọn đại lý', 'info');
       return;
@@ -162,13 +226,12 @@ export const InvoiceCreatePage: React.FC = () => {
       showToast('Cảnh báo', 'Vui lòng chọn ít nhất một phiếu giao hàng để lập hoá đơn gộp', 'info');
       return;
     }
+    setIsConfirmIssueOpen(true);
+  };
 
-    const confirmMsg =
-      `Xác nhận phát hành hoá đơn cho ${selectedOrderIds.length} phiếu giao hàng?\n\n` +
-      `Tổng tiền thực giao: ${selectedDeliveredTotal.toLocaleString('vi-VN')} đ\n\n` +
-      `LƯU Ý: Theo quy định kế toán (AC4), hoá đơn sau khi phát hành sẽ có mã số liên tục và KHÔNG THỂ SỬA HOẶC XOÁ!`;
-
-    if (!window.confirm(confirmMsg)) return;
+  // Thực thi phát hành hoá đơn chính thức khi người dùng xác nhận trên modal
+  const handleExecuteIssue = async () => {
+    if (!selectedCustomerId || selectedOrderIds.length === 0) return;
 
     setSubmitting(true);
     try {
@@ -180,6 +243,8 @@ export const InvoiceCreatePage: React.FC = () => {
         invoiceDate: invoiceDate || undefined,
         note: note.trim() || undefined
       });
+
+      setIsConfirmIssueOpen(false);
 
       showToast(
         'Phát hành thành công!',
@@ -239,56 +304,96 @@ export const InvoiceCreatePage: React.FC = () => {
               )}
             </div>
 
-            {/* Ô tìm kiếm đại lý */}
-            <div className="relative">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                value={agencyKeyword}
-                onChange={(e) => setAgencyKeyword(e.target.value)}
-                placeholder="Tìm mã hoặc tên đại lý..."
-                className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:border-[#F85606] focus:bg-white focus:outline-none transition"
-              />
-            </div>
+            {/* Ô tìm kiếm đại lý có nút Lọc cho mobile */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (searchAgencyTimerRef.current) clearTimeout(searchAgencyTimerRef.current);
+                loadAgenciesData(0, agencyKeyword, false);
+              }}
+              className="relative flex items-center gap-1.5"
+            >
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={agencyKeyword}
+                  onChange={(e) => handleAgencyKeywordChange(e.target.value)}
+                  placeholder="Tìm mã hoặc tên đại lý..."
+                  className="w-full pl-9 pr-8 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:border-[#F85606] focus:bg-white focus:outline-none transition"
+                />
+                {loadingAgencies && (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#F85606] absolute right-3 top-3" />
+                )}
+              </div>
+              <button
+                type="submit"
+                className="px-3 py-2 bg-[#F85606] hover:bg-[#E04D05] active:scale-95 text-white text-xs font-semibold rounded-xl transition cursor-pointer shrink-0 shadow-2xs"
+                title="Lọc kết quả tìm kiếm"
+              >
+                Lọc
+              </button>
+            </form>
 
-            {/* Danh sách đại lý */}
-            <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1 divide-y divide-gray-50">
-              {loadingAgencies ? (
-                <div className="text-center py-8 text-xs text-gray-400">Đang tải danh sách đại lý...</div>
+            {/* Danh sách đại lý có cuộn tải thêm (infinite scroll) & thanh cuộn trực quan */}
+            <div
+              onScroll={handleAgencyScroll}
+              className="max-h-48 overflow-y-auto space-y-1.5 pr-1.5 divide-y divide-gray-50 [scrollbar-width:thin] [scrollbar-color:#F85606_#f3f4f6] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-orange-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 hover:[&::-webkit-scrollbar-thumb]:bg-[#F85606]"
+            >
+              {loadingAgencies && agencies.length === 0 ? (
+                <div className="text-center py-8 text-xs text-gray-400 flex flex-col items-center justify-center gap-2">
+                  <RefreshCw className="w-5 h-5 animate-spin text-[#F85606]" />
+                  <span>Đang tải danh sách đại lý...</span>
+                </div>
               ) : filteredAgencies.length === 0 ? (
                 <div className="text-center py-8 text-xs text-gray-400">Không tìm thấy đại lý phù hợp</div>
               ) : (
-                filteredAgencies.map((agency) => {
-                  const custId = Number(agency.id);
-                  const isSelected = selectedCustomerId === custId;
-                  return (
-                    <button
-                      key={agency.id}
-                      type="button"
-                      onClick={() => handleSelectCustomer(custId)}
-                      className={`w-full text-left p-2.5 rounded-xl transition cursor-pointer flex items-start justify-between gap-2 ${
-                        isSelected
-                          ? 'bg-orange-50 border border-orange-200 text-[#F85606]'
-                          : 'hover:bg-gray-50 border border-transparent text-gray-700'
-                      }`}
-                    >
-                      <div>
-                        <div className={`font-bold text-xs ${isSelected ? 'text-[#F85606]' : 'text-gray-900'}`}>
-                          {agency.name}
+                <>
+                  {filteredAgencies.map((agency) => {
+                    const custId = Number(agency.id);
+                    const isSelected = selectedCustomerId === custId;
+                    return (
+                      <button
+                        key={agency.id}
+                        type="button"
+                        onClick={() => handleSelectCustomer(custId)}
+                        className={`w-full text-left p-2.5 rounded-xl transition cursor-pointer flex items-start justify-between gap-2 ${
+                          isSelected
+                            ? 'bg-orange-50 border border-orange-200 text-[#F85606]'
+                            : 'hover:bg-gray-50 border border-transparent text-gray-700'
+                        }`}
+                      >
+                        <div>
+                          <div className={`font-bold text-xs ${isSelected ? 'text-[#F85606]' : 'text-gray-900'}`}>
+                            {agency.name}
+                          </div>
+                          <div className="text-[10px] text-gray-400 font-mono mt-0.5">
+                            Mã: {agency.code} {agency.taxCode ? `• MST: ${agency.taxCode}` : ''}
+                          </div>
+                          <div className="text-[10px] text-gray-500 truncate max-w-[260px] mt-0.5">
+                            {agency.address}
+                          </div>
                         </div>
-                        <div className="text-[10px] text-gray-400 font-mono mt-0.5">
-                          Mã: {agency.code} {agency.taxCode ? `• MST: ${agency.taxCode}` : ''}
-                        </div>
-                        <div className="text-[10px] text-gray-500 truncate max-w-[260px] mt-0.5">
-                          {agency.address}
-                        </div>
-                      </div>
-                      {isSelected && (
-                        <Check className="w-4 h-4 text-[#F85606] shrink-0 mt-0.5" />
-                      )}
-                    </button>
-                  );
-                })
+                        {isSelected && (
+                          <Check className="w-4 h-4 text-[#F85606] shrink-0 mt-0.5" />
+                        )}
+                      </button>
+                    );
+                  })}
+
+                  {loadingMoreAgencies && (
+                    <div className="py-2.5 text-center text-xs text-gray-500 flex items-center justify-center gap-2">
+                      <RefreshCw size={14} className="animate-spin text-[#F85606]" />
+                      <span>Đang tải thêm đại lý...</span>
+                    </div>
+                  )}
+
+                  {!hasMoreAgencies && agencies.length > 10 && (
+                    <div className="py-2 text-center text-[10px] text-gray-400">
+                      Đã hiển thị toàn bộ đại lý
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -545,7 +650,7 @@ export const InvoiceCreatePage: React.FC = () => {
 
             <button
               type="button"
-              onClick={handleIssue}
+              onClick={handleOpenConfirmIssue}
               disabled={submitting || selectedOrderIds.length === 0}
               className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-orange-500/20 transition cursor-pointer disabled:opacity-50"
             >
@@ -555,6 +660,66 @@ export const InvoiceCreatePage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal Xác nhận phát hành hoá đơn bán hàng chuẩn hệ thống (thay thế window.confirm) */}
+      <ConfirmModal
+        open={isConfirmIssueOpen}
+        variant="primary"
+        icon={<Receipt size={24} className="text-[#F85606]" />}
+        title="Xác nhận phát hành hoá đơn"
+        confirmLabel="Xác nhận phát hành"
+        cancelLabel="Hủy bỏ"
+        loading={submitting}
+        onConfirm={handleExecuteIssue}
+        onCancel={() => {
+          if (!submitting) setIsConfirmIssueOpen(false);
+        }}
+        message={
+          <div className="space-y-3">
+            <p className="text-gray-700 text-xs leading-relaxed">
+              Bạn có chắc chắn muốn lập và phát hành hoá đơn bán hàng cho{' '}
+              <strong className="text-gray-900 font-bold">{selectedOrderIds.length}</strong> phiếu giao hàng đã chọn?
+            </p>
+
+            <div className="bg-white p-3.5 rounded-2xl border border-gray-200 text-xs space-y-2 shadow-2xs">
+              <div className="flex justify-between items-start gap-2">
+                <span className="text-gray-500 font-medium shrink-0">Đại lý / Khách hàng:</span>
+                <span className="font-semibold text-gray-900 text-right">
+                  {selectedAgency ? `${selectedAgency.name} (${selectedAgency.code})` : '—'}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 font-medium">Số phiếu giao gộp:</span>
+                <span className="font-bold text-gray-800">
+                  {selectedOrderIds.length} phiếu giao hàng
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 font-medium">Ngày phát hành:</span>
+                <span className="font-mono text-gray-700 font-medium">
+                  {invoiceDate || new Date().toISOString().slice(0, 10)}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                <span className="text-gray-600 font-semibold">Tổng tiền thực giao:</span>
+                <span className="font-mono font-black text-[#F85606] text-sm">
+                  {selectedDeliveredTotal.toLocaleString('vi-VN')} đ
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-800 text-[11px] leading-relaxed flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <span>
+                <strong>LƯU Ý:</strong> Theo quy định kế toán, hoá đơn sau khi phát hành sẽ có mã số liên tục và <strong>KHÔNG THỂ SỬA HOẶC XOÁ!</strong>
+              </span>
+            </div>
+          </div>
+        }
+      />
 
       {/* Modal Xem Trước Hoá Đơn (Preview) */}
       <InvoicePrintModal
