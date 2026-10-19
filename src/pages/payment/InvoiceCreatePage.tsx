@@ -35,7 +35,7 @@ export const InvoiceCreatePage: React.FC = () => {
   const [agencyKeyword, setAgencyKeyword] = useState<string>('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const selectedAgencyRef = useRef<Agency | null>(null);
-  const searchAgencyTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const searchAgencyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Bộ lọc kỳ giao hàng
   const [fromDate, setFromDate] = useState<string>(() => {
