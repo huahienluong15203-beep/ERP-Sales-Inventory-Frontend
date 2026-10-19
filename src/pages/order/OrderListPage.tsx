@@ -67,7 +67,7 @@ const STATUS_TABS = [
   { label: 'Đã xuất kho', value: 'DISPATCHED', badgeColor: 'bg-indigo-100 text-indigo-800' },
   { label: 'Đã giao hàng', value: 'DELIVERED', badgeColor: 'bg-teal-100 text-teal-800' },
   { label: 'Đã hoàn thành', value: 'COMPLETED,CLOSED', badgeColor: 'bg-emerald-100 text-emerald-800' },
-  { label: 'Đơn nợ hàng (Backorder)', value: 'BACKORDER', badgeColor: 'bg-amber-100 text-amber-900 border-amber-300' },
+  { label: 'Đơn nợ', value: 'BACKORDER', badgeColor: 'bg-amber-100 text-amber-900 border-amber-300' },
   { label: 'Đơn nháp', value: 'DRAFT', badgeColor: 'bg-gray-100 text-gray-700' },
   { label: 'Đã hủy', value: 'CANCELLED', badgeColor: 'bg-rose-100 text-rose-800' },
   { label: 'Từ chối', value: 'REJECTED', badgeColor: 'bg-rose-100 text-rose-800' }
@@ -1120,9 +1120,9 @@ export const OrderListPage: React.FC = () => {
                           ) : (
                             <span
                               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200"
-                              title="Mua nợ gối đầu theo hạn mức công nợ"
+                              title="Thanh toán tín dụng theo hạn mức công nợ"
                             >
-                              Nợ
+                              Tín dụng
                             </span>
                           )}
                           {o.backorder && (

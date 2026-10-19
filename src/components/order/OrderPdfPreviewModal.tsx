@@ -409,7 +409,7 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
               </div>
             ) : (
               <div className="p-2 rounded-lg bg-blue-50/70 border border-blue-200 text-blue-900 text-xs font-semibold flex items-center justify-between">
-                <span>✓ HÌNH THỨC: MUA NỢ GỐI ĐẦU (CREDIT)</span>
+                <span>✓ HÌNH THỨC: THANH TOÁN TÍN DỤNG (CREDIT)</span>
                 <span className="text-blue-700 text-[11px]">Đại lý ký biên bản giao nhận hàng</span>
               </div>
             )}

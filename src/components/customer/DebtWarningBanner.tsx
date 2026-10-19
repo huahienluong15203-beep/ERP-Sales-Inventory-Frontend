@@ -110,21 +110,19 @@ export const DebtWarningBanner: React.FC<DebtWarningBannerProps> = ({
 
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <span
-                className={`text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
-                  isBlocked
-                    ? 'bg-rose-200/90 text-rose-900'
-                    : isOverdue
-                    ? 'bg-amber-200/90 text-amber-900'
-                    : 'bg-orange-200/90 text-orange-900'
-                }`}
-              >
-                {isBlocked
-                  ? 'Gắn cờ tự động: Khóa giao dịch'
-                  : isOverdue
-                  ? 'Gắn cờ tự động: Cảnh báo nợ quá hạn'
-                  : 'Cảnh báo: Vượt hạn mức công nợ'}
-              </span>
+              {!isBlocked && (
+                <span
+                  className={`text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                    isOverdue
+                      ? 'bg-amber-200/90 text-amber-900'
+                      : 'bg-orange-200/90 text-orange-900'
+                  }`}
+                >
+                  {isOverdue
+                    ? 'Gắn cờ tự động: Cảnh báo nợ quá hạn'
+                    : 'Cảnh báo: Vượt hạn mức công nợ'}
+                </span>
+              )}
 
               {customerName && (
                 <span className="text-xs font-bold text-gray-700">
@@ -135,17 +133,17 @@ export const DebtWarningBanner: React.FC<DebtWarningBannerProps> = ({
 
             <h3 className="text-sm sm:text-base font-bold leading-snug">
               {isBlocked
-                ? 'Đại lý đã bị hệ thống tự động khóa giao dịch / chặn tạo đơn hàng mới!'
+                ? 'Đại lý đã bị hệ thống tự động khóa giao dịch!'
                 : isOverdue
                 ? `Đại lý có khoản nợ đã quá hạn thanh toán ${creditStatus.overdueDays} ngày!`
                 : 'Đại lý đã phát sinh dư nợ vượt quá hạn mức tín dụng cho phép!'}
             </h3>
 
-            <p className="text-xs leading-relaxed text-gray-700">
-              {isBlocked
-                ? 'Đơn hàng mới tạo cho đại lý này sẽ bị chặn hoặc tự động chuyển sang trạng thái "Cần duyệt ngoại lệ công nợ" theo cấu hình chính sách quản trị rủi ro.'
-                : 'Đề nghị kế toán công nợ và nhân viên kinh doanh đôn đốc thu hồi công nợ trước khi tiếp tục giao thêm hàng hóa.'}
-            </p>
+            {!isBlocked && (
+              <p className="text-xs leading-relaxed text-gray-700">
+                Đề nghị kế toán công nợ và nhân viên kinh doanh đôn đốc thu hồi công nợ trước khi tiếp tục giao thêm hàng hóa.
+              </p>
+            )}
 
             {/* Chỉ số công nợ chi tiết */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-xs">
