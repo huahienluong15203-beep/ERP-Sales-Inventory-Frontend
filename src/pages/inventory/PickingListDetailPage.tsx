@@ -12,7 +12,9 @@ import {
   Check,
   RefreshCw,
   Truck,
-  Package
+  Package,
+  Compass,
+  MapPin
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useParams } from '../../routes/Router';
@@ -24,8 +26,61 @@ import {
 } from '../../services/pickingListApi';
 import { updateOrderStatus } from '../../services/orderService';
 import { PickingDiscrepancyModal } from '../../components/inventory/PickingDiscrepancyModal';
+import { PickingBatchShortageModal } from '../../components/inventory/PickingBatchShortageModal';
+import { PickingCompleteConfirmModal } from '../../components/inventory/PickingCompleteConfirmModal';
 import { PickingListPrintModal } from '../../components/inventory/PickingListPrintModal';
-import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { LotSelectorDropdown } from '../../components/inventory/LotSelectorDropdown';
+
+/**
+ * Phân tích và hiển thị đường dẫn vị trí chi tiết từ Khu vực -> Dãy kệ -> Ô lưu kho (Zone -> Rack -> Shelf -> Bin)
+ */
+export function parseLocationHierarchy(item: PickingListItem): {
+  zoneText: string;
+  rackText: string;
+  binText: string;
+  fullPath: string;
+} {
+  if (item.zone && item.shelf) {
+    return {
+      zoneText: item.zone,
+      rackText: item.shelf,
+      binText: item.locationCode,
+      fullPath: `${item.zone} ➔ ${item.shelf} ➔ ${item.locationCode}`
+    };
+  }
+
+  // Tách từ mã dạng: BIN-MB-B1-01 hoặc BIN-MN-B2-02
+  const match = (item.locationCode || '').match(/BIN-[A-Z]+-([A-Z])(\d+)-(\d+)/i);
+  if (match) {
+    const zoneLetter = match[1].toUpperCase();
+    const rackNumber = match[2];
+    const binNumber = match[3];
+    return {
+      zoneText: `Khu ${zoneLetter}`,
+      rackText: `Kệ ${zoneLetter}${rackNumber}`,
+      binText: `Ô ${binNumber}`,
+      fullPath: `Khu ${zoneLetter} ➔ Kệ ${zoneLetter}${rackNumber} ➔ Ô ${binNumber}`
+    };
+  }
+
+  // Tách từ mã dạng: A-01-01-01
+  const matchStandard = (item.locationCode || '').match(/^([A-Z])-?(\d+)-?(\d+)-?(\d+)$/i);
+  if (matchStandard) {
+    return {
+      zoneText: `Khu ${matchStandard[1].toUpperCase()}`,
+      rackText: `Dãy ${matchStandard[2]}`,
+      binText: `Tầng ${matchStandard[3]} - Ô ${matchStandard[4]}`,
+      fullPath: `Khu ${matchStandard[1].toUpperCase()} ➔ Dãy ${matchStandard[2]} ➔ Ô ${matchStandard[4]}`
+    };
+  }
+
+  return {
+    zoneText: 'Khu lưu trữ',
+    rackText: 'Kệ kho',
+    binText: item.locationCode || 'Chưa gán',
+    fullPath: item.locationCode || 'Chưa gán vị trí'
+  };
+}
 
 export const PickingListDetailPage: React.FC = () => {
   const navigate = useNavigate();
@@ -60,9 +115,9 @@ export const PickingListDetailPage: React.FC = () => {
   const [savingItemIds, setSavingItemIds] = useState<Record<number, boolean>>({});
   const [completing, setCompleting] = useState<boolean>(false);
 
-  // Modal xác nhận chốt hoàn thành phiếu khi còn hàng chưa soạn (thay thế window.confirm)
-  const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
-  const [uncompletedCount, setUncompletedCount] = useState<number>(0);
+  // Popup Modals thay thế window.confirm & bắt buộc lý do soạn thiếu (S6-03 AC4)
+  const [isBatchShortageModalOpen, setIsBatchShortageModalOpen] = useState<boolean>(false);
+  const [isCompleteConfirmModalOpen, setIsCompleteConfirmModalOpen] = useState<boolean>(false);
 
   const loadData = async () => {
     if (!id) return;
@@ -132,16 +187,28 @@ export const PickingListDetailPage: React.FC = () => {
     itemId: number,
     pickedQuantity: number,
     isCompleted: boolean,
-    discrepancyReason?: string | null
+    discrepancyReason?: string | null,
+    actualBatchNumber?: string,
+    lotChangeReason?: string
   ) => {
     if (!pickingList) return;
     setSavingItemIds((prev) => ({ ...prev, [itemId]: true }));
+
+    const currentItem = pickingList.items.find((i) => i.id === itemId);
+    const chosenBatch =
+      actualBatchNumber !== undefined
+        ? actualBatchNumber
+        : (currentItem?.actualBatchNumber || currentItem?.suggestedBatchNumber);
+    const chosenReason =
+      lotChangeReason !== undefined ? lotChangeReason : currentItem?.lotChangeReason;
 
     try {
       const updatedList = await updateItemProgress(pickingList.id, itemId, {
         pickedQuantity,
         isCompleted,
-        discrepancyReason: discrepancyReason || undefined
+        discrepancyReason: discrepancyReason || undefined,
+        actualBatchNumber: chosenBatch,
+        lotChangeReason: chosenReason
       });
       setPickingList(updatedList);
     } catch (err: any) {
@@ -149,6 +216,19 @@ export const PickingListDetailPage: React.FC = () => {
     } finally {
       setSavingItemIds((prev) => ({ ...prev, [itemId]: false }));
     }
+  };
+
+  // Thủ kho chọn lô xuất hàng (S6-04 AC1 & AC2)
+  const handleLotChange = async (item: PickingListItem, batchNumber: string, reason?: string) => {
+    if (!pickingList || isReadOnly) return;
+    await saveItemUpdate(
+      item.id,
+      item.pickedQuantity,
+      item.isCompleted,
+      item.discrepancyReason,
+      batchNumber,
+      reason
+    );
   };
 
   // Xác nhận lý do soạn thiếu từ Modal (AC4)
@@ -160,39 +240,50 @@ export const PickingListDetailPage: React.FC = () => {
     setDiscrepancyTargetItem(null);
   };
 
-  // Xử lý chốt hoàn thành phiếu: Kiểm tra mặt hàng chưa soạn
+  // Bấm nút "Chốt hoàn thành đợt soạn": Kiểm tra mặt hàng thiếu và mở Popup tương ứng
   const handleCompletePicking = () => {
     if (!pickingList) return;
 
-    // Kiểm tra tất cả mặt hàng chưa soạn xong
-    const uncompleted = pickingList.items.filter((i) => !i.isCompleted);
-    if (uncompleted.length > 0) {
-      setUncompletedCount(uncompleted.length);
-      setShowConfirmModal(true);
+    // Tìm tất cả các mặt hàng soạn thiếu so với yêu cầu
+    const shortageItems = pickingList.items.filter(
+      (i) => i.pickedQuantity < i.requiredQuantity
+    );
+
+    // Nếu có bất kỳ mặt hàng nào thiếu mà chưa có lý do hoặc lý do chưa đủ chuẩn -> Mở Popup bắt buộc nhập lý do (S6-03 AC4)
+    if (shortageItems.length > 0) {
+      setIsBatchShortageModalOpen(true);
       return;
     }
 
-    executeCompletePicking();
+    // Nếu tất cả đã soạn đủ 100% -> Mở Popup xác nhận hoàn tất (không dùng window.confirm)
+    setIsCompleteConfirmModalOpen(true);
   };
 
-  // Thực thi API hoàn thành phiếu sau khi xác nhận
-  const executeCompletePicking = async () => {
+  // Xác nhận lý do từ Batch Shortage Modal và tiến hành chốt phiếu
+  const handleConfirmBatchShortage = async (
+    updates: Array<{ itemId: number; pickedQuantity: number; discrepancyReason: string }>
+  ) => {
     if (!pickingList) return;
+    setCompleting(true);
+    try {
+      // 1. Lưu đồng bộ lý do và số lượng của các mặt hàng thiếu
+      for (const up of updates) {
+        await saveItemUpdate(up.itemId, up.pickedQuantity, true, up.discrepancyReason);
+      }
 
-    // Kiểm tra các dòng thiếu có lý do chưa (AC4)
-    const missingReason = pickingList.items.find(
-      (i) => i.pickedQuantity < i.requiredQuantity && !i.discrepancyReason
-    );
-    if (missingReason) {
-      setShowConfirmModal(false);
-      showToast(
-        'Không thể hoàn thành (AC4)',
-        `Mặt hàng "${missingReason.productName}" soạn thiếu nhưng chưa có lý do!`,
-        'error'
-      );
-      return;
+      // 2. Chốt hoàn thành phiếu soạn hàng
+      await executeCompletePickingList();
+      setIsBatchShortageModalOpen(false);
+    } catch (err: any) {
+      showToast('Lỗi chốt thiếu', err.message || 'Không thể lưu lý do và hoàn tất phiếu', 'error');
+    } finally {
+      setCompleting(false);
     }
+  };
 
+  // Thực hiện gọi API chốt hoàn thành phiếu và tự động chuyển đơn sang DISPATCHED
+  const executeCompletePickingList = async () => {
+    if (!pickingList) return;
     setCompleting(true);
     try {
       const updated = await completePickingList(pickingList.id);
@@ -217,13 +308,14 @@ export const PickingListDetailPage: React.FC = () => {
       if (dispatchedCount > 0) {
         showToast(
           'Đã hoàn thành & Xuất kho',
-          `Đã chốt đợt soạn ${updated.code} và tự động xuất kho ${dispatchedCount} đơn hàng. Quản lý kho có thể xếp xe ngay!`,
+          `Đã chốt đợt soạn ${updated.code} và tự động chuyển ${dispatchedCount} đơn hàng sang ĐÃ XUẤT KHO. Quản lý kho có thể xếp xe ngay!`,
           'success'
         );
       } else {
         showToast('Chúc mừng', `Đã hoàn thành toàn bộ đợt soạn hàng ${updated.code}!`, 'success');
       }
-      loadData();
+      setIsCompleteConfirmModalOpen(false);
+      await loadData();
     } catch (err: any) {
       showToast('Lỗi hoàn thành', err.message || 'Chốt phiếu soạn hàng thất bại', 'error');
     } finally {
@@ -445,13 +537,18 @@ export const PickingListDetailPage: React.FC = () => {
                 >
                   {/* Top line: Route Sequence & Location Badge */}
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-7 h-7 rounded-lg bg-orange-600 text-white font-extrabold flex items-center justify-center text-xs shadow-xs">
-                        #{item.routeSequence}
-                      </span>
-                      <span className="px-2.5 py-1 rounded-lg bg-gray-900 text-white font-mono font-bold text-xs flex items-center gap-1">
-                        📍 {item.locationCode || 'CHỜ XẾP'}
-                      </span>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="w-7 h-7 rounded-lg bg-orange-600 text-white font-extrabold flex items-center justify-center text-xs shadow-xs">
+                          #{item.routeSequence}
+                        </span>
+                        <span className="px-2.5 py-1 rounded-lg bg-gray-900 text-white font-mono font-bold text-xs flex items-center gap-1">
+                          📍 {item.locationCode || 'CHỜ XẾP'}
+                        </span>
+                      </div>
+                      <div className="text-[11px] font-semibold text-orange-800 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200/60 inline-flex items-center gap-1">
+                        <span>{parseLocationHierarchy(item).fullPath}</span>
+                      </div>
                     </div>
 
                     {/* Touch Checkbox */}
@@ -493,6 +590,23 @@ export const PickingListDetailPage: React.FC = () => {
                         ))}
                       </div>
                     )}
+
+                    {/* Lựa chọn lô xuất hàng (FEFO) S6-04 */}
+                    <div className="mt-3 pt-2.5 border-t border-gray-100 space-y-1">
+                      <div className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
+                        <Layers className="w-3.5 h-3.5 text-orange-600" />
+                        <span>Lô xuất hàng (Ưu tiên FEFO):</span>
+                      </div>
+                      <LotSelectorDropdown
+                        productId={item.productId}
+                        warehouseId={pickingList.warehouseId}
+                        requiredQuantity={item.requiredQuantity}
+                        baseUnit={item.baseUnit}
+                        selectedBatchNumber={item.actualBatchNumber || item.suggestedBatchNumber}
+                        onChange={(batchNumber, reason) => handleLotChange(item, batchNumber, reason)}
+                        disabled={isReadOnly || !isWarehouseStaff}
+                      />
+                    </div>
                   </div>
 
                   {/* Shortage Reason Alert if any */}
@@ -562,53 +676,142 @@ export const PickingListDetailPage: React.FC = () => {
         /* ======================================================== */
         /* 2. CHẾ ĐỘ BÀN LÀM VIỆC (DESKTOP TABLE VIEW) */
         /* ======================================================== */
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-orange-500" />
-              Danh Sách Mặt Hàng Đã Gộp Theo Lộ Trình Trong Kho ({sortedItems.length} mặt hàng)
-            </h2>
-            <span className="text-xs text-gray-500">
-              Sắp xếp theo thứ tự tối ưu đường đi: Zone → Rack → Shelf → Bin
-            </span>
-          </div>
+        <div className="space-y-4">
+          {/* Visual Route Pathway Header (AC2: Chỉ dẫn thứ tự đường đi từ Khu vực -> Kệ -> Ô) */}
+          <div className="bg-gradient-to-r from-orange-50/80 via-amber-50/60 to-white p-4 rounded-2xl border border-orange-200/80 shadow-xs space-y-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-[#F85606] text-white rounded-lg shadow-2xs">
+                  <Compass className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs sm:text-sm text-gray-900 flex items-center gap-1.5">
+                    <span>Lộ trình đường đi tối ưu trong kho</span>
+                    <span className="text-[11px] font-normal text-gray-500">
+                      (Sắp xếp theo thứ tự: Khu vực (Zone) ➔ Dãy kệ (Rack) ➔ Ô chứa (Bin))
+                    </span>
+                  </h4>
+                </div>
+              </div>
+              <span className="text-[11px] font-semibold text-orange-700 bg-orange-100/80 px-2.5 py-0.5 rounded-full border border-orange-200 self-start sm:self-auto">
+                {sortedItems.length} điểm dừng gom hàng
+              </span>
+            </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-gray-50/90 border-b border-gray-200 text-gray-700 font-bold uppercase text-[10px]">
-                  <th className="py-3 px-3 text-center w-12">Lộ trình</th>
-                  <th className="py-3 px-3 w-28">Vị trí lưu kho</th>
-                  <th className="py-3 px-3 w-28">Mã SKU</th>
-                  <th className="py-3 px-4">Tên sản phẩm & Phân bổ đơn hàng</th>
-                  <th className="py-3 px-3 text-center w-14">ĐVT</th>
-                  <th className="py-3 px-3 text-right w-20">Yêu cầu</th>
-                  <th className="py-3 px-4 text-center w-36">Thực soạn</th>
-                  <th className="py-3 px-3 text-center w-24">Hoàn thành</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {sortedItems.map((item, idx) => {
-                  const isSaving = savingItemIds[item.id];
-                  return (
-                    <tr
-                      key={item.id}
-                      className={`hover:bg-orange-50/20 transition-colors ${
-                        item.isCompleted ? 'bg-emerald-50/20' : ''
+            {/* Route Steps Stepper */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 text-xs">
+              {sortedItems.map((item, idx) => {
+                const hier = parseLocationHierarchy(item);
+                return (
+                  <React.Fragment key={item.id}>
+                    <div
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border shrink-0 transition-all ${
+                        item.isCompleted
+                          ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-2xs'
+                          : 'bg-white border-orange-200/90 text-gray-800 shadow-2xs hover:border-[#F85606]'
                       }`}
                     >
-                      <td className="py-3 px-3 text-center font-black text-orange-600 bg-orange-50/40">
-                        #{item.routeSequence || idx + 1}
-                      </td>
-                      <td className="py-3 px-3 font-mono font-bold text-gray-900">
-                        <span className="px-2 py-0.5 rounded bg-gray-100 border border-gray-200">
-                          📍 {item.locationCode || 'CHỜ XẾP'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 font-mono text-gray-600">
+                      <span
+                        className={`w-5 h-5 rounded-full flex items-center justify-center font-black text-[11px] shrink-0 ${
+                          item.isCompleted
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-[#F85606] text-white'
+                        }`}
+                      >
+                        {item.isCompleted ? '✓' : idx + 1}
+                      </span>
+                      <div>
+                        <div className="font-bold text-xs flex items-center gap-1">
+                          <span className="text-[#F85606]">{hier.zoneText}</span>
+                          <span className="text-gray-400">➔</span>
+                          <span>{hier.rackText}</span>
+                          <span className="text-gray-400">➔</span>
+                          <span className="font-mono text-gray-900 bg-gray-100 px-1 rounded text-[10px]">
+                            {hier.binText}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-gray-500 truncate max-w-[150px]">
+                          {item.productName} ({item.requiredQuantity} {item.baseUnit})
+                        </div>
+                      </div>
+                    </div>
+                    {idx < sortedItems.length - 1 && (
+                      <span className="text-gray-300 font-bold text-sm shrink-0">➔</span>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Table Container (Mở rộng chiều cao min-h-[380px] pb-32 để dropdown danh sách lô mở dài xuống không bị che khuất) */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-xs">
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                <Layers className="w-4 h-4 text-orange-500" />
+                Danh Sách Mặt Hàng Đã Gộp Theo Lộ Trình Trong Kho ({sortedItems.length} mặt hàng)
+              </h2>
+              <span className="text-xs text-gray-500">
+                Sắp xếp theo thứ tự tối ưu đường đi: Zone → Rack → Shelf → Bin
+              </span>
+            </div>
+
+            <div className="overflow-x-auto min-h-[380px] pb-32">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-gray-50/90 border-b border-gray-200 text-gray-700 font-bold uppercase text-[10px]">
+                    <th className="py-3 px-3 text-center w-14">Lộ trình</th>
+                    <th className="py-3 px-3 w-44">Vị trí lưu kho (Khu ➔ Kệ ➔ Ô)</th>
+                    <th className="py-3 px-3 w-28">Mã SKU</th>
+                    <th className="py-3 px-4 min-w-[200px]">Tên sản phẩm & Phân bổ đơn hàng</th>
+                    <th className="py-3 px-3 w-64 min-w-[240px]">Lô hàng xuất (Gợi ý FEFO)</th>
+                    <th className="py-3 px-3 text-center w-14">ĐVT</th>
+                    <th className="py-3 px-3 text-right w-16">Yêu cầu</th>
+                    <th className="py-3 px-4 text-center w-36">Thực soạn</th>
+                    <th className="py-3 px-3 text-center w-20">Hoàn thành</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {sortedItems.map((item, idx) => {
+                    const isSaving = savingItemIds[item.id];
+                    const hier = parseLocationHierarchy(item);
+                    return (
+                      <tr
+                        key={item.id}
+                        className={`hover:bg-orange-50/20 transition-colors ${
+                          item.isCompleted ? 'bg-emerald-50/20' : ''
+                        }`}
+                      >
+                        <td className="py-3 px-3 text-center font-black text-orange-600 bg-orange-50/40 align-top pt-4">
+                          #{item.routeSequence || idx + 1}
+                        </td>
+                        <td className="py-3 px-3 align-top">
+                          <div className="space-y-1">
+                            <span className="inline-flex items-center gap-1 font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-orange-50 text-orange-900 border border-orange-200 shadow-2xs">
+                              <MapPin className="w-3 h-3 text-[#F85606]" />
+                              {item.locationCode || 'CHỜ XẾP'}
+                            </span>
+                            {/* Phân cấp lộ trình đường đi (Khu vực -> Kệ -> Ô) */}
+                            <div className="text-[11px] font-semibold text-gray-700 flex items-center gap-1">
+                              <span className="text-[#F85606] font-bold">{hier.zoneText}</span>
+                              <span className="text-gray-400">➔</span>
+                              <span className="text-gray-800">{hier.rackText}</span>
+                              <span className="text-gray-400">➔</span>
+                              <span className="text-gray-600 bg-gray-100 px-1 rounded text-[10px] font-mono">
+                                {hier.binText}
+                              </span>
+                            </div>
+                            {item.locationName && (
+                              <div className="text-[10px] text-gray-400 truncate max-w-[180px]">
+                                {item.locationName}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      <td className="py-3 px-3 font-mono text-gray-600 align-top pt-4">
                         {item.productSku}
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 align-top">
                         <div className="font-bold text-gray-900">{item.productName}</div>
                         {item.allocations && (
                           <div className="text-[11px] text-gray-500 mt-1 flex flex-wrap gap-1.5">
@@ -625,10 +828,21 @@ export const PickingListDetailPage: React.FC = () => {
                           </div>
                         )}
                       </td>
-                      <td className="py-3 px-3 text-center text-gray-600">
+                      <td className="py-3 px-3 align-top">
+                        <LotSelectorDropdown
+                          productId={item.productId}
+                          warehouseId={pickingList.warehouseId}
+                          requiredQuantity={item.requiredQuantity}
+                          baseUnit={item.baseUnit}
+                          selectedBatchNumber={item.actualBatchNumber || item.suggestedBatchNumber}
+                          onChange={(batchNumber, reason) => handleLotChange(item, batchNumber, reason)}
+                          disabled={isReadOnly || !isWarehouseStaff}
+                        />
+                      </td>
+                      <td className="py-3 px-3 text-center text-gray-600 align-top pt-4">
                         {item.baseUnit}
                       </td>
-                      <td className="py-3 px-3 text-right font-black text-gray-900 text-sm">
+                      <td className="py-3 px-3 text-right font-black text-gray-900 text-sm align-top pt-4">
                         {item.requiredQuantity}
                       </td>
                       <td className="py-3 px-4">
@@ -686,6 +900,7 @@ export const PickingListDetailPage: React.FC = () => {
             </table>
           </div>
         </div>
+      </div>
       )}
 
       {/* Modal ghi nhận lý do soạn thiếu (AC4) */}
@@ -711,26 +926,22 @@ export const PickingListDetailPage: React.FC = () => {
         onClose={() => setIsPrintModalOpen(false)}
       />
 
-      {/* Modal xác nhận chốt hoàn thành phiếu khi còn hàng chưa soạn (thay thế window.confirm) */}
-      <ConfirmModal
-        open={showConfirmModal}
-        title="Xác nhận chốt hoàn thành phiếu"
-        variant="warning"
-        confirmLabel="Vẫn chốt hoàn thành"
-        cancelLabel="Tiếp tục soạn"
-        loading={completing}
-        message={
-          <div className="space-y-2">
-            <p className="font-semibold text-gray-800">
-              Còn <span className="text-amber-600 font-bold">{uncompletedCount}</span> mặt hàng chưa được đánh dấu đã soạn xong.
-            </p>
-            <p className="text-gray-500 text-[11px] leading-relaxed">
-              Hệ thống sẽ ghi nhận tiến độ hiện tại và tiến hành tự động xuất kho các đơn hàng trong đợt soạn này. Bạn có chắc chắn muốn chốt hoàn thành phiếu không?
-            </p>
-          </div>
-        }
-        onConfirm={executeCompletePicking}
-        onCancel={() => setShowConfirmModal(false)}
+      {/* Popup Bắt buộc ghi nhận lý do soạn thiếu hàng (S6-03 AC4) */}
+      <PickingBatchShortageModal
+        isOpen={isBatchShortageModalOpen}
+        shortageItems={pickingList.items.filter((i) => i.pickedQuantity < i.requiredQuantity)}
+        onConfirm={handleConfirmBatchShortage}
+        onClose={() => setIsBatchShortageModalOpen(false)}
+        isSubmitting={completing}
+      />
+
+      {/* Popup Xác nhận chốt hoàn thành phiếu soạn (thay thế window.confirm) */}
+      <PickingCompleteConfirmModal
+        isOpen={isCompleteConfirmModalOpen}
+        pickingList={pickingList}
+        onConfirm={executeCompletePickingList}
+        onClose={() => setIsCompleteConfirmModalOpen(false)}
+        isSubmitting={completing}
       />
     </div>
   );

@@ -22,7 +22,8 @@ import {
   fetchDeliveryTripById,
   completeDeliveryTrip,
   confirmStopDelivery,
-  completeTripWithAutoResolve
+  completeTripWithAutoResolve,
+  formatOverdueTime
 } from '../../services/deliveryTripApi';
 import { DeliveryTripPrintModal } from '../../components/inventory/DeliveryTripPrintModal';
 import { DeliveryProofModal } from '../../components/delivery/DeliveryProofModal';
@@ -244,8 +245,8 @@ export const DeliveryTripDetailPage: React.FC = () => {
               </span>
             )}
             {trip.overdue && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
-                ⚠️ Trễ hạn {trip.overdueMinutes} phút
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+                ⚠️ {formatOverdueTime(trip.overdueMinutes)}
               </span>
             )}
           </div>

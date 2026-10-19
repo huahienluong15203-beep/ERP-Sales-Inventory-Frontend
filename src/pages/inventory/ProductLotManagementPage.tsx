@@ -33,6 +33,7 @@ import { ProductLotCreateModal } from '../../components/inventory/ProductLotCrea
 import { ProductLotUpdateModal } from '../../components/inventory/ProductLotUpdateModal';
 import { ProductLotDispatchCheckModal } from '../../components/inventory/ProductLotDispatchCheckModal';
 import { ProductLotLockConfirmModal } from '../../components/inventory/ProductLotLockConfirmModal';
+import { ProductBatchManagementConfigModal } from '../../components/inventory/ProductBatchManagementConfigModal';
 
 export const ProductLotManagementPage: React.FC = () => {
   const navigate = useNavigate();
@@ -63,6 +64,7 @@ export const ProductLotManagementPage: React.FC = () => {
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isBatchConfigModalOpen, setIsBatchConfigModalOpen] = useState(false);
   const [editingLot, setEditingLot] = useState<ProductLotResponse | null>(null);
   const [validatingLot, setValidatingLot] = useState<ProductLotResponse | null>(null);
   const [lotToToggleLock, setLotToToggleLock] = useState<ProductLotResponse | null>(null);
@@ -185,14 +187,26 @@ export const ProductLotManagementPage: React.FC = () => {
         </button>
 
         {isWhManagerOrAdmin && (
-          <button
-            type="button"
-            onClick={() => navigate('/inventory/lots/create')}
-            className="px-4 py-2 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer"
-          >
-            <Plus size={15} />
-            <span>Khai báo lô mới</span>
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setIsBatchConfigModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:bg-orange-50 hover:border-orange-200 text-gray-700 hover:text-[#F85606] font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+              title="Bật/Tắt quản lý lô theo từng SKU sản phẩm (S6-01)"
+            >
+              <SlidersHorizontal size={15} className="text-[#F85606]" />
+              <span>Bật/Tắt lô theo SKU</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/inventory/lots/create')}
+              className="px-4 py-2 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer"
+            >
+              <Plus size={15} />
+              <span>Khai báo lô mới</span>
+            </button>
+          </>
         )}
       </div>
 
@@ -631,6 +645,16 @@ export const ProductLotManagementPage: React.FC = () => {
           onConfirm={handleConfirmToggleLock}
         />
       )}
+
+      {/* Modal Cấu hình Bật/Tắt quản lý lô theo từng SKU (S6-01) */}
+      <ProductBatchManagementConfigModal
+        isOpen={isBatchConfigModalOpen}
+        onClose={() => setIsBatchConfigModalOpen(false)}
+        onUpdated={() => {
+          loadLots();
+          loadSummary();
+        }}
+      />
     </div>
   );
 };
