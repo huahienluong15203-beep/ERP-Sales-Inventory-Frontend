@@ -277,7 +277,7 @@ export const LotSelectorDropdown: React.FC<LotSelectorDropdownProps> = ({
 
       {/* YÊU CẦU NHẬP LÝ DO NẾU THỦ KHO CHỌN LÔ KHÁC VỚI LÔ GỢI Ý FEFO (AC 2) */}
       {isDifferentFromSuggested && !isSelectedExpired && (
-        <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1 animate-in fade-in">
+        <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1.5 animate-in fade-in">
           <div className="flex items-center gap-1.5 font-bold text-amber-950">
             <AlertTriangle size={13} className="text-amber-600 shrink-0" />
             <span>Đang chọn khác lô gợi ý FEFO ({suggestedLot?.batchNumber})</span>
@@ -285,13 +285,36 @@ export const LotSelectorDropdown: React.FC<LotSelectorDropdownProps> = ({
           <p className="text-[11px] text-amber-800">
             Vui lòng nhập lý do chọn lô này thay vì lô ưu tiên hạn gần nhất:
           </p>
+          <div className="flex flex-wrap gap-1">
+            {['Đại lý yêu cầu date xa', 'Hàng góc trong khó lấy', 'Khách chỉ định lô'].map((tag, tIdx) => (
+              <button
+                key={tIdx}
+                type="button"
+                disabled={disabled}
+                onClick={() => {
+                  setManualReason(tag);
+                  if (selectedBatchNumber) {
+                    onChange(selectedBatchNumber, tag, false);
+                  }
+                }}
+                className="text-[10px] px-2 py-0.5 rounded-md bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 font-medium cursor-pointer shadow-2xs"
+              >
+                + {tag}
+              </button>
+            ))}
+          </div>
           <input
             type="text"
             value={manualReason}
             disabled={disabled}
             onChange={(e) => setManualReason(e.target.value)}
             onBlur={handleManualReasonBlur}
-            placeholder="Ví dụ: Đại lý yêu cầu date xa / Hàng góc trong kho khó lấy..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleManualReasonBlur();
+              }
+            }}
+            placeholder="Nhập lý do cụ thể (tối thiểu 5 ký tự)..."
             className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
           />
         </div>
