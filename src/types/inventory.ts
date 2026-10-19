@@ -5,6 +5,8 @@
  * S5-09: Cảnh báo tồn tối thiểu
  */
 
+import type { UserProfile, RoleName } from './user';
+
 export type GoodsReceiptStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED';
 
 export interface WarehouseOption {
@@ -52,6 +54,35 @@ export const SYSTEM_WAREHOUSES: WarehouseOption[] = [
     status: 'ACTIVE'
   }
 ];
+
+/**
+ * Lọc danh sách kho mà người dùng có quyền phụ trách:
+ * - ADMIN, ACCOUNTANT, SALES_MANAGER: có quyền xem toàn bộ hệ thống kho
+ * - WAREHOUSE, WH_MANAGER: chỉ được xem/thao tác trên các kho được phân công (kho nào không có quyền thì không hiện)
+ */
+export function getAllowedWarehouses(user: UserProfile | null | undefined, role?: RoleName | null): WarehouseOption[] {
+  if (!user) return SYSTEM_WAREHOUSES;
+  const current = role || user.role;
+  const isBroad = current === 'ROLE_ADMIN' || current === 'ROLE_ACCOUNTANT' || current === 'ROLE_SALES_MANAGER'
+    || (user.roles && (user.roles.includes('ROLE_ADMIN') || user.roles.includes('ROLE_ACCOUNTANT') || user.roles.includes('ROLE_SALES_MANAGER')));
+
+  if (isBroad) {
+    return SYSTEM_WAREHOUSES;
+  }
+
+  if (user.warehouseCodes && user.warehouseCodes.length > 0) {
+    const filtered = SYSTEM_WAREHOUSES.filter((wh) => user.warehouseCodes!.includes(wh.code));
+    if (filtered.length > 0) return filtered;
+  }
+  if (user.warehouse) {
+    const filtered = SYSTEM_WAREHOUSES.filter(
+      (wh) => user.warehouse!.includes(wh.code) || user.warehouse!.includes(wh.name)
+    );
+    if (filtered.length > 0) return filtered;
+  }
+  return SYSTEM_WAREHOUSES;
+}
+
 
 /**
  * Một dòng hàng trong Phiếu nhập kho (S5-04)

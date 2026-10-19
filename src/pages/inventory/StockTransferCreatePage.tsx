@@ -11,8 +11,7 @@ import {
   CheckCircle2,
   Loader2
 } from 'lucide-react';
-import type { WarehouseOption } from '../../types/inventory';
-import { SYSTEM_WAREHOUSES } from '../../types/inventory';
+import { SYSTEM_WAREHOUSES, getAllowedWarehouses, type WarehouseOption } from '../../types/inventory';
 import type { CreateStockTransferPayload } from '../../types/stockTransfer';
 import { productService } from '../../services/productService';
 import type { Product } from '../../types/product';
@@ -48,8 +47,13 @@ export const StockTransferCreatePage: React.FC = () => {
     currentRole === 'ROLE_ADMIN' ||
     Boolean(user?.roles?.some((r) => r === 'ROLE_WH_MANAGER' || r === 'ROLE_ADMIN'));
 
+  // Lọc kho xuất: chỉ các kho người dùng được phân công phụ trách
+  const allowedSourceWarehouses = useMemo(() => {
+    return getAllowedWarehouses(user, currentRole);
+  }, [user, currentRole]);
+
   // Danh mục kho xuất & kho nhận
-  const [sourceWarehouses, setSourceWarehouses] = useState<WarehouseOption[]>(SYSTEM_WAREHOUSES);
+  const [sourceWarehouses, setSourceWarehouses] = useState<WarehouseOption[]>(() => getAllowedWarehouses(user, currentRole));
   const [destWarehouses, setDestWarehouses] = useState<WarehouseOption[]>(SYSTEM_WAREHOUSES);
 
   // Danh mục sản phẩm
@@ -69,8 +73,16 @@ export const StockTransferCreatePage: React.FC = () => {
     } catch {
       // ignore
     }
-    return 'WH-MB01';
+    const list = getAllowedWarehouses(user, currentRole);
+    return list[0]?.code || 'WH-MB01';
   });
+
+  useEffect(() => {
+    setSourceWarehouses(allowedSourceWarehouses);
+    if (allowedSourceWarehouses.length > 0 && !allowedSourceWarehouses.some((w: WarehouseOption) => w.code === sourceWarehouseCode)) {
+      setSourceWarehouseCode(allowedSourceWarehouses[0].code);
+    }
+  }, [allowedSourceWarehouses, sourceWarehouseCode]);
 
   const [destWarehouseCode, setDestWarehouseCode] = useState<string>(() => {
     try {

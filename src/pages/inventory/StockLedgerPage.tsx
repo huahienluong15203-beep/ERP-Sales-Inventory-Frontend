@@ -12,7 +12,7 @@ import {
   BookOpenCheck
 } from 'lucide-react';
 import type { MinStockThresholdConfig } from '../../types/stockAlert';
-import { SYSTEM_WAREHOUSES } from '../../types/inventory';
+import { getAllowedWarehouses, type WarehouseOption } from '../../types/inventory';
 import {
   fetchMinStockConfigsPaged,
   getDashboardMinStockSummary,
@@ -42,6 +42,11 @@ export const StockLedgerPage: React.FC = () => {
     currentRole === 'ROLE_ADMIN' ||
     Boolean(user?.roles?.some((r) => r === 'ROLE_WH_MANAGER' || r === 'ROLE_ADMIN'));
 
+  // Lọc danh sách kho mà người dùng có quyền phụ trách (kho nào không có quyền thì không hiện)
+  const allowedWarehouses = useMemo(() => {
+    return getAllowedWarehouses(user, currentRole);
+  }, [user, currentRole]);
+
   // Kiểm tra quyền sửa theo từng kho:
   // - Admin: được sửa tất cả các kho
   // - Quản lý kho: chỉ được sửa tại các kho mà tài khoản được phân công
@@ -68,11 +73,25 @@ export const StockLedgerPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState<number>(1);
 
   // Bộ lọc
-  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('ALL');
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>(() => {
+    const isBroad = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_ACCOUNTANT' || currentRole === 'ROLE_SALES_MANAGER';
+    const list = getAllowedWarehouses(user, currentRole);
+    if (!isBroad && list.length === 1) {
+      return list[0].code;
+    }
+    return 'ALL';
+  });
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'BELOW' | 'CRITICAL' | 'SAFE'>('ALL');
   const [keyword, setKeyword] = useState<string>('');
   const [debouncedKeyword, setDebouncedKeyword] = useState<string>('');
+
+  useEffect(() => {
+    const isBroad = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_ACCOUNTANT' || currentRole === 'ROLE_SALES_MANAGER';
+    if (!isBroad && allowedWarehouses.length === 1 && selectedWarehouse !== allowedWarehouses[0].code) {
+      setSelectedWarehouse(allowedWarehouses[0].code);
+    }
+  }, [allowedWarehouses, currentRole, selectedWarehouse]);
 
   // Danh mục nhóm hàng đồng bộ từ Quản lý nhóm hàng
   const [categories, setCategories] = useState<CategoryWithCount[]>([]);
@@ -417,8 +436,8 @@ export const StockLedgerPage: React.FC = () => {
               }}
               className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
             >
-              <option value="ALL">Tất cả kho hàng</option>
-              {SYSTEM_WAREHOUSES.map((w) => (
+              <option value="ALL">{allowedWarehouses.length > 1 ? 'Tất cả kho phụ trách' : 'Kho phụ trách'}</option>
+              {allowedWarehouses.map((w: WarehouseOption) => (
                 <option key={w.code} value={w.code}>
                   {w.name}
                 </option>

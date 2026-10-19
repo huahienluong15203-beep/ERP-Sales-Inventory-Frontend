@@ -716,8 +716,14 @@ export async function completePickingList(id: number): Promise<PickingList> {
       if (idx >= 0) lists[idx] = mapped;
       saveStoredLists(lists);
       return mapped;
+    } else {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.message || `Lỗi chốt phiếu: HTTP ${res.status}`);
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
     console.warn('Backend complete picking list failed, updating locally:', err);
   }
 

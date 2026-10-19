@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Plus,
   Search,
@@ -9,8 +9,7 @@ import {
   Eye,
   Package
 } from 'lucide-react';
-import type { GoodsReceipt } from '../../types/inventory';
-import { SYSTEM_WAREHOUSES } from '../../types/inventory';
+import type { GoodsReceipt, WarehouseOption } from '../../types/inventory';
 import {
   fetchGoodsReceipts,
   deleteGoodsReceipt
@@ -20,9 +19,15 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLocation, useNavigate } from '../../routes/Router';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { GoodsReceiptDraftsModal } from '../../components/inventory/GoodsReceiptDraftsModal';
+import { getAllowedWarehouses } from '../../types/inventory';
 
 export const GoodsReceiptManagementPage: React.FC = () => {
-  const { showToast, currentRole } = useAuth();
+  const { user, showToast, currentRole } = useAuth();
+
+  // Lọc danh sách kho mà người dùng có quyền phụ trách (kho nào không có quyền thì không hiện)
+  const allowedWarehouses = useMemo(() => {
+    return getAllowedWarehouses(user, currentRole);
+  }, [user, currentRole]);
 
   // Mục 12 (góp ý GV): chặn ở cả FE và BE - chỉ NV kho, QL kho, Admin được lập / xác nhận / sửa;
   // Kế toán, QL kinh doanh chỉ xem.
@@ -196,8 +201,10 @@ export const GoodsReceiptManagementPage: React.FC = () => {
             onChange={(e) => setSelectedWarehouse(e.target.value)}
             className="text-xs font-semibold border border-gray-200 rounded-xl p-2.5 bg-white"
           >
-            <option value="">Tất cả các kho</option>
-            {SYSTEM_WAREHOUSES.map((w) => (
+            {allowedWarehouses.length > 1 && (
+              <option value="">Tất cả các kho phụ trách</option>
+            )}
+            {allowedWarehouses.map((w: WarehouseOption) => (
               <option key={w.code} value={w.code}>
                 {w.name}
               </option>

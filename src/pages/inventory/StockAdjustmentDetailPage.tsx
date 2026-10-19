@@ -762,8 +762,14 @@ export const StockAdjustmentDetailPage: React.FC = () => {
 
       {/* ================= MODAL PHÊ DUYỆT (AC3) ================= */}
       {isApproveOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4">
+        <div
+          onClick={() => setIsApproveOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-[1px] animate-in fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4"
+          >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                 <CheckCircle size={22} />
@@ -818,8 +824,14 @@ export const StockAdjustmentDetailPage: React.FC = () => {
 
       {/* ================= MODAL TỪ CHỐI DUYỆT ================= */}
       {isRejectOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4">
+        <div
+          onClick={() => setIsRejectOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-[1px] animate-in fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4"
+          >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
                 <XCircle size={22} />
@@ -867,8 +879,14 @@ export const StockAdjustmentDetailPage: React.FC = () => {
 
       {/* ================= MODAL HUỶ PHIẾU ================= */}
       {isCancelOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4">
+        <div
+          onClick={() => setIsCancelOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-[1px] animate-in fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4"
+          >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-gray-100 text-gray-600 flex items-center justify-center shrink-0">
                 <Trash2 size={22} />
