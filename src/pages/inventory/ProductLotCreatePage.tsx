@@ -71,6 +71,30 @@ export const ProductLotCreatePage: React.FC = () => {
 
   const selectedProduct = products.find((p) => String(p.id) === productId);
 
+  // Bật/tắt quản lý lô trực tiếp cho SKU đang chọn (S6-01)
+  const [togglingBatch, setTogglingBatch] = useState(false);
+  const handleToggleProductBatch = async () => {
+    if (!selectedProduct) return;
+    const nextVal = !selectedProduct.hasBatchManagement;
+    setTogglingBatch(true);
+    try {
+      await toggleProductBatchManagement(selectedProduct.id, nextVal);
+      setProducts((prev) =>
+        prev.map((p) => (p.id === selectedProduct.id ? { ...p, hasBatchManagement: nextVal } : p))
+      );
+      showToast?.(
+        nextVal
+          ? `Đã bật theo dõi lô & HSD cho sản phẩm ${selectedProduct.sku}`
+          : `Đã tắt theo dõi lô & HSD cho sản phẩm ${selectedProduct.sku}`,
+        'success'
+      );
+    } catch (err: any) {
+      showToast?.(err.message || 'Không thể thay đổi trạng thái quản lý lô', 'error');
+    } finally {
+      setTogglingBatch(false);
+    }
+  };
+
   // Form validation: tất cả 7 trường có dấu * đều bắt buộc
   const isFormValid = Boolean(
     productId &&
@@ -275,12 +299,48 @@ export const ProductLotCreatePage: React.FC = () => {
                 placeholder="-- Chọn sản phẩm --"
                 loading={loadingOptions}
               />
-              {selectedProduct && !selectedProduct.hasBatchManagement && (
-                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2 animate-in fade-in">
-                  <Info size={14} className="text-amber-600 shrink-0 mt-0.5" />
-                  <p className="text-[11px] leading-relaxed">
-                    Sản phẩm <strong>{selectedProduct.sku}</strong> chưa kích hoạt cờ quản lý theo lô. Hệ thống sẽ <strong>tự động kích hoạt</strong> quản lý lô cho sản phẩm này khi bạn bấm "Khai báo lô hàng".
-                  </p>
+              {selectedProduct && (
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between gap-3 text-xs animate-in fade-in">
+                  <div className="space-y-0.5">
+                    <div className="font-bold text-gray-900 flex items-center gap-1.5 flex-wrap">
+                      <span>Quản lý theo lô (S6-01):</span>
+                      {selectedProduct.hasBatchManagement ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                          Đang bật theo dõi lô & HSD
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 text-gray-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                          Chưa bật quản lý lô
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-500">
+                      {selectedProduct.hasBatchManagement
+                        ? 'SKU này áp dụng quản lý số lô, ngày sản xuất và hạn sử dụng (FEFO).'
+                        : 'Bạn có thể bấm nút bên cạnh để kích hoạt theo dõi lô ngay cho SKU này.'}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={togglingBatch}
+                    onClick={handleToggleProductBatch}
+                    className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs shrink-0 ${
+                      selectedProduct.hasBatchManagement
+                        ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300'
+                        : 'bg-[#F85606] hover:bg-orange-600 text-white shadow-md shadow-orange-500/20'
+                    }`}
+                  >
+                    {togglingBatch ? (
+                      <RefreshCw size={12} className="animate-spin" />
+                    ) : selectedProduct.hasBatchManagement ? (
+                      <span>Tắt quản lý lô</span>
+                    ) : (
+                      <span>Bật quản lý lô ngay</span>
+                    )}
+                  </button>
                 </div>
               )}
             </div>
