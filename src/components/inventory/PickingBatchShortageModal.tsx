@@ -110,7 +110,7 @@ export const PickingBatchShortageModal: React.FC<PickingBatchShortageModalProps>
         const trimmed = s.reason.trim();
         if (!trimmed) {
           hasError = true;
-          return { ...s, error: 'Bắt buộc nhập lý do soạn thiếu hàng (S6-03 AC4)!' };
+          return { ...s, error: 'Bắt buộc nhập lý do soạn thiếu hàng' };
         }
         if (trimmed.length < 5) {
           hasError = true;
@@ -150,7 +150,7 @@ export const PickingBatchShortageModal: React.FC<PickingBatchShortageModalProps>
                 Phát hiện mặt hàng soạn thiếu số lượng
               </h3>
               <p className="text-xs text-amber-100 mt-0.5">
-                Bắt buộc ghi nhận lý do chênh lệch trước khi hoàn tất phiếu (Tiêu chí S6-03 AC4)
+                Bắt buộc ghi nhận lý do chênh lệch trước khi hoàn tất phiếu
               </p>
             </div>
           </div>
@@ -271,11 +271,10 @@ export const PickingBatchShortageModal: React.FC<PickingBatchShortageModalProps>
                       value={state.reason}
                       onChange={(e) => handleReasonChange(idx, e.target.value)}
                       placeholder="Nhập nguyên nhân cụ thể (ví dụ: Kệ chỉ còn 1 lon nguyên vẹn, các lon khác bị móp méo...)"
-                      className={`w-full text-xs p-2.5 rounded-xl border outline-none transition-all ${
-                        state.error
-                          ? 'border-red-400 bg-red-50/40 focus:ring-2 focus:ring-red-200'
-                          : 'border-gray-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200'
-                      }`}
+                      className={`w-full text-xs p-2.5 rounded-xl border outline-none transition-all ${state.error
+                        ? 'border-red-400 bg-red-50/40 focus:ring-2 focus:ring-red-200'
+                        : 'border-gray-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200'
+                        }`}
                     />
 
                     {state.error && (

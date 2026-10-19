@@ -35,6 +35,9 @@ export interface PickingListItem {
   productName: string;
   baseUnit: string;
   locationCode: string; // Vị trí lưu kho (Zone-Rack-Shelf-Bin)
+  locationName?: string; // Tên chi tiết vị trí (vd: Ô Chứa B1-01)
+  zone?: string; // Khu vực (vd: Khu B)
+  shelf?: string; // Giá/Kệ (vd: Kệ B1)
   routeSequence: number; // Thứ tự đường đi trong kho (1, 2, 3...)
   requiredQuantity: number;
   pickedQuantity: number;
