@@ -654,9 +654,6 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
             <CreditCard size={14} className="text-[#F85606]" />
             Hình Thức Thanh Toán <span className="text-red-500">*</span>
           </span>
-          <span className="text-[11px] text-gray-400 font-normal">
-            Chọn mua nợ gối đầu hoặc tài xế thu tiền khi nhận hàng
-          </span>
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
@@ -677,7 +674,7 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-gray-900">Mua Nợ Gối Đầu (CREDIT)</span>
+                <span className="text-xs font-bold text-gray-900">Thanh Toán Tín Dụng (CREDIT)</span>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">
                   Hạn mức tín dụng
                 </span>

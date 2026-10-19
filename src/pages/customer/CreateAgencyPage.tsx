@@ -16,7 +16,6 @@ import {
   type PortalUserOption
 } from '../../services/agencyApi';
 import {
-  Building2,
   ArrowLeft,
   AlertTriangle,
   CheckCircle2,
@@ -28,7 +27,6 @@ import {
   Users,
   FileText,
   Tag,
-  ShieldCheck,
   RefreshCw
 } from '../../components/common/Icons';
 import { AddressPicker } from '../../components/common/AddressPicker';
@@ -199,47 +197,20 @@ export const CreateAgencyPage: React.FC = () => {
 
   return (
     <div className="w-full min-w-0 space-y-5 antialiased pb-20 animate-in fade-in duration-200">
-      {/* 1. THANH QUAY LẠI & BREADCRUMBS */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate('/customers')}
-            className="px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:bg-orange-50 hover:border-orange-200 text-gray-700 hover:text-[#F85606] font-bold text-xs inline-flex items-center gap-2 transition cursor-pointer shadow-2xs active:scale-95"
-            id="agency-create-back-btn"
-          >
-            <ArrowLeft size={16} />
-            <span>Quay lại danh sách đại lý</span>
-          </button>
-          <span className="text-gray-300 hidden sm:inline">•</span>
-          <span className="text-xs text-gray-500 font-medium hidden sm:inline">
-            Bán hàng / Hồ sơ đại lý / Khai báo hồ sơ đại lý mới
-          </span>
-        </div>
+      {/* 1. THANH QUAY LẠI */}
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={() => navigate('/customers')}
+          className="px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:bg-orange-50 hover:border-orange-200 text-gray-700 hover:text-[#F85606] font-bold text-xs inline-flex items-center gap-2 transition cursor-pointer shadow-2xs active:scale-95"
+          id="agency-create-back-btn"
+        >
+          <ArrowLeft size={16} />
+          <span>Quay lại</span>
+        </button>
       </div>
 
-      {/* 2. BANNER TIÊU ĐỀ TRANG */}
-      <div className="bg-gradient-to-r from-orange-500 via-[#FF6A00] to-[#EE4D2D] rounded-2xl p-5 sm:p-6 text-white shadow-md shadow-orange-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0 border border-white/25">
-            <Building2 size={26} className="text-white" />
-          </div>
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold tracking-tight">Khai Báo Hồ Sơ Đại Lý Mới</h1>
-            <p className="text-xs sm:text-sm text-orange-100 mt-0.5">
-              Thiết lập thông tin định danh, nhóm khách hàng, cơ chế bảng giá và phân công địa bàn quản lý
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="px-3 py-1.5 rounded-xl bg-white/15 backdrop-blur-xs text-xs font-semibold border border-white/20 flex items-center gap-1.5">
-            <ShieldCheck size={14} />
-            <span>Chuẩn hóa dữ liệu ERP</span>
-          </span>
-        </div>
-      </div>
-
-      {/* 3. THÔNG BÁO LỖI NẾU CÓ */}
+      {/* 2. THÔNG BÁO LỖI NẾU CÓ */}
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-700 flex items-start gap-3 shadow-2xs animate-in slide-in-from-top-2">
           <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
