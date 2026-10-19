@@ -271,6 +271,10 @@ function mapBackendPickingListItem(dto: any): PickingListItem {
     pickedQuantity: Number(dto.pickedQuantity ?? 0),
     isCompleted: Boolean(dto.isPicked ?? dto.isCompleted),
     discrepancyReason: dto.shortageReason ?? dto.discrepancyReason ?? null,
+    suggestedBatchNumber: dto.suggestedBatchNumber || '',
+    suggestedExpiredDate: dto.suggestedExpiredDate || '',
+    actualBatchNumber: dto.actualBatchNumber || '',
+    lotChangeReason: dto.lotChangeReason || '',
     allocations: (dto.allocations || []).map((a: any) => ({
       orderId: a.orderId,
       orderCode: a.orderCode || `Đơn #${a.orderId}`,
@@ -589,7 +593,9 @@ export async function updateItemProgress(
       body: JSON.stringify({
         pickedQuantity: req.pickedQuantity,
         isPicked: req.isCompleted,
-        shortageReason: req.discrepancyReason || null
+        shortageReason: req.discrepancyReason || null,
+        actualBatchNumber: req.actualBatchNumber || null,
+        lotChangeReason: req.lotChangeReason || null
       })
     });
     if (res.ok) {
@@ -616,6 +622,8 @@ export async function updateItemProgress(
   item.pickedQuantity = req.pickedQuantity;
   item.isCompleted = req.isCompleted;
   item.discrepancyReason = req.discrepancyReason || null;
+  if (req.actualBatchNumber !== undefined) item.actualBatchNumber = req.actualBatchNumber;
+  if (req.lotChangeReason !== undefined) item.lotChangeReason = req.lotChangeReason;
 
   // Cập nhật trạng thái phiếu nếu chưa chuyển sang IN_PROGRESS
   if (list.status === 'ASSIGNED') {
@@ -645,7 +653,9 @@ export async function updateProgressBatch(
           itemId: i.itemId,
           pickedQuantity: i.pickedQuantity,
           isPicked: i.isCompleted,
-          shortageReason: i.discrepancyReason || null
+          shortageReason: i.discrepancyReason || null,
+          actualBatchNumber: i.actualBatchNumber || null,
+          lotChangeReason: i.lotChangeReason || null
         })),
         autoCompleteIfAllDone: req.autoCompleteIfAllDone
       })
@@ -673,6 +683,8 @@ export async function updateProgressBatch(
       item.pickedQuantity = update.pickedQuantity;
       item.isCompleted = update.isCompleted;
       item.discrepancyReason = update.discrepancyReason || null;
+      if (update.actualBatchNumber !== undefined) item.actualBatchNumber = update.actualBatchNumber;
+      if (update.lotChangeReason !== undefined) item.lotChangeReason = update.lotChangeReason;
     }
   });
 

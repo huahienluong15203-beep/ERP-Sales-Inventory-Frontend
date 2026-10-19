@@ -29,6 +29,7 @@ import { PickingDiscrepancyModal } from '../../components/inventory/PickingDiscr
 import { PickingBatchShortageModal } from '../../components/inventory/PickingBatchShortageModal';
 import { PickingCompleteConfirmModal } from '../../components/inventory/PickingCompleteConfirmModal';
 import { PickingListPrintModal } from '../../components/inventory/PickingListPrintModal';
+import { LotSelectorDropdown } from '../../components/inventory/LotSelectorDropdown';
 
 /**
  * Phân tích và hiển thị đường dẫn vị trí chi tiết từ Khu vực -> Dãy kệ -> Ô lưu kho (Zone -> Rack -> Shelf -> Bin)
@@ -186,16 +187,28 @@ export const PickingListDetailPage: React.FC = () => {
     itemId: number,
     pickedQuantity: number,
     isCompleted: boolean,
-    discrepancyReason?: string | null
+    discrepancyReason?: string | null,
+    actualBatchNumber?: string,
+    lotChangeReason?: string
   ) => {
     if (!pickingList) return;
     setSavingItemIds((prev) => ({ ...prev, [itemId]: true }));
+
+    const currentItem = pickingList.items.find((i) => i.id === itemId);
+    const chosenBatch =
+      actualBatchNumber !== undefined
+        ? actualBatchNumber
+        : (currentItem?.actualBatchNumber || currentItem?.suggestedBatchNumber);
+    const chosenReason =
+      lotChangeReason !== undefined ? lotChangeReason : currentItem?.lotChangeReason;
 
     try {
       const updatedList = await updateItemProgress(pickingList.id, itemId, {
         pickedQuantity,
         isCompleted,
-        discrepancyReason: discrepancyReason || undefined
+        discrepancyReason: discrepancyReason || undefined,
+        actualBatchNumber: chosenBatch,
+        lotChangeReason: chosenReason
       });
       setPickingList(updatedList);
     } catch (err: any) {
@@ -203,6 +216,19 @@ export const PickingListDetailPage: React.FC = () => {
     } finally {
       setSavingItemIds((prev) => ({ ...prev, [itemId]: false }));
     }
+  };
+
+  // Thủ kho chọn lô xuất hàng (S6-04 AC1 & AC2)
+  const handleLotChange = async (item: PickingListItem, batchNumber: string, reason?: string) => {
+    if (!pickingList || isReadOnly) return;
+    await saveItemUpdate(
+      item.id,
+      item.pickedQuantity,
+      item.isCompleted,
+      item.discrepancyReason,
+      batchNumber,
+      reason
+    );
   };
 
   // Xác nhận lý do soạn thiếu từ Modal (AC4)
@@ -563,6 +589,23 @@ export const PickingListDetailPage: React.FC = () => {
                         ))}
                       </div>
                     )}
+
+                    {/* Lựa chọn lô xuất hàng (FEFO) S6-04 */}
+                    <div className="mt-3 pt-2.5 border-t border-gray-100 space-y-1">
+                      <div className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
+                        <Layers className="w-3.5 h-3.5 text-orange-600" />
+                        <span>Lô xuất hàng (Ưu tiên FEFO):</span>
+                      </div>
+                      <LotSelectorDropdown
+                        productId={item.productId}
+                        warehouseId={pickingList.warehouseId}
+                        requiredQuantity={item.requiredQuantity}
+                        baseUnit={item.baseUnit}
+                        selectedBatchNumber={item.actualBatchNumber || item.suggestedBatchNumber}
+                        onChange={(batchNumber, reason) => handleLotChange(item, batchNumber, reason)}
+                        disabled={isReadOnly || !isWarehouseStaff}
+                      />
+                    </div>
                   </div>
 
                   {/* Shortage Reason Alert if any */}
@@ -717,13 +760,14 @@ export const PickingListDetailPage: React.FC = () => {
                 <thead>
                   <tr className="bg-gray-50/90 border-b border-gray-200 text-gray-700 font-bold uppercase text-[10px]">
                     <th className="py-3 px-3 text-center w-14">Lộ trình</th>
-                    <th className="py-3 px-3 w-48">Vị trí lưu kho (Khu ➔ Kệ ➔ Ô)</th>
+                    <th className="py-3 px-3 w-44">Vị trí lưu kho (Khu ➔ Kệ ➔ Ô)</th>
                     <th className="py-3 px-3 w-28">Mã SKU</th>
-                    <th className="py-3 px-4">Tên sản phẩm & Phân bổ đơn hàng</th>
+                    <th className="py-3 px-4 min-w-[200px]">Tên sản phẩm & Phân bổ đơn hàng</th>
+                    <th className="py-3 px-3 w-64 min-w-[240px]">Lô hàng xuất (Gợi ý FEFO)</th>
                     <th className="py-3 px-3 text-center w-14">ĐVT</th>
-                    <th className="py-3 px-3 text-right w-20">Yêu cầu</th>
+                    <th className="py-3 px-3 text-right w-16">Yêu cầu</th>
                     <th className="py-3 px-4 text-center w-36">Thực soạn</th>
-                    <th className="py-3 px-3 text-center w-24">Hoàn thành</th>
+                    <th className="py-3 px-3 text-center w-20">Hoàn thành</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -737,10 +781,10 @@ export const PickingListDetailPage: React.FC = () => {
                           item.isCompleted ? 'bg-emerald-50/20' : ''
                         }`}
                       >
-                        <td className="py-3 px-3 text-center font-black text-orange-600 bg-orange-50/40">
+                        <td className="py-3 px-3 text-center font-black text-orange-600 bg-orange-50/40 align-top pt-4">
                           #{item.routeSequence || idx + 1}
                         </td>
-                        <td className="py-3 px-3">
+                        <td className="py-3 px-3 align-top">
                           <div className="space-y-1">
                             <span className="inline-flex items-center gap-1 font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-orange-50 text-orange-900 border border-orange-200 shadow-2xs">
                               <MapPin className="w-3 h-3 text-[#F85606]" />
@@ -763,10 +807,10 @@ export const PickingListDetailPage: React.FC = () => {
                             )}
                           </div>
                         </td>
-                      <td className="py-3 px-3 font-mono text-gray-600">
+                      <td className="py-3 px-3 font-mono text-gray-600 align-top pt-4">
                         {item.productSku}
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 align-top">
                         <div className="font-bold text-gray-900">{item.productName}</div>
                         {item.allocations && (
                           <div className="text-[11px] text-gray-500 mt-1 flex flex-wrap gap-1.5">
@@ -783,10 +827,21 @@ export const PickingListDetailPage: React.FC = () => {
                           </div>
                         )}
                       </td>
-                      <td className="py-3 px-3 text-center text-gray-600">
+                      <td className="py-3 px-3 align-top">
+                        <LotSelectorDropdown
+                          productId={item.productId}
+                          warehouseId={pickingList.warehouseId}
+                          requiredQuantity={item.requiredQuantity}
+                          baseUnit={item.baseUnit}
+                          selectedBatchNumber={item.actualBatchNumber || item.suggestedBatchNumber}
+                          onChange={(batchNumber, reason) => handleLotChange(item, batchNumber, reason)}
+                          disabled={isReadOnly || !isWarehouseStaff}
+                        />
+                      </td>
+                      <td className="py-3 px-3 text-center text-gray-600 align-top pt-4">
                         {item.baseUnit}
                       </td>
-                      <td className="py-3 px-3 text-right font-black text-gray-900 text-sm">
+                      <td className="py-3 px-3 text-right font-black text-gray-900 text-sm align-top pt-4">
                         {item.requiredQuantity}
                       </td>
                       <td className="py-3 px-4">

@@ -43,6 +43,10 @@ export interface PickingListItem {
   pickedQuantity: number;
   isCompleted: boolean;
   discrepancyReason?: string | null;
+  suggestedBatchNumber?: string;
+  suggestedExpiredDate?: string;
+  actualBatchNumber?: string;
+  lotChangeReason?: string;
   allocations: PickingOrderAllocation[];
 }
 
@@ -91,6 +95,8 @@ export interface PickingItemUpdateRequest {
   pickedQuantity: number;
   isCompleted: boolean;
   discrepancyReason?: string;
+  actualBatchNumber?: string;
+  lotChangeReason?: string;
 }
 
 export interface PickingProgressUpdateRequest {
@@ -99,6 +105,8 @@ export interface PickingProgressUpdateRequest {
     pickedQuantity: number;
     isCompleted: boolean;
     discrepancyReason?: string;
+    actualBatchNumber?: string;
+    lotChangeReason?: string;
   }[];
   autoCompleteIfAllDone?: boolean;
 }

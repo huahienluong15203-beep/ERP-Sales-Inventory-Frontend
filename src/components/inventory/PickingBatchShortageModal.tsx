@@ -137,20 +137,20 @@ export const PickingBatchShortageModal: React.FC<PickingBatchShortageModalProps>
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-amber-200 overflow-hidden my-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-4xl lg:max-w-5xl bg-white rounded-3xl shadow-2xl border border-amber-200 overflow-hidden my-6">
         {/* Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-white/20 rounded-xl shadow-inner backdrop-blur-xs">
-              <AlertTriangle className="w-6 h-6 text-white animate-pulse" />
+        <div className="px-6 py-4.5 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-3.5">
+            <div className="p-2.5 bg-white/20 rounded-2xl shadow-inner backdrop-blur-xs">
+              <AlertTriangle className="w-7 h-7 text-white animate-pulse" />
             </div>
             <div>
-              <h3 className="font-bold text-base sm:text-lg leading-tight">
+              <h3 className="font-bold text-lg sm:text-xl leading-tight">
                 Phát hiện mặt hàng soạn thiếu số lượng
               </h3>
-              <p className="text-xs text-amber-100 mt-0.5">
-                Bắt buộc ghi nhận lý do chênh lệch trước khi hoàn tất phiếu
+              <p className="text-xs sm:text-sm text-amber-100 mt-0.5">
+                Bắt buộc ghi nhận lý do chênh lệch trước khi hoàn tất phiếu để hệ thống lưu vết và tạo Backorder
               </p>
             </div>
           </div>
@@ -158,32 +158,32 @@ export const PickingBatchShortageModal: React.FC<PickingBatchShortageModalProps>
             type="button"
             disabled={isSubmitting}
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white disabled:opacity-50 cursor-pointer"
+            className="p-2 rounded-xl hover:bg-white/20 transition-colors text-white disabled:opacity-50 cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* Global Quick Action Bar */}
-        <div className="bg-amber-50/70 border-b border-amber-200/80 p-4 space-y-2.5">
-          <div className="flex items-center gap-2 text-xs font-semibold text-amber-900">
+        <div className="bg-amber-50/80 border-b border-amber-200 p-4 sm:p-5 space-y-3">
+          <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-950">
             <Sparkles className="w-4 h-4 text-amber-600" />
             <span>Chọn nhanh lý do chung cho toàn bộ các mặt hàng bị thiếu:</span>
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {COMMON_SHORTAGE_REASONS.map((qr, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => handleApplyToAll(qr)}
-                className="text-xs px-2.5 py-1 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg shadow-2xs transition-all active:scale-95 cursor-pointer font-medium"
+                className="text-xs sm:text-sm px-3.5 py-1.5 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl shadow-2xs transition-all active:scale-95 cursor-pointer font-medium hover:border-amber-400"
               >
                 + {qr}
               </button>
             ))}
           </div>
           {generalError && (
-            <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-xs text-red-700 font-semibold animate-shake">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm text-red-700 font-semibold animate-shake">
               <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
               <span>{generalError}</span>
             </div>
@@ -192,74 +192,80 @@ export const PickingBatchShortageModal: React.FC<PickingBatchShortageModalProps>
 
         {/* Shortage Items Form */}
         <form onSubmit={handleSubmit}>
-          <div className="max-h-[55vh] overflow-y-auto p-5 space-y-4 divide-y divide-gray-100">
+          <div className="max-h-[62vh] overflow-y-auto p-5 sm:p-6 space-y-4">
             {itemsState.map((state, idx) => {
               const shortage = state.item.requiredQuantity - state.pickedQuantity;
               return (
-                <div key={state.item.id} className={idx > 0 ? 'pt-4 space-y-2.5' : 'space-y-2.5'}>
+                <div
+                  key={state.item.id}
+                  className="bg-gray-50/70 p-4 sm:p-5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-3 hover:border-amber-300 transition-colors"
+                >
                   {/* Top Item Summary */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs font-bold text-gray-800 bg-white px-2.5 py-0.5 rounded-lg border border-gray-200 shadow-2xs">
                           {state.item.productSku}
                         </span>
                         {state.item.locationCode && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded">
-                            <MapPin className="w-3 h-3 text-amber-600" />
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-900 bg-amber-100/80 px-2.5 py-0.5 rounded-lg border border-amber-200">
+                            <MapPin className="w-3.5 h-3.5 text-amber-600" />
                             {state.item.locationCode}
                           </span>
                         )}
+                        <span className="text-xs font-semibold text-gray-500">
+                          (Thứ tự #{idx + 1})
+                        </span>
                       </div>
-                      <div className="font-bold text-sm text-gray-900 leading-snug">
+                      <div className="font-bold text-sm sm:text-base text-gray-900 leading-snug">
                         {state.item.productName}
                       </div>
                     </div>
 
                     {/* Quantity Counters */}
-                    <div className="flex items-center gap-2 shrink-0 bg-gray-50 p-2 rounded-xl border border-gray-200">
-                      <div className="text-right text-xs">
-                        <span className="text-gray-500">Yêu cầu: </span>
-                        <strong className="text-gray-800 font-mono">
+                    <div className="flex items-center gap-3 shrink-0 bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
+                      <div className="text-right text-xs sm:text-sm">
+                        <span className="text-gray-500">Cần soạn: </span>
+                        <strong className="text-gray-900 font-mono font-bold">
                           {state.item.requiredQuantity} {state.item.baseUnit}
                         </strong>
                       </div>
                       <span className="text-gray-300">|</span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-gray-500">Soạn:</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs sm:text-sm text-gray-600 font-medium">Thực soạn:</span>
                         <input
                           type="number"
                           min={0}
                           max={state.item.requiredQuantity}
                           value={state.pickedQuantity}
                           onChange={(e) => handlePickedQtyChange(idx, Number(e.target.value))}
-                          className="w-14 text-center font-bold font-mono text-xs py-1 border border-amber-300 rounded-lg bg-white focus:ring-2 focus:ring-amber-200 outline-none"
+                          className="w-16 text-center font-bold font-mono text-sm py-1 border border-amber-300 rounded-lg bg-amber-50/40 focus:bg-white focus:ring-2 focus:ring-amber-200 outline-none"
                         />
                       </div>
                       <span className="text-gray-300">|</span>
-                      <div className="px-2 py-0.5 rounded-lg bg-red-100 text-red-700 font-bold text-xs font-mono">
+                      <div className="px-2.5 py-1 rounded-lg bg-red-100 text-red-700 font-bold text-xs sm:text-sm font-mono border border-red-200">
                         Thiếu -{shortage} {state.item.baseUnit}
                       </div>
                     </div>
                   </div>
 
                   {/* Reason Textarea & Quick Tags */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-2 pt-1 border-t border-gray-200/70">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold text-gray-700 flex items-center gap-1">
+                      <label className="text-xs sm:text-sm font-bold text-gray-800 flex items-center gap-1">
                         <span>Lý do thiếu hàng (bắt buộc):</span>
                         <span className="text-red-500">*</span>
                       </label>
-                      <span className="text-[11px] text-gray-400">Tối thiểu 5 ký tự</span>
+                      <span className="text-xs text-gray-400">Tối thiểu 5 ký tự</span>
                     </div>
 
-                    <div className="flex flex-wrap gap-1 mb-1">
-                      {COMMON_SHORTAGE_REASONS.slice(0, 3).map((r, rIdx) => (
+                    <div className="flex flex-wrap gap-1.5">
+                      {COMMON_SHORTAGE_REASONS.map((r, rIdx) => (
                         <button
                           key={rIdx}
                           type="button"
                           onClick={() => handleApplyQuickReason(idx, r)}
-                          className="text-[11px] px-2 py-0.5 rounded bg-gray-100 hover:bg-amber-100 text-gray-600 hover:text-amber-900 border border-gray-200 transition-colors cursor-pointer"
+                          className="text-xs px-2.5 py-1 rounded-lg bg-white hover:bg-amber-100 text-gray-700 hover:text-amber-900 border border-gray-200 transition-colors cursor-pointer shadow-2xs font-medium"
                         >
                           {r}
                         </button>
@@ -270,16 +276,17 @@ export const PickingBatchShortageModal: React.FC<PickingBatchShortageModalProps>
                       rows={2}
                       value={state.reason}
                       onChange={(e) => handleReasonChange(idx, e.target.value)}
-                      placeholder="Nhập nguyên nhân cụ thể (ví dụ: Kệ chỉ còn 1 lon nguyên vẹn, các lon khác bị móp méo...)"
-                      className={`w-full text-xs p-2.5 rounded-xl border outline-none transition-all ${state.error
-                        ? 'border-red-400 bg-red-50/40 focus:ring-2 focus:ring-red-200'
-                        : 'border-gray-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200'
-                        }`}
+                      placeholder="Nhập nguyên nhân cụ thể (ví dụ: Kệ chỉ còn 1 lon nguyên vẹn, các lon khác bị móp méo; hoặc hàng trên kệ bị lệch hạn...)"
+                      className={`w-full text-xs sm:text-sm p-3 rounded-xl border outline-none transition-all ${
+                        state.error
+                          ? 'border-red-400 bg-red-50/40 focus:ring-2 focus:ring-red-200'
+                          : 'border-gray-300 bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200'
+                      }`}
                     />
 
                     {state.error && (
-                      <p className="text-[11px] text-red-600 font-medium flex items-center gap-1">
-                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                      <p className="text-xs text-red-600 font-semibold flex items-center gap-1">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
                         {state.error}
                       </p>
                     )}
