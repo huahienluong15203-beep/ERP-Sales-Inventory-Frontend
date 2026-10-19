@@ -743,8 +743,8 @@ export const PickingListDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Table Container */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+          {/* Table Container (Mở rộng chiều cao min-h-[380px] pb-32 để dropdown danh sách lô mở dài xuống không bị che khuất) */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-xs">
             <div className="p-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
                 <Layers className="w-4 h-4 text-orange-500" />
@@ -755,7 +755,7 @@ export const PickingListDetailPage: React.FC = () => {
               </span>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto min-h-[380px] pb-32">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-gray-50/90 border-b border-gray-200 text-gray-700 font-bold uppercase text-[10px]">

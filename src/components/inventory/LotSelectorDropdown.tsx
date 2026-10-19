@@ -204,13 +204,18 @@ export const LotSelectorDropdown: React.FC<LotSelectorDropdownProps> = ({
           <ChevronDown size={14} className="text-gray-400 shrink-0" />
         </button>
 
-        {/* Menu danh sách các lô */}
+        {/* Menu danh sách các lô (Mở dài xuống dưới, thoáng rộng) */}
         {isOpen && (
-          <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-gray-200 z-50 py-1.5 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95">
-            <div className="px-3 py-1.5 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center justify-between">
-              <span>Danh sách lô (Ưu tiên FEFO)</span>
-              <span className="text-[10px] text-orange-600 font-normal">Hạn gần nhất xếp trước</span>
-            </div>
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setIsOpen(false)}
+            />
+            <div className="absolute left-0 min-w-[300px] w-full top-full mt-1.5 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 py-2 max-h-80 overflow-y-auto animate-in fade-in zoom-in-95">
+              <div className="px-3.5 py-2 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center justify-between bg-gray-50/70">
+                <span>Danh sách lô (Ưu tiên FEFO)</span>
+                <span className="text-[10px] text-orange-600 font-normal">Hạn gần nhất xếp trước</span>
+              </div>
             {lots.map((lot) => {
               const isSelected = lot.batchNumber === selectedBatchNumber;
               const isSuggested = suggestedLot?.batchNumber === lot.batchNumber;
@@ -271,7 +276,8 @@ export const LotSelectorDropdown: React.FC<LotSelectorDropdownProps> = ({
                 </button>
               );
             })}
-          </div>
+            </div>
+          </>
         )}
       </div>
 
