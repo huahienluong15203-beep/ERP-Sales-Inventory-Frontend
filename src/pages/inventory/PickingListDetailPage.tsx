@@ -25,6 +25,7 @@ import {
 import { updateOrderStatus } from '../../services/orderService';
 import { PickingDiscrepancyModal } from '../../components/inventory/PickingDiscrepancyModal';
 import { PickingListPrintModal } from '../../components/inventory/PickingListPrintModal';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export const PickingListDetailPage: React.FC = () => {
   const navigate = useNavigate();
@@ -58,6 +59,10 @@ export const PickingListDetailPage: React.FC = () => {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
   const [savingItemIds, setSavingItemIds] = useState<Record<number, boolean>>({});
   const [completing, setCompleting] = useState<boolean>(false);
+
+  // Modal xác nhận chốt hoàn thành phiếu khi còn hàng chưa soạn (thay thế window.confirm)
+  const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
+  const [uncompletedCount, setUncompletedCount] = useState<number>(0);
 
   const loadData = async () => {
     if (!id) return;
@@ -155,24 +160,31 @@ export const PickingListDetailPage: React.FC = () => {
     setDiscrepancyTargetItem(null);
   };
 
-  // Hoàn thành phiếu soạn hàng
-  const handleCompletePicking = async () => {
+  // Xử lý chốt hoàn thành phiếu: Kiểm tra mặt hàng chưa soạn
+  const handleCompletePicking = () => {
     if (!pickingList) return;
 
-    // Kiểm tra tất cả mặt hàng
+    // Kiểm tra tất cả mặt hàng chưa soạn xong
     const uncompleted = pickingList.items.filter((i) => !i.isCompleted);
     if (uncompleted.length > 0) {
-      const confirmContinue = window.confirm(
-        `Còn ${uncompleted.length} mặt hàng chưa được đánh dấu đã soạn. Bạn có chắc muốn chốt hoàn thành phiếu không?`
-      );
-      if (!confirmContinue) return;
+      setUncompletedCount(uncompleted.length);
+      setShowConfirmModal(true);
+      return;
     }
+
+    executeCompletePicking();
+  };
+
+  // Thực thi API hoàn thành phiếu sau khi xác nhận
+  const executeCompletePicking = async () => {
+    if (!pickingList) return;
 
     // Kiểm tra các dòng thiếu có lý do chưa (AC4)
     const missingReason = pickingList.items.find(
       (i) => i.pickedQuantity < i.requiredQuantity && !i.discrepancyReason
     );
     if (missingReason) {
+      setShowConfirmModal(false);
       showToast(
         'Không thể hoàn thành (AC4)',
         `Mặt hàng "${missingReason.productName}" soạn thiếu nhưng chưa có lý do!`,
@@ -185,6 +197,7 @@ export const PickingListDetailPage: React.FC = () => {
     try {
       const updated = await completePickingList(pickingList.id);
       setPickingList(updated);
+      setShowConfirmModal(false);
 
       // Tự động xuất kho các đơn hàng trong phiếu để Quản lý kho xếp xe ngay
       const ordersToDispatch = updated.orders || pickingList.orders || [];
@@ -696,6 +709,28 @@ export const PickingListDetailPage: React.FC = () => {
         isOpen={isPrintModalOpen}
         pickingList={pickingList}
         onClose={() => setIsPrintModalOpen(false)}
+      />
+
+      {/* Modal xác nhận chốt hoàn thành phiếu khi còn hàng chưa soạn (thay thế window.confirm) */}
+      <ConfirmModal
+        open={showConfirmModal}
+        title="Xác nhận chốt hoàn thành phiếu"
+        variant="warning"
+        confirmLabel="Vẫn chốt hoàn thành"
+        cancelLabel="Tiếp tục soạn"
+        loading={completing}
+        message={
+          <div className="space-y-2">
+            <p className="font-semibold text-gray-800">
+              Còn <span className="text-amber-600 font-bold">{uncompletedCount}</span> mặt hàng chưa được đánh dấu đã soạn xong.
+            </p>
+            <p className="text-gray-500 text-[11px] leading-relaxed">
+              Hệ thống sẽ ghi nhận tiến độ hiện tại và tiến hành tự động xuất kho các đơn hàng trong đợt soạn này. Bạn có chắc chắn muốn chốt hoàn thành phiếu không?
+            </p>
+          </div>
+        }
+        onConfirm={executeCompletePicking}
+        onCancel={() => setShowConfirmModal(false)}
       />
     </div>
   );
