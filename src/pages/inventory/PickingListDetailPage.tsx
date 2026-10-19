@@ -288,7 +288,7 @@ export const PickingListDetailPage: React.FC = () => {
     try {
       const updated = await completePickingList(pickingList.id);
       setPickingList(updated);
-      setShowConfirmModal(false);
+      setIsCompleteConfirmModalOpen(false);
 
       // Tự động xuất kho các đơn hàng trong phiếu để Quản lý kho xếp xe ngay
       const ordersToDispatch = updated.orders || pickingList.orders || [];

@@ -16,7 +16,7 @@ import {
   ArrowDown
 } from 'lucide-react';
 import type { GoodsReceiptFormPayload } from '../../types/inventory';
-import { SYSTEM_WAREHOUSES } from '../../types/inventory';
+import { SYSTEM_WAREHOUSES, getAllowedWarehouses, type WarehouseOption } from '../../types/inventory';
 import { fetchSuppliers, INITIAL_SUPPLIERS } from '../../services/supplierApi';
 import type { Supplier } from '../../types/supplier';
 import { productService } from '../../services/productService';
@@ -187,7 +187,12 @@ const DEFAULT_CATALOG_PAGE_SIZE = 10;
 export const GoodsReceiptCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
-  const { showToast } = useAuth();
+  const { user, currentRole, showToast } = useAuth();
+
+  // Lọc danh sách kho mà người dùng có quyền phụ trách (kho nào không có quyền thì không hiện)
+  const allowedWarehouses = useMemo(() => {
+    return getAllowedWarehouses(user, currentRole);
+  }, [user, currentRole]);
 
   const searchParams = new URLSearchParams(
     search || (pathname.includes('?') ? pathname.split('?')[1] : window.location.search)
@@ -206,7 +211,17 @@ export const GoodsReceiptCreatePage: React.FC = () => {
     return `PNK-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${String(Math.floor(1000 + Math.random() * 9000))}`;
   });
   const [receiptDate, setReceiptDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
-  const [selectedWarehouseCode, setSelectedWarehouseCode] = useState<string>(() => paramWarehouseCode || 'WH-MB01');
+  const [selectedWarehouseCode, setSelectedWarehouseCode] = useState<string>(() => {
+    if (paramWarehouseCode) return paramWarehouseCode;
+    const list = getAllowedWarehouses(user, currentRole);
+    return list[0]?.code || 'WH-MB01';
+  });
+
+  useEffect(() => {
+    if (allowedWarehouses.length > 0 && !allowedWarehouses.some((w) => w.code === selectedWarehouseCode)) {
+      setSelectedWarehouseCode(allowedWarehouses[0].code);
+    }
+  }, [allowedWarehouses, selectedWarehouseCode]);
   const [vehiclePlate, setVehiclePlate] = useState<string>('');
   const [driverName, setDriverName] = useState<string>('');
   const [generalNote, setGeneralNote] = useState<string>('');
@@ -637,7 +652,7 @@ export const GoodsReceiptCreatePage: React.FC = () => {
     setFormErrors([]);
 
     const foundSupplier = suppliers.find((s) => String(s.id) === String(selectedSupplierId));
-    const foundWarehouse = SYSTEM_WAREHOUSES.find((w) => w.code === selectedWarehouseCode);
+    const foundWarehouse = SYSTEM_WAREHOUSES.find((w: WarehouseOption) => w.code === selectedWarehouseCode);
 
     const payload: GoodsReceiptFormPayload = {
       supplierId: Number(selectedSupplierId),
@@ -839,7 +854,7 @@ export const GoodsReceiptCreatePage: React.FC = () => {
               onChange={(e) => setSelectedWarehouseCode(e.target.value)}
               className="w-full text-xs font-semibold border border-gray-200 rounded-xl p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20"
             >
-              {SYSTEM_WAREHOUSES.map((w) => (
+              {allowedWarehouses.map((w: WarehouseOption) => (
                 <option key={w.code} value={w.code}>
                   {w.code} - {w.name}
                 </option>

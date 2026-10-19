@@ -349,8 +349,14 @@ export async function fetchDispatchedOrdersForRouting(
           stopSequence: idx + 1
         }));
       }
+    } else if (candRes.status === 403) {
+      const errJson = await candRes.json().catch(() => null);
+      throw new Error(errJson?.message || 'Bạn không được phân công kho chỉ định');
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message?.includes('không được phân công')) {
+      throw err;
+    }
     console.warn('Backend candidate-orders API failed, falling back to legacy/local flow:', err);
   }
 
@@ -389,8 +395,15 @@ export async function fetchDispatchedOrdersForRouting(
           console.warn('Lỗi kiểm tra đơn đã nằm trên chuyến:', e);
         }
 
-        // Chỉ giữ lại những đơn chưa nằm trên chuyến xe nào
-        const unassignedOrders = rawList.filter((o: any) => !assignedOrderIds.has(o.id));
+        // Chỉ giữ lại những đơn chưa nằm trên chuyến xe nào và khớp kho đã chọn (nếu có)
+        const unassignedOrders = rawList.filter((o: any) => {
+          if (assignedOrderIds.has(o.id)) return false;
+          if (warehouseId) {
+            const wh = o.reservedWarehouse?.id || o.warehouseId || o.reservedWarehouseId;
+            if (wh && Number(wh) !== Number(warehouseId)) return false;
+          }
+          return true;
+        });
 
         const stops = await Promise.all(
           unassignedOrders.map(async (o: any, idx: number) => {

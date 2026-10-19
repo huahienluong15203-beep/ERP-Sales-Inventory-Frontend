@@ -13,7 +13,7 @@ import {
   Eye
 } from 'lucide-react';
 import type { StockTransfer, StockTransferStatus } from '../../types/stockTransfer';
-import { SYSTEM_WAREHOUSES } from '../../types/inventory';
+import { SYSTEM_WAREHOUSES, getAllowedWarehouses, type WarehouseOption } from '../../types/inventory';
 import {
   fetchStockTransfers,
   dispatchStockTransfer
@@ -36,6 +36,11 @@ export const StockTransferManagementPage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast, currentRole, user } = useAuth();
   const location = useLocation();
+
+  // Lọc danh sách kho mà người dùng có quyền phụ trách (kho nào không có quyền thì không hiện)
+  const allowedWarehouses = useMemo(() => {
+    return getAllowedWarehouses(user, currentRole);
+  }, [user, currentRole]);
 
   // Mục 12 (góp ý GV): chặn ở cả FE và BE - chỉ NV kho, QL kho, Admin được lập / xuất / nhận phiếu chuyển;
   // Kế toán chỉ xem.
@@ -273,8 +278,8 @@ export const StockTransferManagementPage: React.FC = () => {
               onChange={(e) => setSourceWhFilter(e.target.value)}
               className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             >
-              <option value="ALL">Kho xuất: Tất cả</option>
-              {SYSTEM_WAREHOUSES.map((w) => (
+              <option value="ALL">{allowedWarehouses.length > 1 ? 'Kho xuất: Tất cả phụ trách' : 'Kho xuất'}</option>
+              {allowedWarehouses.map((w: WarehouseOption) => (
                 <option key={w.code} value={w.code}>
                   Từ: {w.name}
                 </option>
@@ -288,7 +293,7 @@ export const StockTransferManagementPage: React.FC = () => {
               className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             >
               <option value="ALL">Kho nhận: Tất cả</option>
-              {SYSTEM_WAREHOUSES.map((w) => (
+              {SYSTEM_WAREHOUSES.map((w: WarehouseOption) => (
                 <option key={w.code} value={w.code}>
                   Đến: {w.name}
                 </option>
