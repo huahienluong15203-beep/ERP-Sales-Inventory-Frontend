@@ -25,8 +25,10 @@ import {
 import { updateOrderStatus } from '../../services/orderService';
 import { PickingDiscrepancyModal } from '../../components/inventory/PickingDiscrepancyModal';
 import { PickingListPrintModal } from '../../components/inventory/PickingListPrintModal';
+import { useConfirmDialog } from '../../components/common/useConfirmDialog';
 
 export const PickingListDetailPage: React.FC = () => {
+  const { confirm, confirmDialog } = useConfirmDialog();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { showToast, currentRole } = useAuth();
@@ -162,9 +164,12 @@ export const PickingListDetailPage: React.FC = () => {
     // Kiểm tra tất cả mặt hàng
     const uncompleted = pickingList.items.filter((i) => !i.isCompleted);
     if (uncompleted.length > 0) {
-      const confirmContinue = window.confirm(
-        `Còn ${uncompleted.length} mặt hàng chưa được đánh dấu đã soạn. Bạn có chắc muốn chốt hoàn thành phiếu không?`
-      );
+      const confirmContinue = await confirm({
+        title: 'Chốt hoàn thành phiếu soạn',
+        message: `Còn ${uncompleted.length} mặt hàng chưa được đánh dấu đã soạn. Bạn có chắc muốn chốt hoàn thành phiếu không?`,
+        variant: 'warning',
+        confirmLabel: 'Chốt hoàn thành'
+      });
       if (!confirmContinue) return;
     }
 
@@ -256,6 +261,7 @@ export const PickingListDetailPage: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
+      {confirmDialog}
       {/* 1. THANH ĐIỀU HƯỚNG QUAY LẠI & THAO TÁC (Gọn gàng như các tab khác) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">

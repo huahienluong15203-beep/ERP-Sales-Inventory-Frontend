@@ -19,6 +19,7 @@ import { createStockAdjustment } from '../../services/stockAdjustmentApi';
 import type { Product } from '../../types/product';
 import type { ProductLotResponse } from '../../types/productLot';
 import type { StockAdjustmentCreateRequest } from '../../types/stockAdjustment';
+import { useConfirmDialog } from '../../components/common/useConfirmDialog';
 
 interface AdjustmentFormLine {
   id: string; // unique key for form
@@ -39,6 +40,7 @@ interface AdjustmentFormLine {
 }
 
 export const StockAdjustmentCreatePage: React.FC = () => {
+  const { confirm, confirmDialog } = useConfirmDialog();
   const navigate = useNavigate();
 
   // Kho hàng & Thông tin chung
@@ -194,12 +196,15 @@ export const StockAdjustmentCreatePage: React.FC = () => {
   }, [selectedWarehouseId, allProducts, costMap]);
 
   // Xóa danh sách sản phẩm khi đổi kho để tránh lệch tồn kho
-  const handleWarehouseChange = (newWarehouseId: number) => {
+  const handleWarehouseChange = async (newWarehouseId: number) => {
     if (lines.length > 0) {
       if (
-        window.confirm(
-          'Đổi kho hàng sẽ làm mới lại danh sách mặt hàng để đảm bảo tồn kho chính xác. Bạn có chắc chắn muốn đổi kho?'
-        )
+        await confirm({
+          title: 'Đổi kho hàng',
+          message: 'Đổi kho hàng sẽ làm mới lại danh sách mặt hàng để đảm bảo tồn kho chính xác. Bạn có chắc chắn muốn đổi kho?',
+          variant: 'warning',
+          confirmLabel: 'Đổi kho'
+        })
       ) {
         setSelectedWarehouseId(newWarehouseId);
         setLines([]);
@@ -227,7 +232,7 @@ export const StockAdjustmentCreatePage: React.FC = () => {
 
     // Kiểm tra xem sản phẩm đã có trong bảng chưa
     if (lines.some((l) => l.productId === item.productId)) {
-      alert(`Sản phẩm [${item.sku}] đã có trong phiếu. Vui lòng chỉnh sửa số lượng ở dòng tương ứng.`);
+      setItemsError(`Sản phẩm [${item.sku}] đã có trong phiếu. Vui lòng chỉnh sửa số lượng ở dòng tương ứng.`);
       return;
     }
 
@@ -442,6 +447,7 @@ export const StockAdjustmentCreatePage: React.FC = () => {
 
   return (
     <div className="erp-fade-in space-y-4 w-full pb-12">
+      {confirmDialog}
       {/* Top Navigation */}
       <div className="flex items-center justify-between">
         <button

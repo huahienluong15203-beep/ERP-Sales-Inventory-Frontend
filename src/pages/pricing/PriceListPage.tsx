@@ -117,7 +117,7 @@ export const PriceListPage: React.FC = () => {
       );
       loadData();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi đổi trạng thái');
+      showToast?.('Lỗi', err instanceof Error ? err.message : 'Lỗi khi đổi trạng thái', 'error');
     }
   };
 
@@ -127,7 +127,7 @@ export const PriceListPage: React.FC = () => {
 
   const handleOpenEdit = (item: PriceList) => {
     if (item.hasOrders) {
-      alert('Bảng giá đã phát sinh đơn hàng nên không thể sửa. Vui lòng tạo phiên bản mới.');
+      showToast?.('Không thể sửa', 'Bảng giá đã phát sinh đơn hàng nên không thể sửa. Vui lòng tạo phiên bản mới.', 'info');
       return;
     }
     navigate(`/pricing/${item.id}/edit`);
