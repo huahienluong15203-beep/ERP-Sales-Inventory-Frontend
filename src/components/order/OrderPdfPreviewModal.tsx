@@ -399,6 +399,21 @@ export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
               </div>
             </div>
 
+            {/* Banner hình thức thanh toán cho tài xế & kho */}
+            {order.paymentMethod === 'COD' ? (
+              <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold flex items-center justify-between">
+                <span>⚠️ HÌNH THỨC: THANH TOÁN KHI NHẬN HÀNG (COD)</span>
+                <span className="text-amber-800 font-semibold text-[11px]">
+                  Tài xế thu đủ: {formatCurrencyVND(Number(order.totalAmount || 0))} mới bàn giao hàng
+                </span>
+              </div>
+            ) : (
+              <div className="p-2 rounded-lg bg-blue-50/70 border border-blue-200 text-blue-900 text-xs font-semibold flex items-center justify-between">
+                <span>✓ HÌNH THỨC: MUA NỢ GỐI ĐẦU (CREDIT)</span>
+                <span className="text-blue-700 text-[11px]">Đại lý ký biên bản giao nhận hàng</span>
+              </div>
+            )}
+
             {/* 3. S4-08 AC1: Chi tiết dòng hàng */}
             <div className="space-y-2">
               <h4 className="font-bold text-xs uppercase tracking-wider text-gray-700 flex items-center justify-between">

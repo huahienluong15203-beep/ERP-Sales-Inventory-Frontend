@@ -1109,22 +1109,39 @@ export const OrderListPage: React.FC = () => {
                         >
                           {o.code}
                         </button>
-                        {o.backorder && (
-                          <span
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300"
-                            title={`Đơn nợ hàng tự động tách từ đơn gốc ${o.parentOrderCode || ''}`}
-                          >
-                            Đơn nợ hàng {o.parentOrderCode ? `(từ ${o.parentOrderCode})` : ''}
-                          </span>
-                        )}
-                        {o.hasShortage && !o.backorder && (
-                          <span
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200"
-                            title="Đã từng xuất thiếu hàng trong quá trình giao"
-                          >
-                            Xuất thiếu
-                          </span>
-                        )}
+                        <div className="flex flex-wrap items-center gap-1">
+                          {o.paymentMethod === 'COD' ? (
+                            <span
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300"
+                              title="Thanh toán khi nhận hàng (Tài xế thu tiền trước khi giao hàng)"
+                            >
+                              COD
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200"
+                              title="Mua nợ gối đầu theo hạn mức công nợ"
+                            >
+                              Nợ
+                            </span>
+                          )}
+                          {o.backorder && (
+                            <span
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300"
+                              title={`Đơn nợ hàng tự động tách từ đơn gốc ${o.parentOrderCode || ''}`}
+                            >
+                              Đơn nợ hàng {o.parentOrderCode ? `(từ ${o.parentOrderCode})` : ''}
+                            </span>
+                          )}
+                          {o.hasShortage && !o.backorder && (
+                            <span
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200"
+                              title="Đã từng xuất thiếu hàng trong quá trình giao"
+                            >
+                              Xuất thiếu
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
 

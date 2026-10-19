@@ -97,6 +97,7 @@ export interface OrderDraft {
   deliveryRouteNotes?: string;
   // Kế hoạch giao hàng
   expectedDeliveryDate: string;     // YYYY-MM-DD (>= ngày hiện tại)
+  paymentMethod?: 'CREDIT' | 'COD'; // Hình thức thanh toán: Mua nợ gối đầu hoặc COD
   note?: string;                    // Ghi chú của sales rep
   // Danh sách dòng hàng
   items: OrderItem[];
@@ -153,6 +154,7 @@ export interface OrderDraftBackendRequest {
   customerId: number;
   deliveryAddressId?: number | null;
   desiredDeliveryDate?: string | null;
+  paymentMethod?: 'CREDIT' | 'COD' | string | null;
   note?: string | null;
   lines: Array<{
     productSku: string;
@@ -227,6 +229,7 @@ export interface OrderBackendResponse {
   cancelledByUsername?: string | null;
   // Xuất kho, đơn nợ hàng và thông tin giao hàng
   fulfillment?: OrderFulfillmentInfo | null;
+  paymentMethod?: 'CREDIT' | 'COD' | string | null;
 }
 
 export interface OrderFulfillmentInfo {
@@ -306,6 +309,7 @@ export interface OrderSummaryItem {
   regionId?: number | null;
   regionName?: string | null;
   createdAt: string;
+  paymentMethod?: 'CREDIT' | 'COD' | string | null;
 }
 
 /**

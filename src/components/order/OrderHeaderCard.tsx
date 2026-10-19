@@ -26,6 +26,8 @@ interface OrderHeaderCardProps {
   onChangeExpectedDeliveryDate: (date: string) => void;
   orderNote: string;
   onChangeOrderNote: (note: string) => void;
+  paymentMethod?: 'CREDIT' | 'COD';
+  onChangePaymentMethod?: (method: 'CREDIT' | 'COD') => void;
   creditStatus?: CreditStatusResponse | null;
   loadingCreditStatus?: boolean;
 }
@@ -39,6 +41,8 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
   onChangeExpectedDeliveryDate,
   orderNote,
   onChangeOrderNote,
+  paymentMethod = 'CREDIT',
+  onChangePaymentMethod,
   creditStatus,
   loadingCreditStatus
 }) => {
@@ -640,6 +644,78 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
               )}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* HÌNH THỨC THANH TOÁN (CÔNG NỢ vs COD) */}
+      <div className="pt-1">
+        <label className="block text-xs font-bold text-gray-700 mb-2 flex items-center justify-between">
+          <span className="flex items-center gap-1.5">
+            <CreditCard size={14} className="text-[#F85606]" />
+            Hình Thức Thanh Toán <span className="text-red-500">*</span>
+          </span>
+          <span className="text-[11px] text-gray-400 font-normal">
+            Chọn mua nợ gối đầu hoặc tài xế thu tiền khi nhận hàng
+          </span>
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => onChangePaymentMethod?.('CREDIT')}
+            className={`p-3 rounded-xl border-2 text-left transition cursor-pointer flex items-start gap-3 ${
+              paymentMethod === 'CREDIT'
+                ? 'border-blue-500 bg-blue-50/70 shadow-xs'
+                : 'border-gray-200 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div
+              className={`w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 flex items-center justify-center ${
+                paymentMethod === 'CREDIT' ? 'border-blue-600 bg-blue-600' : 'border-gray-300 bg-white'
+              }`}
+            >
+              {paymentMethod === 'CREDIT' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-900">Mua Nợ Gối Đầu (CREDIT)</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">
+                  Hạn mức tín dụng
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
+                Đại lý ký biên bản giao nhận. Ghi nhận công nợ và đối trừ sau theo chu kỳ.
+              </p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onChangePaymentMethod?.('COD')}
+            className={`p-3 rounded-xl border-2 text-left transition cursor-pointer flex items-start gap-3 ${
+              paymentMethod === 'COD'
+                ? 'border-amber-500 bg-amber-50/70 shadow-xs'
+                : 'border-gray-200 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div
+              className={`w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 flex items-center justify-center ${
+                paymentMethod === 'COD' ? 'border-amber-600 bg-amber-600' : 'border-gray-300 bg-white'
+              }`}
+            >
+              {paymentMethod === 'COD' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-900">Thanh Toán Khi Nhận Hàng (COD)</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                  Tài xế thu tiền
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
+                Tài xế giao hàng thu đủ tiền mặt / chuyển khoản mới tiến hành bàn giao đơn hàng.
+              </p>
+            </div>
+          </button>
         </div>
       </div>
 

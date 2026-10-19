@@ -8,8 +8,6 @@ import {
   AlertTriangle,
   Clock,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   BookOpenCheck
 } from 'lucide-react';

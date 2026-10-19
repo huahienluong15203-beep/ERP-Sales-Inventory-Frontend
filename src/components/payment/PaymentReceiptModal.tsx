@@ -73,6 +73,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   const [collectorName, setCollectorName] = useState<string>(
     user?.fullName || 'Kế toán công nợ'
   );
+  const [payerName, setPayerName] = useState<string>('');
   const [collectors, setCollectors] = useState<PaymentCollector[]>([]);
   const [loadingCollectors, setLoadingCollectors] = useState<boolean>(false);
   const [selectedCollectorId, setSelectedCollectorId] = useState<string>('');
@@ -121,6 +122,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     setValidationError(null);
     setAmount(0);
     setAmountInputStr('');
+    setPayerName('');
     setSpecificAllocations({});
     setNotes('');
 
@@ -360,6 +362,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             amount,
             paymentMethod,
             paymentDate,
+            payerName: payerName.trim() || undefined,
             notes: notes.trim(),
             receiptImageUrl: receiptImage.startsWith('http') ? receiptImage : undefined,
             receiptImageBase64: receiptImage.startsWith('data:') ? receiptImage : (receiptImage || undefined)
@@ -395,6 +398,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             paymentDate,
             collectorName: selectedCollector?.fullName || collectorName.trim() || 'Kế toán công nợ',
             collectorId: selectedCollectorId ? Number(selectedCollectorId) : undefined,
+            payerName: payerName.trim() || undefined,
             notes: notes.trim(),
             allocationType,
             specificAllocations: specificArray
@@ -438,7 +442,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-        <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[92vh] my-auto">
+        <div className="relative w-full max-w-4xl xl:max-w-5xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[92vh] my-auto">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-emerald-600 to-teal-700 text-white">
             <div className="flex items-center gap-3">
@@ -512,10 +516,15 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               ) : creditStatus ? (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-gray-200 text-xs">
                   <div className="bg-white p-2.5 rounded-lg border border-gray-200">
-                    <span className="text-gray-500 block text-[11px]">Tổng công nợ còn lại:</span>
+                    <span className="text-gray-500 block text-[11px]">Nợ trên hoá đơn:</span>
                     <span className="font-bold text-rose-600 font-mono text-sm">
                       {formatCurrencyVND(totalRemainingDebt)}
                     </span>
+                    {creditStatus && creditStatus.currentDebt > totalRemainingDebt && (
+                      <span className="text-[10px] text-amber-600 block mt-0.5" title="Công nợ tính từ các đơn hàng chưa lập hoá đơn">
+                        (Tổng nợ đơn: {formatCurrencyVND(creditStatus.currentDebt)})
+                      </span>
+                    )}
                   </div>
                   <div className="bg-white p-2.5 rounded-lg border border-gray-200">
                     <span className="text-gray-500 block text-[11px]">Hạn mức tín dụng:</span>
@@ -602,6 +611,27 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                 />
               </div>
 
+              {/* Người nộp tiền / Tài xế bàn giao */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <User size={15} className="text-emerald-600" />
+                    <span>Người nộp tiền / Tài xế bàn giao</span>
+                  </span>
+                  <span className="text-[10px] text-gray-500 font-normal">Tự nhập khi tài xế nộp thay</span>
+                </label>
+                <input
+                  type="text"
+                  value={payerName}
+                  onChange={(e) => setPayerName(e.target.value)}
+                  placeholder="Nhập tên người nộp / tài xế bàn giao (để trống sẽ tự lấy tên đại lý)..."
+                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <p className="text-[11px] text-gray-500">
+                  Nếu tài xế giao hàng hoặc người khác nộp thay tiền mặt, hãy nhập họ tên vào đây. Nếu để trống, hệ thống sẽ tự động ghi nhận theo tên đại lý.
+                </p>
+              </div>
+
               {/* Người thu tiền */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
@@ -640,7 +670,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               </div>
 
               {/* Ghi chú */}
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 sm:col-span-2">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
                   <FileText size={15} className="text-emerald-600" />
                   <span>Ghi chú / Diễn giải chứng từ</span>
@@ -802,8 +832,18 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
                 <div className="max-h-60 overflow-y-auto">
                   {invoices.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-gray-500">
-                      Đại lý hiện không có hoá đơn nào còn nợ.
+                    <div className="p-6 text-center text-xs space-y-2">
+                      <p className="font-semibold text-gray-700">Đại lý hiện không có hoá đơn nào còn nợ.</p>
+                      {creditStatus && creditStatus.currentDebt > 0 && (
+                        <div className="text-amber-800 bg-amber-50/90 border border-amber-200 rounded-xl p-3 max-w-lg mx-auto text-left text-xs space-y-1">
+                          <p className="font-semibold text-amber-900">
+                            💡 Lưu ý về công nợ của đại lý:
+                          </p>
+                          <p className="text-[11px] text-amber-800 leading-relaxed">
+                            Đại lý đang có tổng nợ <strong>{formatCurrencyVND(creditStatus.currentDebt)}</strong> từ các đơn hàng chưa xuất hoá đơn. Để đối trừ phiếu thu vào từng khoản, vui lòng vào phân hệ <strong>Hoá đơn &gt; Lập hoá đơn</strong> để phát hành hoá đơn cho các đơn hàng đã giao trước.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ) : allocationType === 'FIFO' ? (
                     /* FIFO Table Preview */
