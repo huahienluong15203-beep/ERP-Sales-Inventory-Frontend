@@ -130,8 +130,8 @@ const INITIAL_DELIVERY_TRIPS: DeliveryTrip[] = [
     driverName: 'Nguyễn Văn Mạnh',
     driverPhone: '0912.334.556',
     status: 'IN_PROGRESS',
-    departedAt: '2026-10-15T09:00:00',
-    expectedReturnAt: '2026-10-15T16:00:00',
+    departedAt: '2026-10-19T14:00:00',
+    expectedReturnAt: '2026-10-19T17:00:00',
     completedAt: null,
     totalStops: 3,
     deliveredStops: 1,
@@ -140,7 +140,7 @@ const INITIAL_DELIVERY_TRIPS: DeliveryTrip[] = [
     valueOnRoad: 24700000,
     overdue: false,
     overdueMinutes: 0,
-    note: 'Tuyến Cầu Giấy - Ba Đình - Đống Đa buổi sáng',
+    note: 'Tuyến Cầu Giấy - Ba Đình - Đống Đa chiều nay',
     stops: [
       {
         orderId: 191,
@@ -262,7 +262,22 @@ const INITIAL_DELIVERY_TRIPS: DeliveryTrip[] = [
 function getStoredTrips(): DeliveryTrip[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed: DeliveryTrip[] = JSON.parse(raw);
+      // Migrate các chuyến mẫu cũ ngày 15/10/2026 sang ngày hiện tại để thời gian trễ hợp lý
+      let migrated = false;
+      parsed.forEach((t) => {
+        if (t.code === 'CG261015-88A1' && t.departedAt?.includes('2026-10-15')) {
+          t.departedAt = '2026-10-19T14:00:00';
+          t.expectedReturnAt = '2026-10-19T17:00:00';
+          migrated = true;
+        }
+      });
+      if (migrated) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      }
+      return parsed;
+    }
   } catch (e) {
     console.warn('Lỗi đọc local trips:', e);
   }
@@ -506,29 +521,67 @@ export async function fetchDeliveryTrips(params?: {
 }
 
 /**
+ * Định dạng thời gian trễ thân thiện (quy đổi thành giờ / ngày giờ thay vì chỉ hiển thị hàng nghìn phút)
+ */
+export function formatOverdueTime(minutes?: number): string {
+  if (!minutes || minutes <= 0) return '';
+  if (minutes < 60) {
+    return `Trễ ${minutes} phút`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remMinutes = minutes % 60;
+  if (hours < 24) {
+    return remMinutes > 0 ? `Trễ ${hours} giờ ${remMinutes} phút` : `Trễ ${hours} giờ`;
+  }
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  return remHours > 0
+    ? `Trễ ${days} ngày ${remHours} giờ (~${hours} giờ)`
+    : `Trễ ${days} ngày (~${hours} giờ)`;
+}
+
+/**
  * 3. Lấy tóm tắt hàng đi đường (InTransit Summary)
  */
 export async function fetchInTransitSummary(): Promise<InTransitSummary> {
+  let backendData: any = null;
   try {
     const res = await authFetch(`${API_BASE_URL}/api/delivery-trips/summary`);
     if (res.ok) {
-      return await res.json();
+      backendData = await res.json();
     }
   } catch (err) {
     console.warn('Backend fetch in-transit summary failed, calculating locally:', err);
   }
 
-  const trips = getStoredTrips();
+  // Luôn lấy trips đã qua tính toán overdue theo thời gian thực để đồng bộ số liệu
+  const trips = await fetchDeliveryTrips();
   const dispatchedOrders = getStoredDispatchedOrders();
 
   const runningTrips = trips.filter((t) => t.status === 'IN_PROGRESS');
   const overdueTrips = runningTrips.filter((t) => t.overdue).length;
-  const ordersOnRoad = runningTrips.reduce((acc, t) => acc + t.remainingStops, 0);
+  const ordersOnRoad = runningTrips.reduce((acc, t) => acc + (t.remainingStops || 0), 0);
   const valueOnRoad = runningTrips.reduce((acc, t) => acc + (t.valueOnRoad || 0), 0);
 
-  const unassignedDispatchedOrders = dispatchedOrders.length;
-  const unassignedValue = dispatchedOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+  const unassignedDispatchedOrders = backendData?.unassignedOrders ?? dispatchedOrders.length;
+  const unassignedValue =
+    backendData?.unassignedValue != null
+      ? Number(backendData.unassignedValue)
+      : dispatchedOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
 
+  // Nếu backend có các chuyến xe thực tế đang chạy thì ưu tiên số liệu backend
+  if (backendData && backendData.activeTrips > 0) {
+    return {
+      runningTrips: backendData.activeTrips ?? 0,
+      overdueTrips: backendData.overdueTrips ?? 0,
+      ordersOnRoad: backendData.ordersOnRoad ?? 0,
+      valueOnRoad: Number(backendData.valueOnRoad ?? 0),
+      unassignedDispatchedOrders,
+      unassignedValue
+    };
+  }
+
+  // Ngược lại, lấy số liệu đồng bộ chính xác với danh sách hiển thị trên giao diện
   return {
     runningTrips: runningTrips.length,
     overdueTrips,

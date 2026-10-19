@@ -24,6 +24,8 @@ import {
 } from '../../services/pickingListApi';
 import { updateOrderStatus } from '../../services/orderService';
 import { PickingDiscrepancyModal } from '../../components/inventory/PickingDiscrepancyModal';
+import { PickingBatchShortageModal } from '../../components/inventory/PickingBatchShortageModal';
+import { PickingCompleteConfirmModal } from '../../components/inventory/PickingCompleteConfirmModal';
 import { PickingListPrintModal } from '../../components/inventory/PickingListPrintModal';
 
 export const PickingListDetailPage: React.FC = () => {
@@ -58,6 +60,10 @@ export const PickingListDetailPage: React.FC = () => {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
   const [savingItemIds, setSavingItemIds] = useState<Record<number, boolean>>({});
   const [completing, setCompleting] = useState<boolean>(false);
+
+  // Popup Modals thay thế window.confirm & bắt buộc lý do soạn thiếu (S6-03 AC4)
+  const [isBatchShortageModalOpen, setIsBatchShortageModalOpen] = useState<boolean>(false);
+  const [isCompleteConfirmModalOpen, setIsCompleteConfirmModalOpen] = useState<boolean>(false);
 
   const loadData = async () => {
     if (!id) return;
@@ -155,32 +161,50 @@ export const PickingListDetailPage: React.FC = () => {
     setDiscrepancyTargetItem(null);
   };
 
-  // Hoàn thành phiếu soạn hàng
-  const handleCompletePicking = async () => {
+  // Bấm nút "Chốt hoàn thành đợt soạn": Kiểm tra mặt hàng thiếu và mở Popup tương ứng
+  const handleCompletePicking = () => {
     if (!pickingList) return;
 
-    // Kiểm tra tất cả mặt hàng
-    const uncompleted = pickingList.items.filter((i) => !i.isCompleted);
-    if (uncompleted.length > 0) {
-      const confirmContinue = window.confirm(
-        `Còn ${uncompleted.length} mặt hàng chưa được đánh dấu đã soạn. Bạn có chắc muốn chốt hoàn thành phiếu không?`
-      );
-      if (!confirmContinue) return;
-    }
-
-    // Kiểm tra các dòng thiếu có lý do chưa (AC4)
-    const missingReason = pickingList.items.find(
-      (i) => i.pickedQuantity < i.requiredQuantity && !i.discrepancyReason
+    // Tìm tất cả các mặt hàng soạn thiếu so với yêu cầu
+    const shortageItems = pickingList.items.filter(
+      (i) => i.pickedQuantity < i.requiredQuantity
     );
-    if (missingReason) {
-      showToast(
-        'Không thể hoàn thành (AC4)',
-        `Mặt hàng "${missingReason.productName}" soạn thiếu nhưng chưa có lý do!`,
-        'error'
-      );
+
+    // Nếu có bất kỳ mặt hàng nào thiếu mà chưa có lý do hoặc lý do chưa đủ chuẩn -> Mở Popup bắt buộc nhập lý do (S6-03 AC4)
+    if (shortageItems.length > 0) {
+      setIsBatchShortageModalOpen(true);
       return;
     }
 
+    // Nếu tất cả đã soạn đủ 100% -> Mở Popup xác nhận hoàn tất (không dùng window.confirm)
+    setIsCompleteConfirmModalOpen(true);
+  };
+
+  // Xác nhận lý do từ Batch Shortage Modal và tiến hành chốt phiếu
+  const handleConfirmBatchShortage = async (
+    updates: Array<{ itemId: number; pickedQuantity: number; discrepancyReason: string }>
+  ) => {
+    if (!pickingList) return;
+    setCompleting(true);
+    try {
+      // 1. Lưu đồng bộ lý do và số lượng của các mặt hàng thiếu
+      for (const up of updates) {
+        await saveItemUpdate(up.itemId, up.pickedQuantity, true, up.discrepancyReason);
+      }
+
+      // 2. Chốt hoàn thành phiếu soạn hàng
+      await executeCompletePickingList();
+      setIsBatchShortageModalOpen(false);
+    } catch (err: any) {
+      showToast('Lỗi chốt thiếu', err.message || 'Không thể lưu lý do và hoàn tất phiếu', 'error');
+    } finally {
+      setCompleting(false);
+    }
+  };
+
+  // Thực hiện gọi API chốt hoàn thành phiếu và tự động chuyển đơn sang DISPATCHED
+  const executeCompletePickingList = async () => {
+    if (!pickingList) return;
     setCompleting(true);
     try {
       const updated = await completePickingList(pickingList.id);
@@ -204,13 +228,14 @@ export const PickingListDetailPage: React.FC = () => {
       if (dispatchedCount > 0) {
         showToast(
           'Đã hoàn thành & Xuất kho',
-          `Đã chốt đợt soạn ${updated.code} và tự động xuất kho ${dispatchedCount} đơn hàng. Quản lý kho có thể xếp xe ngay!`,
+          `Đã chốt đợt soạn ${updated.code} và tự động chuyển ${dispatchedCount} đơn hàng sang ĐÃ XUẤT KHO. Quản lý kho có thể xếp xe ngay!`,
           'success'
         );
       } else {
         showToast('Chúc mừng', `Đã hoàn thành toàn bộ đợt soạn hàng ${updated.code}!`, 'success');
       }
-      loadData();
+      setIsCompleteConfirmModalOpen(false);
+      await loadData();
     } catch (err: any) {
       showToast('Lỗi hoàn thành', err.message || 'Chốt phiếu soạn hàng thất bại', 'error');
     } finally {
@@ -696,6 +721,24 @@ export const PickingListDetailPage: React.FC = () => {
         isOpen={isPrintModalOpen}
         pickingList={pickingList}
         onClose={() => setIsPrintModalOpen(false)}
+      />
+
+      {/* Popup Bắt buộc ghi nhận lý do soạn thiếu hàng (S6-03 AC4) */}
+      <PickingBatchShortageModal
+        isOpen={isBatchShortageModalOpen}
+        shortageItems={pickingList.items.filter((i) => i.pickedQuantity < i.requiredQuantity)}
+        onConfirm={handleConfirmBatchShortage}
+        onClose={() => setIsBatchShortageModalOpen(false)}
+        isSubmitting={completing}
+      />
+
+      {/* Popup Xác nhận chốt hoàn thành phiếu soạn (thay thế window.confirm) */}
+      <PickingCompleteConfirmModal
+        isOpen={isCompleteConfirmModalOpen}
+        pickingList={pickingList}
+        onConfirm={executeCompletePickingList}
+        onClose={() => setIsCompleteConfirmModalOpen(false)}
+        isSubmitting={completing}
       />
     </div>
   );

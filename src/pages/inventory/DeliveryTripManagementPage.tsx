@@ -17,7 +17,8 @@ import type { DeliveryTrip, InTransitSummary } from '../../types/deliveryTrip';
 import {
   fetchDeliveryTrips,
   fetchInTransitSummary,
-  completeTripWithAutoResolve
+  completeTripWithAutoResolve,
+  formatOverdueTime
 } from '../../services/deliveryTripApi';
 import { SYSTEM_WAREHOUSES } from '../../types/inventory';
 
@@ -316,8 +317,8 @@ export const DeliveryTripManagementPage: React.FC = () => {
                           )}
                         </div>
                         {trip.overdue && !trip.completedAt && (
-                          <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded bg-red-100 text-red-700 font-bold text-[10px]">
-                            Trễ {trip.overdueMinutes} phút
+                          <span className="inline-block mt-0.5 px-2 py-0.5 rounded-md bg-red-100 text-red-700 font-bold text-[10px]">
+                            {formatOverdueTime(trip.overdueMinutes)}
                           </span>
                         )}
                       </td>
