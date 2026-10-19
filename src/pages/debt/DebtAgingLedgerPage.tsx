@@ -19,6 +19,7 @@ import { formatCurrencyVND } from '../../services/orderService';
 import { fetchDebtLedger, downloadDebtLedgerExcel } from '../../services/debtLedgerApi';
 import type { DebtLedgerResponse, DebtLedgerFilterParams } from '../../types/debtLedger';
 import { PaymentReminderPopupModal } from '../../components/debt/PaymentReminderPopupModal';
+import { Pagination } from '../../components/common/Pagination';
 
 export const DebtAgingLedgerPage: React.FC = () => {
   const navigate = useNavigate();
@@ -36,8 +37,9 @@ export const DebtAgingLedgerPage: React.FC = () => {
   const [includeSettled, setIncludeSettled] = useState<boolean>(false);
   const [sort, setSort] = useState<'NEWEST' | 'OLDEST' | 'OUTSTANDING' | 'OVERDUE' | 'CODE'>('NEWEST');
   const [page, setPage] = useState<number>(0);
+  const [pageSize, setPageSize] = useState<number>(20);
 
-  const loadData = async (newPage: number = page) => {
+  const loadData = async (newPage: number = page, newSize: number = pageSize) => {
     setLoading(true);
     try {
       const params: DebtLedgerFilterParams = {
@@ -47,7 +49,7 @@ export const DebtAgingLedgerPage: React.FC = () => {
         includeSettled,
         sort,
         page: newPage,
-        size: 50
+        size: newSize
       };
       const res = await fetchDebtLedger(params);
       setData(res);
@@ -60,12 +62,12 @@ export const DebtAgingLedgerPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData(0);
+    loadData(0, pageSize);
   }, [bucket, overdueOnly, includeSettled, sort]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loadData(0);
+    loadData(0, pageSize);
   };
 
   const handleExport = async () => {
@@ -90,56 +92,56 @@ export const DebtAgingLedgerPage: React.FC = () => {
     <div className="space-y-5 antialiased max-w-7xl mx-auto pb-16">
       {/* 1. Header thao tác tinh gọn */}
       <div className="flex items-center justify-end gap-2.5">
-          <button
-            type="button"
-            onClick={() => loadData(page)}
-            disabled={loading}
-            className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-2xs transition cursor-pointer"
-            title="Tải lại dữ liệu"
-          >
-            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-          </button>
+        <button
+          type="button"
+          onClick={() => loadData(page)}
+          disabled={loading}
+          className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-2xs transition cursor-pointer"
+          title="Tải lại dữ liệu"
+        >
+          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+        </button>
 
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={exporting}
-            className="px-3.5 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer disabled:opacity-50"
-            title="Xuất bảng Excel sổ công nợ & tuổi nợ"
-          >
-            <FileSpreadsheet size={15} className={exporting ? 'animate-spin' : 'text-emerald-600'} />
-            <span>{exporting ? 'Đang xuất...' : 'Xuất Excel'}</span>
-          </button>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exporting}
+          className="px-3.5 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer disabled:opacity-50"
+          title="Xuất bảng Excel sổ công nợ & tuổi nợ"
+        >
+          <FileSpreadsheet size={15} className={exporting ? 'animate-spin' : 'text-emerald-600'} />
+          <span>{exporting ? 'Đang xuất...' : 'Xuất Excel'}</span>
+        </button>
 
-          <button
-            type="button"
-            onClick={() => setShowReminderModal(true)}
-            className="px-3.5 py-2 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 text-[#F85606] font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
-            title="Xem danh sách nhắc nợ đại lý"
-          >
-            <Clock size={15} />
-            <span>Nhắc nợ</span>
-          </button>
+        <button
+          type="button"
+          onClick={() => setShowReminderModal(true)}
+          className="px-3.5 py-2 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100 text-[#F85606] font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+          title="Xem danh sách nhắc nợ đại lý"
+        >
+          <Clock size={15} />
+          <span>Nhắc nợ</span>
+        </button>
 
-          <button
-            type="button"
-            onClick={() => navigate('/reports/overdue-debts')}
-            className="px-3.5 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
-            title="Xem Báo cáo công nợ quá hạn theo tuổi nợ (S8-09)"
-          >
-            <AlertTriangle size={15} className="text-rose-600" />
-            <span>Báo cáo nợ quá hạn</span>
-          </button>
+        <button
+          type="button"
+          onClick={() => navigate('/reports/overdue-debts')}
+          className="px-3.5 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+          title="Xem Báo cáo công nợ quá hạn theo tuổi nợ (S8-09)"
+        >
+          <AlertTriangle size={15} className="text-rose-600" />
+          <span>Báo cáo nợ quá hạn</span>
+        </button>
 
-          <button
-            type="button"
-            onClick={() => navigate('/debts/reconciliation')}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
-          >
-            <FileText size={15} />
-            <span>Đối chiếu công nợ</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/debts/reconciliation')}
+          className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+        >
+          <FileText size={15} />
+          <span>Đối chiếu công nợ</span>
+        </button>
+      </div>
 
       {/* 2. Thẻ thống kê KPI tổng quan công nợ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -193,16 +195,26 @@ export const DebtAgingLedgerPage: React.FC = () => {
       {/* 3. Bộ lọc tìm kiếm & Phân tích tuổi nợ */}
       <div className="p-4 rounded-2xl bg-white border border-gray-200/80 shadow-2xs space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Ô tìm kiếm */}
-          <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="Tìm theo mã hoặc tên đại lý..."
-              className="w-full pl-9 pr-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606] focus:bg-white transition"
-            />
+          {/* Ô tìm kiếm & Nút Lọc */}
+          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 flex-1 max-w-md">
+            <div className="relative flex-1">
+              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="Tìm theo mã hoặc tên đại lý..."
+                className="w-full pl-9 pr-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606] focus:bg-white transition"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-[#F85606] hover:bg-[#E04D05] active:scale-95 text-white text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1.5 shrink-0 shadow-xs"
+              title="Lọc kết quả tìm kiếm"
+            >
+              <Filter size={13} />
+              <span>Lọc</span>
+            </button>
           </form>
 
           {/* Sắp xếp */}
@@ -240,11 +252,10 @@ export const DebtAgingLedgerPage: React.FC = () => {
                 key={f.key}
                 type="button"
                 onClick={() => setBucket(f.key as any)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-                  bucket === f.key
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${bucket === f.key
                     ? 'bg-[#F85606] text-white shadow-xs'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 {f.label}
               </button>
@@ -322,9 +333,8 @@ export const DebtAgingLedgerPage: React.FC = () => {
                   return (
                     <tr
                       key={row.customerId}
-                      className={`hover:bg-orange-50/20 transition-colors ${
-                        isOverdue ? 'bg-rose-50/10' : ''
-                      }`}
+                      className={`hover:bg-orange-50/20 transition-colors ${isOverdue ? 'bg-rose-50/10' : ''
+                        }`}
                     >
                       {/* Đại lý */}
                       <td className="py-3 px-3">
@@ -392,7 +402,7 @@ export const DebtAgingLedgerPage: React.FC = () => {
                             type="button"
                             onClick={() => navigate(`/debts/statement?customerId=${row.customerId}`)}
                             className="p-1.5 hover:bg-orange-50 text-[#F85606] rounded-lg transition cursor-pointer"
-                            title="Xem và xuất sổ chi tiết công nợ (S8-10)"
+                            title="Xem và xuất sổ chi tiết công nợ "
                           >
                             <BookOpenCheck size={15} />
                           </button>
@@ -450,34 +460,22 @@ export const DebtAgingLedgerPage: React.FC = () => {
           </table>
         </div>
 
-        {/* Phân trang */}
-        {data && data.totalPages > 1 && (
-          <div className="p-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between text-xs text-gray-600">
-            <div>
-              Trang <strong className="text-gray-900">{page + 1}</strong> / {data.totalPages} (Tổng{' '}
-              {data.totalElements} đại lý)
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                disabled={page === 0}
-                onClick={() => loadData(page - 1)}
-                className="px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 disabled:opacity-40 transition cursor-pointer"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <button
-                type="button"
-                disabled={page >= data.totalPages - 1}
-                onClick={() => loadData(page + 1)}
-                className="px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 disabled:opacity-40 transition cursor-pointer"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Phân trang chuẩn hệ thống */}
+        <div className="p-4 bg-gray-50/50 border-t border-gray-200">
+          <Pagination
+            page={page}
+            totalPages={data?.totalPages || 0}
+            totalElements={data?.totalElements || 0}
+            size={pageSize}
+            itemLabel="đại lý"
+            onPageChange={(p) => loadData(p, pageSize)}
+            onSizeChange={(s) => {
+              setPageSize(s);
+              loadData(0, s);
+            }}
+            disabled={loading}
+          />
+        </div>
       </div>
 
       {/* Modal Popup Nhắc Hạn Thanh Toán Tự Động */}

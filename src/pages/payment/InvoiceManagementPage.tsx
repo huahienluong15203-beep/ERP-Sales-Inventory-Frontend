@@ -6,8 +6,6 @@ import {
   Printer,
   RefreshCw,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   TrendingUp,
   FileSpreadsheet,
   FileText
@@ -19,6 +17,8 @@ import { searchInvoices } from '../../services/invoiceApi';
 import { fetchAgencies } from '../../services/agencyApi';
 import type { Agency } from '../../types/agency';
 import { InvoicePrintModal } from '../../components/payment/InvoicePrintModal';
+import { SearchSelect } from '../../components/common/SearchSelect';
+import { Pagination } from '../../components/common/Pagination';
 
 export const InvoiceManagementPage: React.FC = () => {
   const navigate = useNavigate();
@@ -30,7 +30,7 @@ export const InvoiceManagementPage: React.FC = () => {
   const [invoices, setInvoices] = useState<InvoiceSummaryResponse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [page, setPage] = useState<number>(0);
-  const [pageSize] = useState<number>(20);
+  const [pageSize, setPageSize] = useState<number>(20);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalElements, setTotalElements] = useState<number>(0);
 
@@ -40,21 +40,57 @@ export const InvoiceManagementPage: React.FC = () => {
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
 
-  // Danh sách đại lý cho filter
+  // Danh sách đại lý cho filter (hỗ trợ tìm kiếm FE & BE + tải phân trang theo cuộn)
   const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [agencyPage, setAgencyPage] = useState<number>(0);
+  const [hasMoreAgencies, setHasMoreAgencies] = useState<boolean>(true);
+  const [loadingAgencies, setLoadingAgencies] = useState<boolean>(false);
+  const [agencySearchKeyword, setAgencySearchKeyword] = useState<string>('');
 
   // Modal in hoá đơn
   const [printModalInvoiceId, setPrintModalInvoiceId] = useState<number | null>(null);
 
-  // Tải danh sách đại lý
+  // Tải danh sách đại lý (FE & BE search + cuộn load thêm)
+  const loadFilterAgencies = async (targetPage: number, kw: string, isAppend: boolean) => {
+    setLoadingAgencies(true);
+    try {
+      const res = await fetchAgencies({
+        page: targetPage,
+        size: 20,
+        keyword: kw.trim() || undefined,
+        status: 'ACTIVE'
+      });
+      const items = res.content || [];
+      setAgencies((prev) => {
+        if (!isAppend) return items;
+        const existingIds = new Set(prev.map((a) => a.id));
+        return [...prev, ...items.filter((a) => !existingIds.has(a.id))];
+      });
+      setAgencyPage(targetPage);
+      setHasMoreAgencies(targetPage + 1 < res.totalPages);
+    } catch {
+      // Giữ nguyên danh sách hiện tại nếu có lỗi
+    } finally {
+      setLoadingAgencies(false);
+    }
+  };
+
   useEffect(() => {
-    fetchAgencies({ page: 0, size: 100 })
-      .then((res) => setAgencies(res.content || []))
-      .catch(() => {});
+    loadFilterAgencies(0, '', false);
   }, []);
 
+  const handleAgencySearch = (val: string) => {
+    setAgencySearchKeyword(val);
+    loadFilterAgencies(0, val, false);
+  };
+
+  const handleAgencyLoadMore = () => {
+    if (loadingAgencies || !hasMoreAgencies) return;
+    loadFilterAgencies(agencyPage + 1, agencySearchKeyword, true);
+  };
+
   // Tải danh sách hoá đơn
-  const loadInvoices = async (targetPage = page) => {
+  const loadInvoices = async (targetPage = page, currentSize = pageSize) => {
     setLoading(true);
     try {
       const res = await searchInvoices({
@@ -63,7 +99,7 @@ export const InvoiceManagementPage: React.FC = () => {
         toDate: toDate || undefined,
         keyword: keyword.trim() || undefined,
         page: targetPage,
-        size: pageSize
+        size: currentSize
       });
       setInvoices(res.content || []);
       setTotalPages(res.totalPages || 1);
@@ -77,12 +113,12 @@ export const InvoiceManagementPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadInvoices(0);
+    loadInvoices(0, pageSize);
   }, [selectedCustomerId, fromDate, toDate, pageSize]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loadInvoices(0);
+    loadInvoices(0, pageSize);
   };
 
   const handleResetFilter = () => {
@@ -90,6 +126,8 @@ export const InvoiceManagementPage: React.FC = () => {
     setSelectedCustomerId(undefined);
     setFromDate('');
     setToDate('');
+    setAgencySearchKeyword('');
+    loadFilterAgencies(0, '', false);
   };
 
   // Tính tổng tiền các hoá đơn trong trang hiện tại
@@ -107,26 +145,26 @@ export const InvoiceManagementPage: React.FC = () => {
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
 
-          {isAccountantOrAdmin && (
-            <>
-              <button
-                onClick={() => navigate('/payments/adjustments')}
-                className="px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-2 shadow-2xs transition cursor-pointer"
-                title="Lập chứng từ điều chỉnh công nợ khi có sai lệch hoặc trả hàng"
-              >
-                <FileText className="w-4 h-4 text-[#F85606]" />
-                <span>Lập chứng từ điều chỉnh</span>
-              </button>
+        {isAccountantOrAdmin && (
+          <>
+            <button
+              onClick={() => navigate('/payments/adjustments')}
+              className="px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-2 shadow-2xs transition cursor-pointer"
+              title="Lập chứng từ điều chỉnh công nợ khi có sai lệch hoặc trả hàng"
+            >
+              <FileText className="w-4 h-4 text-[#F85606]" />
+              <span>Lập chứng từ điều chỉnh</span>
+            </button>
 
-              <button
-                onClick={() => navigate('/invoices/create')}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-orange-500/20 transition cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>+ Lập hoá đơn mới (Gộp đơn)</span>
-              </button>
-            </>
-          )}
+            <button
+              onClick={() => navigate('/invoices/create')}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-orange-500/20 transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span> Lập hoá đơn mới</span>
+            </button>
+          </>
+        )}
       </div>
 
       {/* 3. KPI Statistics Cards */}
@@ -167,7 +205,7 @@ export const InvoiceManagementPage: React.FC = () => {
             </div>
             <div className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Đồng bộ số thực giao (AC1)
+              Đồng bộ số thực giao
             </div>
           </div>
         </div>
@@ -188,12 +226,17 @@ export const InvoiceManagementPage: React.FC = () => {
             />
           </div>
 
-          {/* Customer select */}
+          {/* Customer select có tìm kiếm FE & BE + cuộn load thêm */}
           <div>
-            <select
-              value={selectedCustomerId || ''}
+            <SearchSelect
+              value={selectedCustomerId ?? ''}
               onChange={(e) => setSelectedCustomerId(e.target.value ? Number(e.target.value) : undefined)}
               className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:border-[#F85606] focus:outline-none bg-white"
+              searchPlaceholder="Tìm tên hoặc mã đại lý..."
+              onSearchChange={handleAgencySearch}
+              onLoadMore={handleAgencyLoadMore}
+              hasMore={hasMoreAgencies}
+              isLoading={loadingAgencies}
             >
               <option value="">Tất cả đại lý</option>
               {agencies.map((a) => (
@@ -201,7 +244,7 @@ export const InvoiceManagementPage: React.FC = () => {
                   {a.name} ({a.code})
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
 
           {/* From date */}
@@ -246,7 +289,7 @@ export const InvoiceManagementPage: React.FC = () => {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-gray-50/90 border-b border-gray-200 text-gray-700 font-bold uppercase text-[10px]">
-                <th className="py-3 px-4 w-36">Số hoá đơn (AC2)</th>
+                <th className="py-3 px-4 w-36">Số hoá đơn </th>
                 <th className="py-3 px-3 w-28">Ngày lập</th>
                 <th className="py-3 px-4">Đại lý / Khách hàng</th>
                 <th className="py-3 px-3 text-center w-24">Số dòng</th>
@@ -324,31 +367,22 @@ export const InvoiceManagementPage: React.FC = () => {
           </table>
         </div>
 
-        {/* Phân trang */}
-        {totalPages > 1 && (
-          <div className="p-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-600">
-            <div>
-              Trang <strong className="text-gray-900">{page + 1}</strong> / {totalPages} (Tổng{' '}
-              {totalElements} hoá đơn)
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => loadInvoices(page - 1)}
-                disabled={page === 0}
-                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 cursor-pointer"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => loadInvoices(page + 1)}
-                disabled={page >= totalPages - 1}
-                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 cursor-pointer"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Phân trang chuẩn hệ thống */}
+        <div className="p-4 border-t border-gray-100">
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalElements={totalElements}
+            size={pageSize}
+            itemLabel="hoá đơn"
+            onPageChange={(p) => loadInvoices(p, pageSize)}
+            onSizeChange={(s) => {
+              setPageSize(s);
+              loadInvoices(0, s);
+            }}
+            disabled={loading}
+          />
+        </div>
       </div>
 
       {/* Modal In Hoá Đơn A4 */}
