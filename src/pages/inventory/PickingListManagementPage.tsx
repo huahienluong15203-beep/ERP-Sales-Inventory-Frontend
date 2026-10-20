@@ -16,8 +16,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
 import type { PickingList, PickingStatus } from '../../types/pickingList';
 import { fetchPickingLists, cancelPickingList } from '../../services/pickingListApi';
-import { SYSTEM_WAREHOUSES } from '../../types/inventory';
+import { SYSTEM_WAREHOUSES, type WarehouseOption } from '../../types/inventory';
 import { PickingListPrintModal } from '../../components/inventory/PickingListPrintModal';
+import { fetchWarehouses } from '../../services/warehouseApi';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const PickingListManagementPage: React.FC = () => {
   const navigate = useNavigate();
@@ -25,23 +27,46 @@ export const PickingListManagementPage: React.FC = () => {
 
   const isWarehouseStaff = ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'].includes(currentRole ?? '');
 
+  const [warehousesList, setWarehousesList] = useState<WarehouseOption[]>(SYSTEM_WAREHOUSES);
+
+  useEffect(() => {
+    fetchWarehouses({ status: 'ACTIVE' })
+      .then((data) => {
+        if (data && data.length > 0) {
+          setWarehousesList(
+            data.map((w) => ({
+              id: w.id,
+              code: w.code,
+              name: w.name,
+              address: w.address || undefined,
+              status: w.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn('Lỗi tải danh sách kho từ backend, dùng fallback:', err);
+      });
+  }, []);
+
   // Lọc danh sách kho mà người dùng được phân công phụ trách
   const allowedWarehouses = React.useMemo(() => {
+    const baseList = warehousesList.length > 0 ? warehousesList : SYSTEM_WAREHOUSES;
     if (currentRole === 'ROLE_ADMIN' || user?.roles?.includes('ROLE_ADMIN')) {
-      return SYSTEM_WAREHOUSES;
+      return baseList;
     }
     if (user?.warehouseCodes && user.warehouseCodes.length > 0) {
-      const filtered = SYSTEM_WAREHOUSES.filter((wh) => user.warehouseCodes!.includes(wh.code));
+      const filtered = baseList.filter((wh) => user.warehouseCodes!.includes(wh.code));
       if (filtered.length > 0) return filtered;
     }
     if (user?.warehouse) {
-      const filtered = SYSTEM_WAREHOUSES.filter(
+      const filtered = baseList.filter(
         (wh) => user.warehouse!.includes(wh.code) || user.warehouse!.includes(wh.name)
       );
       if (filtered.length > 0) return filtered;
     }
-    return SYSTEM_WAREHOUSES;
-  }, [user, currentRole]);
+    return baseList;
+  }, [user, currentRole, warehousesList]);
 
   const [pickingLists, setPickingLists] = useState<PickingList[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -255,11 +280,12 @@ export const PickingListManagementPage: React.FC = () => {
         {/* Filters row */}
         <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
           <div className="flex flex-wrap gap-3 w-full md:w-auto items-center">
-            {/* Warehouse select */}
-            <div className="w-full sm:w-64">
-              <select
+            {/* Warehouse select có ô tìm kiếm */}
+            <div className="w-full sm:w-72">
+              <SearchSelect
                 value={warehouseId ?? ''}
                 onChange={(e) => setWarehouseId(e.target.value ? Number(e.target.value) : undefined)}
+                searchPlaceholder="Tìm kiếm tên hoặc mã kho..."
                 className="w-full text-xs font-medium border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-orange-200 focus:border-orange-500 outline-none"
               >
                 {allowedWarehouses.length > 1 && (
@@ -267,10 +293,10 @@ export const PickingListManagementPage: React.FC = () => {
                 )}
                 {allowedWarehouses.map((wh) => (
                   <option key={wh.id} value={wh.id}>
-                    🏢 {wh.name}
+                    🏢 {wh.name} {wh.code ? `(${wh.code})` : ''}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
             </div>
           </div>
 
