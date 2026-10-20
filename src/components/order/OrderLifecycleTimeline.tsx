@@ -18,6 +18,7 @@ interface OrderLifecycleTimelineProps {
   createdAt?: string;
   desiredDeliveryDate?: string;
   className?: string;
+  onNavigateToPicking?: () => void;
 }
 
 interface StepConfig {
@@ -104,7 +105,8 @@ export const OrderLifecycleTimeline: React.FC<OrderLifecycleTimelineProps> = ({
   status,
   cancelReason,
   approvalHistory = [],
-  className = ''
+  className = '',
+  onNavigateToPicking
 }) => {
   const isCancelled = status === 'CANCELLED';
   const isRejected = status === 'REJECTED';
@@ -245,7 +247,11 @@ export const OrderLifecycleTimeline: React.FC<OrderLifecycleTimelineProps> = ({
                 <div className="flex flex-col items-center text-center relative z-10 w-24 shrink-0">
                   {/* Circle Icon */}
                   <div
-                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${isCompleted
+                    onClick={step.key === 'PICKING' && onNavigateToPicking ? onNavigateToPicking : undefined}
+                    title={step.key === 'PICKING' && onNavigateToPicking ? 'Bấm để chuyển sang phần soạn hàng' : undefined}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                      step.key === 'PICKING' && onNavigateToPicking ? 'cursor-pointer hover:scale-115 active:scale-95' : ''
+                    } ${isCompleted
                       ? 'bg-emerald-500 text-white shadow-xs shadow-emerald-500/30'
                       : isCurrent
                         ? ['CLOSED', 'COMPLETED'].includes(status)
@@ -259,7 +265,10 @@ export const OrderLifecycleTimeline: React.FC<OrderLifecycleTimelineProps> = ({
 
                   {/* Nhãn nấc */}
                   <span
-                    className={`mt-2 text-xs font-bold leading-tight ${isCurrent
+                    onClick={step.key === 'PICKING' && onNavigateToPicking ? onNavigateToPicking : undefined}
+                    className={`mt-2 text-xs font-bold leading-tight ${
+                      step.key === 'PICKING' && onNavigateToPicking ? 'cursor-pointer hover:underline' : ''
+                    } ${isCurrent
                       ? 'text-[#F85606]'
                       : isCompleted
                         ? 'text-gray-900'
@@ -281,11 +290,26 @@ export const OrderLifecycleTimeline: React.FC<OrderLifecycleTimelineProps> = ({
                     </span>
                   )}
 
-                  {/* Badge "Hiện tại" */}
+                  {/* Badge "Hiện tại" & Nút "Soạn ngay" nếu ở khâu PICKING */}
                   {isCurrent && (
-                    <span className="mt-1 px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-orange-100 text-[#F85606] border border-orange-200">
-                      Hiện tại
-                    </span>
+                    <div className="flex flex-col items-center gap-1 mt-1">
+                      <span className="px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-orange-100 text-[#F85606] border border-orange-200">
+                        Hiện tại
+                      </span>
+                      {step.key === 'PICKING' && onNavigateToPicking && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onNavigateToPicking();
+                          }}
+                          className="mt-0.5 px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-[#F85606] hover:bg-orange-600 text-white shadow-2xs flex items-center gap-0.5 cursor-pointer transition active:scale-95 animate-pulse"
+                          title="Chuyển đến phiếu soạn hàng để soạn sản phẩm"
+                        >
+                          <span>Soạn ngay →</span>
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
 

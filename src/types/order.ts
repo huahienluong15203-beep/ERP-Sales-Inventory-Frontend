@@ -188,6 +188,11 @@ export interface OrderLineBackendResponse {
   shortageQuantity?: number | null;
   isShortage?: boolean | null;
   shortageReason?: string | null;
+  // S6-04: Quản lý số lô & FEFO
+  batchNumber?: string | null;
+  suggestedBatchNumber?: string | null;
+  lotChangeReason?: string | null;
+  lotExpiredDate?: string | null;
 }
 
 export interface OrderBackendResponse {
@@ -256,6 +261,8 @@ export interface OrderDispatchRequest {
     lineId: number;
     dispatchedQuantity: number;
     shortageReason?: string;
+    batchNumber?: string;
+    lotChangeReason?: string;
   }>;
   note?: string;
   createBackorder?: boolean;

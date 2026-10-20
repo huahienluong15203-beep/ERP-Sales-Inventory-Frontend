@@ -17,6 +17,7 @@ export interface DeliveryTripStop {
   deliveryAddress: string;
   receiverName?: string | null;
   receiverPhone?: string | null;
+  regionName?: string | null;
   district?: string | null;
   province?: string | null;
   status: string; // DISPATCHED, DELIVERED, DELIVERY_FAILED, etc.

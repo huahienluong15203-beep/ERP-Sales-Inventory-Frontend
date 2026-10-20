@@ -88,24 +88,59 @@ export const DeliveryTripCreatePage: React.FC = () => {
     }
   };
 
-  // Trích xuất danh sách các quận/huyện duy nhất để lọc nhanh theo khu vực (AC1)
-  const districts = Array.from(
-    new Set(availableOrders.map((o) => o.district || 'Khu vực nội thành'))
-  ).filter(Boolean);
+  // Trích xuất danh sách các khu vực, quận/huyện duy nhất để lọc nhanh theo khu vực (AC1)
+  const DEFAULT_REGIONS = [
+    'Miền Bắc',
+    'Miền Trung',
+    'Miền Nam',
+    'Hà Nội',
+    'Quận Cầu Giấy',
+    'Quận Đống Đa',
+    'Quận Ba Đình',
+    'Quận Hoàn Kiếm',
+    'Quận Thanh Xuân',
+    'Quận Hai Bà Trưng',
+    'TP. Hồ Chí Minh',
+    'Quận 1',
+    'Quận 3',
+    'Quận 7',
+    'TP. Thủ Đức'
+  ];
+
+  const extractedDistricts = Array.from(
+    new Set(
+      availableOrders
+        .flatMap((o) => [o.regionName, o.district, o.province])
+        .filter(Boolean) as string[]
+    )
+  );
+
+  const districts = Array.from(new Set([...extractedDistricts, ...DEFAULT_REGIONS]));
 
   // Lọc danh sách chờ
   const filteredAvailable = availableOrders.filter((order) => {
     // Không hiện các đơn đã được đưa vào chuyến bên phải
     if (assignedStops.some((s) => s.orderId === order.orderId)) return false;
 
-    if (districtFilter !== 'ALL' && order.district !== districtFilter) return false;
+    if (districtFilter !== 'ALL') {
+      const matchDistrict =
+        order.district === districtFilter ||
+        order.regionName === districtFilter ||
+        order.province === districtFilter;
+      if (!matchDistrict) return false;
+    }
 
     if (searchKeyword) {
       const kw = searchKeyword.toLowerCase();
       const match =
         order.orderCode.toLowerCase().includes(kw) ||
         order.customerName.toLowerCase().includes(kw) ||
-        order.deliveryAddress.toLowerCase().includes(kw);
+        order.deliveryAddress.toLowerCase().includes(kw) ||
+        (order.district && order.district.toLowerCase().includes(kw)) ||
+        (order.province && order.province.toLowerCase().includes(kw)) ||
+        (order.regionName && order.regionName.toLowerCase().includes(kw)) ||
+        (order.receiverName && order.receiverName.toLowerCase().includes(kw)) ||
+        (order.receiverPhone && order.receiverPhone.toLowerCase().includes(kw));
       if (!match) return false;
     }
     return true;
@@ -234,7 +269,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2.5">
                 <span className="w-6 h-6 rounded-full bg-[#F85606] text-white flex items-center justify-center text-xs font-black">1</span>
-                Phiếu Xuất Chờ Xếp Chuyến ({filteredAvailable.length})
+                Phiếu Xuất / Đơn Chờ Xếp Chuyến ({filteredAvailable.length})
               </h2>
               {filteredAvailable.length > 0 && (
                 <button
@@ -270,7 +305,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
                   type="text"
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
-                  placeholder="Tìm theo mã đơn, khách, địa chỉ..."
+                  placeholder="Tìm theo mã đơn, khách, địa chỉ, khu vực..."
                   className="w-full text-sm pl-9 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none"
                 />
               </div>
@@ -301,13 +336,22 @@ export const DeliveryTripCreatePage: React.FC = () => {
                   <div className="flex items-start gap-2.5 flex-1 min-w-0">
                     <GripVertical className="w-4 h-4 text-gray-400 group-hover:text-[#F85606] mt-1 shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono font-bold text-gray-900 text-sm">
                           {order.orderCode}
                         </span>
-                        {order.district && (
+                        {order.status === 'PICKING' ? (
+                          <span className="text-xs px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 font-semibold border border-amber-200">
+                            Chờ xếp xe (Đã soạn)
+                          </span>
+                        ) : (
+                          <span className="text-xs px-2 py-0.5 rounded-md bg-green-100 text-green-800 font-semibold border border-green-200">
+                            Đã xuất kho
+                          </span>
+                        )}
+                        {(order.regionName || order.district) && (
                           <span className="text-xs px-2 py-0.5 rounded-md bg-orange-100 text-orange-800 font-semibold">
-                            {order.district}
+                            📍 {order.regionName ? `${order.regionName}${order.district && order.district !== order.regionName ? ` • ${order.district}` : ''}` : order.district}
                           </span>
                         )}
                       </div>
@@ -398,13 +442,18 @@ export const DeliveryTripCreatePage: React.FC = () => {
                     </span>
 
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono font-bold text-gray-900 text-sm">
                           {stop.orderCode}
                         </span>
                         <span className="text-xs text-gray-500">
                           {stop.receiverName} • {stop.receiverPhone}
                         </span>
+                        {(stop.regionName || stop.district) && (
+                          <span className="text-xs px-2 py-0.5 rounded-md bg-orange-100 text-orange-800 font-semibold">
+                            📍 {stop.regionName ? `${stop.regionName}${stop.district && stop.district !== stop.regionName ? ` • ${stop.district}` : ''}` : stop.district}
+                          </span>
+                        )}
                       </div>
                       <div className="font-bold text-gray-800 text-sm truncate mt-1">
                         {stop.customerName}

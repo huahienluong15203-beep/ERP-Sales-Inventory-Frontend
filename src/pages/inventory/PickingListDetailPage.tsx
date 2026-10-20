@@ -210,14 +210,38 @@ export const PickingListDetailPage: React.FC = () => {
         return;
       }
 
+      setInputValues((prev) => ({ ...prev, [item.id]: String(currentPicked) }));
+      setPickingList((prev) => {
+        if (!prev) return prev;
+        const newItems = prev.items.map((i) =>
+          i.id === item.id ? { ...i, isCompleted: true, pickedQuantity: currentPicked } : i
+        );
+        return {
+          ...prev,
+          items: newItems,
+          completedItems: newItems.filter((i) => i.isCompleted).length
+        };
+      });
+
       await saveItemUpdate(item.id, currentPicked, true, item.discrepancyReason);
     } else {
-      // Bỏ đánh dấu hoàn thành -> Trả về chưa xong
-      await saveItemUpdate(item.id, item.pickedQuantity, false, item.discrepancyReason);
+      // Bỏ đánh dấu hoàn thành -> Trả về chưa xong và reset số lượng thực soạn về 0
+      setInputValues((prev) => ({ ...prev, [item.id]: '0' }));
+      setPickingList((prev) => {
+        if (!prev) return prev;
+        const newItems = prev.items.map((i) =>
+          i.id === item.id ? { ...i, isCompleted: false, pickedQuantity: 0, discrepancyReason: null } : i
+        );
+        return {
+          ...prev,
+          items: newItems,
+          completedItems: newItems.filter((i) => i.isCompleted).length
+        };
+      });
+
+      await saveItemUpdate(item.id, 0, false, null);
     }
   };
-
-
 
   // Lưu cập nhật item vào backend
   const saveItemUpdate = async (
@@ -254,8 +278,13 @@ export const PickingListDetailPage: React.FC = () => {
         lotChangeReason: chosenReason
       });
       setPickingList(updatedList);
+      setInputValues((prev) => ({
+        ...prev,
+        [itemId]: String(pickedQuantity)
+      }));
     } catch (err: any) {
       showToast('Lỗi cập nhật', err.message || 'Không thể lưu tiến độ', 'error');
+      await loadData();
     } finally {
       setSavingItemIds((prev) => ({ ...prev, [itemId]: false }));
     }
@@ -400,6 +429,28 @@ export const PickingListDetailPage: React.FC = () => {
     const allCompleted = sortedItems.length > 0 && sortedItems.every((i) => i.isCompleted);
     const targetCompleted = !allCompleted;
 
+    // Cập nhật lạc quan trên UI ngay lập tức
+    const optimisticInputValues: Record<number, string> = {};
+    sortedItems.forEach((item) => {
+      optimisticInputValues[item.id] = String(targetCompleted ? item.requiredQuantity : 0);
+    });
+    setInputValues(optimisticInputValues);
+
+    setPickingList((prev) => {
+      if (!prev) return prev;
+      const updatedItems = prev.items.map((item) => ({
+        ...item,
+        isCompleted: targetCompleted,
+        pickedQuantity: targetCompleted ? item.requiredQuantity : 0,
+        discrepancyReason: targetCompleted ? item.discrepancyReason : null
+      }));
+      return {
+        ...prev,
+        items: updatedItems,
+        completedItems: targetCompleted ? updatedItems.length : 0
+      };
+    });
+
     try {
       const itemsPayload = sortedItems.map((item) => ({
         itemId: item.id,
@@ -428,6 +479,7 @@ export const PickingListDetailPage: React.FC = () => {
       );
     } catch (err: any) {
       showToast('Lỗi thao tác', err.message || 'Không thể cập nhật danh sách', 'error');
+      await loadData();
     }
   };
 
@@ -545,7 +597,7 @@ export const PickingListDetailPage: React.FC = () => {
       <div className="space-y-4">
         {/* Table Container */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs">
-          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
               <Layers className="w-4 h-4 text-[#F85606]" />
               Danh Sách Mặt Hàng Đã Gộp Theo Lộ Trình Trong Kho ({sortedItems.length} mặt hàng)
@@ -555,10 +607,10 @@ export const PickingListDetailPage: React.FC = () => {
             </span>
           </div>
 
-          <div className="overflow-x-auto min-h-[380px] pb-32">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-gray-50/90 border-b border-gray-200 text-gray-700 font-bold uppercase text-[10px]">
+          <div className="overflow-x-auto overflow-y-auto max-h-[580px] sm:max-h-[640px] pb-16 shadow-inner">
+            <table className="w-full text-left border-collapse text-xs min-w-[840px]">
+              <thead className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-xs shadow-2xs">
+                <tr className="border-b border-gray-200 text-gray-700 font-bold uppercase text-[10px]">
                   <th className="py-3 px-3 text-center w-14">Lộ trình</th>
                   <th className="py-3 px-3 w-44">Vị trí lưu kho (Khu ➔ Kệ ➔ Ô)</th>
                   <th className="py-3 px-3 w-28">Mã SKU</th>
@@ -569,7 +621,7 @@ export const PickingListDetailPage: React.FC = () => {
                   <th className="py-3 px-4 text-center w-36">Thực soạn</th>
                   <th className="py-3 px-3 text-center w-24">
                     <div className="flex flex-col items-center justify-center gap-1">
-                      <span>Hoàn thành</span>
+                      <span>Thao tác</span>
                       {!isReadOnly && isWarehouseStaff && sortedItems.length > 0 && (
                         <label className="inline-flex items-center gap-1 cursor-pointer select-none text-[10px] text-gray-500 font-semibold hover:text-[#F85606] transition-colors" title="Chọn tất cả">
                           <input

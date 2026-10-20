@@ -112,7 +112,13 @@ export const OrderDispatchModal: React.FC<OrderDispatchModalProps> = ({
     setError(null);
 
     // Kiểm tra hợp lệ các dòng xuất thiếu (bắt buộc phải có lý do)
-    const linesPayload: Array<{ lineId: number; dispatchedQuantity: number; shortageReason?: string }> = [];
+    const linesPayload: Array<{
+      lineId: number;
+      dispatchedQuantity: number;
+      shortageReason?: string;
+      batchNumber?: string;
+      lotChangeReason?: string;
+    }> = [];
     let hasMissingReason = false;
     let totalDispatched = 0;
 
@@ -123,6 +129,9 @@ export const OrderDispatchModal: React.FC<OrderDispatchModalProps> = ({
       totalDispatched += dispatchedQty;
 
       const orderedQty = Number(line.quantity);
+      const chosenBatch = state?.selectedBatchNumber || line.batchNumber || undefined;
+      const lotReason = state?.lotReason || line.lotChangeReason || undefined;
+
       if (dispatchedQty < orderedQty) {
         if (!state?.shortageReason?.trim() && !dispatchNote.trim()) {
           hasMissingReason = true;
@@ -131,13 +140,17 @@ export const OrderDispatchModal: React.FC<OrderDispatchModalProps> = ({
         linesPayload.push({
           lineId: line.id,
           dispatchedQuantity: dispatchedQty,
-          shortageReason: state?.shortageReason?.trim() || dispatchNote.trim()
+          shortageReason: state?.shortageReason?.trim() || dispatchNote.trim(),
+          batchNumber: chosenBatch,
+          lotChangeReason: lotReason
         });
       } else {
         // Xuất đủ
         linesPayload.push({
           lineId: line.id,
-          dispatchedQuantity: dispatchedQty
+          dispatchedQuantity: dispatchedQty,
+          batchNumber: chosenBatch,
+          lotChangeReason: lotReason
         });
       }
     }

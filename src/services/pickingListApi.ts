@@ -578,6 +578,25 @@ export async function fetchPickingListById(id: number): Promise<PickingList> {
 }
 
 /**
+ * 5b. Tìm phiếu soạn hàng đang chứa đơn hàng cụ thể
+ */
+export async function fetchPickingListByOrderId(orderId: number): Promise<PickingList | null> {
+  try {
+    const res = await authFetch(`${PICKING_LIST_API_BASE}/by-order/${orderId}`);
+    if (res.ok && res.status === 200) {
+      const data = await res.json();
+      if (data) return mapBackendPickingList(data);
+    }
+  } catch (err) {
+    console.warn('Backend fetch picking list by order id failed:', err);
+  }
+
+  const lists = getStoredLists();
+  const found = lists.find((l) => (l.orders || []).some((o) => o.id === Number(orderId)));
+  return found || null;
+}
+
+/**
  * 6. Cập nhật tiến độ một dòng hàng (Mobile-friendly)
  * Bắt buộc nhập lý do nếu số lượng thực soạn < số lượng yêu cầu (AC4)
  */
