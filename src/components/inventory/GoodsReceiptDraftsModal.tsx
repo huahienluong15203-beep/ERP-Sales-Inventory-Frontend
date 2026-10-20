@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from '../../components/common/Icons';
+import { useConfirmDialog } from '../common/useConfirmDialog';
 
 const PAGE_SIZE = 10;
 
@@ -34,6 +35,7 @@ export const GoodsReceiptDraftsModal: React.FC<GoodsReceiptDraftsModalProps> = (
   onDeleteDraft,
   canEdit = true
 }) => {
+  const { confirm, confirmDialog } = useConfirmDialog();
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [deletingId, setDeletingId] = useState<number | string | null>(null);
@@ -77,7 +79,13 @@ export const GoodsReceiptDraftsModal: React.FC<GoodsReceiptDraftsModalProps> = (
 
   const handleDelete = async (receiptId: number | string, code: string) => {
     if (!onDeleteDraft) return;
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn phiếu nhập kho nháp ${code} không?`)) {
+    const ok = await confirm({
+      title: 'Xoá phiếu nhập kho nháp',
+      message: `Bạn có chắc chắn muốn xóa vĩnh viễn phiếu nhập kho nháp ${code} không?`,
+      variant: 'danger',
+      confirmLabel: 'Xoá phiếu nháp'
+    });
+    if (!ok) {
       return;
     }
     setDeletingId(receiptId);
@@ -92,6 +100,7 @@ export const GoodsReceiptDraftsModal: React.FC<GoodsReceiptDraftsModalProps> = (
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-xs animate-in fade-in">
+      {confirmDialog}
       <div
         className="w-full max-w-5xl xl:max-w-6xl h-[720px] max-h-[90vh] bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}

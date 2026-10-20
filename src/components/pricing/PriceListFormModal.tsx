@@ -153,7 +153,7 @@ export const PriceListFormModal: React.FC<PriceListFormModalProps> = ({
     // Kiểm tra SKU đã có chưa
     const existing = items.find((i) => i.productSku.toUpperCase() === prod.sku.toUpperCase());
     if (existing) {
-      alert(`Sản phẩm '${prod.sku} - ${prod.name}' đã có trong danh sách bảng giá!`);
+      setFormError(`Sản phẩm '${prod.sku} - ${prod.name}' đã có trong danh sách bảng giá!`);
       return;
     }
 

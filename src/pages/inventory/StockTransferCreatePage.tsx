@@ -23,6 +23,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { NumberInput } from '../../components/common/NumberInput';
+import { useConfirmDialog } from '../../components/common/useConfirmDialog';
 
 interface TransferLineDraft {
   id: string;
@@ -38,6 +39,7 @@ interface TransferLineDraft {
 }
 
 export const StockTransferCreatePage: React.FC = () => {
+  const { confirm, confirmDialog } = useConfirmDialog();
   const navigate = useNavigate();
   const { user, showToast, currentRole } = useAuth();
 
@@ -370,8 +372,15 @@ export const StockTransferCreatePage: React.FC = () => {
 
   // Xóa 1 sản phẩm theo productId (gọi từ Modal)
   // Xóa toàn bộ mặt hàng
-  const handleRemoveAllLines = () => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa toàn bộ ${lines.length} mặt hàng khỏi phiếu chuyển kho?`)) {
+  const handleRemoveAllLines = async () => {
+    if (
+      await confirm({
+        title: 'Xoá toàn bộ mặt hàng',
+        message: `Bạn có chắc chắn muốn xóa toàn bộ ${lines.length} mặt hàng khỏi phiếu chuyển kho?`,
+        variant: 'danger',
+        confirmLabel: 'Xoá tất cả'
+      })
+    ) {
       setLines([]);
       saveLinesToDraft([]);
       showToast('Đã xóa tất cả', 'Đã làm trống danh sách mặt hàng', 'info', 2000);
@@ -505,6 +514,7 @@ export const StockTransferCreatePage: React.FC = () => {
 
   return (
     <div className="space-y-4 pb-12 max-w-6xl mx-auto">
+      {confirmDialog}
       {/* HEADER BAR & BREADCRUMB */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-xs">
         <div className="flex items-center gap-3">

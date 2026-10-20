@@ -7,6 +7,7 @@ import type { ProductOptionItem } from '../../services/productService';
 import { Icons } from '../common/Icons';
 import { SearchSelect } from '../common/SearchSelect';
 import { NumberInput } from '../common/NumberInput';
+import { useConfirmDialog } from '../common/useConfirmDialog';
 
 interface PriceListDetailModalProps {
   priceList: PriceList | null;
@@ -23,6 +24,7 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
   onRefresh,
   onOpenClone
 }) => {
+  const { confirm, confirmDialog } = useConfirmDialog();
   const [addingItem, setAddingItem] = useState<boolean>(false);
   const [sku, setSku] = useState<string>('');
   const [name, setName] = useState<string>('');
@@ -131,19 +133,26 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
   };
 
   const handleDeleteItem = async (itemId: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa dòng giá sản phẩm này khỏi bảng giá?')) {
+    const ok = await confirm({
+      title: 'Xoá dòng giá',
+      message: 'Bạn có chắc chắn muốn xóa dòng giá sản phẩm này khỏi bảng giá?',
+      variant: 'danger',
+      confirmLabel: 'Xoá dòng giá'
+    });
+    if (!ok) {
       return;
     }
     try {
       await deletePriceListItem(priceList.id, itemId);
       onRefresh();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi xóa dòng sản phẩm');
+      setItemError(err instanceof Error ? err.message : 'Lỗi khi xóa dòng sản phẩm');
     }
   };
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs overflow-y-auto">
+      {confirmDialog}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl max-w-4xl w-full max-h-[92vh] my-auto flex flex-col overflow-hidden animate-in fade-in duration-200">
         {/* Header Modal */}
         <div className="p-5 border-b border-gray-200 flex items-start justify-between bg-gray-50/60">
