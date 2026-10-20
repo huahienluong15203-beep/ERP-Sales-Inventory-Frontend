@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Printer, Download, X, Building, CheckCircle, FileText } from 'lucide-react';
 import type { PaymentReceipt } from '../../types/payment';
 import { formatCurrencyVND } from '../../services/orderService';
@@ -17,7 +17,7 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
   receipt
 }) => {
   const printIframeRef = useRef<HTMLIFrameElement | null>(null);
-  const [isFitPage, setIsFitPage] = useState<boolean>(true);
+  const isFitPage = true;
   // Ảnh biên lai lưu sau API có kiểm quyền (/api/payments/{id}/image) -> tải bằng token thành Blob URL
   const { src: receiptImageSrc } = useAuthImageSrc(isOpen ? receipt?.receiptImageUrl : null);
 
@@ -434,19 +434,6 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setIsFitPage(!isFitPage)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
-                isFitPage
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                  : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-              }`}
-              title="Thu nhỏ để xem trọn vẹn 1 trang không cần cuộn"
-            >
-              {isFitPage ? '🔍 Xem vừa 1 trang' : '↔️ Kích thước 100%'}
-            </button>
-
             <button
               type="button"
               onClick={handlePrint}

@@ -117,7 +117,7 @@ export const DeliveryTripDetailPage: React.FC = () => {
       isOpen: true,
       title: 'Xác nhận xe đã về kho an toàn',
       tripCode: trip.code,
-      badgeText: '100% điểm đã giao xong',
+      badgeText: (trip.failedStops > 0) ? `Đã xử lý xong (${trip.failedStops} điểm thất bại)` : '100% điểm đã giao xong',
       message: `Xác nhận xe ${trip.vehiclePlate} (${trip.driverName}) đã hoàn tất lộ trình và quay về kho an toàn?`,
       confirmLabel: 'Xác nhận về kho',
       confirmVariant: 'primary',
@@ -172,6 +172,7 @@ export const DeliveryTripDetailPage: React.FC = () => {
 
   const sortedStops = [...(trip.stops || [])].sort((a, b) => (a.stopSequence || 0) - (b.stopSequence || 0));
   const deliveredCount = sortedStops.filter((s) => isDeliveredStop(s)).length;
+  const failedCount = sortedStops.filter((s) => isFailedStop(s)).length;
   const totalStopsCount = trip.totalStops > 0 ? trip.totalStops : sortedStops.length;
   const percent = totalStopsCount > 0 ? Math.round((Math.max(trip.deliveredStops || 0, deliveredCount) / totalStopsCount) * 100) : 0;
 
@@ -180,6 +181,9 @@ export const DeliveryTripDetailPage: React.FC = () => {
   const totalTripValue = (trip.totalValue && trip.totalValue > 0) ? trip.totalValue : calculatedTotal;
   const deliveredValue = sortedStops
     .filter((s) => isDeliveredStop(s))
+    .reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
+  const failedValue = sortedStops
+    .filter((s) => isFailedStop(s))
     .reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
   const remainingValue = (trip.status === 'COMPLETED')
     ? 0
@@ -370,10 +374,24 @@ export const DeliveryTripDetailPage: React.FC = () => {
                   </span>
                 </div>
               )}
+              {failedValue > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 font-medium">Hàng hoàn về kho:</span>
+                  <span className="font-bold text-red-600">
+                    {failedValue.toLocaleString('vi-VN')} đ ({trip.failedStops || failedCount} điểm)
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-gray-500 font-medium">Còn trên xe:</span>
-                <span className={`font-bold ${remainingValue > 0 ? 'text-[#F85606]' : 'text-emerald-600'}`}>
-                  {remainingValue > 0 ? `${remainingValue.toLocaleString('vi-VN')} đ` : '0 đ (Đã giao đủ)'}
+                <span className={`font-bold ${remainingValue > 0 ? 'text-[#F85606]' : (trip.failedStops > 0 || failedCount > 0) && (trip.deliveredStops === 0 && deliveredCount === 0) ? 'text-red-600' : 'text-emerald-600'}`}>
+                  {remainingValue > 0
+                    ? `${remainingValue.toLocaleString('vi-VN')} đ`
+                    : (trip.failedStops > 0 || failedCount > 0)
+                      ? (trip.deliveredStops > 0 || deliveredCount > 0)
+                        ? `0 đ (Có ${trip.failedStops || failedCount} điểm giao không thành công)`
+                        : `0 đ (Giao không thành công - Đã hoàn kho)`
+                      : '0 đ (Đã giao đủ)'}
                 </span>
               </div>
             </div>

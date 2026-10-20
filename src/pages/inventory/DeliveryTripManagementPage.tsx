@@ -393,6 +393,16 @@ export const DeliveryTripManagementPage: React.FC = () => {
                                 <span className="text-[#F85606] font-semibold">
                                   Trên xe: {trip.valueOnRoad.toLocaleString('vi-VN')} đ
                                 </span>
+                              ) : trip.failedStops > 0 ? (
+                                trip.deliveredStops > 0 ? (
+                                  <span className="text-amber-700 font-semibold" title={`${trip.failedStops} điểm giao thất bại hoàn kho`}>
+                                    Giao {trip.deliveredStops}/{trip.totalStops} (⚠️ {trip.failedStops} hoàn kho)
+                                  </span>
+                                ) : (
+                                  <span className="text-red-600 font-semibold" title="Tất cả điểm giao không thành công và đã hoàn lại kho">
+                                    ⚠️ Giao không thành công
+                                  </span>
+                                )
                               ) : (
                                 <span className="text-emerald-700 font-semibold">
                                   ✓ Đã giao hết
@@ -409,10 +419,17 @@ export const DeliveryTripManagementPage: React.FC = () => {
                               Đang trên đường
                             </div>
                           </div>
-                        ) : percent === 100 ? (
+                        ) : percent === 100 && trip.failedStops === 0 ? (
                           <div>
                             <span className="inline-flex items-center gap-1 text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-xs">
                               ✓ Đã giao xong
+                            </span>
+                            <div className="text-[11px] text-gray-500 font-medium mt-0.5">Trên xe: 0 đ</div>
+                          </div>
+                        ) : trip.failedStops > 0 && trip.deliveredStops === 0 ? (
+                          <div>
+                            <span className="inline-flex items-center gap-1 text-red-800 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-200 text-xs">
+                              ⚠️ Giao không thành công
                             </span>
                             <div className="text-[11px] text-gray-500 font-medium mt-0.5">Trên xe: 0 đ</div>
                           </div>
