@@ -58,10 +58,10 @@ export const DeliveryTripCreatePage: React.FC = () => {
   // Drag & Drop State
   const [draggedOrder, setDraggedOrder] = useState<DeliveryTripStop | null>(null);
 
-  // Form Fields (AC2)
-  const [driverName, setDriverName] = useState<string>('Nguyễn Văn Mạnh');
-  const [driverPhone, setDriverPhone] = useState<string>('0912.334.556');
-  const [vehiclePlate, setVehiclePlate] = useState<string>('29C-912.45');
+  // Form Fields (AC2) - Để trống để người dùng tự nhập
+  const [driverName, setDriverName] = useState<string>('');
+  const [driverPhone, setDriverPhone] = useState<string>('');
+  const [vehiclePlate, setVehiclePlate] = useState<string>('');
   const [expectedReturnAt, setExpectedReturnAt] = useState<string>(() => {
     const d = new Date();
     d.setHours(d.getHours() + 5);
@@ -501,7 +501,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
               type="text"
               value={driverName}
               onChange={(e) => setDriverName(e.target.value)}
-              placeholder="Ví dụ: Nguyễn Văn Mạnh..."
+              placeholder="Nhập họ tên tài xế / người giao..."
               required
               className="w-full font-medium border border-gray-300 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none"
             />
@@ -517,7 +517,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
               type="text"
               value={driverPhone}
               onChange={(e) => setDriverPhone(e.target.value)}
-              placeholder="Ví dụ: 0912.334.556..."
+              placeholder="Nhập số điện thoại liên hệ..."
               className="w-full font-medium border border-gray-300 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none"
             />
           </div>
@@ -532,7 +532,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
               type="text"
               value={vehiclePlate}
               onChange={(e) => setVehiclePlate(e.target.value)}
-              placeholder="Ví dụ: 29C-912.45..."
+              placeholder="Nhập biển số xe (VD: 29C-123.45)..."
               className="w-full font-mono font-bold border border-gray-300 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none uppercase"
             />
           </div>
