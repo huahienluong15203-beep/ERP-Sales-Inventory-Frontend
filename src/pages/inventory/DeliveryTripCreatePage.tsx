@@ -210,7 +210,7 @@ export const DeliveryTripCreatePage: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-full mx-auto pb-12">
-      {/* Select Warehouse & Back Button Row */}
+      {/* Back Button Row */}
       <div className="flex items-center justify-between gap-4">
         <button
           type="button"
@@ -222,20 +222,6 @@ export const DeliveryTripCreatePage: React.FC = () => {
           <ArrowLeft className="w-4 h-4" />
           <span>Quay lại</span>
         </button>
-
-        <div className="w-full sm:w-72">
-          <select
-            value={warehouseId}
-            onChange={(e) => setWarehouseId(Number(e.target.value))}
-            className="w-full text-sm font-semibold border border-orange-200 rounded-xl px-4 py-2.5 bg-white text-gray-900 focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none shadow-xs cursor-pointer"
-          >
-            {allowedWarehouses.map((wh: WarehouseOption) => (
-              <option key={wh.id} value={wh.id}>
-                {wh.name}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
 
       {/* ========================================================================= */}

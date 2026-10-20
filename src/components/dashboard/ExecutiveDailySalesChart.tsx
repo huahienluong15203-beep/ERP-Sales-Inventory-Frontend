@@ -32,9 +32,7 @@ export const ExecutiveDailySalesChart: React.FC<ExecutiveDailySalesChartProps> =
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartInstanceRef = useRef<ChartJS | null>(null);
 
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const currentYear = new Date().getFullYear();
-  const years = [currentYear - 1, currentYear, currentYear + 1];
+
 
   const formatVnd = (amount: number) => {
     return (Number(amount) || 0).toLocaleString('vi-VN') + ' đ';
@@ -198,38 +196,24 @@ export const ExecutiveDailySalesChart: React.FC<ExecutiveDailySalesChartProps> =
 
         {/* BỘ LỌC NGÀY THÁNG TRÊN BIỂU ĐỒ (AC 2 & TEST FE) */}
         <div className="flex items-center gap-2">
-          {/* Chọn tháng */}
-          <div className="relative">
-            <select
-              id="daily-sales-month-select"
-              value={selectedMonth}
-              onChange={(e) => onMonthChange(Number(e.target.value))}
+          {/* Chọn tháng bằng lịch */}
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-xl hover:border-orange-300 transition">
+            <Calendar size={14} className="text-[#F85606] shrink-0" />
+            <input
+              type="month"
+              id="daily-sales-month-picker"
+              value={`${selectedYear}-${String(selectedMonth).padStart(2, '0')}`}
+              onChange={(e) => {
+                if (!e.target.value) return;
+                const [y, m] = e.target.value.split('-');
+                if (y && m) {
+                  onYearChange(Number(y));
+                  onMonthChange(Number(m));
+                }
+              }}
               disabled={loading}
-              className="px-3 py-1.5 pr-7 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 focus:bg-white focus:border-orange-500 focus:outline-none transition cursor-pointer"
-            >
-              {months.map((m) => (
-                <option key={m} value={m}>
-                  Tháng {m}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Chọn năm */}
-          <div className="relative">
-            <select
-              id="daily-sales-year-select"
-              value={selectedYear}
-              onChange={(e) => onYearChange(Number(e.target.value))}
-              disabled={loading}
-              className="px-3 py-1.5 pr-7 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 focus:bg-white focus:border-orange-500 focus:outline-none transition cursor-pointer"
-            >
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  Năm {y}
-                </option>
-              ))}
-            </select>
+              className="bg-transparent text-xs font-bold text-gray-800 outline-none cursor-pointer"
+            />
           </div>
 
           {onRefresh && (
