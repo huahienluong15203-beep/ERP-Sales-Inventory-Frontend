@@ -30,6 +30,7 @@ import type {
 import { PaymentReceiptModal } from '../../components/payment/PaymentReceiptModal';
 import { PaymentReceiptPrintModal } from '../../components/payment/PaymentReceiptPrintModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { useAuthImageSrc } from '../../hooks/useAuthImageSrc';
 
 export const PaymentReconciliationPage: React.FC = () => {
   const { user, showToast } = useAuth();
@@ -53,6 +54,8 @@ export const PaymentReconciliationPage: React.FC = () => {
 
   // Lightbox xem ảnh biên lai
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  // Ảnh biên lai lưu sau API có kiểm quyền -> tải bằng token rồi hiển thị
+  const previewImage = useAuthImageSrc(previewImageUrl);
 
   // Modal từ chối nhận tiền
   const [rejectingItem, setRejectingItem] = useState<PaymentReconciliationItem | null>(null);
@@ -498,11 +501,17 @@ export const PaymentReconciliationPage: React.FC = () => {
               </button>
             </div>
             <div className="p-4 flex items-center justify-center">
-              <img
-                src={previewImageUrl}
-                alt="Ảnh biên lai"
-                className="max-h-[75vh] w-auto object-contain rounded-lg shadow-md"
-              />
+              {previewImage.src ? (
+                <img
+                  src={previewImage.src}
+                  alt="Ảnh biên lai"
+                  className="max-h-[75vh] w-auto object-contain rounded-lg shadow-md"
+                />
+              ) : (
+                <span className="text-xs text-gray-400 py-10 px-6">
+                  {previewImage.error ? 'Không tải được ảnh biên lai.' : 'Đang tải ảnh biên lai...'}
+                </span>
+              )}
             </div>
           </div>
         </div>
