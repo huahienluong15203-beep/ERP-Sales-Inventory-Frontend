@@ -3,6 +3,7 @@ import { Printer, Download, X, Building, CheckCircle, FileText } from 'lucide-re
 import type { PaymentReceipt } from '../../types/payment';
 import { formatCurrencyVND } from '../../services/orderService';
 import { numberToVietnameseWords } from '../../utils/numberToVietnameseWords';
+import { useAuthImageSrc } from '../../hooks/useAuthImageSrc';
 
 interface PaymentReceiptPrintModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
 }) => {
   const printIframeRef = useRef<HTMLIFrameElement | null>(null);
   const [isFitPage, setIsFitPage] = useState<boolean>(true);
+  // Ảnh biên lai lưu sau API có kiểm quyền (/api/payments/{id}/image) -> tải bằng token thành Blob URL
+  const { src: receiptImageSrc } = useAuthImageSrc(isOpen ? receipt?.receiptImageUrl : null);
 
   // Dọn dẹp iframe khi unmount
   useEffect(() => {
@@ -92,11 +95,11 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
       `
         : '';
 
-    const receiptImageHtml = receipt.receiptImageUrl
+    const receiptImageHtml = receiptImageSrc
       ? `
         <div style="margin: 14px 0; padding: 10px; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px;">
           <div style="font-weight: bold; font-size: 11px; text-transform: uppercase; color: #374151; margin-bottom: 6px;">Ảnh biên lai thu tiền tại điểm bán:</div>
-          <img src="${receipt.receiptImageUrl}" alt="Biên lai" style="max-height: 180px; width: auto; border: 1px solid #e5e7eb; border-radius: 4px;" />
+          <img src="${escapeHtml(receiptImageSrc)}" alt="Biên lai" style="max-height: 180px; width: auto; border: 1px solid #e5e7eb; border-radius: 4px;" />
         </div>
       `
       : '';
@@ -643,11 +646,11 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
             )}
 
             {/* Ảnh biên lai nếu có */}
-            {receipt.receiptImageUrl && (
+            {receiptImageSrc && (
               <div className="mb-6 p-3 bg-gray-50 border border-gray-300 rounded-lg">
                 <p className="font-bold text-xs uppercase text-gray-700 mb-2">Ảnh biên lai thu tiền tại điểm bán:</p>
                 <img
-                  src={receipt.receiptImageUrl}
+                  src={receiptImageSrc}
                   alt="Biên lai"
                   className="max-h-48 w-auto rounded border border-gray-200 shadow-xs"
                 />

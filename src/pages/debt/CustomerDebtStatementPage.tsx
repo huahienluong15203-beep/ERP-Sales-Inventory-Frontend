@@ -314,7 +314,7 @@ export const CustomerDebtStatementPage: React.FC = () => {
             <span>II. Phát sinh Nợ (Mua hàng)</span>
           </span>
           <div className="text-xl sm:text-2xl font-black text-[#F85606] font-mono">
-            +{formatCurrencyVND(statement?.totalDebit || 0)}
+            {(statement?.totalDebit || 0) > 0 ? '+' : ''}{formatCurrencyVND(statement?.totalDebit || 0)}
           </div>
           <div className="text-[11px] text-orange-900">
             Tổng giá trị đơn hàng / hoá đơn phát sinh
@@ -328,7 +328,7 @@ export const CustomerDebtStatementPage: React.FC = () => {
             <span>III. Phát sinh Có (Đã trả & Giảm trừ)</span>
           </span>
           <div className="text-xl sm:text-2xl font-black text-emerald-700 font-mono">
-            -{formatCurrencyVND(statement?.totalCredit || 0)}
+            {(statement?.totalCredit || 0) > 0 ? '-' : ''}{formatCurrencyVND(statement?.totalCredit || 0)}
           </div>
           <div className="text-[11px] text-emerald-900">
             Đại lý thanh toán hoặc chứng từ giảm trừ

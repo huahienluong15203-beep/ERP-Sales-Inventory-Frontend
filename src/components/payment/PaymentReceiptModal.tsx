@@ -95,19 +95,45 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   const [isRouteCashMode, setIsRouteCashMode] = useState<boolean>(isSalesRep);
   const [receiptImage, setReceiptImage] = useState<string>('');
 
+  // S7-05: Thu nhỏ ảnh chụp (tối đa 1600px, JPEG) trước khi gửi để phiếu thu lưu nhanh, không nặng đường truyền
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
+    input.value = '';
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setValidationError('Kích thước ảnh biên lai không được vượt quá 5MB');
+    if (!file.type.startsWith('image/')) {
+      setValidationError('Vui lòng chọn tệp ảnh (JPG, PNG) cho biên lai');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      setReceiptImage(String(uploadEvent.target?.result || ''));
+    if (file.size > 15 * 1024 * 1024) {
+      setValidationError('Ảnh biên lai quá lớn (tối đa 15MB trước khi thu nhỏ)');
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const MAX_SIDE = 1600;
+      const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      const ctx = canvas.getContext('2d');
+      URL.revokeObjectURL(objectUrl);
+      if (!ctx) {
+        setValidationError('Trình duyệt không xử lý được ảnh, vui lòng thử ảnh khác');
+        return;
+      }
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      setReceiptImage(canvas.toDataURL('image/jpeg', 0.8));
       setValidationError(null);
     };
-    reader.readAsDataURL(file);
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      setValidationError('Không đọc được ảnh này (có thể là định dạng HEIC). Vui lòng chọn ảnh JPG hoặc PNG');
+    };
+    img.src = objectUrl;
   };
 
   // Modal in phiếu thu sau khi lưu thành công
@@ -225,7 +251,10 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
     const unpaid = [...invoices]
       .filter((i) => i.remainingAmount > 0)
-      .sort((a, b) => (a.invoiceDate > b.invoiceDate ? 1 : -1));
+      // Cũ nhất trước; cùng ngày thì hoá đơn lập trước (id nhỏ) trước - khớp thứ tự backend cấn trừ
+      .sort((a, b) =>
+        a.invoiceDate === b.invoiceDate ? Number(a.id) - Number(b.id) : a.invoiceDate > b.invoiceDate ? 1 : -1
+      );
 
     let moneyLeft = amount;
     return unpaid.map((inv) => {
@@ -334,6 +363,12 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
       setValidationError(
         `Số tiền thu (${formatCurrencyVND(amount)}) không được vượt quá tổng công nợ còn lại của đại lý (${formatCurrencyVND(totalRemainingDebt)})`
       );
+      return;
+    }
+
+    // S7-05: Thu tiền tại cửa hàng bắt buộc kèm ảnh biên lai
+    if (isRouteCashMode && !receiptImage) {
+      setValidationError('Vui lòng chụp hoặc chọn ảnh biên lai thu tiền tại cửa hàng');
       return;
     }
 
