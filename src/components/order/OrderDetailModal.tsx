@@ -17,7 +17,6 @@ import {
   RefreshCw,
   RotateCcw,
   History,
-  Ban,
   Printer,
   Truck,
   CheckCheck,
@@ -29,7 +28,6 @@ import { useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
 import { OrderApprovalActionModal, type ApprovalActionType } from './OrderApprovalActionModal';
 import { OrderLifecycleTimeline } from './OrderLifecycleTimeline';
-import { OrderCancelModal } from './OrderCancelModal';
 import { OrderPdfPreviewModal } from './OrderPdfPreviewModal';
 
 interface OrderDetailModalProps {
@@ -51,7 +49,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
     isOpen: boolean;
     actionType: ApprovalActionType;
   }>({ isOpen: false, actionType: 'APPROVE' });
-  const [isCancelModalOpen, setIsCancelModalOpen] = useState<boolean>(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
   const [updatingStatus, setUpdatingStatus] = useState<boolean>(false);
 
@@ -701,23 +698,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
           </div>
 
           <div className="flex items-center gap-2">
-            {activeOrder &&
-              !['CANCELLED', 'REJECTED', 'CLOSED', 'DISPATCHED', 'DELIVERED'].includes(activeOrder.status) &&
-              // Đại lý chỉ tự huỷ được đơn Chờ duyệt / Nháp (khớp quy tắc ở server); kho, kế toán không huỷ đơn
-              (currentRole === 'ROLE_CUSTOMER'
-                ? ['PENDING_APPROVAL', 'DRAFT'].includes(activeOrder.status)
-                : ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP'].includes(currentRole ?? '')) && (
-              <button
-                type="button"
-                onClick={() => setIsCancelModalOpen(true)}
-                className="px-3.5 py-2 rounded-xl border border-rose-300 text-rose-700 hover:bg-rose-50 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
-                title="Hủy đơn hàng"
-              >
-                <Ban size={14} />
-                <span>Hủy đơn</span>
-              </button>
-            )}
-
             {activeOrder && (
               <button
                 type="button"
@@ -763,17 +743,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isO
           order={activeOrder}
           actionType={approvalModalState.actionType}
           onClose={() => setApprovalModalState((s) => ({ ...s, isOpen: false }))}
-          onSuccess={() => {
-            if (orderId) loadOrderDetailAndHistory(orderId);
-            if (onOrderUpdated) onOrderUpdated();
-          }}
-        />
-
-        {/* Modal hủy đơn hàng bắt buộc nhập lý do (S4-06) */}
-        <OrderCancelModal
-          isOpen={isCancelModalOpen}
-          order={activeOrder}
-          onClose={() => setIsCancelModalOpen(false)}
           onSuccess={() => {
             if (orderId) loadOrderDetailAndHistory(orderId);
             if (onOrderUpdated) onOrderUpdated();

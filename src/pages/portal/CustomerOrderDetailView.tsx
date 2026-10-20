@@ -504,9 +504,8 @@ export const CustomerOrderDetailView: React.FC<CustomerOrderDetailViewProps> = (
                     order.lines.map((line, index) => (
                       <tr
                         key={line.id || index}
-                        className={`hover:bg-orange-50/30 transition-colors ${
-                          line.isShortage ? 'bg-amber-50/40' : ''
-                        }`}
+                        className={`hover:bg-orange-50/30 transition-colors ${line.isShortage ? 'bg-amber-50/40' : ''
+                          }`}
                       >
                         <td className="py-3.5 px-4 text-center text-gray-400 font-medium">
                           {line.lineNo || index + 1}
@@ -632,15 +631,14 @@ export const CustomerOrderDetailView: React.FC<CustomerOrderDetailViewProps> = (
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
-                          className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold ${
-                            item.action === 'APPROVE'
-                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                              : item.action === 'REJECT'
+                          className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold ${item.action === 'APPROVE'
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : item.action === 'REJECT'
                               ? 'bg-rose-100 text-rose-800 border border-rose-200'
                               : item.action === 'RETURN'
-                              ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                              : 'bg-blue-100 text-blue-800 border border-blue-200'
-                          }`}
+                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                : 'bg-blue-100 text-blue-800 border border-blue-200'
+                            }`}
                         >
                           {item.actionLabel || item.action}
                         </span>
@@ -665,38 +663,23 @@ export const CustomerOrderDetailView: React.FC<CustomerOrderDetailViewProps> = (
           </div>
 
           {/* FOOTER ACTION BAR */}
-          <div className="bg-white rounded-3xl border border-gray-200 p-4 sm:p-5 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={onBack}
-              className="px-4 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-700 font-bold text-xs inline-flex items-center gap-2 transition cursor-pointer active:scale-95"
-            >
-              <ArrowLeft size={15} />
-              <span>Quay lại danh sách đơn hàng</span>
-            </button>
 
-            <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-2">
+
+
+            {canReorder && onReorder && order.id != null && (
               <button
                 type="button"
-                onClick={() => setIsPdfModalOpen(true)}
-                className="px-4 py-2.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer shadow-2xs active:scale-95"
+                onClick={() => onReorder(order.id!)}
+                className="px-5 py-2.5 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer active:scale-95"
               >
-                <Printer size={15} />
-                <span>In / Xuất PDF</span>
+                <RotateCcw size={15} />
+                <span>Mua lại đơn hàng này</span>
               </button>
-
-              {canReorder && onReorder && order.id != null && (
-                <button
-                  type="button"
-                  onClick={() => onReorder(order.id!)}
-                  className="px-5 py-2.5 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer active:scale-95"
-                >
-                  <RotateCcw size={15} />
-                  <span>Mua lại đơn hàng này</span>
-                </button>
-              )}
-            </div>
+            )}
           </div>
+
         </div>
       )}
 
