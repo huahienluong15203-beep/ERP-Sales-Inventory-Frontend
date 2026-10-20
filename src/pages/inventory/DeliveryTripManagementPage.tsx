@@ -105,9 +105,9 @@ export const DeliveryTripManagementPage: React.FC = () => {
         {isWarehouseStaff && (
           <button
             onClick={() => navigate('/inventory/delivery-trips/create')}
-            className="px-6 py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center gap-3 text-base cursor-pointer"
+            className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-xl shadow-xs transition-all flex items-center gap-2 text-xs sm:text-sm cursor-pointer"
           >
-            <Plus className="w-6 h-6 stroke-[2.5]" />
+            <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Lập chuyến giao mới</span>
           </button>
         )}
@@ -115,44 +115,44 @@ export const DeliveryTripManagementPage: React.FC = () => {
 
       {/* KPI Stats Bar (3 thẻ: Trễ hạn, Đơn hàng đang giao, Giá trị hàng trên xe) */}
       {summary && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 md:gap-6">
-          <div className="bg-white p-6 rounded-2xl border-2 border-red-100 shadow-sm flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-base font-bold text-red-600">Chuyến trễ hạn</p>
-              <p className="text-3xl md:text-4xl font-black text-red-600">{summary.overdueTrips} chuyến</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+          <div className="bg-white p-4 rounded-xl border border-red-100 shadow-xs flex items-center justify-between">
+            <div className="space-y-0.5">
+              <p className="text-xs font-bold text-red-600">Chuyến trễ hạn</p>
+              <p className="text-xl md:text-2xl font-black text-red-600">{summary.overdueTrips} chuyến</p>
             </div>
-            <div className="p-4 bg-red-50 text-red-600 rounded-2xl">
-              <AlertTriangle className="w-8 h-8" />
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl border-2 border-orange-100 shadow-sm flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-base font-bold text-orange-600">Đơn hàng đang giao</p>
-              <p className="text-3xl md:text-4xl font-black text-gray-900">{summary.ordersOnRoad} đơn</p>
-            </div>
-            <div className="p-4 bg-orange-50 text-orange-600 rounded-2xl">
-              <Package className="w-8 h-8" />
+            <div className="p-2.5 bg-red-50 text-red-600 rounded-xl">
+              <AlertTriangle className="w-5 h-5" />
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border-2 border-emerald-100 shadow-sm flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-base font-bold text-emerald-700">Giá trị hàng trên xe</p>
-              <p className="text-2xl md:text-3xl font-black text-emerald-700">
+          <div className="bg-white p-4 rounded-xl border border-orange-100 shadow-xs flex items-center justify-between">
+            <div className="space-y-0.5">
+              <p className="text-xs font-bold text-orange-600">Đơn hàng đang giao</p>
+              <p className="text-xl md:text-2xl font-black text-gray-900">{summary.ordersOnRoad} đơn</p>
+            </div>
+            <div className="p-2.5 bg-orange-50 text-orange-600 rounded-xl">
+              <Package className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl border border-emerald-100 shadow-xs flex items-center justify-between">
+            <div className="space-y-0.5">
+              <p className="text-xs font-bold text-emerald-700">Giá trị hàng trên xe</p>
+              <p className="text-lg md:text-xl font-black text-emerald-700">
                 {summary.valueOnRoad.toLocaleString('vi-VN')} đ
               </p>
             </div>
-            <div className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl">
-              <Clock className="w-8 h-8" />
+            <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
+              <Clock className="w-5 h-5" />
             </div>
           </div>
         </div>
       )}
 
       {/* Filter and Tabs */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-5">
-        <div className="flex flex-wrap gap-3 border-b border-gray-200 pb-5">
+      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-xs space-y-3">
+        <div className="flex flex-wrap gap-2 border-b border-gray-100 pb-3">
           {[
             { key: 'ALL', label: 'Tất cả chuyến xe' },
             { key: 'IN_PROGRESS', label: 'Đang lưu thông' },
@@ -161,9 +161,9 @@ export const DeliveryTripManagementPage: React.FC = () => {
             <button
               key={tab.key}
               onClick={() => setStatusFilter(tab.key)}
-              className={`px-5 py-3 text-base font-bold rounded-xl transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                 statusFilter === tab.key
-                  ? 'bg-[#F85606] text-white font-extrabold shadow-md'
+                  ? 'bg-[#F85606] text-white font-extrabold shadow-2xs'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -172,12 +172,12 @@ export const DeliveryTripManagementPage: React.FC = () => {
           ))}
         </div>
 
-        <div className="flex flex-wrap gap-4 items-center justify-between">
-          <div className="w-full sm:w-80">
+        <div className="flex flex-wrap gap-3 items-center justify-between">
+          <div className="w-full sm:w-72">
             <select
               value={warehouseId ?? ''}
               onChange={(e) => setWarehouseId(e.target.value ? Number(e.target.value) : undefined)}
-              className="w-full text-base font-bold border-2 border-gray-300 rounded-xl px-4 py-3 bg-white focus:ring-2 focus:ring-orange-200 focus:border-[#F85606] outline-none shadow-sm cursor-pointer"
+              className="w-full text-xs font-medium border border-gray-200 rounded-lg px-3 py-2 bg-white focus:ring-1 focus:ring-orange-200 focus:border-[#F85606] outline-none shadow-2xs cursor-pointer"
             >
               {allowedWarehouses.length > 1 && (
                 <option value="">🏢 Tất cả kho phụ trách</option>
@@ -190,50 +190,50 @@ export const DeliveryTripManagementPage: React.FC = () => {
             </select>
           </div>
 
-          <div className="text-base text-gray-700 font-semibold">
-            Có <strong className="text-gray-900 text-lg font-black">{summary?.unassignedDispatchedOrders || 0}</strong> đơn đã xuất kho đang chờ lập chuyến
+          <div className="text-xs text-gray-600 font-medium">
+            Có <strong className="text-gray-900 font-bold">{summary?.unassignedDispatchedOrders || 0}</strong> đơn đã xuất kho đang chờ lập chuyến
           </div>
         </div>
       </div>
 
       {/* Main Table */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
         {loading ? (
-          <div className="p-20 text-center text-gray-500 space-y-4">
-            <RefreshCw className="w-12 h-12 animate-spin mx-auto text-[#F85606]" />
-            <p className="text-lg font-bold">Đang tải danh sách chuyến giao hàng...</p>
+          <div className="p-16 text-center text-gray-500 space-y-3">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto text-[#F85606]" />
+            <p className="text-xs font-bold">Đang tải danh sách chuyến giao hàng...</p>
           </div>
         ) : trips.length === 0 ? (
-          <div className="p-20 text-center space-y-5">
-            <Truck className="w-20 h-20 text-gray-300 mx-auto" />
-            <p className="text-xl font-black text-gray-800">Chưa có chuyến giao hàng nào</p>
-            <p className="text-base text-gray-500 max-w-lg mx-auto">
+          <div className="p-16 text-center space-y-3">
+            <Truck className="w-12 h-12 text-gray-300 mx-auto" />
+            <p className="text-sm font-black text-gray-800">Chưa có chuyến giao hàng nào</p>
+            <p className="text-xs text-gray-500 max-w-md mx-auto">
               Quản lý kho có thể gom các đơn đã xuất kho thành các chuyến giao theo từng khu vực để xe chạy vòng quanh.
             </p>
             {isWarehouseStaff && (
               <button
                 onClick={() => navigate('/inventory/delivery-trips/create')}
-                className="mt-4 px-6 py-3.5 bg-[#F85606] hover:bg-[#E04D05] text-white text-base font-extrabold rounded-xl shadow-md transition-all inline-flex items-center gap-2 cursor-pointer"
+                className="mt-2 px-4 py-2 bg-[#F85606] hover:bg-[#E04D05] text-white text-xs font-bold rounded-lg shadow-xs transition-all inline-flex items-center gap-1.5 cursor-pointer"
               >
-                <Plus className="w-5 h-5 stroke-[2.5]" />
+                <Plus className="w-4 h-4 stroke-[2.5]" />
                 Lập chuyến đầu tiên
               </button>
             )}
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-gray-100/90 border-b-2 border-gray-200 text-gray-900 font-extrabold uppercase text-sm tracking-wider">
-                  <th className="py-4.5 px-6">Mã chuyến</th>
-                  <th className="py-4.5 px-6">Kho xuất phát</th>
-                  <th className="py-4.5 px-6 text-center">Tiến độ điểm giao</th>
-                  <th className="py-4.5 px-6 text-right">Tiền hàng / Trên xe</th>
-                  <th className="py-4.5 px-6">Thời gian</th>
-                  <th className="py-4.5 px-6 text-center">Trạng thái</th>
+                <tr className="bg-gray-50/90 border-b border-gray-200 text-gray-700 font-bold uppercase text-[10px] tracking-wider">
+                  <th className="py-3 px-4">Mã chuyến</th>
+                  <th className="py-3 px-4">Kho xuất phát</th>
+                  <th className="py-3 px-4 text-center">Tiến độ điểm giao</th>
+                  <th className="py-3 px-4 text-right">Tiền hàng / Trên xe</th>
+                  <th className="py-3 px-4">Thời gian</th>
+                  <th className="py-3 px-4 text-center">Trạng thái</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-100">
                 {trips.map((trip) => {
                   const percent =
                     trip.totalStops > 0 ? Math.round((trip.deliveredStops / trip.totalStops) * 100) : 0;
@@ -241,47 +241,47 @@ export const DeliveryTripManagementPage: React.FC = () => {
                     <tr
                       key={trip.id}
                       onClick={() => navigate(`/inventory/delivery-trips/${trip.id}`)}
-                      className="hover:bg-orange-50/50 transition-colors cursor-pointer group"
+                      className="hover:bg-orange-50/40 transition-colors cursor-pointer group"
                       title="Nhấn vào dòng để xem chi tiết chuyến giao hàng"
                     >
-                      <td className="py-5 px-6 font-mono font-black text-gray-900 text-base">
-                        <div className="group-hover:text-[#F85606] flex items-center gap-2.5 transition-colors">
-                          <Truck className="w-5 h-5 text-[#F85606] shrink-0" />
+                      <td className="py-3.5 px-4 font-mono font-bold text-gray-900 text-xs">
+                        <div className="group-hover:text-[#F85606] flex items-center gap-2 transition-colors">
+                          <Truck className="w-4 h-4 text-[#F85606] shrink-0" />
                           <span>{trip.code}</span>
                         </div>
                       </td>
-                      <td className="py-5 px-6 font-bold text-gray-900 text-base">
+                      <td className="py-3.5 px-4 font-semibold text-gray-900 text-xs">
                         {trip.warehouseName}
                       </td>
-                      <td className="py-5 px-6 text-center w-64">
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="font-bold text-gray-900">
+                      <td className="py-3.5 px-4 text-center w-56">
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-xs">
+                            <span className="font-semibold text-gray-900">
                               {trip.deliveredStops}/{trip.totalStops} điểm
                             </span>
-                            <span className="font-extrabold text-[#F85606]">{percent}%</span>
+                            <span className="font-bold text-[#F85606]">{percent}%</span>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                             <div
-                              className="bg-[#F85606] h-3 rounded-full transition-all"
+                              className="bg-[#F85606] h-2 rounded-full transition-all"
                               style={{ width: `${percent}%` }}
                             />
                           </div>
                         </div>
                       </td>
-                      <td className="py-5 px-6 text-right">
+                      <td className="py-3.5 px-4 text-right">
                         {trip.totalValue && trip.totalValue > 0 ? (
                           <div>
-                            <div className="font-mono font-black text-gray-900 text-base md:text-lg">
+                            <div className="font-mono font-bold text-gray-900 text-xs sm:text-sm">
                               {trip.totalValue.toLocaleString('vi-VN')} đ
                             </div>
-                            <div className="text-sm mt-1">
+                            <div className="text-[11px] mt-0.5">
                               {trip.valueOnRoad > 0 ? (
-                                <span className="text-[#F85606] font-bold">
+                                <span className="text-[#F85606] font-semibold">
                                   Trên xe: {trip.valueOnRoad.toLocaleString('vi-VN')} đ
                                 </span>
                               ) : (
-                                <span className="text-emerald-700 font-bold">
+                                <span className="text-emerald-700 font-semibold">
                                   ✓ Đã giao hết
                                 </span>
                               )}
@@ -289,27 +289,27 @@ export const DeliveryTripManagementPage: React.FC = () => {
                           </div>
                         ) : trip.valueOnRoad > 0 ? (
                           <div>
-                            <div className="font-mono font-black text-gray-900 text-base md:text-lg">
+                            <div className="font-mono font-bold text-gray-900 text-xs sm:text-sm">
                               {trip.valueOnRoad.toLocaleString('vi-VN')} đ
                             </div>
-                            <div className="text-sm text-orange-600 font-bold mt-1">
+                            <div className="text-[11px] text-orange-600 font-semibold mt-0.5">
                               Đang trên đường
                             </div>
                           </div>
                         ) : percent === 100 ? (
                           <div>
-                            <span className="inline-flex items-center gap-1.5 text-emerald-800 font-bold bg-emerald-100/80 px-3 py-1 rounded-lg border border-emerald-300 text-sm">
+                            <span className="inline-flex items-center gap-1 text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-xs">
                               ✓ Đã giao xong
                             </span>
-                            <div className="text-sm text-gray-500 font-medium mt-1">Trên xe: 0 đ</div>
+                            <div className="text-[11px] text-gray-500 font-medium mt-0.5">Trên xe: 0 đ</div>
                           </div>
                         ) : (
-                          <span className="font-mono text-gray-500 font-bold text-base">0 đ</span>
+                          <span className="font-mono text-gray-500 font-semibold text-xs">0 đ</span>
                         )}
                       </td>
-                      <td className="py-5 px-6 text-sm whitespace-nowrap">
-                        <div className="font-medium text-gray-800 leading-relaxed">
-                          <span className="text-gray-500 font-semibold">Xuất: </span>
+                      <td className="py-3.5 px-4 text-xs whitespace-nowrap">
+                        <div className="font-medium text-gray-800 leading-normal">
+                          <span className="text-gray-500 font-normal">Xuất: </span>
                           <span className="font-mono font-bold text-gray-900">
                             {trip.departedAt ? (
                               `${new Date(trip.departedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ${new Date(trip.departedAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
@@ -318,10 +318,10 @@ export const DeliveryTripManagementPage: React.FC = () => {
                             )}
                           </span>
                         </div>
-                        <div className="mt-1 font-medium leading-relaxed">
+                        <div className="mt-0.5 font-medium leading-normal">
                           {trip.completedAt ? (
                             <div className="text-emerald-800">
-                              <span className="text-gray-500 font-semibold">Về: </span>
+                              <span className="text-gray-500 font-normal">Về: </span>
                               <span className="font-mono font-bold">
                                 {new Date(trip.completedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}{' '}
                                 {new Date(trip.completedAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
@@ -329,7 +329,7 @@ export const DeliveryTripManagementPage: React.FC = () => {
                             </div>
                           ) : (
                             <div className="text-gray-700">
-                              <span className="text-gray-500 font-semibold">Dự kiến: </span>
+                              <span className="text-gray-500 font-normal">Dự kiến: </span>
                               <span className="font-mono font-bold">
                                 {new Date(trip.expectedReturnAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}{' '}
                                 {new Date(trip.expectedReturnAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
@@ -338,20 +338,20 @@ export const DeliveryTripManagementPage: React.FC = () => {
                           )}
                         </div>
                         {trip.overdue && !trip.completedAt && (
-                          <span className="inline-block mt-1.5 px-2.5 py-1 rounded-lg bg-red-100 text-red-700 font-black text-xs">
+                          <span className="inline-block mt-1 px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold text-[10px]">
                             {formatOverdueTime(trip.overdueMinutes)}
                           </span>
                         )}
                       </td>
-                      <td className="py-5 px-6 text-center">
+                      <td className="py-3.5 px-4 text-center">
                         {trip.status === 'IN_PROGRESS' ? (
-                          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-extrabold bg-amber-50 text-amber-800 border-2 border-amber-200">
-                            <Clock className="w-4 h-4 text-amber-600" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                            <Clock className="w-3.5 h-3.5 text-amber-600" />
                             Đang lưu thông
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-extrabold bg-emerald-50 text-emerald-800 border-2 border-emerald-200">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                             Đã về kho
                           </span>
                         )}

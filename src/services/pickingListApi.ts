@@ -779,3 +779,68 @@ export async function cancelPickingList(id: number, reason: string): Promise<Pic
   saveStoredLists(lists);
   return { ...list };
 }
+
+/**
+ * 10. Cập nhật tiến độ hàng loạt cho nhiều dòng hàng (AC3 & S6-03)
+ */
+export async function updateBatchProgress(
+  listId: number,
+  items: Array<{
+    itemId: number;
+    pickedQuantity: number;
+    isPicked: boolean;
+    shortageReason?: string | null;
+    actualBatchNumber?: string | null;
+    lotChangeReason?: string | null;
+  }>,
+  completeIfAllPicked?: boolean
+): Promise<PickingList> {
+  try {
+    const res = await authFetch(`${PICKING_LIST_API_BASE}/${listId}/progress`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items,
+        completeIfAllPicked: completeIfAllPicked || false
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const mapped = mapBackendPickingList(data);
+      const lists = getStoredLists();
+      const idx = lists.findIndex((l) => l.id === listId);
+      if (idx >= 0) lists[idx] = mapped;
+      saveStoredLists(lists);
+      return mapped;
+    }
+  } catch (err) {
+    console.warn('Backend update batch progress failed, updating locally:', err);
+  }
+
+  // Local fallback
+  const lists = getStoredLists();
+  const list = lists.find((l) => l.id === listId);
+  if (!list) throw new Error('Không tìm thấy phiếu');
+
+  items.forEach((update) => {
+    const it = list.items.find((i) => i.id === update.itemId);
+    if (it) {
+      it.pickedQuantity = update.pickedQuantity;
+      it.isCompleted = update.isPicked;
+      if (update.actualBatchNumber !== undefined) it.actualBatchNumber = update.actualBatchNumber || undefined;
+      if (update.shortageReason !== undefined) it.discrepancyReason = update.shortageReason || undefined;
+    }
+  });
+
+  list.completedItems = list.items.filter((i) => i.isCompleted).length;
+  if (completeIfAllPicked && list.completedItems === list.items.length) {
+    list.status = 'COMPLETED';
+  } else if (list.status === 'ASSIGNED') {
+    list.status = 'IN_PROGRESS';
+  }
+  list.updatedAt = new Date().toISOString();
+
+  saveStoredLists(lists);
+  return { ...list };
+}
+

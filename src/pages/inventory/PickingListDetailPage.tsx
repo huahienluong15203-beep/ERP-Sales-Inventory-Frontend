@@ -2,18 +2,13 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Printer,
-  Smartphone,
-  Laptop,
   CheckCircle2,
   AlertTriangle,
   Layers,
-  Plus,
-  Minus,
   Check,
   RefreshCw,
   Truck,
   Package,
-  Compass,
   MapPin
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -22,6 +17,7 @@ import type { PickingList, PickingListItem } from '../../types/pickingList';
 import {
   fetchPickingListById,
   updateItemProgress,
+  updateBatchProgress,
   completePickingList
 } from '../../services/pickingListApi';
 import { updateOrderStatus } from '../../services/orderService';
@@ -92,17 +88,8 @@ export const PickingListDetailPage: React.FC = () => {
   const [pickingList, setPickingList] = useState<PickingList | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // View Mode: Desktop table vs Mobile Picking Touch Interface
-  const [isMobileMode, setIsMobileMode] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const isMobileQuery = window.location.search.includes('mode=mobile');
-      return isMobileQuery || window.innerWidth < 768;
-    }
-    return false;
-  });
-
-  // Mobile filter: All, Pending, Completed
-  const [mobileFilter, setMobileFilter] = useState<'ALL' | 'PENDING' | 'DONE'>('ALL');
+  // Giá trị nhập tay tạm thời cho từng dòng hàng (hỗ trợ nhập số tự do, không âm)
+  const [inputValues, setInputValues] = useState<Record<number, string>>({});
 
   // Discrepancy Reason Modal State
   const [discrepancyTargetItem, setDiscrepancyTargetItem] = useState<{
@@ -136,10 +123,23 @@ export const PickingListDetailPage: React.FC = () => {
     loadData();
   }, [id]);
 
+  // Đồng bộ giá trị ô nhập số lượng từ pickingList
+  useEffect(() => {
+    if (pickingList?.items) {
+      const initial: Record<number, string> = {};
+      pickingList.items.forEach((item) => {
+        initial[item.id] = String(item.pickedQuantity ?? 0);
+      });
+      setInputValues(initial);
+    }
+  }, [pickingList?.items]);
+
   // Cập nhật số lượng thực soạn
   const handleQuantityChange = async (item: PickingListItem, newQty: number) => {
     if (!pickingList || pickingList.status === 'COMPLETED' || pickingList.status === 'CANCELLED') return;
     const validQty = Math.max(0, Math.min(item.requiredQuantity, newQty));
+
+    setInputValues((prev) => ({ ...prev, [item.id]: String(validQty) }));
 
     // Nếu soạn đủ số lượng yêu cầu -> Tự động đánh dấu hoàn thành
     if (validQty === item.requiredQuantity) {
@@ -148,8 +148,49 @@ export const PickingListDetailPage: React.FC = () => {
     }
 
     // Nếu số lượng nhỏ hơn yêu cầu -> Cập nhật số lượng thực soạn, chưa đánh dấu xong
-    // (Chỉ bật Modal khi thủ kho bấm tick Hoàn thành hoặc bấm Báo thiếu)
     await saveItemUpdate(item.id, validQty, false, item.discrepancyReason);
+  };
+
+  // Nhập tự do số (chỉ nhận số nguyên không âm)
+  const handleInputChange = (item: PickingListItem, rawVal: string) => {
+    const digitsOnly = rawVal.replace(/\D/g, '');
+    setInputValues((prev) => ({ ...prev, [item.id]: digitsOnly }));
+  };
+
+  // Xử lý khi blur khỏi ô nhập
+  const handleInputBlur = (item: PickingListItem) => {
+    const currentVal = inputValues[item.id] ?? '';
+    let parsed = currentVal === '' ? 0 : parseInt(currentVal, 10);
+    if (isNaN(parsed) || parsed < 0) parsed = 0;
+    if (parsed > item.requiredQuantity) parsed = item.requiredQuantity;
+    setInputValues((prev) => ({ ...prev, [item.id]: String(parsed) }));
+    if (parsed !== item.pickedQuantity) {
+      handleQuantityChange(item, parsed);
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+
+  // Nút tăng/giảm: khi đang ở 0 bấm + sẽ nhảy lên 1, không âm
+  const handleStepQuantity = (item: PickingListItem, step: number) => {
+    const currentValStr = inputValues[item.id];
+    const current = currentValStr !== undefined && currentValStr !== ''
+      ? parseInt(currentValStr, 10)
+      : (item.pickedQuantity || 0);
+
+    let next: number;
+    if (step > 0) {
+      next = current <= 0 ? 1 : Math.min(item.requiredQuantity, current + step);
+    } else {
+      next = Math.max(0, current + step);
+    }
+
+    setInputValues((prev) => ({ ...prev, [item.id]: String(next) }));
+    handleQuantityChange(item, next);
   };
 
   // Toggle tick hoàn thành cho một dòng hàng (Checkbox di động AC5)
@@ -176,11 +217,7 @@ export const PickingListDetailPage: React.FC = () => {
     }
   };
 
-  // Nút nhanh: "Soạn đủ" (Quick Match: Đặt pickedQuantity = requiredQuantity và tick xong)
-  const handleQuickMatch = async (item: PickingListItem) => {
-    if (!pickingList || pickingList.status === 'COMPLETED' || pickingList.status === 'CANCELLED') return;
-    await saveItemUpdate(item.id, item.requiredQuantity, true, null);
-  };
+
 
   // Lưu cập nhật item vào backend
   const saveItemUpdate = async (
@@ -350,11 +387,41 @@ export const PickingListDetailPage: React.FC = () => {
   }
 
   const sortedItems = [...pickingList.items].sort((a, b) => (a.routeSequence || 0) - (b.routeSequence || 0));
-  const filteredItems = sortedItems.filter((i) => {
-    if (mobileFilter === 'PENDING') return !i.isCompleted;
-    if (mobileFilter === 'DONE') return i.isCompleted;
-    return true;
-  });
+
+  // Tích chọn / bỏ chọn tất cả các dòng soạn hàng
+  const handleToggleAllCompleted = async () => {
+    if (!pickingList || isReadOnly || !isWarehouseStaff) return;
+    const allCompleted = sortedItems.length > 0 && sortedItems.every((i) => i.isCompleted);
+    const targetCompleted = !allCompleted;
+
+    try {
+      const itemsPayload = sortedItems.map((item) => ({
+        itemId: item.id,
+        pickedQuantity: targetCompleted ? item.requiredQuantity : 0,
+        isPicked: targetCompleted,
+        shortageReason: null,
+        actualBatchNumber: item.actualBatchNumber || item.suggestedBatchNumber || null,
+        lotChangeReason: item.lotChangeReason || null
+      }));
+
+      const updated = await updateBatchProgress(pickingList.id, itemsPayload, false);
+      setPickingList(updated);
+
+      const nextInputValues: Record<number, string> = {};
+      updated.items.forEach((item) => {
+        nextInputValues[item.id] = String(item.pickedQuantity);
+      });
+      setInputValues(nextInputValues);
+
+      showToast(
+        'Thành công',
+        targetCompleted ? 'Đã tích hoàn thành tất cả mặt hàng' : 'Đã bỏ chọn tất cả mặt hàng',
+        'success'
+      );
+    } catch (err: any) {
+      showToast('Lỗi thao tác', err.message || 'Không thể cập nhật danh sách', 'error');
+    }
+  };
 
   const percent = pickingList.totalItems > 0 ? Math.round((pickingList.completedItems / pickingList.totalItems) * 100) : 0;
   const isReadOnly = pickingList.status === 'COMPLETED' || pickingList.status === 'CANCELLED';
@@ -401,34 +468,8 @@ export const PickingListDetailPage: React.FC = () => {
           </span>
         </div>
 
-        {/* View mode toggle & Print button */}
+        {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          {/* Switch giữa Máy tính và Di động */}
-          <div className="bg-white border border-gray-200 p-0.5 rounded-xl flex items-center shadow-2xs">
-            <button
-              type="button"
-              onClick={() => setIsMobileMode(false)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-                !isMobileMode ? 'bg-orange-50 text-[#F85606] font-bold shadow-2xs' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Laptop className="w-3.5 h-3.5" />
-              <span>Bàn làm việc</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsMobileMode(true)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-                isMobileMode
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold shadow-2xs'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Thủ kho Mobile (AC5)</span>
-            </button>
-          </div>
-
           <button
             type="button"
             onClick={() => setIsPrintModalOpen(true)}
@@ -492,326 +533,94 @@ export const PickingListDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ======================================================== */}
-      {/* 1. CHẾ ĐỘ THỦ KHO DI ĐỘNG (MOBILE PICKING MODE - AC5) */}
-      {/* ======================================================== */}
-      {isMobileMode ? (
-        <div className="space-y-4">
-          {/* Quick Filter Bar for Mobile */}
-          <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-100 shadow-xs">
-            <span className="text-xs font-semibold text-gray-700">Lọc dòng soạn:</span>
-            <div className="flex gap-1.5">
-              {[
-                { key: 'ALL', label: `Tất cả (${sortedItems.length})` },
-                { key: 'PENDING', label: `Chưa xong (${sortedItems.filter((i) => !i.isCompleted).length})` },
-                { key: 'DONE', label: `Đã soạn (${sortedItems.filter((i) => i.isCompleted).length})` }
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setMobileFilter(tab.key as any)}
-                  className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                    mobileFilter === tab.key
-                      ? 'bg-orange-500 text-white font-bold'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+            {/* DANH SÁCH MẶT HÀNG TRONG PHIẾU SOẠN */}
+      <div className="space-y-4">
+        {/* Table Container */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs">
+          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+              <Layers className="w-4 h-4 text-[#F85606]" />
+              Danh Sách Mặt Hàng Đã Gộp Theo Lộ Trình Trong Kho ({sortedItems.length} mặt hàng)
+            </h2>
+            <span className="text-xs text-gray-500">
+              Sắp xếp theo thứ tự tối ưu đường đi: Zone → Rack → Shelf → Bin
+            </span>
           </div>
 
-          {/* Cards for each item sorted by routeSequence */}
-          <div className="space-y-3">
-            {filteredItems.map((item) => {
-              const isSaving = savingItemIds[item.id];
-
-              return (
-                <div
-                  key={item.id}
-                  className={`bg-white rounded-2xl p-4 shadow-sm border transition-all ${
-                    item.isCompleted
-                      ? 'border-emerald-300 bg-emerald-50/20'
-                      : 'border-orange-200 hover:border-orange-400'
-                  }`}
-                >
-                  {/* Top line: Route Sequence & Location Badge */}
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="w-7 h-7 rounded-lg bg-orange-600 text-white font-extrabold flex items-center justify-center text-xs shadow-xs">
-                          #{item.routeSequence}
-                        </span>
-                        <span className="px-2.5 py-1 rounded-lg bg-gray-900 text-white font-mono font-bold text-xs flex items-center gap-1">
-                          📍 {item.locationCode || 'CHỜ XẾP'}
-                        </span>
-                      </div>
-                      <div className="text-[11px] font-semibold text-orange-800 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200/60 inline-flex items-center gap-1">
-                        <span>{parseLocationHierarchy(item).fullPath}</span>
-                      </div>
+          <div className="overflow-x-auto min-h-[380px] pb-32">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-gray-50/90 border-b border-gray-200 text-gray-700 font-bold uppercase text-[10px]">
+                  <th className="py-3 px-3 text-center w-14">Lộ trình</th>
+                  <th className="py-3 px-3 w-44">Vị trí lưu kho (Khu ➔ Kệ ➔ Ô)</th>
+                  <th className="py-3 px-3 w-28">Mã SKU</th>
+                  <th className="py-3 px-4 min-w-[200px]">Tên sản phẩm & Phân bổ đơn hàng</th>
+                  <th className="py-3 px-3 w-64 min-w-[240px]">Lô hàng xuất (Gợi ý FEFO)</th>
+                  <th className="py-3 px-3 text-center w-14">ĐVT</th>
+                  <th className="py-3 px-3 text-center w-16">Yêu cầu</th>
+                  <th className="py-3 px-4 text-center w-36">Thực soạn</th>
+                  <th className="py-3 px-3 text-center w-24">
+                    <div className="flex flex-col items-center justify-center gap-1">
+                      <span>Hoàn thành</span>
+                      {!isReadOnly && isWarehouseStaff && sortedItems.length > 0 && (
+                        <label className="inline-flex items-center gap-1 cursor-pointer select-none text-[10px] text-gray-500 font-semibold hover:text-[#F85606] transition-colors" title="Chọn tất cả">
+                          <input
+                            type="checkbox"
+                            checked={sortedItems.every((i) => i.isCompleted)}
+                            onChange={handleToggleAllCompleted}
+                            className="w-3.5 h-3.5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer accent-[#F85606]"
+                          />
+                          <span>Tất cả</span>
+                        </label>
+                      )}
                     </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {sortedItems.map((item, idx) => {
+                  const isSaving = savingItemIds[item.id];
+                  const hier = parseLocationHierarchy(item);
+                  const currentInputStr = inputValues[item.id] !== undefined ? inputValues[item.id] : String(item.pickedQuantity ?? 0);
+                  const currentNumeric = currentInputStr !== '' ? parseInt(currentInputStr, 10) : (item.pickedQuantity || 0);
 
-                    {/* Touch Checkbox */}
-                    <button
-                      type="button"
-                      disabled={isReadOnly || isSaving}
-                      onClick={() => handleToggleCompleted(item)}
-                      className={`w-9 h-9 rounded-xl border-2 flex items-center justify-center transition-all ${
-                        item.isCompleted
-                          ? 'bg-emerald-600 border-emerald-600 text-white shadow-md'
-                          : 'bg-white border-gray-300 text-transparent hover:border-orange-500'
+                  return (
+                    <tr
+                      key={item.id}
+                      className={`hover:bg-orange-50/20 transition-colors ${
+                        item.isCompleted ? 'bg-emerald-50/20' : ''
                       }`}
                     >
-                      <Check className="w-5 h-5 stroke-[3]" />
-                    </button>
-                  </div>
-
-                  {/* Product Details */}
-                  <div className="mb-3">
-                    <h3 className="font-bold text-gray-900 text-sm leading-snug">
-                      {item.productName}
-                    </h3>
-                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                      <span className="font-mono">SKU: {item.productSku}</span>
-                      <span>ĐVT: <strong className="text-gray-800">{item.baseUnit}</strong></span>
-                    </div>
-
-                    {/* Allocations breakdown */}
-                    {item.allocations && item.allocations.length > 0 && (
-                      <div className="mt-2 text-[11px] text-gray-600 flex flex-wrap gap-1.5">
-                        <span className="font-semibold text-gray-700">Giao cho:</span>
-                        {item.allocations.map((al, aIdx) => (
-                          <span
-                            key={aIdx}
-                            className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded-md border border-gray-200"
-                          >
-                            {al.orderCode} (<strong>{al.quantity} {item.baseUnit}</strong>)
+                      <td className="py-3 px-3 text-center font-black text-orange-600 bg-orange-50/40 align-middle">
+                        #{item.routeSequence || idx + 1}
+                      </td>
+                      <td className="py-3 px-3 align-middle">
+                        <div className="space-y-1">
+                          <span className="inline-flex items-center gap-1 font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-orange-50 text-orange-900 border border-orange-200 shadow-2xs">
+                            <MapPin className="w-3 h-3 text-[#F85606]" />
+                            {item.locationCode || 'CHỜ XẾP'}
                           </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Lựa chọn lô xuất hàng (FEFO) S6-04 */}
-                    <div className="mt-3 pt-2.5 border-t border-gray-100 space-y-1">
-                      <div className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
-                        <Layers className="w-3.5 h-3.5 text-orange-600" />
-                        <span>Lô xuất hàng (Ưu tiên FEFO):</span>
-                      </div>
-                      <LotSelectorDropdown
-                        productId={item.productId}
-                        warehouseId={pickingList.warehouseId}
-                        requiredQuantity={item.requiredQuantity}
-                        baseUnit={item.baseUnit}
-                        selectedBatchNumber={item.actualBatchNumber || item.suggestedBatchNumber}
-                        onChange={(batchNumber, reason) => handleLotChange(item, batchNumber, reason)}
-                        disabled={isReadOnly || !isWarehouseStaff}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Shortage Reason Alert if any */}
-                  {item.discrepancyReason && (
-                    <div className="mb-3 p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-start gap-2">
-                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                      <div>
-                        <strong>Lý do soạn thiếu:</strong> {item.discrepancyReason}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Bottom: Quantity Stepper & Quick Match Button */}
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                    <div className="text-xs">
-                      <span className="text-gray-500">Cần soạn:</span>{' '}
-                      <strong className="text-sm text-gray-900">{item.requiredQuantity}</strong> {item.baseUnit}
-                    </div>
-
-                    {!isReadOnly && isWarehouseStaff ? (
-                      <div className="flex items-center gap-2">
-                        {/* Stepper buttons */}
-                        <div className="flex items-center border border-gray-300 rounded-xl bg-gray-50 p-0.5">
-                          <button
-                            type="button"
-                            disabled={item.pickedQuantity <= 0 || isSaving}
-                            onClick={() => handleQuantityChange(item, item.pickedQuantity - 1)}
-                            className="w-8 h-8 rounded-lg bg-white hover:bg-gray-100 text-gray-700 flex items-center justify-center font-bold text-sm shadow-xs disabled:opacity-40"
-                          >
-                            <Minus className="w-3.5 h-3.5" />
-                          </button>
-                          <span className="w-12 text-center font-black text-sm text-gray-900">
-                            {item.pickedQuantity}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={item.pickedQuantity >= item.requiredQuantity || isSaving}
-                            onClick={() => handleQuantityChange(item, item.pickedQuantity + 1)}
-                            className="w-8 h-8 rounded-lg bg-white hover:bg-gray-100 text-gray-700 flex items-center justify-center font-bold text-sm shadow-xs disabled:opacity-40"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-
-                        {/* Soạn đủ button */}
-                        <button
-                          type="button"
-                          disabled={isSaving}
-                          onClick={() => handleQuickMatch(item)}
-                          className="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-800 text-xs font-bold rounded-xl transition-colors"
-                        >
-                          Soạn đủ ({item.requiredQuantity})
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="text-sm font-bold text-emerald-700">
-                        Thực soạn: {item.pickedQuantity} {item.baseUnit}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
-        /* ======================================================== */
-        /* 2. CHẾ ĐỘ BÀN LÀM VIỆC (DESKTOP TABLE VIEW) */
-        /* ======================================================== */
-        <div className="space-y-4">
-          {/* Visual Route Pathway Header (AC2: Chỉ dẫn thứ tự đường đi từ Khu vực -> Kệ -> Ô) */}
-          <div className="bg-gradient-to-r from-orange-50/80 via-amber-50/60 to-white p-4 rounded-2xl border border-orange-200/80 shadow-xs space-y-2.5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-[#F85606] text-white rounded-lg shadow-2xs">
-                  <Compass className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-xs sm:text-sm text-gray-900 flex items-center gap-1.5">
-                    <span>Lộ trình đường đi tối ưu trong kho</span>
-                    <span className="text-[11px] font-normal text-gray-500">
-                      (Sắp xếp theo thứ tự: Khu vực (Zone) ➔ Dãy kệ (Rack) ➔ Ô chứa (Bin))
-                    </span>
-                  </h4>
-                </div>
-              </div>
-              <span className="text-[11px] font-semibold text-orange-700 bg-orange-100/80 px-2.5 py-0.5 rounded-full border border-orange-200 self-start sm:self-auto">
-                {sortedItems.length} điểm dừng gom hàng
-              </span>
-            </div>
-
-            {/* Route Steps Stepper */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 text-xs">
-              {sortedItems.map((item, idx) => {
-                const hier = parseLocationHierarchy(item);
-                return (
-                  <React.Fragment key={item.id}>
-                    <div
-                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border shrink-0 transition-all ${
-                        item.isCompleted
-                          ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-2xs'
-                          : 'bg-white border-orange-200/90 text-gray-800 shadow-2xs hover:border-[#F85606]'
-                      }`}
-                    >
-                      <span
-                        className={`w-5 h-5 rounded-full flex items-center justify-center font-black text-[11px] shrink-0 ${
-                          item.isCompleted
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-[#F85606] text-white'
-                        }`}
-                      >
-                        {item.isCompleted ? '✓' : idx + 1}
-                      </span>
-                      <div>
-                        <div className="font-bold text-xs flex items-center gap-1">
-                          <span className="text-[#F85606]">{hier.zoneText}</span>
-                          <span className="text-gray-400">➔</span>
-                          <span>{hier.rackText}</span>
-                          <span className="text-gray-400">➔</span>
-                          <span className="font-mono text-gray-900 bg-gray-100 px-1 rounded text-[10px]">
-                            {hier.binText}
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-gray-500 truncate max-w-[150px]">
-                          {item.productName} ({item.requiredQuantity} {item.baseUnit})
-                        </div>
-                      </div>
-                    </div>
-                    {idx < sortedItems.length - 1 && (
-                      <span className="text-gray-300 font-bold text-sm shrink-0">➔</span>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Table Container (Mở rộng chiều cao min-h-[380px] pb-32 để dropdown danh sách lô mở dài xuống không bị che khuất) */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-xs">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                <Layers className="w-4 h-4 text-orange-500" />
-                Danh Sách Mặt Hàng Đã Gộp Theo Lộ Trình Trong Kho ({sortedItems.length} mặt hàng)
-              </h2>
-              <span className="text-xs text-gray-500">
-                Sắp xếp theo thứ tự tối ưu đường đi: Zone → Rack → Shelf → Bin
-              </span>
-            </div>
-
-            <div className="overflow-x-auto min-h-[380px] pb-32">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-gray-50/90 border-b border-gray-200 text-gray-700 font-bold uppercase text-[10px]">
-                    <th className="py-3 px-3 text-center w-14">Lộ trình</th>
-                    <th className="py-3 px-3 w-44">Vị trí lưu kho (Khu ➔ Kệ ➔ Ô)</th>
-                    <th className="py-3 px-3 w-28">Mã SKU</th>
-                    <th className="py-3 px-4 min-w-[200px]">Tên sản phẩm & Phân bổ đơn hàng</th>
-                    <th className="py-3 px-3 w-64 min-w-[240px]">Lô hàng xuất (Gợi ý FEFO)</th>
-                    <th className="py-3 px-3 text-center w-14">ĐVT</th>
-                    <th className="py-3 px-3 text-right w-16">Yêu cầu</th>
-                    <th className="py-3 px-4 text-center w-36">Thực soạn</th>
-                    <th className="py-3 px-3 text-center w-20">Hoàn thành</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {sortedItems.map((item, idx) => {
-                    const isSaving = savingItemIds[item.id];
-                    const hier = parseLocationHierarchy(item);
-                    return (
-                      <tr
-                        key={item.id}
-                        className={`hover:bg-orange-50/20 transition-colors ${
-                          item.isCompleted ? 'bg-emerald-50/20' : ''
-                        }`}
-                      >
-                        <td className="py-3 px-3 text-center font-black text-orange-600 bg-orange-50/40 align-top pt-4">
-                          #{item.routeSequence || idx + 1}
-                        </td>
-                        <td className="py-3 px-3 align-top">
-                          <div className="space-y-1">
-                            <span className="inline-flex items-center gap-1 font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-orange-50 text-orange-900 border border-orange-200 shadow-2xs">
-                              <MapPin className="w-3 h-3 text-[#F85606]" />
-                              {item.locationCode || 'CHỜ XẾP'}
+                          {/* Phân cấp lộ trình đường đi (Khu vực -> Kệ -> Ô) */}
+                          <div className="text-[11px] font-semibold text-gray-700 flex items-center gap-1">
+                            <span className="text-[#F85606] font-bold">{hier.zoneText}</span>
+                            <span className="text-gray-400">➔</span>
+                            <span className="text-gray-800">{hier.rackText}</span>
+                            <span className="text-gray-400">➔</span>
+                            <span className="text-gray-600 bg-gray-100 px-1 rounded text-[10px] font-mono">
+                              {hier.binText}
                             </span>
-                            {/* Phân cấp lộ trình đường đi (Khu vực -> Kệ -> Ô) */}
-                            <div className="text-[11px] font-semibold text-gray-700 flex items-center gap-1">
-                              <span className="text-[#F85606] font-bold">{hier.zoneText}</span>
-                              <span className="text-gray-400">➔</span>
-                              <span className="text-gray-800">{hier.rackText}</span>
-                              <span className="text-gray-400">➔</span>
-                              <span className="text-gray-600 bg-gray-100 px-1 rounded text-[10px] font-mono">
-                                {hier.binText}
-                              </span>
-                            </div>
-                            {item.locationName && (
-                              <div className="text-[10px] text-gray-400 truncate max-w-[180px]">
-                                {item.locationName}
-                              </div>
-                            )}
                           </div>
-                        </td>
-                      <td className="py-3 px-3 font-mono text-gray-600 align-top pt-4">
+                          {item.locationName && (
+                            <div className="text-[10px] text-gray-400 truncate max-w-[180px]">
+                              {item.locationName}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 font-mono text-gray-600 align-middle">
                         {item.productSku}
                       </td>
-                      <td className="py-3 px-4 align-top">
+                      <td className="py-3 px-4 align-middle">
                         <div className="font-bold text-gray-900">{item.productName}</div>
                         {item.allocations && (
                           <div className="text-[11px] text-gray-500 mt-1 flex flex-wrap gap-1.5">
@@ -828,7 +637,7 @@ export const PickingListDetailPage: React.FC = () => {
                           </div>
                         )}
                       </td>
-                      <td className="py-3 px-3 align-top">
+                      <td className="py-3 px-3 align-middle">
                         <LotSelectorDropdown
                           productId={item.productId}
                           warehouseId={pickingList.warehouseId}
@@ -839,36 +648,37 @@ export const PickingListDetailPage: React.FC = () => {
                           disabled={isReadOnly || !isWarehouseStaff}
                         />
                       </td>
-                      <td className="py-3 px-3 text-center text-gray-600 align-top pt-4">
+                      <td className="py-3 px-3 text-center font-bold text-gray-700 align-middle">
                         {item.baseUnit}
                       </td>
-                      <td className="py-3 px-3 text-right font-black text-gray-900 text-sm align-top pt-4">
+                      <td className="py-3 px-3 text-center font-black text-gray-900 text-sm align-middle">
                         {item.requiredQuantity}
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 text-center align-middle">
                         {!isReadOnly && isWarehouseStaff ? (
                           <div className="flex items-center justify-center gap-1.5">
                             <button
                               type="button"
-                              disabled={item.pickedQuantity <= 0 || isSaving}
-                              onClick={() => handleQuantityChange(item, item.pickedQuantity - 1)}
-                              className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-xs"
+                              disabled={currentNumeric <= 0 || isSaving}
+                              onClick={() => handleStepQuantity(item, -1)}
+                              className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                             >
                               -
                             </button>
                             <input
-                              type="number"
-                              min={0}
-                              max={item.requiredQuantity}
-                              value={item.pickedQuantity}
-                              onChange={(e) => handleQuantityChange(item, Number(e.target.value))}
-                              className="w-14 text-center font-bold border border-gray-300 rounded-lg py-1 text-xs outline-none focus:border-orange-500"
+                              type="text"
+                              inputMode="numeric"
+                              value={currentInputStr}
+                              onChange={(e) => handleInputChange(item, e.target.value)}
+                              onBlur={() => handleInputBlur(item)}
+                              onKeyDown={(e) => handleInputKeyDown(e)}
+                              className="w-14 text-center font-bold border border-gray-300 rounded-lg py-1 text-xs outline-none focus:border-[#F85606] focus:ring-1 focus:ring-[#F85606] transition"
                             />
                             <button
                               type="button"
-                              disabled={item.pickedQuantity >= item.requiredQuantity || isSaving}
-                              onClick={() => handleQuantityChange(item, item.pickedQuantity + 1)}
-                              className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-xs"
+                              disabled={currentNumeric >= item.requiredQuantity || isSaving}
+                              onClick={() => handleStepQuantity(item, 1)}
+                              className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                             >
                               +
                             </button>
@@ -879,15 +689,15 @@ export const PickingListDetailPage: React.FC = () => {
                           </div>
                         )}
                       </td>
-                      <td className="py-3 px-3 text-center">
+                      <td className="py-3 px-3 text-center align-middle">
                         <button
                           type="button"
                           disabled={isReadOnly || isSaving}
                           onClick={() => handleToggleCompleted(item)}
-                          className={`w-7 h-7 mx-auto rounded-lg border flex items-center justify-center transition-all ${
+                          className={`w-7 h-7 mx-auto rounded-lg border flex items-center justify-center transition-all cursor-pointer ${
                             item.isCompleted
                               ? 'bg-emerald-600 border-emerald-600 text-white'
-                              : 'bg-white border-gray-300 text-transparent hover:border-orange-500'
+                              : 'bg-white border-gray-300 text-transparent hover:border-[#F85606]'
                           }`}
                         >
                           <Check className="w-4 h-4 stroke-[3]" />
@@ -901,9 +711,8 @@ export const PickingListDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
-      )}
 
-      {/* Modal ghi nhận lý do soạn thiếu (AC4) */}
+{/* Modal ghi nhận lý do soạn thiếu (AC4) */}
       {discrepancyTargetItem && (
         <PickingDiscrepancyModal
           isOpen={Boolean(discrepancyTargetItem)}
