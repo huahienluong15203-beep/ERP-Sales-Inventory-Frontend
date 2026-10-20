@@ -3,12 +3,8 @@ import {
   X,
   FileEdit,
   AlertTriangle,
-  CheckCircle2,
   Calendar,
-  Building2,
-  DollarSign,
   User,
-  CreditCard,
   RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
