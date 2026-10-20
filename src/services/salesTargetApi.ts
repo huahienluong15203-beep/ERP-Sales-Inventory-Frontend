@@ -33,9 +33,6 @@ function getStoredTargets(): SalesTargetResponse[] {
   return [];
 }
 
-function saveStoredTargets(items: SalesTargetResponse[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-}
 
 /**
  * Danh sách chỉ tiêu KPI theo kỳ và loại
@@ -50,7 +47,27 @@ export async function fetchSalesTargets(
     if (type && type !== 'ALL') query.set('type', type);
     const res = await authFetch(`${TARGET_URL}?${query.toString()}`);
     if (res.ok) {
-      return await res.json();
+      const rawList: any[] = await res.json();
+      return rawList.map((item) => ({
+        id: item.id,
+        period: item.period,
+        targetType: item.targetType,
+        salesRepId: item.salesRepId,
+        salesRepCode: item.salesRepCode || (item.salesRepId ? `NV-${item.salesRepId}` : ''),
+        salesRepName: item.salesRepName || '',
+        regionId: item.regionId,
+        regionName: item.regionName || item.region || '',
+        region: item.region || item.regionName || '',
+        targetAmount: item.targetAmount != null ? Number(item.targetAmount) : 0,
+        actualAmount: item.actualAmount != null ? Number(item.actualAmount) : 0,
+        achievementPercent: item.achievementPercent != null ? Number(item.achievementPercent) : 0,
+        completionRate: item.completionRate != null ? Number(item.completionRate) : (item.achievementPercent != null ? Number(item.achievementPercent) : 0),
+        locked: Boolean(item.locked ?? item.isLocked),
+        isLocked: Boolean(item.isLocked ?? item.locked),
+        note: item.note || '',
+        updatedAt: item.updatedAt,
+        updatedBy: item.updatedByUsername || item.updatedBy
+      }));
     }
   } catch {
     // fallback
@@ -153,41 +170,28 @@ export async function fetchMySalesProgress(
 export async function createSalesTarget(
   payload: SalesTargetCreateRequest
 ): Promise<SalesTargetResponse> {
-  try {
-    const res = await authFetch(TARGET_URL, {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    if (res.ok) {
-      return await res.json();
+  const res = await authFetch(TARGET_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    let msg = 'Lỗi khi thiết lập chỉ tiêu';
+    try {
+      const err = await res.json();
+      msg = err.message || msg;
+    } catch {
+      // ignore
     }
-  } catch {
-    // fallback
+    throw new Error(msg);
   }
-
-  const list = getStoredTargets();
-  const currentPeriod = new Date().toISOString().slice(0, 7);
-  const isPast = payload.period < currentPeriod;
-
-  const newItem: SalesTargetResponse = {
-    id: Date.now(),
-    period: payload.period,
-    targetType: payload.targetType,
-    salesRepId: payload.salesRepId,
-    salesRepCode: payload.salesRepId ? `NVKD-${payload.salesRepId}` : undefined,
-    salesRepName: payload.salesRepId ? `Nhân viên #${payload.salesRepId}` : undefined,
-    region: payload.region || 'Miền Bắc',
-    targetAmount: payload.targetAmount,
-    actualAmount: 0,
-    completionRate: 0,
-    isLocked: isPast,
-    note: payload.note,
-    updatedAt: new Date().toISOString()
+  const item = await res.json();
+  return {
+    ...item,
+    region: item.region || item.regionName || '',
+    salesRepCode: item.salesRepCode || (item.salesRepId ? `NV-${item.salesRepId}` : ''),
+    completionRate: item.completionRate != null ? Number(item.completionRate) : (item.achievementPercent != null ? Number(item.achievementPercent) : 0),
+    isLocked: Boolean(item.isLocked ?? item.locked)
   };
-
-  list.unshift(newItem);
-  saveStoredTargets(list);
-  return newItem;
 }
 
 /**
@@ -197,35 +201,26 @@ export async function updateSalesTarget(
   id: number,
   payload: SalesTargetUpdateRequest
 ): Promise<SalesTargetResponse> {
-  try {
-    const res = await authFetch(`${TARGET_URL}/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(payload)
-    });
-    if (res.ok) {
-      return await res.json();
+  const res = await authFetch(`${TARGET_URL}/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    let msg = 'Lỗi khi điều chỉnh chỉ tiêu';
+    try {
+      const err = await res.json();
+      msg = err.message || msg;
+    } catch {
+      // ignore
     }
-  } catch {
-    // fallback
+    throw new Error(msg);
   }
-
-  const list = getStoredTargets();
-  const idx = list.findIndex((i) => i.id === id);
-  if (idx === -1) throw new Error('Không tìm thấy chỉ tiêu cần sửa');
-
-  const old = list[idx];
-  const rate = Math.round((old.actualAmount / payload.targetAmount) * 1000) / 10;
-
-  const updated: SalesTargetResponse = {
-    ...old,
-    targetAmount: payload.targetAmount,
-    note: payload.note || old.note,
-    completionRate: rate,
-    updatedAt: new Date().toISOString(),
-    updatedBy: `Sửa do: ${payload.reason}`
+  const item = await res.json();
+  return {
+    ...item,
+    region: item.region || item.regionName || '',
+    salesRepCode: item.salesRepCode || (item.salesRepId ? `NV-${item.salesRepId}` : ''),
+    completionRate: item.completionRate != null ? Number(item.completionRate) : (item.achievementPercent != null ? Number(item.achievementPercent) : 0),
+    isLocked: Boolean(item.isLocked ?? item.locked)
   };
-
-  list[idx] = updated;
-  saveStoredTargets(list);
-  return updated;
 }
