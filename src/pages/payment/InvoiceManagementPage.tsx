@@ -19,6 +19,7 @@ import type { Agency } from '../../types/agency';
 import { InvoicePrintModal } from '../../components/payment/InvoicePrintModal';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { Pagination } from '../../components/common/Pagination';
+import { RowActionMenu } from '../../components/common/RowActionMenu';
 
 export const InvoiceManagementPage: React.FC = () => {
   const navigate = useNavigate();
@@ -148,24 +149,13 @@ export const InvoiceManagementPage: React.FC = () => {
         </button>
 
         {isAccountantOrAdmin && (
-          <>
-            <button
-              onClick={() => navigate('/payments/adjustments')}
-              className="px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-2 shadow-2xs transition cursor-pointer"
-              title="Lập chứng từ điều chỉnh công nợ khi có sai lệch hoặc trả hàng"
-            >
-              <FileText className="w-4 h-4 text-[#F85606]" />
-              <span>Lập chứng từ điều chỉnh</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/invoices/create')}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-orange-500/20 transition cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span> Lập hoá đơn mới</span>
-            </button>
-          </>
+          <button
+            onClick={() => navigate('/invoices/create')}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-orange-500/20 transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span> Lập hoá đơn mới</span>
+          </button>
         )}
       </div>
 
@@ -351,15 +341,25 @@ export const InvoiceManagementPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => setPrintModalInvoiceId(inv.id)}
-                          className="px-2.5 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#F85606] font-bold text-[11px] transition cursor-pointer flex items-center gap-1"
-                          title="Xem chi tiết & In hoá đơn A4 / Lưu PDF"
-                        >
-                          <Printer className="w-3.5 h-3.5" />
-                          <span>In / PDF</span>
-                        </button>
+                      <div className="flex items-center justify-center">
+                        <RowActionMenu
+                          title="Thao tác hoá đơn"
+                          items={[
+                            {
+                              label: 'In / Xuất PDF',
+                              icon: <Printer size={14} className="text-[#F85606]" />,
+                              onClick: () => setPrintModalInvoiceId(inv.id),
+                              title: 'Xem chi tiết & In hoá đơn A4 / Lưu PDF'
+                            },
+                            {
+                              label: 'Lập chứng từ điều chỉnh',
+                              icon: <FileText size={14} className="text-orange-600" />,
+                              onClick: () => navigate(`/sales-returns/create?invoiceId=${inv.id}`),
+                              title: 'Lập chứng từ điều chỉnh / trả hàng cho hoá đơn này',
+                              hidden: !isAccountantOrAdmin
+                            }
+                          ]}
+                        />
                       </div>
                     </td>
                   </tr>

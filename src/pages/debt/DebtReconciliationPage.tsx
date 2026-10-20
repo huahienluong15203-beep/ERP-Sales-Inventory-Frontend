@@ -441,7 +441,7 @@ export const DebtReconciliationPage: React.FC = () => {
                       II. Phát sinh nợ (Mua hàng):
                     </span>
                     <span className="text-base font-black text-[#F85606] font-mono block">
-                      +{formatCurrencyVND(simulatedTotalDebit)}
+                      {(simulatedTotalDebit) > 0 ? '+' : ''}{formatCurrencyVND(simulatedTotalDebit)}
                     </span>
                   </div>
 
@@ -450,7 +450,7 @@ export const DebtReconciliationPage: React.FC = () => {
                       III. Phát sinh có (Đã thanh toán):
                     </span>
                     <span className="text-base font-black text-emerald-700 font-mono block">
-                      -{formatCurrencyVND(simulatedTotalCredit)}
+                      {(simulatedTotalCredit) > 0 ? '-' : ''}{formatCurrencyVND(simulatedTotalCredit)}
                     </span>
                   </div>
 
@@ -648,11 +648,11 @@ export const DebtReconciliationPage: React.FC = () => {
                           </td>
 
                           <td className="py-3 px-3 text-right font-mono text-[#F85606]">
-                            +{formatCurrencyVND(stmt.totalDebit)}
+                            {(stmt.totalDebit) > 0 ? '+' : ''}{formatCurrencyVND(stmt.totalDebit)}
                           </td>
 
                           <td className="py-3 px-3 text-right font-mono text-emerald-700">
-                            -{formatCurrencyVND(stmt.totalCredit)}
+                            {(stmt.totalCredit) > 0 ? '-' : ''}{formatCurrencyVND(stmt.totalCredit)}
                           </td>
 
                           <td className="py-3 px-3 text-right font-mono font-black text-[#F85606] bg-orange-50/30">

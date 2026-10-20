@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
   Clock,
@@ -33,17 +34,48 @@ export const LotSelectorDropdown: React.FC<LotSelectorDropdownProps> = ({
   disabled = false
 }) => {
   const { currentRole, user } = useAuth();
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [loading, setLoading] = useState(false);
   const [lots, setLots] = useState<ProductLotResponse[]>([]);
   const [hasBatchManagement, setHasBatchManagement] = useState(false);
   const [manualReason, setManualReason] = useState('');
   const [isOverrideConfirmed, setIsOverrideConfirmed] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
   const [pendingLot, setPendingLot] = useState<ProductLotResponse | null>(null);
   const [modalReason, setModalReason] = useState('');
   const [modalOverrideChecked, setModalOverrideChecked] = useState(false);
   const [modalError, setModalError] = useState('');
+
+  // Tính toán vị trí hiển thị nổi của Dropdown để không bao giờ bị cắt ngang bởi table hay overflow-y-auto
+  useEffect(() => {
+    if (isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const menuWidth = Math.max(rect.width, 360);
+      const left = Math.min(rect.left, window.innerWidth - menuWidth - 16);
+
+      if (spaceBelow < 260 && spaceAbove > spaceBelow) {
+        setMenuStyle({
+          position: 'fixed',
+          bottom: `${window.innerHeight - rect.top + 6}px`,
+          left: `${Math.max(16, left)}px`,
+          width: `${menuWidth}px`,
+          zIndex: 9999
+        });
+      } else {
+        setMenuStyle({
+          position: 'fixed',
+          top: `${rect.bottom + 6}px`,
+          left: `${Math.max(16, left)}px`,
+          width: `${menuWidth}px`,
+          zIndex: 9999
+        });
+      }
+    }
+  }, [isOpen]);
 
   const isWhManagerOrAdmin =
     currentRole === 'ROLE_WH_MANAGER' ||
@@ -184,6 +216,7 @@ export const LotSelectorDropdown: React.FC<LotSelectorDropdownProps> = ({
     <div className="relative min-w-[220px]">
       {/* Dropdown kích hoạt */}
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
@@ -250,84 +283,89 @@ export const LotSelectorDropdown: React.FC<LotSelectorDropdownProps> = ({
         <ChevronDown size={14} className={`text-gray-400 shrink-0 transition-transform ${isOpen ? 'rotate-180 text-orange-500' : ''}`} />
       </button>
 
-      {/* Menu danh sách các lô xổ xuống dưới (Chỉ hiển thị danh sách gọn gàng) */}
-      {isOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
-          />
-          <div className="absolute left-0 min-w-[340px] w-full top-full mt-1.5 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="px-3.5 py-2 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center justify-between bg-gray-50/70">
-              <span>Danh sách lô (Ưu tiên FEFO)</span>
-              <span className="text-[10px] text-orange-600 font-normal">Hạn gần nhất xếp trước</span>
-            </div>
+      {/* Menu danh sách các lô xổ xuống dưới (Render qua createPortal nổi trên document.body để không bị overflow table cắt ngang) */}
+      {isOpen &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-[9998]"
+              onClick={() => setIsOpen(false)}
+            />
+            <div
+              style={menuStyle}
+              className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-in fade-in zoom-in-95"
+            >
+              <div className="px-3.5 py-2 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center justify-between bg-gray-50/70">
+                <span>Danh sách lô (Ưu tiên FEFO)</span>
+                <span className="text-[10px] text-orange-600 font-normal">Hạn gần nhất xếp trước</span>
+              </div>
 
-            <div className="max-h-60 overflow-y-auto py-1 divide-y divide-gray-50">
-              {lots.map((lot) => {
-                const isSelected = lot.batchNumber === selectedBatchNumber;
-                const isSuggested = suggestedLot?.batchNumber === lot.batchNumber;
-                const isExpired = lot.daysToExpiration <= 0 || lot.expiryStatus === 'EXPIRED';
-                const isLocked = lot.status === 'LOCKED';
-                const isShortStock = lot.quantity < requiredQuantity;
+              <div className="max-h-60 overflow-y-auto py-1 divide-y divide-gray-50">
+                {lots.map((lot) => {
+                  const isSelected = lot.batchNumber === selectedBatchNumber;
+                  const isSuggested = suggestedLot?.batchNumber === lot.batchNumber;
+                  const isExpired = lot.daysToExpiration <= 0 || lot.expiryStatus === 'EXPIRED';
+                  const isLocked = lot.status === 'LOCKED';
+                  const isShortStock = lot.quantity < requiredQuantity;
 
-                return (
-                  <button
-                    key={lot.id}
-                    type="button"
-                    disabled={isLocked}
-                    onClick={() => handleSelectLot(lot)}
-                    className={`w-full text-left px-3 py-2 text-xs transition cursor-pointer flex items-start justify-between gap-2 ${
-                      isSelected ? 'bg-orange-50/80 font-semibold' : 'hover:bg-gray-50'
-                    } ${isLocked ? 'opacity-40 cursor-not-allowed bg-gray-50' : ''}`}
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-mono font-bold text-gray-900">{lot.batchNumber}</span>
-                        {isSuggested && (
-                          <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                            Gợi ý FEFO
+                  return (
+                    <button
+                      key={lot.id}
+                      type="button"
+                      disabled={isLocked}
+                      onClick={() => handleSelectLot(lot)}
+                      className={`w-full text-left px-3 py-2 text-xs transition cursor-pointer flex items-start justify-between gap-2 ${
+                        isSelected ? 'bg-orange-50/80 font-semibold' : 'hover:bg-gray-50'
+                      } ${isLocked ? 'opacity-40 cursor-not-allowed bg-gray-50' : ''}`}
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono font-bold text-gray-900">{lot.batchNumber}</span>
+                          {isSuggested && (
+                            <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              Gợi ý FEFO
+                            </span>
+                          )}
+                          {isExpired && (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                              Quá hạn
+                            </span>
+                          )}
+                          {isLocked && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-gray-200 text-gray-700">
+                              <Lock size={10} />
+                              Đã khóa
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-gray-500 flex items-center gap-2">
+                          <span className="flex items-center gap-1">
+                            <Calendar size={11} className="text-gray-400" />
+                            HSD: {lot.expiredDate}
                           </span>
-                        )}
-                        {isExpired && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
-                            Quá hạn
+                          <span>•</span>
+                          <span>
+                            Tồn: <strong className={isShortStock ? 'text-amber-700' : 'text-gray-800'}>{lot.quantity}</strong> {baseUnit}
                           </span>
-                        )}
-                        {isLocked && (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-gray-200 text-gray-700">
-                            <Lock size={10} />
-                            Đã khóa
-                          </span>
-                        )}
+                          {lot.daysToExpiration > 0 ? (
+                            <span className="text-[10px] text-emerald-600">(còn {lot.daysToExpiration} ngày)</span>
+                          ) : (
+                            <span className="text-[10px] text-rose-600 font-bold">(đã hết hạn)</span>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-[11px] text-gray-500 flex items-center gap-2">
-                        <span className="flex items-center gap-1">
-                          <Calendar size={11} className="text-gray-400" />
-                          HSD: {lot.expiredDate}
-                        </span>
-                        <span>•</span>
-                        <span>
-                          Tồn: <strong className={isShortStock ? 'text-amber-700' : 'text-gray-800'}>{lot.quantity}</strong> {baseUnit}
-                        </span>
-                        {lot.daysToExpiration > 0 ? (
-                          <span className="text-[10px] text-emerald-600">(còn {lot.daysToExpiration} ngày)</span>
-                        ) : (
-                          <span className="text-[10px] text-rose-600 font-bold">(đã hết hạn)</span>
-                        )}
-                      </div>
-                    </div>
 
-                    <div className="shrink-0 pt-0.5">
-                      {isSelected && <CheckCircle2 size={15} className="text-orange-600" />}
-                    </div>
-                  </button>
-                );
-              })}
+                      <div className="shrink-0 pt-0.5">
+                        {isSelected && <CheckCircle2 size={15} className="text-orange-600" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>,
+          document.body
+        )}
 
       {/* POPUP MODAL NHẬP LÝ DO KHI CHỌN LÔ KHÁC HOẶC LÔ QUÁ HẠN (Hiển thị giữa màn hình) */}
       {isReasonModalOpen && pendingLot && (

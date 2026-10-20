@@ -234,12 +234,12 @@ export const PickingListCreatePage: React.FC = () => {
                 <AlertCircle className="w-8 h-8 text-gray-400 mx-auto" />
                 <p className="text-xs font-semibold text-gray-700">Không có đơn hàng nào chờ soạn tại kho này</p>
                 <p className="text-[11px] text-gray-500">
-                  Tất cả các đơn đã được soạn hoặc chưa được duyệt (APPROVED).
+                  Tất cả các đơn đã được soạn hoặc chưa được duyệt
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs text-gray-600 px-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-gray-600 px-1">
                   <label className="flex items-center gap-2 cursor-pointer font-semibold select-none">
                     <input
                       type="checkbox"
@@ -255,10 +255,10 @@ export const PickingListCreatePage: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="border border-gray-200 rounded-xl overflow-hidden max-h-80 overflow-y-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-gray-50 border-b border-gray-200 text-gray-700 font-bold sticky top-0 uppercase text-[10px]">
+                <div className="border border-gray-200 rounded-xl overflow-x-auto max-h-[380px] sm:max-h-[440px] overflow-y-auto shadow-2xs">
+                  <table className="w-full text-left border-collapse text-xs min-w-[580px]">
+                    <thead className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-xs">
+                      <tr className="border-b border-gray-200 text-gray-700 font-bold uppercase text-[10px]">
                         <th className="py-2.5 px-3 w-10 text-center"></th>
                         <th className="py-2.5 px-3">Mã đơn</th>
                         <th className="py-2.5 px-3">Khách hàng & Địa chỉ</th>
@@ -351,10 +351,10 @@ export const PickingListCreatePage: React.FC = () => {
                 </span>
               </div>
 
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-gray-100 border-b border-gray-200 text-gray-800 font-bold uppercase text-[10px]">
+              <div className="border border-gray-200 rounded-xl overflow-x-auto max-h-[420px] overflow-y-auto shadow-2xs">
+                <table className="w-full text-left border-collapse text-xs min-w-[580px]">
+                  <thead className="sticky top-0 z-10 bg-gray-100/95 backdrop-blur-xs">
+                    <tr className="border-b border-gray-200 text-gray-800 font-bold uppercase text-[10px]">
                       <th className="py-2.5 px-3 text-center w-12">Thứ tự</th>
                       <th className="py-2.5 px-3 w-28">Vị trí lưu kho</th>
                       <th className="py-2.5 px-3 w-28">Mã SKU</th>

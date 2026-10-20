@@ -154,11 +154,11 @@ export const AgencyReconciliationPanel: React.FC = () => {
                 </div>
                 <div className="rounded-xl bg-gray-50 px-3 py-2">
                   <p className="text-gray-500">Phát sinh nợ</p>
-                  <p className="font-mono font-bold text-[#F85606]">+{formatCurrencyVND(stmt.totalDebit)}</p>
+                  <p className="font-mono font-bold text-[#F85606]">{stmt.totalDebit > 0 ? '+' : ''}{formatCurrencyVND(stmt.totalDebit)}</p>
                 </div>
                 <div className="rounded-xl bg-gray-50 px-3 py-2">
                   <p className="text-gray-500">Đã trả / giảm trừ</p>
-                  <p className="font-mono font-bold text-emerald-700">-{formatCurrencyVND(stmt.totalCredit)}</p>
+                  <p className="font-mono font-bold text-emerald-700">{stmt.totalCredit > 0 ? '-' : ''}{formatCurrencyVND(stmt.totalCredit)}</p>
                 </div>
                 <div className="rounded-xl bg-orange-50 px-3 py-2">
                   <p className="text-gray-500">Số dư cuối kỳ</p>

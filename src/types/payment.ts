@@ -8,7 +8,7 @@ export interface PageResponse<T> {
 
 export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'OTHER';
 
-export type PaymentStatus = 'PENDING_SUBMISSION' | 'CONFIRMED' | 'REJECTED';
+export type PaymentStatus = 'PENDING_SUBMISSION' | 'CONFIRMED' | 'REJECTED' | 'VOIDED';
 
 export type AllocationType = 'FIFO' | 'SPECIFIC';
 

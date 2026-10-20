@@ -52,8 +52,8 @@ export const SalesReturnListPage: React.FC = () => {
     roleStr.includes('WAREHOUSE');
 
   const canCreateReturn =
-    ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT'].includes(currentRole ?? '') ||
-    Boolean(user?.roles?.some((r) => ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT'].includes(r)));
+    ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN'].includes(currentRole ?? '') ||
+    Boolean(user?.roles?.some((r) => ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN'].includes(r)));
 
   // Filter states
   const [keyword, setKeyword] = useState<string>('');

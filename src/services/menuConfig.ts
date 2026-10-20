@@ -89,7 +89,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     icon: 'RotateCcw',
     epic: 'Bán hàng & Kho vận',
     description: 'Lập phiếu hoàn hàng từ đại lý theo hoá đơn, nhập kho theo lô & kiểm duyệt nhập kho (S8-01)',
-    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
+    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
   },
 
   {

@@ -10,18 +10,16 @@ import {
   Package,
   RefreshCw,
   XCircle,
-  CheckCheck,
   Check,
   X,
   ExternalLink
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useParams } from '../../routes/Router';
-import type { DeliveryTrip } from '../../types/deliveryTrip';
+import type { DeliveryTrip, DeliveryTripStop } from '../../types/deliveryTrip';
 import {
   fetchDeliveryTripById,
   completeDeliveryTrip,
-  confirmStopDelivery,
   completeTripWithAutoResolve,
   formatOverdueTime
 } from '../../services/deliveryTripApi';
@@ -83,39 +81,6 @@ export const DeliveryTripDetailPage: React.FC = () => {
     loadData();
   }, [id]);
 
-  // Xác nhận giao tất cả các điểm còn lại
-  const handleConfirmAllStops = () => {
-    if (!trip?.stops) return;
-    const pending = trip.stops.filter((s) => s.status === 'DISPATCHED');
-    if (pending.length === 0) return;
-
-    setConfirmModalConfig({
-      isOpen: true,
-      title: 'Xác nhận giao đủ tất cả điểm giao',
-      tripCode: trip.code,
-      badgeText: `${pending.length} điểm cần giao`,
-      highlightDetail: `Hệ thống sẽ cập nhật kết quả giao thành công cho toàn bộ ${pending.length} điểm giao còn lại trên xe.`,
-      message: `Xác nhận toàn bộ ${pending.length} điểm giao đều đã được bàn giao đến tay đại lý/khách hàng?`,
-      confirmLabel: 'Xác nhận giao đủ',
-      confirmVariant: 'primary',
-      onConfirm: async () => {
-        setCompleting(true);
-        try {
-          for (const stop of pending) {
-            await confirmStopDelivery(stop.orderId);
-          }
-          showToast('Thành công', `Đã xác nhận giao thành công tất cả ${pending.length} điểm giao!`, 'success');
-          setConfirmModalConfig(null);
-          await loadData();
-        } catch (err: any) {
-          showToast('Lỗi', err.message || 'Có lỗi xảy ra khi xác nhận giao hàng', 'error');
-        } finally {
-          setCompleting(false);
-        }
-      }
-    });
-  };
-
   const handleCompleteTrip = () => {
     if (!trip) return;
 
@@ -152,7 +117,7 @@ export const DeliveryTripDetailPage: React.FC = () => {
       isOpen: true,
       title: 'Xác nhận xe đã về kho an toàn',
       tripCode: trip.code,
-      badgeText: '100% điểm đã giao xong',
+      badgeText: (trip.failedStops > 0) ? `Đã xử lý xong (${trip.failedStops} điểm thất bại)` : '100% điểm đã giao xong',
       message: `Xác nhận xe ${trip.vehiclePlate} (${trip.driverName}) đã hoàn tất lộ trình và quay về kho an toàn?`,
       confirmLabel: 'Xác nhận về kho',
       confirmVariant: 'primary',
@@ -197,20 +162,36 @@ export const DeliveryTripDetailPage: React.FC = () => {
     );
   }
 
+  const isDeliveredStop = (s: DeliveryTripStop) => {
+    return ['DELIVERED', 'CLOSED', 'COMPLETED'].includes(s.status) || (trip?.status === 'COMPLETED' && s.status !== 'DELIVERY_FAILED');
+  };
+
+  const isFailedStop = (s: DeliveryTripStop) => {
+    return s.status === 'DELIVERY_FAILED';
+  };
+
   const sortedStops = [...(trip.stops || [])].sort((a, b) => (a.stopSequence || 0) - (b.stopSequence || 0));
-  const percent = trip.totalStops > 0 ? Math.round((trip.deliveredStops / trip.totalStops) * 100) : 0;
+  const deliveredCount = sortedStops.filter((s) => isDeliveredStop(s)).length;
+  const failedCount = sortedStops.filter((s) => isFailedStop(s)).length;
+  const totalStopsCount = trip.totalStops > 0 ? trip.totalStops : sortedStops.length;
+  const percent = totalStopsCount > 0 ? Math.round((Math.max(trip.deliveredStops || 0, deliveredCount) / totalStopsCount) * 100) : 0;
 
   // Tính toán minh bạch các giá trị tiền hàng của chuyến
   const calculatedTotal = sortedStops.reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
   const totalTripValue = (trip.totalValue && trip.totalValue > 0) ? trip.totalValue : calculatedTotal;
   const deliveredValue = sortedStops
-    .filter((s) => s.status === 'DELIVERED' || s.status === 'CLOSED')
+    .filter((s) => isDeliveredStop(s))
     .reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
-  const remainingValue = (trip.valueOnRoad !== undefined && trip.valueOnRoad !== null && trip.valueOnRoad > 0)
-    ? trip.valueOnRoad
-    : sortedStops
-      .filter((s) => s.status === 'DISPATCHED')
-      .reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
+  const failedValue = sortedStops
+    .filter((s) => isFailedStop(s))
+    .reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
+  const remainingValue = (trip.status === 'COMPLETED')
+    ? 0
+    : (trip.valueOnRoad !== undefined && trip.valueOnRoad !== null && trip.valueOnRoad > 0)
+      ? trip.valueOnRoad
+      : sortedStops
+        .filter((s) => !isDeliveredStop(s) && !isFailedStop(s))
+        .reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
 
   return (
     <div className="space-y-6 max-w-full mx-auto pb-16">
@@ -257,26 +238,13 @@ export const DeliveryTripDetailPage: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Nút giao tất cả điểm nếu còn điểm chưa giao */}
-          {isWarehouseStaff && trip.status === 'IN_PROGRESS' && trip.remainingStops > 0 && (
-            <button
-              onClick={handleConfirmAllStops}
-              disabled={completing}
-              className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-              title="Xác nhận giao hàng thành công toàn bộ điểm trên xe"
-            >
-              <CheckCheck className="w-4 h-4" />
-              <span>Giao đủ tất cả ({trip.remainingStops} điểm)</span>
-            </button>
-          )}
-
           {/* In danh sách điểm giao AC3 */}
           <button
             onClick={() => setIsPrintModalOpen(true)}
             className="px-3.5 py-2 bg-[#F85606] hover:bg-[#E04D05] text-white font-bold text-xs rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <Printer className="w-4 h-4" />
-            <span>In Bảng Kê (AC3)</span>
+            <span>In Bảng Kê</span>
           </button>
 
           {/* Xác nhận xe về kho */}
@@ -406,10 +374,24 @@ export const DeliveryTripDetailPage: React.FC = () => {
                   </span>
                 </div>
               )}
+              {failedValue > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 font-medium">Hàng hoàn về kho:</span>
+                  <span className="font-bold text-red-600">
+                    {failedValue.toLocaleString('vi-VN')} đ ({trip.failedStops || failedCount} điểm)
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-gray-500 font-medium">Còn trên xe:</span>
-                <span className={`font-bold ${remainingValue > 0 ? 'text-[#F85606]' : 'text-emerald-600'}`}>
-                  {remainingValue > 0 ? `${remainingValue.toLocaleString('vi-VN')} đ` : '0 đ (Đã giao đủ)'}
+                <span className={`font-bold ${remainingValue > 0 ? 'text-[#F85606]' : (trip.failedStops > 0 || failedCount > 0) && (trip.deliveredStops === 0 && deliveredCount === 0) ? 'text-red-600' : 'text-emerald-600'}`}>
+                  {remainingValue > 0
+                    ? `${remainingValue.toLocaleString('vi-VN')} đ`
+                    : (trip.failedStops > 0 || failedCount > 0)
+                      ? (trip.deliveredStops > 0 || deliveredCount > 0)
+                        ? `0 đ (Có ${trip.failedStops || failedCount} điểm giao không thành công)`
+                        : `0 đ (Giao không thành công - Đã hoàn kho)`
+                      : '0 đ (Đã giao đủ)'}
                 </span>
               </div>
             </div>
@@ -478,7 +460,7 @@ export const DeliveryTripDetailPage: React.FC = () => {
                     {stop.totalAmount?.toLocaleString('vi-VN')} đ
                   </td>
                   <td className="py-2.5 px-3 text-center">
-                    {stop.status === 'DELIVERED' ? (
+                    {isDeliveredStop(stop) ? (
                       <div>
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -491,7 +473,7 @@ export const DeliveryTripDetailPage: React.FC = () => {
                           </div>
                         )}
                       </div>
-                    ) : stop.status === 'DELIVERY_FAILED' ? (
+                    ) : isFailedStop(stop) ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-800 border border-red-300" title={stop.deliveryFailedReason || ''}>
                         <XCircle className="w-3.5 h-3.5 text-red-600" />
                         Giao không thành công
@@ -505,7 +487,7 @@ export const DeliveryTripDetailPage: React.FC = () => {
                   </td>
                   <td className="py-2.5 px-3 text-center">
                     <div className="flex items-center justify-center gap-1.5">
-                      {isWarehouseStaff && trip.status === 'IN_PROGRESS' && stop.status === 'DISPATCHED' && (
+                      {isWarehouseStaff && trip.status === 'IN_PROGRESS' && !isDeliveredStop(stop) && !isFailedStop(stop) && (
                         <>
                           <button
                             type="button"
@@ -548,7 +530,7 @@ export const DeliveryTripDetailPage: React.FC = () => {
                         </>
                       )}
 
-                      {stop.status === 'DELIVERED' && (
+                      {isDeliveredStop(stop) && (
                         <button
                           type="button"
                           onClick={() =>

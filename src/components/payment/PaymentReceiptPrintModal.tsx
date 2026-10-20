@@ -1,8 +1,9 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Printer, Download, X, Building, CheckCircle, FileText } from 'lucide-react';
 import type { PaymentReceipt } from '../../types/payment';
 import { formatCurrencyVND } from '../../services/orderService';
 import { numberToVietnameseWords } from '../../utils/numberToVietnameseWords';
+import { useAuthImageSrc } from '../../hooks/useAuthImageSrc';
 
 interface PaymentReceiptPrintModalProps {
   isOpen: boolean;
@@ -16,7 +17,9 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
   receipt
 }) => {
   const printIframeRef = useRef<HTMLIFrameElement | null>(null);
-  const [isFitPage, setIsFitPage] = useState<boolean>(true);
+  const isFitPage = true;
+  // Ảnh biên lai lưu sau API có kiểm quyền (/api/payments/{id}/image) -> tải bằng token thành Blob URL
+  const { src: receiptImageSrc } = useAuthImageSrc(isOpen ? receipt?.receiptImageUrl : null);
 
   // Dọn dẹp iframe khi unmount
   useEffect(() => {
@@ -92,11 +95,11 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
       `
         : '';
 
-    const receiptImageHtml = receipt.receiptImageUrl
+    const receiptImageHtml = receiptImageSrc
       ? `
         <div style="margin: 14px 0; padding: 10px; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px;">
           <div style="font-weight: bold; font-size: 11px; text-transform: uppercase; color: #374151; margin-bottom: 6px;">Ảnh biên lai thu tiền tại điểm bán:</div>
-          <img src="${receipt.receiptImageUrl}" alt="Biên lai" style="max-height: 180px; width: auto; border: 1px solid #e5e7eb; border-radius: 4px;" />
+          <img src="${escapeHtml(receiptImageSrc)}" alt="Biên lai" style="max-height: 180px; width: auto; border: 1px solid #e5e7eb; border-radius: 4px;" />
         </div>
       `
       : '';
@@ -106,6 +109,8 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
         ? 'Chờ nộp quỹ (Kế toán chưa duyệt)'
         : receipt.status === 'CONFIRMED'
         ? 'Đã nộp quỹ & đối trừ nợ'
+        : receipt.status === 'VOIDED'
+        ? 'Đã điều chỉnh (Huỷ cấn trừ nợ)'
         : `Từ chối nhận tiền ${receipt.rejectionReason ? `(${escapeHtml(receipt.rejectionReason)})` : ''}`;
 
     const statusBadgeStyle =
@@ -113,6 +118,8 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
         ? 'background: #fef3c7; color: #92400e; border: 1px solid #fcd34d;'
         : receipt.status === 'CONFIRMED'
         ? 'background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7;'
+        : receipt.status === 'VOIDED'
+        ? 'background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;'
         : 'background: #ffe4e6; color: #9f1239; border: 1px solid #fca5a5;';
 
     return `
@@ -433,19 +440,6 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setIsFitPage(!isFitPage)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
-                isFitPage
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                  : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-              }`}
-              title="Thu nhỏ để xem trọn vẹn 1 trang không cần cuộn"
-            >
-              {isFitPage ? '🔍 Xem vừa 1 trang' : '↔️ Kích thước 100%'}
-            </button>
-
-            <button
-              type="button"
               onClick={handlePrint}
               className="px-3.5 sm:px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-sm transition active:scale-95 cursor-pointer"
             >
@@ -643,11 +637,11 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
             )}
 
             {/* Ảnh biên lai nếu có */}
-            {receipt.receiptImageUrl && (
+            {receiptImageSrc && (
               <div className="mb-6 p-3 bg-gray-50 border border-gray-300 rounded-lg">
                 <p className="font-bold text-xs uppercase text-gray-700 mb-2">Ảnh biên lai thu tiền tại điểm bán:</p>
                 <img
-                  src={receipt.receiptImageUrl}
+                  src={receiptImageSrc}
                   alt="Biên lai"
                   className="max-h-48 w-auto rounded border border-gray-200 shadow-xs"
                 />

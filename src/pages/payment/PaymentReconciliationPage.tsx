@@ -13,7 +13,10 @@ import {
   Check,
   X,
   User,
-  AlertCircle
+  AlertCircle,
+  MoreVertical,
+  FileEdit,
+  Ban
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatCurrencyVND } from '../../services/orderService';
@@ -31,7 +34,9 @@ import type {
 } from '../../types/payment';
 import { PaymentReceiptModal } from '../../components/payment/PaymentReceiptModal';
 import { PaymentReceiptPrintModal } from '../../components/payment/PaymentReceiptPrintModal';
+import { PaymentAdjustmentModal } from '../../components/payment/PaymentAdjustmentModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { useAuthImageSrc } from '../../hooks/useAuthImageSrc';
 
 export const PaymentReconciliationPage: React.FC = () => {
   const { user, showToast } = useAuth();
@@ -64,6 +69,8 @@ export const PaymentReconciliationPage: React.FC = () => {
 
   // Lightbox xem ảnh biên lai
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  // Ảnh biên lai lưu sau API có kiểm quyền -> tải bằng token rồi hiển thị
+  const previewImage = useAuthImageSrc(previewImageUrl);
 
   // Modal từ chối nhận tiền
   const [rejectingItem, setRejectingItem] = useState<PaymentReconciliationItem | null>(null);
@@ -72,6 +79,13 @@ export const PaymentReconciliationPage: React.FC = () => {
   // Modal xác nhận nhận tiền nộp quỹ (Chuẩn style hệ thống ConfirmModal)
   const [confirmingItem, setConfirmingItem] = useState<PaymentReconciliationItem | null>(null);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
+
+  // Dropdown 3 chấm (dấu 3 dot) ở cột thao tác
+  const [activeDropdownId, setActiveDropdownId] = useState<number | string | null>(null);
+
+  // Modal lập bút toán điều chỉnh
+  const [adjustingItem, setAdjustingItem] = useState<PaymentReconciliationItem | null>(null);
+  const [showAdjustmentModal, setShowAdjustmentModal] = useState<boolean>(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -173,6 +187,12 @@ export const PaymentReconciliationPage: React.FC = () => {
     };
     setSelectedReceiptForPrint(receipt);
     setShowPrintModal(true);
+  };
+
+  // Mở modal lập bút toán điều chỉnh
+  const handleOpenAdjustment = (item: PaymentReconciliationItem) => {
+    setAdjustingItem(item);
+    setShowAdjustmentModal(true);
   };
 
   return (
@@ -346,7 +366,7 @@ export const PaymentReconciliationPage: React.FC = () => {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[300px] pb-24">
           <table className="w-full text-xs text-left">
             <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-600 dark:text-gray-400 uppercase font-semibold border-b border-gray-200 dark:border-gray-700">
               <tr>
@@ -451,10 +471,23 @@ export const PaymentReconciliationPage: React.FC = () => {
                           <span>Từ chối</span>
                         </span>
                       )}
+                      {item.status === 'VOIDED' && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20">
+                          <Ban size={12} />
+                          <span>Đã điều chỉnh</span>
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-[200px] truncate">
-                      {item.rejectionReason ? (
-                        <span className="text-rose-600 dark:text-rose-400 font-medium">
+                      {item.status === 'VOIDED' ? (
+                        <span
+                          className="text-slate-600 dark:text-slate-400 font-medium truncate block"
+                          title={item.rejectionReason || 'Đã lập bút toán điều chỉnh'}
+                        >
+                          {item.rejectionReason || 'Đã lập bút toán điều chỉnh'}
+                        </span>
+                      ) : item.rejectionReason ? (
+                        <span className="text-rose-600 dark:text-rose-400 font-medium truncate block" title={item.rejectionReason}>
                           Lý do từ chối: {item.rejectionReason}
                         </span>
                       ) : (
@@ -490,20 +523,67 @@ export const PaymentReconciliationPage: React.FC = () => {
                           </>
                         )}
 
-                        <button
-                          type="button"
-                          onClick={() => handleOpenPrint(item)}
-                          className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition"
-                          title="Xem và in phiếu thu"
-                        >
-                          <Printer size={14} />
-                        </button>
+                        {/* Menu 3 dot (MoreVertical): Gom nút in và nút bút toán điều chỉnh để tinh gọn giao diện */}
+                        <div className="relative inline-block text-left">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveDropdownId(activeDropdownId === item.id ? null : item.id);
+                            }}
+                            className={`p-1.5 rounded-lg transition cursor-pointer ${
+                              activeDropdownId === item.id
+                                ? 'bg-orange-100 dark:bg-orange-950/60 text-[#F85606]'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                            }`}
+                            title="Thao tác chứng từ"
+                          >
+                            <MoreVertical size={14} />
+                          </button>
+
+                          {activeDropdownId === item.id && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-20 cursor-default"
+                                onClick={() => setActiveDropdownId(null)}
+                              />
+                              <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1.5 z-30 animate-in fade-in zoom-in-95 text-left divide-y divide-gray-100 dark:divide-gray-700">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveDropdownId(null);
+                                    handleOpenPrint(item);
+                                  }}
+                                  className="w-full px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-[#F85606] flex items-center gap-2 cursor-pointer transition"
+                                >
+                                  <Printer size={14} className="text-gray-500" />
+                                  <span>In phiếu thu</span>
+                                </button>
+
+                                {isAccountantOrAdmin && item.status !== 'REJECTED' && item.status !== 'VOIDED' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveDropdownId(null);
+                                      handleOpenAdjustment(item);
+                                    }}
+                                    className="w-full px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-orange-50 dark:hover:bg-gray-700 hover:text-[#F85606] flex items-center gap-2 cursor-pointer transition"
+                                  >
+                                    <FileEdit size={14} className="text-[#F85606]" />
+                                    <span>Lập bút toán điều chỉnh</span>
+                                  </button>
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
+
           </table>
         </div>
       </div>
@@ -526,11 +606,17 @@ export const PaymentReconciliationPage: React.FC = () => {
               </button>
             </div>
             <div className="p-4 flex items-center justify-center">
-              <img
-                src={previewImageUrl}
-                alt="Ảnh biên lai"
-                className="max-h-[75vh] w-auto object-contain rounded-lg shadow-md"
-              />
+              {previewImage.src ? (
+                <img
+                  src={previewImage.src}
+                  alt="Ảnh biên lai"
+                  className="max-h-[75vh] w-auto object-contain rounded-lg shadow-md"
+                />
+              ) : (
+                <span className="text-xs text-gray-400 py-10 px-6">
+                  {previewImage.error ? 'Không tải được ảnh biên lai.' : 'Đang tải ảnh biên lai...'}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -660,6 +746,19 @@ export const PaymentReconciliationPage: React.FC = () => {
           setSelectedReceiptForPrint(null);
         }}
         receipt={selectedReceiptForPrint}
+      />
+
+      {/* Modal Lập bút toán điều chỉnh */}
+      <PaymentAdjustmentModal
+        isOpen={showAdjustmentModal}
+        onClose={() => {
+          setShowAdjustmentModal(false);
+          setAdjustingItem(null);
+        }}
+        receipt={adjustingItem}
+        onSuccess={() => {
+          loadData();
+        }}
       />
     </div>
   );

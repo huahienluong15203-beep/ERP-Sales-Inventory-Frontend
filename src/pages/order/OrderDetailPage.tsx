@@ -49,6 +49,7 @@ import { OrderDispatchModal } from '../../components/order/OrderDispatchModal';
 import { AgencyDeliveryTimeline } from '../../components/portal/AgencyDeliveryTimeline';
 import { DeliveryProofModal } from '../../components/delivery/DeliveryProofModal';
 import { getUserFullName } from '../../lib/userFormatters';
+import { fetchPickingListByOrderId } from '../../services/pickingListApi';
 
 export const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -287,6 +288,20 @@ export const OrderDetailPage: React.FC = () => {
     }
   };
 
+  const handleGoToPicking = async () => {
+    if (!order?.id) return;
+    try {
+      const pickingList = await fetchPickingListByOrderId(order.id);
+      if (pickingList?.id) {
+        navigate(`/inventory/picking-lists/${pickingList.id}`);
+        return;
+      }
+    } catch (e) {
+      console.warn('Could not find picking list for order:', e);
+    }
+    navigate(`/inventory/picking-lists/create`);
+  };
+
   if (loading) {
     return (
       <div className="py-24 text-center space-y-4">
@@ -448,6 +463,18 @@ export const OrderDetailPage: React.FC = () => {
                 <span>Bắt đầu soạn hàng</span>
               </button>
             </div>
+          )}
+
+          {order.status === 'PICKING' && (
+            <button
+              type="button"
+              onClick={handleGoToPicking}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer"
+              title="Chuyển đến phiếu soạn hàng để lấy hàng theo vị trí kho và FEFO"
+            >
+              <Package size={14} />
+              <span>Soạn hàng ngay (Phiếu soạn) →</span>
+            </button>
           )}
 
           {order.status === 'PICKING' && isWarehouseOrAdmin && (
@@ -647,7 +674,33 @@ export const OrderDetailPage: React.FC = () => {
         approvalHistory={approvalHistory}
         createdAt={order.createdAt}
         desiredDeliveryDate={order.desiredDeliveryDate || undefined}
+        onNavigateToPicking={handleGoToPicking}
       />
+
+      {order.status === 'PICKING' && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50/50 border border-orange-200 text-xs text-orange-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#F85606] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Package size={20} className="animate-bounce" />
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-gray-900">
+                Đơn hàng đang ở trạng thái soạn hàng (PICKING)
+              </h4>
+              <p className="text-xs text-gray-600 mt-0.5">
+                Nhân viên kho có thể mở trực tiếp phiếu soạn hàng để quét vị trí kệ, chọn số lô theo FEFO và soạn sản phẩm.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleGoToPicking}
+            className="px-4 py-2 rounded-xl bg-[#F85606] hover:bg-[#E04D05] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 transition cursor-pointer shrink-0"
+          >
+            <span>Mở phiếu soạn hàng →</span>
+          </button>
+        </div>
+      )}
 
       {/* THÔNG TIN BÀN GIAO & BẢNG SỐ LƯỢNG THỰC GIAO TỪNG DÒNG (Đã ẩn thanh stepper trùng lặp) */}
       <AgencyDeliveryTimeline
