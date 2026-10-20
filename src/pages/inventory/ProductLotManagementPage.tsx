@@ -12,7 +12,6 @@ import {
   Lock,
   Unlock,
   Edit,
-  ShieldCheck,
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal
@@ -31,7 +30,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
 import { ProductLotCreateModal } from '../../components/inventory/ProductLotCreateModal';
 import { ProductLotUpdateModal } from '../../components/inventory/ProductLotUpdateModal';
-import { ProductLotDispatchCheckModal } from '../../components/inventory/ProductLotDispatchCheckModal';
 import { ProductLotLockConfirmModal } from '../../components/inventory/ProductLotLockConfirmModal';
 import { ProductBatchManagementConfigModal } from '../../components/inventory/ProductBatchManagementConfigModal';
 
@@ -67,7 +65,6 @@ export const ProductLotManagementPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isBatchConfigModalOpen, setIsBatchConfigModalOpen] = useState(false);
   const [editingLot, setEditingLot] = useState<ProductLotResponse | null>(null);
-  const [validatingLot, setValidatingLot] = useState<ProductLotResponse | null>(null);
   const [lotToToggleLock, setLotToToggleLock] = useState<ProductLotResponse | null>(null);
   const [submittingLock, setSubmittingLock] = useState(false);
 
@@ -541,16 +538,6 @@ export const ProductLotManagementPage: React.FC = () => {
                       {/* Thao tác */}
                       <td className="py-3 px-4 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1.5">
-                          {/* Kiểm tra xuất kho */}
-                          <button
-                            type="button"
-                            onClick={() => setValidatingLot(lot)}
-                            title="Kiểm tra HSD & tính hợp lệ khi xuất kho"
-                            className="p-1.5 rounded-lg border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 text-gray-600 hover:text-emerald-700 transition cursor-pointer"
-                          >
-                            <ShieldCheck size={14} />
-                          </button>
-
                           {/* Sửa thông tin */}
                           {isWhManagerOrAdmin && (
                             <button
@@ -647,13 +634,6 @@ export const ProductLotManagementPage: React.FC = () => {
         />
       )}
 
-      {validatingLot && (
-        <ProductLotDispatchCheckModal
-          isOpen={Boolean(validatingLot)}
-          lot={validatingLot}
-          onClose={() => setValidatingLot(null)}
-        />
-      )}
 
       {/* Modal xác nhận Khóa / Mở khóa lô hàng */}
       {lotToToggleLock && (
