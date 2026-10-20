@@ -553,11 +553,28 @@ export async function fetchAuditLogs(
               actorId: item.actorId,
               actorUsername: item.actorUsername || 'user',
               actorFullName: item.actorFullName || item.actorUsername || 'Người dùng',
-              actorRole: item.actorUsername?.includes('wh')
-                ? 'Kho vận'
-                : item.actorUsername?.includes('acc')
-                ? 'Kế toán'
-                : 'Hệ thống',
+              actorRole: (() => {
+                const r = item.actorRole;
+                if (r) {
+                  if (r === 'ROLE_SALES_MANAGER') return 'Quản lý kinh doanh';
+                  if (r === 'ROLE_ADMIN') return 'Quản trị hệ thống';
+                  if (r === 'ROLE_SALES_REP') return 'Nhân viên kinh doanh';
+                  if (r === 'ROLE_WAREHOUSE') return 'Thủ kho';
+                  if (r === 'ROLE_WH_MANAGER') return 'Quản lý kho';
+                  if (r === 'ROLE_ACCOUNTANT') return 'Kế toán';
+                  if (r === 'ROLE_CUSTOMER') return 'Đại lý';
+                  return r;
+                }
+                const u = (item.actorUsername || '').toLowerCase();
+                if (u.includes('manager') || u.includes('mgr')) return 'Quản lý kinh doanh';
+                if (u.includes('admin')) return 'Quản trị hệ thống';
+                if (u.includes('rep') || u.includes('sales') || u.includes('phong2006') || u.includes('sales_sg01') || u.includes('tran_minh')) return 'Nhân viên kinh doanh';
+                if (u.includes('acc') || u.includes('toan')) return 'Kế toán';
+                if (u.includes('wh_manager') || u.includes('ql_kho')) return 'Quản lý kho';
+                if (u.includes('wh') || u.includes('kho')) return 'Thủ kho';
+                if (u.includes('cust') || u.includes('agent') || u.includes('daily')) return 'Đại lý';
+                return 'Nhân sự';
+              })(),
               actorAvatarUrl: item.actorAvatarUrl,
               oldValue: formattedOld,
               newValue: formattedNew,
