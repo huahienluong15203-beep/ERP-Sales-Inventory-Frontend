@@ -906,48 +906,43 @@ export const CustomerOrderPortalPage: React.FC = () => {
           {/* CHỈ RENDER NỘI DUNG ĐẶT HÀNG KHI ĐÃ CÓ DỮ LIỆU ĐẠI LÝ */}
           {agency && activeTab === 'catalog' && (
             <div className="space-y-4">
-              {/* THANH TICK NHANH SẢN PHẨM ĐỂ THÊM NHANH */}
-              {paginatedProducts.length > 0 && (
-                <div className="bg-white rounded-2xl border border-gray-200 px-3.5 py-2.5 flex items-center justify-between gap-3 flex-wrap shadow-2xs">
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={allProductsOnPageSelected}
-                        onChange={toggleSelectAllProductsOnPage}
-                        className="w-4 h-4 rounded text-[#F85606] accent-[#F85606] cursor-pointer"
-                      />
-                      <span className="text-xs font-bold text-gray-700">
-                        Chọn tất cả ({availableProductsOnPage.length} sản phẩm còn hàng trên trang)
-                      </span>
-                    </label>
-                    {selectedProductIds.size > 0 && (
-                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-orange-100 text-[#F85606] border border-orange-200">
-                        Đã tick: {selectedProductIds.size} sản phẩm
-                      </span>
-                    )}
+              {/* BANNER 3 CHỈ SỐ TÀI CHÍNH CHIA ĐỀU Ở GIỮA */}
+              <div className="bg-white rounded-2xl p-4 sm:p-5 text-gray-900 border border-gray-200/90 shadow-2xs">
+                <div className="grid grid-cols-3 divide-x divide-gray-200 text-center">
+                  <div className="px-3 sm:px-6">
+                    <div className="text-[11px] sm:text-xs uppercase font-bold text-gray-500 tracking-wider">Hạn mức</div>
+                    <div className="text-base sm:text-xl font-black font-mono text-gray-900 mt-1">
+                      {formatCurrencyVND(creditLimit)}
+                    </div>
+                  </div>
+                  <div className="px-3 sm:px-6">
+                    <div className="text-[11px] sm:text-xs uppercase font-bold text-gray-500 tracking-wider">Nợ hiện tại</div>
+                    <div className="text-base sm:text-xl font-black font-mono text-rose-600 mt-1">
+                      {formatCurrencyVND(currentDebt)}
+                    </div>
                   </div>
                   <div className="px-3 sm:px-6">
                     <div className="text-[11px] sm:text-xs uppercase font-bold text-gray-500 tracking-wider">Còn lại</div>
                     <div
-                      className={`text-base sm:text-xl font-black font-mono mt-1 ${remainingBeforeOrder < 0 ? 'text-rose-600' : 'text-emerald-600'
-                        }`}
+                      className={`text-base sm:text-xl font-black font-mono mt-1 ${
+                        remainingBeforeOrder < 0 ? 'text-rose-600' : 'text-emerald-600'
+                      }`}
                     >
                       {formatCurrencyVND(remainingBeforeOrder)}
                     </div>
                   </div>
                 </div>
-              )}
 
-              {/* Cảnh báo nợ quá hạn nếu có */}
-              {hasOverdueDebt && (
-                <div className="mt-3 bg-rose-50 border border-rose-200 rounded-xl p-2.5 flex items-center justify-center gap-2 text-rose-800 text-xs">
-                  <ShieldAlert size={16} className="text-rose-600 shrink-0" />
-                  <span>
-                    <strong>Cảnh báo tài chính:</strong> Đại lý có khoản nợ quá hạn ({creditStatus?.overdueDays || 30} ngày). Đơn hàng sẽ bị chặn gửi cho đến khi hoàn tất thanh toán.
-                  </span>
-                </div>
-              )}
+                {/* Cảnh báo nợ quá hạn nếu có */}
+                {hasOverdueDebt && (
+                  <div className="mt-3 bg-rose-50 border border-rose-200 rounded-xl p-2.5 flex items-center justify-center gap-2 text-rose-800 text-xs">
+                    <ShieldAlert size={16} className="text-rose-600 shrink-0" />
+                    <span>
+                      <strong>Cảnh báo tài chính:</strong> Đại lý có khoản nợ quá hạn ({creditStatus?.overdueDays || 30} ngày). Đơn hàng sẽ bị chặn gửi cho đến khi hoàn tất thanh toán.
+                    </span>
+                  </div>
+                )}
+              </div>
 
               {/* BỘ LỌC TÌM KIẾM SẢN PHẨM */}
               <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-3">

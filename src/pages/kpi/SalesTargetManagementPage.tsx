@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Target,
   TrendingUp,
-  Award,
   Calendar,
   Lock,
   Unlock,
@@ -13,8 +12,7 @@ import {
   MapPin,
   X,
   Users,
-  DollarSign,
-  CheckCircle2
+  DollarSign
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatCurrencyVND } from '../../services/orderService';
@@ -87,7 +85,7 @@ export const SalesTargetManagementPage: React.FC = () => {
             setSalesRepOptions(
               reps.map((r) => ({
                 id: String(r.id),
-                code: r.code || `NV-${r.id}`,
+                code: (r as any).code || (r as any).username || `NV-${r.id}`,
                 name: r.fullName
               }))
             );

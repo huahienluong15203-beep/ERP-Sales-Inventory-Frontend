@@ -606,8 +606,14 @@ export async function updateItemProgress(
       if (idx >= 0) lists[idx] = mapped;
       saveStoredLists(lists);
       return mapped;
+    } else {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.message || `Cập nhật tiến độ thất bại (Mã lỗi ${res.status})`);
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
     console.warn('Backend update item progress failed, updating locally:', err);
   }
 
@@ -668,8 +674,14 @@ export async function updateProgressBatch(
       if (idx >= 0) lists[idx] = mapped;
       saveStoredLists(lists);
       return mapped;
+    } else {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.message || `Cập nhật tiến độ thất bại (Mã lỗi ${res.status})`);
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
     console.warn('Backend batch progress update failed, updating locally:', err);
   }
 
@@ -763,8 +775,14 @@ export async function cancelPickingList(id: number, reason: string): Promise<Pic
       if (idx >= 0) lists[idx] = mapped;
       saveStoredLists(lists);
       return mapped;
+    } else {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.message || `Hủy phiếu thất bại (Mã lỗi ${res.status})`);
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
     console.warn('Backend cancel picking list failed, updating locally:', err);
   }
 
@@ -812,8 +830,14 @@ export async function updateBatchProgress(
       if (idx >= 0) lists[idx] = mapped;
       saveStoredLists(lists);
       return mapped;
+    } else {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.message || `Cập nhật hàng loạt thất bại (Mã lỗi ${res.status})`);
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+      throw err;
+    }
     console.warn('Backend update batch progress failed, updating locally:', err);
   }
 

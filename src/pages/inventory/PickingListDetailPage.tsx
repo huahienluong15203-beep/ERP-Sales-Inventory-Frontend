@@ -238,12 +238,19 @@ export const PickingListDetailPage: React.FC = () => {
         : (currentItem?.actualBatchNumber || currentItem?.suggestedBatchNumber);
     const chosenReason =
       lotChangeReason !== undefined ? lotChangeReason : currentItem?.lotChangeReason;
+    // Nếu chưa hoàn thành và số lượng < yêu cầu, kèm lý do tạm thời để backend chấp nhận tiến độ gom hàng
+    const effectiveDiscrepancyReason =
+      discrepancyReason ||
+      currentItem?.discrepancyReason ||
+      (!isCompleted && pickedQuantity < (currentItem?.requiredQuantity || 0)
+        ? 'Đang gom hàng theo lộ trình'
+        : undefined);
 
     try {
       const updatedList = await updateItemProgress(pickingList.id, itemId, {
         pickedQuantity,
         isCompleted,
-        discrepancyReason: discrepancyReason || undefined,
+        discrepancyReason: effectiveDiscrepancyReason,
         actualBatchNumber: chosenBatch,
         lotChangeReason: chosenReason
       });
@@ -399,7 +406,9 @@ export const PickingListDetailPage: React.FC = () => {
         itemId: item.id,
         pickedQuantity: targetCompleted ? item.requiredQuantity : 0,
         isPicked: targetCompleted,
-        shortageReason: null,
+        shortageReason: targetCompleted
+          ? null
+          : (item.discrepancyReason || 'Đang gom hàng theo lộ trình'),
         actualBatchNumber: item.actualBatchNumber || item.suggestedBatchNumber || null,
         lotChangeReason: item.lotChangeReason || null
       }));
