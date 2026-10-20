@@ -54,6 +54,7 @@ export const ProductLotManagementPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [selectedExpiryStatus, setSelectedExpiryStatus] = useState<string>('ALL');
   const [nearExpiryDays, setNearExpiryDays] = useState<number>(30);
+  const [sortBy, setSortBy] = useState<string>('id,desc');
 
   // Dữ liệu danh mục phục vụ bộ lọc
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -105,6 +106,7 @@ export const ProductLotManagementPage: React.FC = () => {
         status: selectedStatus,
         expiryStatus: selectedExpiryStatus,
         nearExpiryDays,
+        sort: sortBy,
         page,
         size
       });
@@ -124,6 +126,7 @@ export const ProductLotManagementPage: React.FC = () => {
     selectedStatus,
     selectedExpiryStatus,
     nearExpiryDays,
+    sortBy,
     page,
     size,
     showToast
@@ -325,7 +328,7 @@ export const ProductLotManagementPage: React.FC = () => {
         </div>
 
         {/* Các dropdown lọc phụ */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1 border-t border-gray-100">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5 pt-1 border-t border-gray-100">
           {/* Kho */}
           <select
             value={selectedWarehouseId}
@@ -388,6 +391,23 @@ export const ProductLotManagementPage: React.FC = () => {
             <option value="ALL">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang hoạt động (Cho xuất)</option>
             <option value="LOCKED">Đã khóa (Cấm xuất)</option>
+          </select>
+
+          {/* Sắp xếp thứ tự */}
+          <select
+            value={sortBy}
+            onChange={(e) => {
+              setSortBy(e.target.value);
+              setPage(0);
+            }}
+            className="px-3 py-1.5 bg-orange-50/70 border border-orange-200 rounded-xl text-xs font-semibold text-orange-950 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+          >
+            <option value="id,desc">Mới khai báo nhất (Mặc định)</option>
+            <option value="expiredDate,asc">Hạn dùng gần nhất (FEFO)</option>
+            <option value="expiredDate,desc">Hạn dùng xa nhất</option>
+            <option value="id,asc">Cũ nhất trước</option>
+            <option value="quantity,desc">Số lượng tồn nhiều nhất</option>
+            <option value="quantity,asc">Số lượng tồn ít nhất</option>
           </select>
         </div>
       </div>
@@ -606,6 +626,8 @@ export const ProductLotManagementPage: React.FC = () => {
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={() => {
             showToast?.('Khai báo lô hàng mới thành công', 'success');
+            setSortBy('id,desc');
+            setPage(0);
             loadLots();
             loadSummary();
           }}

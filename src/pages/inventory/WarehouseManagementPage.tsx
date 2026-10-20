@@ -37,8 +37,11 @@ const LOCATION_TABS: { key: '' | LocationType; label: string; icon: string }[] =
 export const WarehouseManagementPage: React.FC = () => {
   const { currentRole, showToast } = useAuth();
 
-  // Phân quyền quản trị kho: Chỉ Admin và Quản lý kho mới được Thêm/Sửa/Xóa
-  const canManage = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_WH_MANAGER';
+  // Phân quyền quản trị kho & vị trí:
+  // - Quản lý kho hàng (Tạo kho, Sửa kho, Xóa kho): Chỉ Admin và Quản lý kho
+  const canManageWarehouse = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_WH_MANAGER';
+  // - Quản lý vị trí lưu trữ (Tạo/Sửa/Xóa vị trí trong kho): Admin, Quản lý kho và Nhân viên kho
+  const canManageLocation = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_WH_MANAGER' || currentRole === 'ROLE_WAREHOUSE';
 
   // State danh sách kho
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -287,7 +290,7 @@ export const WarehouseManagementPage: React.FC = () => {
               <span className="hidden sm:inline">Làm mới</span>
             </button>
 
-            {canManage && (
+            {canManageWarehouse && (
               <button
                 type="button"
                 onClick={() => {
@@ -429,7 +432,7 @@ export const WarehouseManagementPage: React.FC = () => {
                   <Building2 size={40} className="mx-auto mb-2 text-slate-300 dark:text-slate-600" />
                   <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Không tìm thấy kho hàng nào</p>
                   <p className="text-xs text-slate-400 mt-1">Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc</p>
-                  {canManage && (
+                  {canManageWarehouse && (
                     <button
                       type="button"
                       onClick={() => {
@@ -567,7 +570,23 @@ export const WarehouseManagementPage: React.FC = () => {
                                     <ChevronRight size={13} />
                                   </button>
 
-                                  {canManage && (
+                                  {canManageLocation && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedWarehouse(wh);
+                                        setLocationToEdit(null);
+                                        setIsLocationModalOpen(true);
+                                      }}
+                                      className="px-2.5 py-1.5 rounded-xl border border-orange-200/90 bg-orange-50/70 hover:bg-orange-600 text-orange-700 hover:text-white dark:bg-orange-950/40 dark:text-orange-300 dark:hover:text-white font-semibold text-xs flex items-center gap-1 transition-all shadow-2xs"
+                                      title="Thêm vị trí mới vào kho này"
+                                    >
+                                      <Plus size={13} />
+                                      <span>Thêm vị trí</span>
+                                    </button>
+                                  )}
+
+                                  {canManageWarehouse && (
                                     <div className="flex items-center gap-0.5 border-l border-slate-200 dark:border-slate-700 pl-2">
                                       <button
                                         type="button"
@@ -745,33 +764,33 @@ export const WarehouseManagementPage: React.FC = () => {
                 <span className="hidden sm:inline">Làm mới vị trí</span>
               </button>
 
-              {canManage && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setWarehouseToEdit(selectedWarehouse);
-                      setIsWarehouseModalOpen(true);
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 shadow-2xs transition-all"
-                    title="Chỉnh sửa thông tin kho này"
-                  >
-                    <Edit size={14} />
-                    <span>Sửa kho</span>
-                  </button>
+              {canManageWarehouse && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWarehouseToEdit(selectedWarehouse);
+                    setIsWarehouseModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 shadow-2xs transition-all"
+                  title="Chỉnh sửa thông tin kho này"
+                >
+                  <Edit size={14} />
+                  <span>Sửa kho</span>
+                </button>
+              )}
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLocationToEdit(null);
-                      setIsLocationModalOpen(true);
-                    }}
-                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-sm transition-all active:scale-95"
-                  >
-                    <Plus size={16} />
-                    <span>Thêm vị trí mới</span>
-                  </button>
-                </>
+              {canManageLocation && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocationToEdit(null);
+                    setIsLocationModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-sm transition-all active:scale-95"
+                >
+                  <Plus size={16} />
+                  <span>Thêm vị trí mới</span>
+                </button>
               )}
             </div>
           </div>
@@ -887,7 +906,7 @@ export const WarehouseManagementPage: React.FC = () => {
                   <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
                     Hãy thiết lập sơ đồ phân khu, dãy kệ và ô chứa để tối ưu quy trình nhập kho và nhặt hàng.
                   </p>
-                  {canManage && (
+                  {canManageLocation && (
                     <button
                       type="button"
                       onClick={() => {
@@ -911,7 +930,7 @@ export const WarehouseManagementPage: React.FC = () => {
                       <th className="py-3 px-4">Phân khu / Dãy kệ</th>
                       <th className="py-3 px-4">Mô tả</th>
                       <th className="py-3 px-4 text-center">Trạng thái</th>
-                      {canManage && <th className="py-3 px-4 text-right">Thao tác</th>}
+                      {canManageLocation && <th className="py-3 px-4 text-right">Thao tác</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -978,7 +997,7 @@ export const WarehouseManagementPage: React.FC = () => {
                           </td>
 
                           {/* Thao tác */}
-                          {canManage && (
+                          {canManageLocation && (
                             <td className="py-3.5 px-4 text-right whitespace-nowrap">
                               <div className="flex items-center justify-end gap-1">
                                 <button

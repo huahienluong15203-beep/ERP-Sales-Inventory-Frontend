@@ -47,7 +47,7 @@ export async function searchProductLots(
   if (params.nearExpiryDays !== undefined) query.set('nearExpiryDays', String(params.nearExpiryDays));
   query.set('page', String(params.page ?? 0));
   query.set('size', String(params.size ?? 20));
-  query.set('sort', params.sort || 'expiredDate,asc');
+  query.set('sort', params.sort || 'id,desc');
 
   const res = await authFetch(`${LOT_BASE_URL}?${query.toString()}`);
   if (!res.ok) {
