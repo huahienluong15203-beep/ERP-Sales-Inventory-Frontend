@@ -150,7 +150,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
-    title: 'Chỉ tiêu doanh số (KPI)',
+    title: 'Chỉ tiêu doanh số ',
     path: '/kpi/targets',
     group: 'Bán hàng',
     icon: 'TrendingUp',
@@ -160,7 +160,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
-    title: 'Báo cáo doanh số đa chiều',
+    title: 'Báo cáo doanh số',
     path: '/reports/sales',
     group: 'Bán hàng',
     icon: 'BarChart3',
@@ -325,7 +325,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
   },
 
   {
-    title: 'Luân chuyển kho & Tuổi hàng',
+    title: 'Luân chuyển kho & Tuổi',
     path: '/inventory/aging',
     group: 'Sản phẩm & Kho',
     icon: 'Clock',
