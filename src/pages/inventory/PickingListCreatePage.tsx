@@ -10,31 +10,57 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
-import { SYSTEM_WAREHOUSES } from '../../types/inventory';
+import { SYSTEM_WAREHOUSES, type WarehouseOption } from '../../types/inventory';
 import type { AvailablePickingOrder, PickingListPreviewResponse } from '../../types/pickingList';
 import { fetchAvailableOrders, previewPickingList, createPickingList } from '../../services/pickingListApi';
+import { fetchWarehouses } from '../../services/warehouseApi';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const PickingListCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast, user, currentRole } = useAuth();
 
+  const [warehousesList, setWarehousesList] = useState<WarehouseOption[]>(SYSTEM_WAREHOUSES);
+
+  // Tải danh sách kho từ backend (hỗ trợ khi hệ thống có nhiều kho mới)
+  useEffect(() => {
+    fetchWarehouses({ status: 'ACTIVE' })
+      .then((data) => {
+        if (data && data.length > 0) {
+          setWarehousesList(
+            data.map((w) => ({
+              id: w.id,
+              code: w.code,
+              name: w.name,
+              address: w.address || undefined,
+              status: w.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn('Lỗi tải danh sách kho từ backend, dùng fallback:', err);
+      });
+  }, []);
+
   // Lọc danh sách kho mà người dùng được phân công phụ trách
   const allowedWarehouses = React.useMemo(() => {
+    const baseList = warehousesList.length > 0 ? warehousesList : SYSTEM_WAREHOUSES;
     if (currentRole === 'ROLE_ADMIN' || user?.roles?.includes('ROLE_ADMIN')) {
-      return SYSTEM_WAREHOUSES;
+      return baseList;
     }
     if (user?.warehouseCodes && user.warehouseCodes.length > 0) {
-      const filtered = SYSTEM_WAREHOUSES.filter((wh) => user.warehouseCodes!.includes(wh.code));
+      const filtered = baseList.filter((wh) => user.warehouseCodes!.includes(wh.code));
       if (filtered.length > 0) return filtered;
     }
     if (user?.warehouse) {
-      const filtered = SYSTEM_WAREHOUSES.filter(
+      const filtered = baseList.filter(
         (wh) => user.warehouse!.includes(wh.code) || user.warehouse!.includes(wh.name)
       );
       if (filtered.length > 0) return filtered;
     }
-    return SYSTEM_WAREHOUSES;
-  }, [user, currentRole]);
+    return baseList;
+  }, [user, currentRole, warehousesList]);
 
   // Warehouse selection: Mặc định chọn kho user phụ trách
   const [warehouseId, setWarehouseId] = useState<number>(() => {
@@ -58,7 +84,6 @@ export const PickingListCreatePage: React.FC = () => {
 
   // Form State
   const [note, setNote] = useState<string>('');
-  const [pickerName, setPickerName] = useState<string>(() => user?.fullName || 'Nhân Viên Kho01');
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   // Đảm bảo warehouseId luôn đồng bộ với kho nhân viên phụ trách khi user load xong
@@ -68,11 +93,6 @@ export const PickingListCreatePage: React.FC = () => {
     }
   }, [allowedWarehouses, warehouseId]);
 
-  useEffect(() => {
-    if (user?.fullName && (pickerName === 'Trần Văn Thủ Kho' || !pickerName)) {
-      setPickerName(user.fullName);
-    }
-  }, [user]);
 
   // Load available orders whenever warehouseId changes
   useEffect(() => {
@@ -186,19 +206,20 @@ export const PickingListCreatePage: React.FC = () => {
                 </h2>
               </div>
 
-              {/* Warehouse selector */}
-              <div className="w-full sm:w-64">
-                <select
+              {/* Warehouse selector có ô tìm kiếm */}
+              <div className="w-full sm:w-72">
+                <SearchSelect
                   value={warehouseId}
                   onChange={(e) => setWarehouseId(Number(e.target.value))}
+                  searchPlaceholder="Tìm kiếm tên hoặc mã kho..."
                   className="w-full text-xs font-semibold border border-orange-300 rounded-xl px-3 py-2 bg-orange-50/50 text-orange-950 focus:ring-2 focus:ring-orange-200 outline-none"
                 >
                   {allowedWarehouses.map((wh) => (
                     <option key={wh.id} value={wh.id}>
-                      {wh.name}
+                      {wh.name} {wh.code ? `(${wh.code})` : ''}
                     </option>
                   ))}
-                </select>
+                </SearchSelect>
               </div>
             </div>
 
@@ -388,7 +409,7 @@ export const PickingListCreatePage: React.FC = () => {
               Thông Tin Phân Công & Tạo Phiếu
             </h2>
 
-            {/* Picker assignment */}
+            {/* Picker assignment (tự động gán người tạo phiếu) */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
                 <User className="w-4 h-4 text-orange-500" />
@@ -396,12 +417,15 @@ export const PickingListCreatePage: React.FC = () => {
               </label>
               <input
                 type="text"
-                value={pickerName}
-                onChange={(e) => setPickerName(e.target.value)}
-                placeholder="Nhập tên thủ kho..."
-                className="w-full text-xs font-medium border border-gray-300 rounded-xl px-3 py-2.5 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-orange-200 focus:border-orange-500 outline-none"
-                required
+                value={user?.fullName || user?.username || 'Người tạo phiếu'}
+                readOnly
+                disabled
+                className="w-full text-xs font-bold border border-gray-200 rounded-xl px-3 py-2.5 bg-gray-100 text-gray-800 cursor-not-allowed select-none outline-none shadow-2xs"
+                title="Người chịu trách nhiệm được tự động gán là người tạo phiếu"
               />
+              <p className="text-[10px] text-gray-400 mt-1">
+                * Tự động lấy theo tài khoản người tạo phiếu (không cho phép sửa).
+              </p>
             </div>
 
             {/* Ghi chú */}

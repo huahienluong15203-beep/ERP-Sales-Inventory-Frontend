@@ -27,6 +27,7 @@ import { productService, type ProductOptionItem } from '../../services/productSe
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from '../../routes/Router';
 import { Pagination } from '../../components/common/Pagination';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 /**
  * S6-02: Thẻ kho chi tiết (Stock Card)
@@ -541,18 +542,19 @@ export const StockCardPage: React.FC = () => {
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-xs">
         <form onSubmit={handleFilterSubmit} className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Lọc 1: Kho hàng */}
+            {/* Lọc 1: Kho hàng (hỗ trợ tìm kiếm nhanh) */}
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
                 Kho Lưu Trữ
               </label>
-              <select
+              <SearchSelect
                 value={selectedWarehouseId}
                 onChange={(e) => {
                   setSelectedWarehouseId(e.target.value);
                   setPage(0);
                 }}
                 disabled={loadingWarehouses}
+                searchPlaceholder="Tìm kiếm mã hoặc tên kho..."
                 className="w-full text-xs font-semibold px-3 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606] cursor-pointer"
               >
                 <option value="">-- Tất cả các kho --</option>
@@ -561,7 +563,7 @@ export const StockCardPage: React.FC = () => {
                     {w.code} - {w.name}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
             </div>
 
             {/* Lọc 2: Sản phẩm (Tìm nhanh SKU hoặc tên với Autocomplete) */}
@@ -804,8 +806,7 @@ export const StockCardPage: React.FC = () => {
                 <col className="w-[160px]" /> {/* Chứng từ gốc */}
                 <col className="w-[160px]" /> {/* Loại nghiệp vụ */}
                 <col className="w-[310px]" /> {/* Sản phẩm (tên & ĐVT) */}
-                <col className="w-[110px]" /> {/* Nhập (+) */}
-                <col className="w-[110px]" /> {/* Xuất (-) */}
+                <col className="w-[120px]" /> {/* Nhập / Xuất */}
                 <col className="w-[120px]" /> {/* Tồn sau phát sinh */}
                 <col className="w-[65px]" />  {/* Thao tác (Con mắt) */}
               </colgroup>
@@ -816,8 +817,7 @@ export const StockCardPage: React.FC = () => {
                   <th className="py-3 px-3">Chứng Từ Gốc</th>
                   <th className="py-3 px-3">Nghiệp Vụ</th>
                   <th className="py-3 px-3">Sản Phẩm</th>
-                  <th className="py-3 px-3 text-right">Nhập (+)</th>
-                  <th className="py-3 px-3 text-right">Xuất (-)</th>
+                  <th className="py-3 px-3 text-right">Nhập / Xuất</th>
                   <th className="py-3 px-3 text-right">Tồn Sau</th>
                   <th className="py-3 px-2 text-center">Chi Tiết</th>
                 </tr>
@@ -905,20 +905,13 @@ export const StockCardPage: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Nhập (+) */}
-                      <td className="py-3 px-3 text-right">
+                      {/* Nhập / Xuất */}
+                      <td className="py-3 px-3 text-right whitespace-nowrap">
                         {qtyIn > 0 ? (
                           <span className="font-mono font-bold text-emerald-700 text-xs">
                             +{formatQty(qtyIn)}
                           </span>
-                        ) : (
-                          <span className="text-gray-300 font-mono">—</span>
-                        )}
-                      </td>
-
-                      {/* Xuất (-) */}
-                      <td className="py-3 px-3 text-right">
-                        {qtyOut > 0 ? (
+                        ) : qtyOut > 0 ? (
                           <span className="font-mono font-bold text-orange-700 text-xs">
                             -{formatQty(qtyOut)}
                           </span>
@@ -1164,8 +1157,8 @@ export const StockCardPage: React.FC = () => {
 
       {/* 7. MODAL XEM TRƯỚC VÀ IN THẺ KHO (PRINT PREVIEW MODAL) */}
       {isPrintModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs print:p-0 print:bg-white">
-          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto print:max-w-none print:w-full print:p-0 print:shadow-none print:border-none">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs print:p-0 print:bg-white print:static print:z-auto print:block print:m-0">
+          <div className="bg-white rounded-none print:rounded-none max-w-4xl w-full p-6 shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto print:max-w-none print:w-full print:p-0 print:shadow-none print:border-none print:overflow-visible print:max-h-none print:static">
             {/* Header Modal (ẩn khi in) */}
             <div className="flex items-center justify-between pb-3 border-b border-gray-200 print:hidden">
               <div className="flex items-center gap-2">
@@ -1192,7 +1185,7 @@ export const StockCardPage: React.FC = () => {
             </div>
 
             {/* NỘI DUNG THẺ KHO CHUẨN MẪU IN KẾ TOÁN S12-DN */}
-            <div className="p-6 text-black print:p-0 space-y-4 font-sans">
+            <div className="p-6 text-black print:p-0 space-y-4 font-sans bg-white rounded-none print:rounded-none">
               <div className="flex justify-between items-start text-xs border-b pb-3">
                 <div>
                   <div className="font-bold uppercase tracking-wider text-sm">HỆ THỐNG ERP SALES & INVENTORY</div>
