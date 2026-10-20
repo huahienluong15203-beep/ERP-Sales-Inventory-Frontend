@@ -937,17 +937,17 @@ export const CustomerOrderPortalPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
+              )}
 
-                {/* Cảnh báo nợ quá hạn nếu có */}
-                {hasOverdueDebt && (
-                  <div className="mt-3 bg-rose-50 border border-rose-200 rounded-xl p-2.5 flex items-center justify-center gap-2 text-rose-800 text-xs">
-                    <ShieldAlert size={16} className="text-rose-600 shrink-0" />
-                    <span>
-                      <strong>Cảnh báo tài chính:</strong> Đại lý có khoản nợ quá hạn ({creditStatus?.overdueDays || 30} ngày). Đơn hàng sẽ bị chặn gửi cho đến khi hoàn tất thanh toán.
-                    </span>
-                  </div>
-                )}
-              </div>
+              {/* Cảnh báo nợ quá hạn nếu có */}
+              {hasOverdueDebt && (
+                <div className="mt-3 bg-rose-50 border border-rose-200 rounded-xl p-2.5 flex items-center justify-center gap-2 text-rose-800 text-xs">
+                  <ShieldAlert size={16} className="text-rose-600 shrink-0" />
+                  <span>
+                    <strong>Cảnh báo tài chính:</strong> Đại lý có khoản nợ quá hạn ({creditStatus?.overdueDays || 30} ngày). Đơn hàng sẽ bị chặn gửi cho đến khi hoàn tất thanh toán.
+                  </span>
+                </div>
+              )}
 
               {/* BỘ LỌC TÌM KIẾM SẢN PHẨM */}
               <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-3">
