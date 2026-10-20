@@ -106,6 +106,8 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
         ? 'Chờ nộp quỹ (Kế toán chưa duyệt)'
         : receipt.status === 'CONFIRMED'
         ? 'Đã nộp quỹ & đối trừ nợ'
+        : receipt.status === 'VOIDED'
+        ? 'Đã điều chỉnh (Huỷ cấn trừ nợ)'
         : `Từ chối nhận tiền ${receipt.rejectionReason ? `(${escapeHtml(receipt.rejectionReason)})` : ''}`;
 
     const statusBadgeStyle =
@@ -113,6 +115,8 @@ export const PaymentReceiptPrintModal: React.FC<PaymentReceiptPrintModalProps> =
         ? 'background: #fef3c7; color: #92400e; border: 1px solid #fcd34d;'
         : receipt.status === 'CONFIRMED'
         ? 'background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7;'
+        : receipt.status === 'VOIDED'
+        ? 'background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;'
         : 'background: #ffe4e6; color: #9f1239; border: 1px solid #fca5a5;';
 
     return `
