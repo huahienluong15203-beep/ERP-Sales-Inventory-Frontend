@@ -254,7 +254,7 @@ export const DebtReconciliationPage: React.FC = () => {
               className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#F85606] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
             >
               <Plus size={15} />
-              <span>+ Lập biên bản đối chiếu mới</span>
+              <span>Lập biên bản đối chiếu mới</span>
             </button>
           ) : (
             <button
@@ -611,7 +611,7 @@ export const DebtReconciliationPage: React.FC = () => {
                   ) : statements.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="py-16 text-center text-gray-400">
-                        Chưa có biên bản đối chiếu nào. Hãy bấm &ldquo;+ Lập biên bản đối chiếu mới&rdquo;.
+                        Chưa có biên bản đối chiếu nào. Hãy bấm &ldquo;Lập biên bản đối chiếu mới&rdquo;.
                       </td>
                     </tr>
                   ) : (
