@@ -192,7 +192,7 @@ export const ProductLotManagementPage: React.FC = () => {
               type="button"
               onClick={() => setIsBatchConfigModalOpen(true)}
               className="px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:bg-orange-50 hover:border-orange-200 text-gray-700 hover:text-[#F85606] font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
-              title="Bật/Tắt quản lý lô theo từng SKU sản phẩm (S6-01)"
+              title="Bật/Tắt quản lý lô theo từng SKU sản phẩm "
             >
               <SlidersHorizontal size={15} className="text-[#F85606]" />
               <span>Bật/Tắt lô theo SKU</span>
@@ -455,9 +455,8 @@ export const ProductLotManagementPage: React.FC = () => {
                   return (
                     <tr
                       key={lot.id}
-                      className={`hover:bg-orange-50/30 transition-colors ${
-                        isExpired ? 'bg-rose-50/20' : isLocked ? 'bg-gray-50/50' : 'bg-white'
-                      }`}
+                      className={`hover:bg-orange-50/30 transition-colors ${isExpired ? 'bg-rose-50/20' : isLocked ? 'bg-gray-50/50' : 'bg-white'
+                        }`}
                     >
                       {/* Số lô */}
                       <td className="py-3 px-4 whitespace-nowrap">
@@ -556,11 +555,10 @@ export const ProductLotManagementPage: React.FC = () => {
                               type="button"
                               onClick={() => handleOpenLockModal(lot)}
                               title={isLocked ? 'Mở khóa cho phép xuất kho' : 'Khóa lô ngăn xuất kho'}
-                              className={`p-1.5 rounded-lg border transition cursor-pointer ${
-                                isLocked
+                              className={`p-1.5 rounded-lg border transition cursor-pointer ${isLocked
                                   ? 'border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
                                   : 'border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700'
-                              }`}
+                                }`}
                             >
                               {isLocked ? <Unlock size={14} /> : <Lock size={14} />}
                             </button>

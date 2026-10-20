@@ -99,7 +99,7 @@ export const ProductBatchManagementConfigModal: React.FC<ProductBatchManagementC
             </div>
             <div>
               <h3 className="font-bold text-base sm:text-lg leading-tight">
-                Cấu hình Bật / Tắt Quản lý Lô theo từng SKU (S6-01)
+                Cấu hình Bật / Tắt Quản lý Lô theo từng SKU
               </h3>
               <p className="text-xs text-orange-100 mt-0.5">
                 Kích hoạt hoặc vô hiệu hóa cơ chế theo dõi số lô, hạn sử dụng và trừ tồn kho theo FEFO
@@ -135,22 +135,20 @@ export const ProductBatchManagementConfigModal: React.FC<ProductBatchManagementC
               <button
                 type="button"
                 onClick={() => setFilterMode('ALL')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
-                  filterMode === 'ALL'
+                className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${filterMode === 'ALL'
                     ? 'bg-[#F85606] text-white shadow-2xs'
                     : 'text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 Tất cả ({products.length})
               </button>
               <button
                 type="button"
                 onClick={() => setFilterMode('ACTIVE')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1 ${
-                  filterMode === 'ACTIVE'
+                className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1 ${filterMode === 'ACTIVE'
                     ? 'bg-emerald-600 text-white shadow-2xs'
                     : 'text-gray-600 hover:text-emerald-700'
-                }`}
+                  }`}
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
                 <span>Đang theo dõi lô ({activeCount})</span>
@@ -158,11 +156,10 @@ export const ProductBatchManagementConfigModal: React.FC<ProductBatchManagementC
               <button
                 type="button"
                 onClick={() => setFilterMode('INACTIVE')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1 ${
-                  filterMode === 'INACTIVE'
+                className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1 ${filterMode === 'INACTIVE'
                     ? 'bg-gray-700 text-white shadow-2xs'
                     : 'text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 <span className="w-2 h-2 rounded-full bg-gray-400" />
                 <span>Chưa theo dõi ({inactiveCount})</span>
@@ -216,19 +213,17 @@ export const ProductBatchManagementConfigModal: React.FC<ProductBatchManagementC
                           type="button"
                           disabled={isToggling}
                           onClick={() => handleToggle(p)}
-                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer shadow-2xs ${
-                            p.hasBatchManagement
+                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer shadow-2xs ${p.hasBatchManagement
                               ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100'
                               : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
-                          }`}
+                            }`}
                         >
                           {isToggling ? (
                             <RefreshCw size={12} className="animate-spin text-orange-500" />
                           ) : (
                             <span
-                              className={`w-2 h-2 rounded-full ${
-                                p.hasBatchManagement ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'
-                              }`}
+                              className={`w-2 h-2 rounded-full ${p.hasBatchManagement ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'
+                                }`}
                             />
                           )}
                           <span>{p.hasBatchManagement ? 'Đang theo dõi lô' : 'Đang tắt (Nhấp bật)'}</span>

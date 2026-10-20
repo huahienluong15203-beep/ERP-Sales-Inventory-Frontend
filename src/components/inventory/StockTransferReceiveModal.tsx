@@ -363,7 +363,7 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
             </div>
           )}
 
-          {/* Ghi chú cộng tồn (AC3) */}
+          {/* Ghi chú cộng tồn  */}
           <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-start gap-2">
             <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
             <div>
@@ -394,8 +394,8 @@ export const StockTransferReceiveModal: React.FC<StockTransferReceiveModalProps>
               {submitting
                 ? 'Đang xử lý...'
                 : hasAnyDiscrepancy
-                ? 'Xác nhận giải trình & Nhận hàng'
-                : 'Xác nhận kiểm tra & Nhận đủ'}
+                  ? 'Xác nhận giải trình & Nhận hàng'
+                  : 'Xác nhận kiểm tra & Nhận đủ'}
             </span>
           </button>
         </div>
