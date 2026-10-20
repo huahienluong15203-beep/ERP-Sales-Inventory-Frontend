@@ -25,6 +25,7 @@ import {
   agencyRespondStatement
 } from '../../services/debtReconciliationApi';
 import { ReconciliationPrintModal } from '../../components/debt/ReconciliationPrintModal';
+import { ReconciliationDisputeModal } from '../../components/debt/ReconciliationDisputeModal';
 
 export const DebtReconciliationPage: React.FC = () => {
   const navigate = useNavigate();
@@ -186,19 +187,17 @@ export const DebtReconciliationPage: React.FC = () => {
     setIsPrintModalOpen(true);
   };
 
-  // Giả lập đại lý xác nhận hoặc phản hồi lệch (Test tính năng portal)
-  const handleSimulateAgencyAction = async (stmt: PeriodicReconciliationStatement, isAccept: boolean) => {
+  // Đại lý xác nhận hoặc phản hồi lệch (khi báo lệch mở hộp nhập lý do theo giao diện hệ thống)
+  const [disputeTarget, setDisputeTarget] = useState<PeriodicReconciliationStatement | null>(null);
+  const [responding, setResponding] = useState<boolean>(false);
+
+  const submitAgencyResponse = async (
+    stmt: PeriodicReconciliationStatement,
+    isAccept: boolean,
+    feedback?: string
+  ) => {
+    setResponding(true);
     try {
-      let feedback: string | undefined;
-      if (!isAccept) {
-        const input = window.prompt('Ghi rõ số liệu chưa khớp để kế toán kiểm tra lại:');
-        if (input === null) return;
-        if (input.trim().length < 5) {
-          showToast('Cảnh báo', 'Vui lòng ghi rõ số liệu lệch (tối thiểu 5 ký tự)', 'info');
-          return;
-        }
-        feedback = input.trim();
-      }
       await agencyRespondStatement(
         stmt.id,
         isAccept ? 'AGENCY_ACCEPTED' : 'AGENCY_DISPUTED',
@@ -210,9 +209,20 @@ export const DebtReconciliationPage: React.FC = () => {
         isAccept ? 'Biên bản đã được đại lý chấp thuận' : 'Kế toán cần đối chiếu lại chứng từ',
         isAccept ? 'success' : 'info'
       );
+      setDisputeTarget(null);
       loadStatements();
     } catch (err: any) {
       showToast('Lỗi', err.message, 'error');
+    } finally {
+      setResponding(false);
+    }
+  };
+
+  const handleSimulateAgencyAction = (stmt: PeriodicReconciliationStatement, isAccept: boolean) => {
+    if (isAccept) {
+      submitAgencyResponse(stmt, true);
+    } else {
+      setDisputeTarget(stmt);
     }
   };
 
@@ -724,6 +734,14 @@ export const DebtReconciliationPage: React.FC = () => {
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
         statement={selectedStatement}
+      />
+
+      <ReconciliationDisputeModal
+        open={disputeTarget !== null}
+        statementCode={disputeTarget?.statementCode}
+        loading={responding}
+        onCancel={() => setDisputeTarget(null)}
+        onSubmit={(feedback) => disputeTarget && submitAgencyResponse(disputeTarget, false, feedback)}
       />
     </div>
   );
