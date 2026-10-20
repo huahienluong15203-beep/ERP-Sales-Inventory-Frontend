@@ -940,8 +940,7 @@ export const AppRoutes: React.FC = () => {
               allowedRoles={[
                 'ROLE_SALES_REP',
                 'ROLE_SALES_MANAGER',
-                'ROLE_ADMIN',
-                'ROLE_ACCOUNTANT'
+                'ROLE_ADMIN'
               ]}
             >
               <SalesReturnListPage />
@@ -955,8 +954,7 @@ export const AppRoutes: React.FC = () => {
               allowedRoles={[
                 'ROLE_SALES_REP',
                 'ROLE_SALES_MANAGER',
-                'ROLE_ADMIN',
-                'ROLE_ACCOUNTANT'
+                'ROLE_ADMIN'
               ]}
             >
               <CreateSalesReturnPage />
