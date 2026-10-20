@@ -693,3 +693,22 @@ export async function fetchPaymentCollectors(): Promise<PaymentCollector[]> {
     }
   ];
 }
+
+/**
+ * 8. Lập bút toán điều chỉnh cho phiếu thu đã ghi nhận (hoàn tác cấn trừ công nợ)
+ */
+export async function adjustPaymentReceipt(
+  receiptId: number | string,
+  reason: string
+): Promise<PaymentReceipt> {
+  const payload = { reason };
+  const res = await authFetch(`${API_BASE_URL}/api/payments/${receiptId}/adjust`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  if (res.ok) {
+    return await res.json();
+  }
+  const errData = await res.json().catch(() => null);
+  throw new Error(errData?.message || 'Lỗi lập bút toán điều chỉnh phiếu thu');
+}
