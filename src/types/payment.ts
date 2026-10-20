@@ -107,6 +107,9 @@ export interface PaymentReconciliationItem {
   rejectedAt?: string;
   rejectedByUsername?: string;
   rejectionReason?: string;
+  collectorId?: number;
+  collectorName?: string;
+  collectorUsername?: string;
 }
 
 export interface PaymentReconciliationResponse {

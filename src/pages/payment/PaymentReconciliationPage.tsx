@@ -20,12 +20,14 @@ import { formatCurrencyVND } from '../../services/orderService';
 import {
   fetchPaymentReconciliation,
   confirmRouteCashCollection,
-  rejectRouteCashCollection
+  rejectRouteCashCollection,
+  fetchPaymentCollectors
 } from '../../services/paymentApi';
 import type {
   PaymentReconciliationResponse,
   PaymentReconciliationItem,
-  PaymentReceipt
+  PaymentReceipt,
+  PaymentCollector
 } from '../../types/payment';
 import { PaymentReceiptModal } from '../../components/payment/PaymentReceiptModal';
 import { PaymentReceiptPrintModal } from '../../components/payment/PaymentReceiptPrintModal';
@@ -43,6 +45,15 @@ export const PaymentReconciliationPage: React.FC = () => {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [data, setData] = useState<PaymentReconciliationResponse | null>(null);
+  const [collectors, setCollectors] = useState<PaymentCollector[]>([]);
+
+  useEffect(() => {
+    if (isAccountantOrAdmin) {
+      fetchPaymentCollectors()
+        .then((res) => setCollectors(res || []))
+        .catch((err) => console.error('Lỗi tải danh sách nhân viên thu:', err));
+    }
+  }, [isAccountantOrAdmin]);
 
   // Modal ghi nhận thu tiền tại tuyến
   const [showCollectModal, setShowCollectModal] = useState<boolean>(false);
@@ -290,15 +301,20 @@ export const PaymentReconciliationPage: React.FC = () => {
             <div>
               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-1.5">
                 <User size={13} />
-                <span>Mã/ID nhân viên (tuỳ chọn)</span>
+                <span>Nhân viên thu tiền</span>
               </label>
-              <input
-                type="text"
-                placeholder="Tất cả nhân viên"
+              <select
                 value={collectorId}
                 onChange={(e) => setCollectorId(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
-              />
+              >
+                <option value="">Tất cả nhân viên</option>
+                {collectors.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.fullName} ({c.username})
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -336,6 +352,7 @@ export const PaymentReconciliationPage: React.FC = () => {
               <tr>
                 <th className="px-4 py-3">Mã phiếu</th>
                 <th className="px-4 py-3">Ngày thu</th>
+                <th className="px-4 py-3">Nhân viên thu</th>
                 <th className="px-4 py-3">Đại lý</th>
                 <th className="px-4 py-3 text-right">Số tiền</th>
                 <th className="px-4 py-3 text-center">Hình thức</th>
@@ -348,14 +365,14 @@ export const PaymentReconciliationPage: React.FC = () => {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700 text-gray-800 dark:text-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={10} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                     <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-emerald-500" />
                     <span>Đang tải bảng đối chiếu...</span>
                   </td>
                 </tr>
               ) : !data?.items || data.items.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={10} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                     <AlertCircle size={28} className="mx-auto mb-2 text-gray-400" />
                     <span>Không có khoản thu nào trong khoảng thời gian đã chọn</span>
                   </td>
@@ -366,8 +383,19 @@ export const PaymentReconciliationPage: React.FC = () => {
                     <td className="px-4 py-3 font-mono font-bold text-gray-900 dark:text-white">
                       {item.code}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">
                       {item.paymentDate}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <User size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <span>{item.collectorName || 'Chưa phân công'}</span>
+                      </div>
+                      {item.collectorUsername && (
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400 font-mono">
+                          @{item.collectorUsername}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="font-semibold text-gray-900 dark:text-white">

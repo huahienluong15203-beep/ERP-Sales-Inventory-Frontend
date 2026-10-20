@@ -56,7 +56,7 @@ export const SalesTargetManagementPage: React.FC = () => {
   const [newTargetType, setNewTargetType] = useState<SalesTargetType>('REP');
   const [newSalesRepId, setNewSalesRepId] = useState<string>('101');
   const [newRegion, setNewRegion] = useState<string>('Miền Bắc');
-  const [newTargetAmountStr, setNewTargetAmountStr] = useState<string>('500000000');
+  const [newTargetAmountStr, setNewTargetAmountStr] = useState<string>((500000000).toLocaleString('vi-VN'));
   const [newNote, setNewNote] = useState<string>('');
   const [submittingCreate, setSubmittingCreate] = useState<boolean>(false);
 
@@ -66,6 +66,12 @@ export const SalesTargetManagementPage: React.FC = () => {
   const [editReason, setEditReason] = useState<string>('');
   const [editNote, setEditNote] = useState<string>('');
   const [submittingEdit, setSubmittingEdit] = useState<boolean>(false);
+
+  // Xử lý nhập tiền tự động định dạng phân cách hàng nghìn
+  const handleAmountInputChange = (setter: React.Dispatch<React.SetStateAction<string>>) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, '');
+    setter(digits ? Number(digits).toLocaleString('vi-VN') : '');
+  };
 
   // Danh sách nhân viên kinh doanh
   const [salesRepOptions, setSalesRepOptions] = useState<Array<{ id: string; code: string; name: string }>>([
@@ -127,15 +133,22 @@ export const SalesTargetManagementPage: React.FC = () => {
 
   // Thống kê tổng hợp cho Admin / Quản lý
   const teamStats = useMemo(() => {
-    const totalTarget = targets.reduce((acc, t) => acc + (t.targetAmount || 0), 0);
-    const totalActual = targets.reduce((acc, t) => acc + (t.actualAmount || 0), 0);
+    // Khi chọn ALL: ưu tiên tính chỉ tiêu theo Nhân viên (REP) để không bị trùng lặp số tiền với khu vực (REGION)
+    const targetSource =
+      typeFilter === 'ALL'
+        ? targets.filter((t) => t.targetType === 'REP')
+        : targets;
+    const finalTargets = targetSource.length > 0 ? targetSource : targets;
+
+    const totalTarget = finalTargets.reduce((acc, t) => acc + (t.targetAmount || 0), 0);
+    const totalActual = finalTargets.reduce((acc, t) => acc + (t.actualAmount || 0), 0);
     const countReps = targets.filter((t) => t.targetType === 'REP').length;
     const avgRate =
-      targets.length > 0
-        ? Math.round(targets.reduce((acc, t) => acc + (t.completionRate || 0), 0) / targets.length)
+      finalTargets.length > 0
+        ? Math.round(finalTargets.reduce((acc, t) => acc + (t.completionRate || 0), 0) / finalTargets.length)
         : 0;
     return { totalTarget, totalActual, countReps, avgRate };
-  }, [targets]);
+  }, [targets, typeFilter]);
 
   // Xử lý tạo mới chỉ tiêu
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -640,8 +653,8 @@ export const SalesTargetManagementPage: React.FC = () => {
                   type="text"
                   required
                   value={newTargetAmountStr}
-                  onChange={(e) => setNewTargetAmountStr(e.target.value)}
-                  placeholder="Ví dụ: 500,000,000"
+                  onChange={handleAmountInputChange(setNewTargetAmountStr)}
+                  placeholder="Ví dụ: 500.000.000"
                   className="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
                 />
                 {Number(newTargetAmountStr.replace(/\D/g, '')) > 0 && (
@@ -731,9 +744,15 @@ export const SalesTargetManagementPage: React.FC = () => {
                   type="text"
                   required
                   value={editAmountStr}
-                  onChange={(e) => setEditAmountStr(e.target.value)}
+                  onChange={handleAmountInputChange(setEditAmountStr)}
+                  placeholder="Ví dụ: 500.000.000"
                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm font-bold font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
                 />
+                {Number(editAmountStr.replace(/\D/g, '')) > 0 && (
+                  <p className="text-[11px] text-gray-500 italic mt-0.5">
+                    Bằng chữ: <strong>{numberToVietnameseWords(Number(editAmountStr.replace(/\D/g, '')))}</strong>
+                  </p>
+                )}
               </div>
 
               {/* Bắt buộc lý do theo AC3 */}
