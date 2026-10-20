@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   ArrowLeft,
   RotateCcw,
@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
-import { searchInvoices } from '../../services/invoiceApi';
+import { searchInvoices, fetchInvoiceById } from '../../services/invoiceApi';
 import { fetchWarehouses } from '../../services/warehouseApi';
 import {
   fetchReturnableInvoiceLines,
@@ -144,40 +144,8 @@ export const CreateSalesReturnPage: React.FC = () => {
   const [lineItems, setLineItems] = useState<LineItemState[]>([]);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  // Tải dữ liệu ban đầu
-  useEffect(() => {
-    const initData = async () => {
-      setLoadingInitial(true);
-      try {
-        const [whRes, invRes] = await Promise.allSettled([
-          fetchWarehouses(),
-          searchInvoices({ size: 50 })
-        ]);
-
-        if (whRes.status === 'fulfilled' && whRes.value && whRes.value.length > 0) {
-          setWarehouses(whRes.value);
-          setSelectedWarehouseId((prev) => prev || whRes.value[0].id);
-        } else {
-          setWarehouses(DEFAULT_WAREHOUSES);
-          setSelectedWarehouseId((prev) => prev || DEFAULT_WAREHOUSES[0].id);
-        }
-
-        if (invRes.status === 'fulfilled' && (invRes.value?.content || []).length > 0) {
-          setInvoices(invRes.value.content);
-        } else {
-          setInvoices(FALLBACK_INVOICES);
-        }
-      } catch (err: any) {
-        setInvoices(FALLBACK_INVOICES);
-      } finally {
-        setLoadingInitial(false);
-      }
-    };
-    initData();
-  }, []);
-
   // Khi chọn hoá đơn -> tải các dòng hàng có thể hoàn trả
-  const handleSelectInvoice = async (inv: InvoiceSummaryResponse) => {
+  const handleSelectInvoice = useCallback(async (inv: InvoiceSummaryResponse) => {
     setSelectedInvoice(inv);
     setLoadingLines(true);
     try {
@@ -212,7 +180,80 @@ export const CreateSalesReturnPage: React.FC = () => {
     } finally {
       setLoadingLines(false);
     }
-  };
+  }, [showToast]);
+
+  // Tải dữ liệu ban đầu
+  useEffect(() => {
+    const initData = async () => {
+      setLoadingInitial(true);
+      try {
+        const [whRes, invRes] = await Promise.allSettled([
+          fetchWarehouses(),
+          searchInvoices({ size: 50 })
+        ]);
+
+        if (whRes.status === 'fulfilled' && whRes.value && whRes.value.length > 0) {
+          setWarehouses(whRes.value);
+          setSelectedWarehouseId((prev) => prev || whRes.value[0].id);
+        } else {
+          setWarehouses(DEFAULT_WAREHOUSES);
+          setSelectedWarehouseId((prev) => prev || DEFAULT_WAREHOUSES[0].id);
+        }
+
+        let loadedInvoices: InvoiceSummaryResponse[] = FALLBACK_INVOICES;
+        if (invRes.status === 'fulfilled' && (invRes.value?.content || []).length > 0) {
+          loadedInvoices = invRes.value.content;
+          setInvoices(loadedInvoices);
+        } else {
+          setInvoices(FALLBACK_INVOICES);
+        }
+
+        // Tự động chọn hoá đơn nếu được truyền từ trang hoá đơn qua query param ?invoiceId=...
+        const searchParams = new URLSearchParams(window.location.search);
+        const paramInvoiceIdStr = searchParams.get('invoiceId');
+        if (paramInvoiceIdStr) {
+          const paramInvoiceId = Number(paramInvoiceIdStr);
+          let targetInv = loadedInvoices.find((i) => i.id === paramInvoiceId);
+          if (!targetInv) {
+            try {
+              const singleInv = await fetchInvoiceById(paramInvoiceId);
+              if (singleInv) {
+                const singleSummary: InvoiceSummaryResponse = {
+                  id: singleInv.id ?? paramInvoiceId,
+                  code: singleInv.code ?? `HD-${paramInvoiceId}`,
+                  invoiceDate: singleInv.invoiceDate,
+                  status: singleInv.status,
+                  customerId: singleInv.customerId,
+                  customerCode: singleInv.customerCode,
+                  customerName: singleInv.customerName,
+                  totalAmount: singleInv.totalAmount,
+                  notes: singleInv.note,
+                  issuedAt: singleInv.issuedAt,
+                  issuedByUsername: singleInv.issuedByUsername
+                };
+                targetInv = singleSummary;
+                setInvoices((prev) => {
+                  if (prev.some((i) => i.id === singleSummary.id)) return prev;
+                  return [singleSummary, ...prev];
+                });
+              }
+            } catch (e) {
+              console.warn('Could not fetch invoice by param ID:', e);
+            }
+          }
+
+          if (targetInv) {
+            handleSelectInvoice(targetInv);
+          }
+        }
+      } catch (err: any) {
+        setInvoices(FALLBACK_INVOICES);
+      } finally {
+        setLoadingInitial(false);
+      }
+    };
+    initData();
+  }, [handleSelectInvoice]);
 
   // Cập nhật chọn/bỏ chọn dòng hàng
   const handleToggleSelectLine = (invoiceLineId: number) => {
@@ -400,9 +441,15 @@ export const CreateSalesReturnPage: React.FC = () => {
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
-          onClick={() => navigate('/sales-returns')}
+          onClick={() => {
+            if (window.history.length > 1) {
+              window.history.back();
+            } else {
+              navigate('/sales-returns');
+            }
+          }}
           className="px-3.5 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
-          title="Quay lại danh sách phiếu trả hàng"
+          title="Quay lại"
         >
           <ArrowLeft size={16} />
           <span>Quay lại</span>
