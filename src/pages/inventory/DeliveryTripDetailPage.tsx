@@ -219,53 +219,53 @@ export const DeliveryTripDetailPage: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate('/inventory/delivery-trips')}
-          className="px-5 py-3 bg-white text-gray-700 hover:text-[#F85606] hover:border-orange-300 rounded-xl border-2 border-gray-200 shadow-xs hover:shadow transition-all cursor-pointer inline-flex items-center gap-2.5 text-sm font-extrabold active:scale-95"
+          className="px-3.5 py-2 bg-white text-gray-700 hover:text-[#F85606] hover:border-orange-300 rounded-xl border border-gray-200 shadow-2xs hover:shadow-xs transition-all cursor-pointer inline-flex items-center gap-2 text-xs font-bold active:scale-95"
           title="Quay lại danh sách chuyến giao hàng"
           id="btn-delivery-trip-detail-back"
         >
-          <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+          <ArrowLeft className="w-4 h-4" />
           <span>Quay lại</span>
         </button>
       </div>
 
       {/* Top Header Card */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-gray-200">
         <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight font-mono">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-lg md:text-xl font-bold text-gray-900 tracking-tight font-mono">
               {trip.code}
             </h1>
             {trip.status === 'COMPLETED' ? (
-              <span className="px-3.5 py-1.5 rounded-full text-sm font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                 ✓ ĐÃ VỀ KHO
               </span>
             ) : (
-              <span className="px-3.5 py-1.5 rounded-full text-sm font-extrabold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
                 ĐANG LƯU THÔNG
               </span>
             )}
             {trip.overdue && (
-              <span className="px-3.5 py-1.5 rounded-full text-sm font-extrabold bg-red-100 text-red-700 border border-red-300">
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-300">
                 ⚠️ {formatOverdueTime(trip.overdueMinutes)}
               </span>
             )}
           </div>
-          <p className="text-sm text-gray-600 mt-2 font-medium">
+          <p className="text-xs text-gray-500 mt-1.5 font-medium">
             Kho xuất: <strong className="text-gray-900 font-bold">{trip.warehouseName}</strong> • Phương tiện: <strong className="text-gray-900 font-bold">{trip.vehiclePlate}</strong> • Tài xế: <strong className="text-gray-900 font-bold">{trip.driverName}</strong>
           </p>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Nút giao tất cả điểm nếu còn điểm chưa giao */}
           {isWarehouseStaff && trip.status === 'IN_PROGRESS' && trip.remainingStops > 0 && (
             <button
               onClick={handleConfirmAllStops}
               disabled={completing}
-              className="px-4.5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-sm rounded-xl shadow transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               title="Xác nhận giao hàng thành công toàn bộ điểm trên xe"
             >
-              <CheckCheck className="w-5 h-5" />
+              <CheckCheck className="w-4 h-4" />
               <span>Giao đủ tất cả ({trip.remainingStops} điểm)</span>
             </button>
           )}
@@ -273,9 +273,9 @@ export const DeliveryTripDetailPage: React.FC = () => {
           {/* In danh sách điểm giao AC3 */}
           <button
             onClick={() => setIsPrintModalOpen(true)}
-            className="px-5 py-2.5 bg-[#F85606] hover:bg-[#E04D05] text-white font-bold text-sm rounded-xl shadow transition-colors flex items-center gap-2 cursor-pointer"
+            className="px-3.5 py-2 bg-[#F85606] hover:bg-[#E04D05] text-white font-bold text-xs rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            <Printer className="w-5 h-5" />
+            <Printer className="w-4 h-4" />
             <span>In Bảng Kê (AC3)</span>
           </button>
 
@@ -284,12 +284,12 @@ export const DeliveryTripDetailPage: React.FC = () => {
             <button
               onClick={handleCompleteTrip}
               disabled={completing}
-              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm rounded-xl shadow transition-colors flex items-center gap-2 cursor-pointer"
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               {completing ? (
-                <RefreshCw className="w-5 h-5 animate-spin" />
+                <RefreshCw className="w-4 h-4 animate-spin" />
               ) : (
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               )}
               <span>Xác nhận Xe về kho</span>
             </button>
@@ -298,21 +298,21 @@ export const DeliveryTripDetailPage: React.FC = () => {
       </div>
 
       {/* Info Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Tài xế & Phương tiện */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
-          <div className="flex items-center gap-2.5 text-sm font-extrabold text-gray-800 uppercase tracking-wider border-b border-gray-100 pb-3">
-            <User className="w-5 h-5 text-[#F85606]" />
-            Tài xế & Phương tiện
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-xs space-y-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-100 pb-2.5">
+            <User className="w-4 h-4 text-[#F85606]" />
+            <span>Tài xế & Phương tiện</span>
           </div>
-          <div className="space-y-2.5 text-sm">
+          <div className="space-y-2 text-xs">
             <div className="flex justify-between items-center">
               <span className="text-gray-500 font-medium">Họ và tên:</span>
               <strong className="text-gray-900 font-bold">{trip.driverName}</strong>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-500 font-medium">Số điện thoại:</span>
-              <strong className="text-[#F85606] font-mono font-bold text-base">
+              <strong className="text-[#F85606] font-bold">
                 {trip.driverPhone ? (
                   <a href={`tel:${trip.driverPhone}`} className="hover:underline">
                     📞 {trip.driverPhone}
@@ -324,7 +324,7 @@ export const DeliveryTripDetailPage: React.FC = () => {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-500 font-medium">Biển số xe:</span>
-              <strong className="font-mono font-black bg-gray-100 px-3 py-1 rounded-lg text-gray-900 text-sm">
+              <strong className="font-bold bg-gray-100 px-2 py-0.5 rounded text-gray-900 text-xs">
                 {trip.vehiclePlate || 'Chưa gán'}
               </strong>
             </div>
@@ -332,15 +332,15 @@ export const DeliveryTripDetailPage: React.FC = () => {
         </div>
 
         {/* Lịch trình thời gian */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
-          <div className="flex items-center gap-2.5 text-sm font-extrabold text-gray-800 uppercase tracking-wider border-b border-gray-100 pb-3">
-            <Clock className="w-5 h-5 text-[#F85606]" />
-            Thời gian lộ trình
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-xs space-y-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-100 pb-2.5">
+            <Clock className="w-4 h-4 text-[#F85606]" />
+            <span>Thời gian lộ trình</span>
           </div>
-          <div className="space-y-2.5 text-sm">
+          <div className="space-y-2 text-xs">
             <div className="flex justify-between items-center">
               <span className="text-gray-500 font-medium">Xuất bến:</span>
-              <strong className="text-gray-900 font-mono font-bold">
+              <strong className="text-gray-900 font-bold">
                 {trip.departedAt ? (
                   `${new Date(trip.departedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ${new Date(trip.departedAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
                 ) : (
@@ -351,7 +351,7 @@ export const DeliveryTripDetailPage: React.FC = () => {
             {trip.completedAt ? (
               <div className="flex justify-between items-center">
                 <span className="text-gray-500 font-medium">Bàn giao / Về:</span>
-                <strong className="text-emerald-700 font-mono font-bold">
+                <strong className="text-emerald-700 font-bold">
                   {new Date(trip.completedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}{' '}
                   {new Date(trip.completedAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                 </strong>
@@ -359,7 +359,7 @@ export const DeliveryTripDetailPage: React.FC = () => {
             ) : (
               <div className="flex justify-between items-center">
                 <span className="text-gray-500 font-medium">Dự kiến về:</span>
-                <strong className="text-gray-900 font-mono font-bold">
+                <strong className="text-gray-900 font-bold">
                   {new Date(trip.expectedReturnAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}{' '}
                   {new Date(trip.expectedReturnAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                 </strong>
@@ -369,46 +369,46 @@ export const DeliveryTripDetailPage: React.FC = () => {
         </div>
 
         {/* Tiến độ & Tiền hàng */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between text-sm font-extrabold text-gray-800 uppercase tracking-wider border-b border-gray-100 pb-3">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-xs space-y-3">
+          <div className="flex items-center justify-between text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-100 pb-2.5">
             <span className="flex items-center gap-2">
-              <Package className="w-5 h-5 text-[#F85606]" />
+              <Package className="w-4 h-4 text-[#F85606]" />
               Tiến độ ({percent}%)
             </span>
-            <span className="text-[#F85606] font-mono font-black text-base">
+            <span className="text-[#F85606] font-bold text-xs sm:text-sm">
               {totalTripValue.toLocaleString('vi-VN')} đ
             </span>
           </div>
-          <div className="space-y-2.5">
-            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+          <div className="space-y-2">
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
               <div
-                className="bg-[#F85606] h-3 rounded-full transition-all"
+                className="bg-[#F85606] h-2 rounded-full transition-all"
                 style={{ width: `${percent}%` }}
               />
             </div>
-            <div className="flex justify-between text-sm text-gray-700 font-semibold">
-              <span>Đã giao: <strong className="text-emerald-700">{trip.deliveredStops}</strong></span>
-              <span>Còn lại: <strong className="text-[#F85606]">{trip.remainingStops}</strong></span>
-              <span>Thất bại: <strong className="text-red-600">{trip.failedStops}</strong></span>
+            <div className="flex justify-between text-xs text-gray-600 font-medium">
+              <span>Đã giao: <strong className="text-emerald-700 font-bold">{trip.deliveredStops}</strong></span>
+              <span>Còn lại: <strong className="text-[#F85606] font-bold">{trip.remainingStops}</strong></span>
+              <span>Thất bại: <strong className="text-red-600 font-bold">{trip.failedStops}</strong></span>
             </div>
-            <div className="pt-2.5 text-sm space-y-2 border-t border-gray-100">
+            <div className="pt-2 text-xs space-y-1.5 border-t border-gray-100">
               <div className="flex justify-between items-center">
                 <span className="text-gray-500 font-medium">Tổng tiền chuyến:</span>
-                <span className="font-mono font-black text-gray-900">
+                <span className="font-bold text-gray-900">
                   {totalTripValue.toLocaleString('vi-VN')} đ
                 </span>
               </div>
               {deliveredValue > 0 && (
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500 font-medium">Đã giao khách:</span>
-                  <span className="font-mono font-bold text-emerald-700">
+                  <span className="font-bold text-emerald-700">
                     {deliveredValue.toLocaleString('vi-VN')} đ
                   </span>
                 </div>
               )}
               <div className="flex justify-between items-center">
                 <span className="text-gray-500 font-medium">Còn trên xe:</span>
-                <span className={`font-mono font-black ${remainingValue > 0 ? 'text-[#F85606]' : 'text-emerald-600'}`}>
+                <span className={`font-bold ${remainingValue > 0 ? 'text-[#F85606]' : 'text-emerald-600'}`}>
                   {remainingValue > 0 ? `${remainingValue.toLocaleString('vi-VN')} đ` : '0 đ (Đã giao đủ)'}
                 </span>
               </div>
@@ -418,93 +418,93 @@ export const DeliveryTripDetailPage: React.FC = () => {
       </div>
 
       {/* Danh sách điểm giao (Stop Manifest Table) */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-extrabold text-gray-900 uppercase tracking-wider flex items-center gap-2.5">
-            <MapPin className="w-5 h-5 text-[#F85606]" />
-            Danh Sách Điểm Giao Của Chuyến ({sortedStops.length} điểm)
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div className="p-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2.5">
+          <h2 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-[#F85606]" />
+            <span>Danh Sách Điểm Giao Của Chuyến ({sortedStops.length} điểm)</span>
           </h2>
-          <span className="text-sm text-gray-500 italic">
+          <span className="text-xs text-gray-400 italic">
             Liệt kê theo thứ tự xe ghé giao kèm địa chỉ và số điện thoại người nhận
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-sm">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-gray-100/90 border-b-2 border-gray-200 text-gray-900 font-extrabold uppercase text-xs tracking-wider">
-                <th className="py-4 px-4 text-center w-14">Lộ trình</th>
-                <th className="py-4 px-4 w-36">Mã đơn hàng</th>
-                <th className="py-4 px-5">Khách hàng / Đại lý</th>
-                <th className="py-4 px-5">Địa chỉ giao hàng</th>
-                <th className="py-4 px-5 w-48">Người nhận & SĐT</th>
-                <th className="py-4 px-4 text-right w-36">Tiền hàng (COD)</th>
-                <th className="py-4 px-4 text-center w-36">Trạng thái</th>
-                <th className="py-4 px-4 text-center w-52">Thao tác</th>
+              <tr className="bg-gray-50/90 border-b border-gray-200 text-gray-600 font-bold uppercase text-[10px] tracking-wider">
+                <th className="py-2.5 px-3 text-center w-14">Lộ trình</th>
+                <th className="py-2.5 px-3 w-36">Mã đơn hàng</th>
+                <th className="py-2.5 px-3">Khách hàng / Đại lý</th>
+                <th className="py-2.5 px-3">Địa chỉ giao hàng</th>
+                <th className="py-2.5 px-3 w-44">Người nhận & SĐT</th>
+                <th className="py-2.5 px-3 text-right w-32">Tiền hàng (COD)</th>
+                <th className="py-2.5 px-3 text-center w-36">Trạng thái</th>
+                <th className="py-2.5 px-3 text-center w-48">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {sortedStops.map((stop, idx) => (
-                <tr key={stop.orderId || idx} className="hover:bg-orange-50/20 transition-colors">
-                  <td className="py-4 px-4 text-center font-black text-base text-[#F85606] bg-orange-50/50">
+                <tr key={stop.orderId || idx} className="hover:bg-orange-50/30 transition-colors">
+                  <td className="py-2.5 px-3 text-center font-bold text-xs text-[#F85606] bg-orange-50/40">
                     #{stop.stopSequence || idx + 1}
                   </td>
-                  <td className="py-4 px-4 font-mono font-extrabold text-gray-900 text-sm">
+                  <td className="py-2.5 px-3 font-mono font-bold text-gray-900 text-xs">
                     {stop.orderCode}
                   </td>
-                  <td className="py-4 px-5">
-                    <div className="font-extrabold text-gray-900 text-sm">{stop.customerName}</div>
+                  <td className="py-2.5 px-3">
+                    <div className="font-bold text-gray-900 text-xs">{stop.customerName}</div>
                     {stop.customerCode && (
-                      <div className="text-xs text-gray-500 font-mono mt-0.5">Mã: {stop.customerCode}</div>
+                      <div className="text-[10px] text-gray-400 font-mono mt-0.5">Mã: {stop.customerCode}</div>
                     )}
                   </td>
-                  <td className="py-4 px-5">
-                    <div className="text-gray-900 font-medium leading-snug text-sm">{stop.deliveryAddress}</div>
+                  <td className="py-2.5 px-3">
+                    <div className="text-gray-800 font-normal leading-snug text-xs">{stop.deliveryAddress}</div>
                     {stop.district && (
-                      <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 font-semibold border border-gray-300">
+                      <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-medium border border-gray-200">
                         📍 {stop.district}
                       </span>
                     )}
                   </td>
-                  <td className="py-4 px-5">
-                    <div className="font-bold text-gray-900 text-sm">{stop.receiverName || 'Người nhận'}</div>
-                    <div className="font-mono text-[#F85606] font-bold text-sm mt-0.5">
+                  <td className="py-2.5 px-3">
+                    <div className="font-medium text-gray-900 text-xs">{stop.receiverName || 'Người nhận'}</div>
+                    <div className="text-[#F85606] font-semibold text-xs mt-0.5">
                       <a href={`tel:${stop.receiverPhone}`} className="hover:underline">
                         📞 {stop.receiverPhone || '0988.xxx.xxx'}
                       </a>
                     </div>
                   </td>
-                  <td className="py-4 px-4 text-right font-black text-gray-900 text-base">
+                  <td className="py-2.5 px-3 text-right font-bold text-gray-900 text-xs">
                     {stop.totalAmount?.toLocaleString('vi-VN')} đ
                   </td>
-                  <td className="py-4 px-4 text-center">
+                  <td className="py-2.5 px-3 text-center">
                     {stop.status === 'DELIVERED' ? (
                       <div>
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                           Đã giao xong
                         </span>
                         {stop.deliveredAt && (
-                          <div className="text-xs text-emerald-800 font-mono mt-1 font-semibold">
+                          <div className="text-[10px] text-emerald-700 mt-0.5 font-medium">
                             {new Date(stop.deliveredAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}{' '}
                             {new Date(stop.deliveredAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                           </div>
                         )}
                       </div>
                     ) : stop.status === 'DELIVERY_FAILED' ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300" title={stop.deliveryFailedReason || ''}>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-800 border border-red-300" title={stop.deliveryFailedReason || ''}>
                         <XCircle className="w-3.5 h-3.5 text-red-600" />
                         Giao không thành công
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
                         <Clock className="w-3.5 h-3.5 text-amber-600" />
                         Đang trên xe
                       </span>
                     )}
                   </td>
-                  <td className="py-4 px-4 text-center">
-                    <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <td className="py-2.5 px-3 text-center">
+                    <div className="flex items-center justify-center gap-1.5 flex-wrap">
                       {isWarehouseStaff && trip.status === 'IN_PROGRESS' && stop.status === 'DISPATCHED' && (
                         <>
                           <button
@@ -520,10 +520,10 @@ export const DeliveryTripDetailPage: React.FC = () => {
                                 mode: 'CONFIRM'
                               })
                             }
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
                             title="Xác nhận giao thành công & Tải ảnh biên bản có chữ ký (POD)"
                           >
-                            <Check className="w-4 h-4 stroke-[2.5]" />
+                            <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                             <span>Xác nhận</span>
                           </button>
                           <button
@@ -539,10 +539,10 @@ export const DeliveryTripDetailPage: React.FC = () => {
                                 mode: 'FAIL'
                               })
                             }
-                            className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer border border-red-200"
+                            className="px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer border border-red-200"
                             title="Ghi nhận giao không thành công (chọn lý do, hàng quay về kho)"
                           >
-                            <X className="w-4 h-4 stroke-[2.5]" />
+                            <X className="w-3.5 h-3.5 stroke-[2.5]" />
                             <span>Thất bại</span>
                           </button>
                         </>
@@ -562,20 +562,20 @@ export const DeliveryTripDetailPage: React.FC = () => {
                               mode: 'VIEW'
                             })
                           }
-                          className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer border border-blue-200"
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer border border-blue-200"
                           title="Xem ảnh biên bản giao hàng có chữ ký khách hàng"
                         >
-                          <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
                           <span>Xem POD</span>
                         </button>
                       )}
 
                       <button
                         onClick={() => navigate(`/orders/${stop.orderId}`)}
-                        className="p-2 text-gray-400 hover:text-[#F85606] hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-gray-400 hover:text-[#F85606] hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
                         title="Xem chi tiết đơn hàng"
                       >
-                        <ExternalLink className="w-4 h-4" />
+                        <ExternalLink className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </td>

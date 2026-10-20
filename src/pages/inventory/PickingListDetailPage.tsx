@@ -238,13 +238,12 @@ export const PickingListDetailPage: React.FC = () => {
         : (currentItem?.actualBatchNumber || currentItem?.suggestedBatchNumber);
     const chosenReason =
       lotChangeReason !== undefined ? lotChangeReason : currentItem?.lotChangeReason;
-    // Nếu chưa hoàn thành và số lượng < yêu cầu, kèm lý do tạm thời để backend chấp nhận tiến độ gom hàng
     const effectiveDiscrepancyReason =
-      discrepancyReason ||
-      currentItem?.discrepancyReason ||
-      (!isCompleted && pickedQuantity < (currentItem?.requiredQuantity || 0)
-        ? 'Đang gom hàng theo lộ trình'
-        : undefined);
+      discrepancyReason !== undefined
+        ? (discrepancyReason || undefined)
+        : isCompleted && pickedQuantity < (currentItem?.requiredQuantity || 0)
+        ? (currentItem?.discrepancyReason || undefined)
+        : undefined;
 
     try {
       const updatedList = await updateItemProgress(pickingList.id, itemId, {
@@ -408,7 +407,7 @@ export const PickingListDetailPage: React.FC = () => {
         isPicked: targetCompleted,
         shortageReason: targetCompleted
           ? null
-          : (item.discrepancyReason || 'Đang gom hàng theo lộ trình'),
+          : (item.discrepancyReason || null),
         actualBatchNumber: item.actualBatchNumber || item.suggestedBatchNumber || null,
         lotChangeReason: item.lotChangeReason || null
       }));
@@ -640,7 +639,7 @@ export const PickingListDetailPage: React.FC = () => {
                             ))}
                           </div>
                         )}
-                        {item.discrepancyReason && (
+                        {item.isCompleted && item.pickedQuantity < item.requiredQuantity && item.discrepancyReason && item.discrepancyReason !== 'Đang gom hàng theo lộ trình' && (
                           <div className="mt-1 text-[11px] text-amber-700 bg-amber-50 p-1.5 rounded-lg border border-amber-200">
                             ⚠️ <strong>Lý do thiếu:</strong> {item.discrepancyReason}
                           </div>

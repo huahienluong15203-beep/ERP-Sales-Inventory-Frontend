@@ -4,7 +4,6 @@ import {
   X,
   Check,
   MapPin,
-  Sparkles,
   Info
 } from 'lucide-react';
 import type { PickingListItem } from '../../types/pickingList';
@@ -50,7 +49,10 @@ export const PickingBatchShortageModal: React.FC<PickingBatchShortageModalProps>
         shortageItems.map((item) => ({
           item,
           pickedQuantity: item.pickedQuantity,
-          reason: item.discrepancyReason || '',
+          reason:
+            item.discrepancyReason && item.discrepancyReason !== 'Đang gom hàng theo lộ trình'
+              ? item.discrepancyReason
+              : '',
           error: ''
         }))
       );
@@ -87,18 +89,6 @@ export const PickingBatchShortageModal: React.FC<PickingBatchShortageModalProps>
 
   const handleApplyQuickReason = (index: number, quickReason: string) => {
     handleReasonChange(index, quickReason);
-  };
-
-  const handleApplyToAll = (reasonToApply: string) => {
-    if (!reasonToApply.trim()) return;
-    setItemsState((prev) =>
-      prev.map((s) => ({
-        ...s,
-        reason: reasonToApply.trim(),
-        error: ''
-      }))
-    );
-    setGeneralError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -164,34 +154,14 @@ export const PickingBatchShortageModal: React.FC<PickingBatchShortageModalProps>
           </button>
         </div>
 
-        {/* Global Quick Action Bar */}
-        <div className="bg-amber-50/80 border-b border-amber-200 p-4 sm:p-5 space-y-3">
-          <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-950">
-            <Sparkles className="w-4 h-4 text-amber-600" />
-            <span>Chọn nhanh lý do chung cho toàn bộ các mặt hàng bị thiếu:</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {COMMON_SHORTAGE_REASONS.map((qr, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleApplyToAll(qr)}
-                className="text-xs sm:text-sm px-3.5 py-1.5 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl shadow-2xs transition-all active:scale-95 cursor-pointer font-medium hover:border-amber-400"
-              >
-                + {qr}
-              </button>
-            ))}
-          </div>
+        {/* Shortage Items Form */}
+        <form onSubmit={handleSubmit}>
           {generalError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm text-red-700 font-semibold animate-shake">
+            <div className="mx-5 sm:mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm text-red-700 font-semibold animate-shake">
               <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
               <span>{generalError}</span>
             </div>
           )}
-        </div>
-
-        {/* Shortage Items Form */}
-        <form onSubmit={handleSubmit}>
           <div className="max-h-[62vh] overflow-y-auto p-5 sm:p-6 space-y-4">
             {itemsState.map((state, idx) => {
               const shortage = state.item.requiredQuantity - state.pickedQuantity;
