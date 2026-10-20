@@ -682,14 +682,14 @@ export const StockCardPage: React.FC = () => {
                 className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#F85606] cursor-pointer text-gray-700"
               >
                 <option value="ALL">Tất cả nghiệp vụ</option>
-                <option value="RECEIPT">🟢 Nhập kho (RECEIPT)</option>
-                <option value="SALES_DISPATCH">🟠 Xuất bán (SALES_DISPATCH)</option>
-                <option value="DELIVERY_RETURN">🟣 Nhập hàng hoàn (DELIVERY_RETURN)</option>
-                <option value="SALES_RETURN">🟢 Nhập trả hàng (SALES_RETURN)</option>
-                <option value="TRANSFER_OUT">🟡 Xuất chuyển kho (TRANSFER_OUT)</option>
-                <option value="TRANSFER_IN">🔵 Nhận chuyển kho (TRANSFER_IN)</option>
-                <option value="STOCKTAKE_ADJUST">🔴 Điều chỉnh kiểm kê (STOCKTAKE_ADJUST)</option>
-                <option value="STOCK_ADJUSTMENT">🔴 Xuất hủy hao hụt (STOCK_ADJUSTMENT)</option>
+                <option value="RECEIPT">🟢 Nhập kho</option>
+                <option value="SALES_DISPATCH">🟠 Xuất bán </option>
+                <option value="DELIVERY_RETURN">🟣 Nhập hàng hoàn </option>
+                <option value="SALES_RETURN">🟢 Nhập trả hàng </option>
+                <option value="TRANSFER_OUT">🟡 Xuất chuyển kho</option>
+                <option value="TRANSFER_IN">🔵 Nhận chuyển kho </option>
+                <option value="STOCKTAKE_ADJUST">🔴 Điều chỉnh kiểm kê </option>
+                <option value="STOCK_ADJUSTMENT">🔴 Xuất hủy hao hụt </option>
               </select>
             </div>
 
@@ -699,55 +699,50 @@ export const StockCardPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setQuickDateRange('today')}
-                className={`px-2 py-1 text-[11px] rounded-lg border transition cursor-pointer ${
-                  activeQuickRange === 'today'
+                className={`px-2 py-1 text-[11px] rounded-lg border transition cursor-pointer ${activeQuickRange === 'today'
                     ? 'border-amber-400 bg-amber-100 text-amber-900 font-bold shadow-xs'
                     : 'border-gray-200 hover:bg-gray-100 font-medium text-gray-600'
-                }`}
+                  }`}
               >
                 Hôm nay
               </button>
               <button
                 type="button"
                 onClick={() => setQuickDateRange(7)}
-                className={`px-2 py-1 text-[11px] rounded-lg border transition cursor-pointer ${
-                  activeQuickRange === 7
+                className={`px-2 py-1 text-[11px] rounded-lg border transition cursor-pointer ${activeQuickRange === 7
                     ? 'border-amber-400 bg-amber-100 text-amber-900 font-bold shadow-xs'
                     : 'border-gray-200 hover:bg-gray-100 font-medium text-gray-600'
-                }`}
+                  }`}
               >
                 7 ngày
               </button>
               <button
                 type="button"
                 onClick={() => setQuickDateRange(30)}
-                className={`px-2 py-1 text-[11px] rounded-lg border transition cursor-pointer ${
-                  activeQuickRange === 30
+                className={`px-2 py-1 text-[11px] rounded-lg border transition cursor-pointer ${activeQuickRange === 30
                     ? 'border-amber-400 bg-amber-100 text-amber-900 font-bold shadow-xs'
                     : 'border-gray-200 hover:bg-gray-100 font-medium text-gray-600'
-                }`}
+                  }`}
               >
                 30 ngày
               </button>
               <button
                 type="button"
                 onClick={() => setQuickDateRange('thisMonth')}
-                className={`px-2 py-1 text-[11px] rounded-lg border transition cursor-pointer ${
-                  activeQuickRange === 'thisMonth'
+                className={`px-2 py-1 text-[11px] rounded-lg border transition cursor-pointer ${activeQuickRange === 'thisMonth'
                     ? 'border-amber-400 bg-amber-100 text-amber-900 font-bold shadow-xs'
                     : 'border-gray-200 hover:bg-gray-100 font-medium text-gray-600'
-                }`}
+                  }`}
               >
                 Tháng này
               </button>
               <button
                 type="button"
                 onClick={() => setQuickDateRange('lastMonth')}
-                className={`px-2 py-1 text-[11px] rounded-lg border transition cursor-pointer ${
-                  activeQuickRange === 'lastMonth'
+                className={`px-2 py-1 text-[11px] rounded-lg border transition cursor-pointer ${activeQuickRange === 'lastMonth'
                     ? 'border-amber-400 bg-amber-100 text-amber-900 font-bold shadow-xs'
                     : 'border-gray-200 hover:bg-gray-100 font-medium text-gray-600'
-                }`}
+                  }`}
               >
                 Tháng trước
               </button>
