@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Target,
   TrendingUp,
@@ -11,7 +11,10 @@ import {
   RefreshCw,
   User,
   MapPin,
-  X
+  X,
+  Users,
+  DollarSign,
+  CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatCurrencyVND } from '../../services/orderService';
@@ -22,6 +25,7 @@ import {
   createSalesTarget,
   updateSalesTarget
 } from '../../services/salesTargetApi';
+import { fetchActiveSalesReps } from '../../services/agencyApi';
 import type {
   SalesTargetResponse,
   MySalesProgressResponse,
@@ -32,15 +36,11 @@ import { SearchSelect } from '../../components/common/SearchSelect';
 export const SalesTargetManagementPage: React.FC = () => {
   const { currentRole, user, showToast } = useAuth();
 
+  // Kiểm tra vai trò quản trị / quản lý kinh doanh
   const isManagerOrAdmin =
     currentRole === 'ROLE_SALES_MANAGER' ||
     currentRole === 'ROLE_ADMIN' ||
     Boolean(user?.roles?.some((r) => ['ROLE_SALES_MANAGER', 'ROLE_ADMIN'].includes(r)));
-
-  // Tab view: 'MY_PROGRESS' (Tiến độ của tôi) vs 'ALL_TARGETS' (Quản lý chỉ tiêu toàn đội ngũ)
-  const [activeTab, setActiveTab] = useState<'MY_PROGRESS' | 'ALL_TARGETS'>(
-    isManagerOrAdmin ? 'ALL_TARGETS' : 'MY_PROGRESS'
-  );
 
   const currentPeriod = new Date().toISOString().slice(0, 7);
 
@@ -69,37 +69,75 @@ export const SalesTargetManagementPage: React.FC = () => {
   const [editNote, setEditNote] = useState<string>('');
   const [submittingEdit, setSubmittingEdit] = useState<boolean>(false);
 
-  // Danh sách nhân viên kinh doanh mẫu
-  const salesRepOptions = [
+  // Danh sách nhân viên kinh doanh
+  const [salesRepOptions, setSalesRepOptions] = useState<Array<{ id: string; code: string; name: string }>>([
     { id: '101', code: 'NVKD-01', name: 'Nguyễn Văn Minh' },
     { id: '102', code: 'NVKD-02', name: 'Trần Thị Thu Thảo' },
     { id: '103', code: 'NVKD-03', name: 'Lê Hoàng Nam' },
     { id: '104', code: 'NVKD-04', name: 'Phạm Hồng Ánh' },
     { id: '105', code: 'NVKD-05', name: 'Vũ Đức Thành' }
-  ];
+  ]);
+
+  // Tải danh sách nhân viên thực tế khi là Admin/Manager
+  useEffect(() => {
+    if (isManagerOrAdmin) {
+      fetchActiveSalesReps(true)
+        .then((reps) => {
+          if (reps && reps.length > 0) {
+            setSalesRepOptions(
+              reps.map((r) => ({
+                id: String(r.id),
+                code: r.code || `NV-${r.id}`,
+                name: r.fullName
+              }))
+            );
+            setNewSalesRepId(String(reps[0].id));
+          }
+        })
+        .catch((err) => {
+          console.warn('Lỗi khi tải danh sách NVKD:', err);
+        });
+    }
+  }, [isManagerOrAdmin]);
 
   // Danh sách khu vực thị trường
   const regionOptions = ['Miền Bắc', 'Miền Trung', 'Miền Nam', 'Đồng bằng Sông Cửu Long', 'Tây Nguyên'];
 
+  // Tải dữ liệu theo vai trò
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [prog, list] = await Promise.all([
-        fetchMySalesProgress(selectedPeriod),
-        fetchSalesTargets(selectedPeriod, typeFilter)
-      ]);
-      setMyProgress(prog);
-      setTargets(list);
+      if (isManagerOrAdmin) {
+        // Admin / Quản lý xem của nhân viên
+        const list = await fetchSalesTargets(selectedPeriod, typeFilter);
+        setTargets(list || []);
+      } else {
+        // Nhân viên chỉ xem của bản thân
+        const prog = await fetchMySalesProgress(selectedPeriod);
+        setMyProgress(prog);
+      }
     } catch (err) {
       console.error('Lỗi tải dữ liệu chỉ tiêu doanh số:', err);
     } finally {
       setLoading(false);
     }
-  }, [selectedPeriod, typeFilter]);
+  }, [selectedPeriod, typeFilter, isManagerOrAdmin]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Thống kê tổng hợp cho Admin / Quản lý
+  const teamStats = useMemo(() => {
+    const totalTarget = targets.reduce((acc, t) => acc + (t.targetAmount || 0), 0);
+    const totalActual = targets.reduce((acc, t) => acc + (t.actualAmount || 0), 0);
+    const countReps = targets.filter((t) => t.targetType === 'REP').length;
+    const avgRate =
+      targets.length > 0
+        ? Math.round(targets.reduce((acc, t) => acc + (t.completionRate || 0), 0) / targets.length)
+        : 0;
+    return { totalTarget, totalActual, countReps, avgRate };
+  }, [targets]);
 
   // Xử lý tạo mới chỉ tiêu
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -124,8 +162,6 @@ export const SalesTargetManagementPage: React.FC = () => {
       showToast('Thiết lập chỉ tiêu doanh số thành công!', 'success');
       setShowCreateModal(false);
       setNewNote('');
-      // S8-04: Sau khi thiết lập chỉ tiêu, tự động chuyển sang bảng cấu hình toàn đội ngũ
-      setActiveTab('ALL_TARGETS');
       loadData();
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Lỗi khi tạo chỉ tiêu', 'error');
@@ -134,7 +170,7 @@ export const SalesTargetManagementPage: React.FC = () => {
     }
   };
 
-  // Mở modal sửa chỉ tiêu (S8-04: chỉ cho chỉnh các tháng đã qua hoặc tháng hiện tại)
+  // Mở modal sửa chỉ tiêu (chỉ cho chỉnh các tháng đã qua hoặc tháng hiện tại)
   const openEditModal = (target: SalesTargetResponse) => {
     if (target.period > currentPeriod) {
       showToast('Chỉ được chỉnh sửa các tháng đã qua hoặc tháng hiện tại, không cho chỉnh những tháng chưa đến.', 'warning');
@@ -189,24 +225,12 @@ export const SalesTargetManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-4 antialiased pb-12">
-      {/* 1. Header Trang & Chọn kỳ */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4.5 rounded-2xl border border-gray-200/80 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#F85606] to-orange-500 text-white flex items-center justify-center shadow-xs shadow-orange-500/20">
-            <Target size={20} />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">Chỉ tiêu Doanh số (KPI) & Tiến độ</h1>
-            <p className="text-xs text-gray-500">
-              Theo dõi tiến độ doanh thu thời gian thực, đặt chỉ tiêu tháng cho nhân viên và khu vực
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
+      {/* 1. Thanh thao tác & Chọn kỳ (Đã loại bỏ toàn bộ tiêu đề/mô tả lặp lại được bôi xanh) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-gray-200/80 shadow-2xs">
+        <div className="flex items-center gap-2.5">
           {/* Chọn kỳ tháng */}
-          <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-xl hover:border-orange-200 transition">
-            <Calendar size={14} className="text-[#F85606]" />
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3.5 py-2 rounded-xl hover:border-orange-200 transition">
+            <Calendar size={15} className="text-[#F85606]" />
             <span className="text-xs font-semibold text-gray-700">Kỳ tháng:</span>
             <input
               type="month"
@@ -215,8 +239,10 @@ export const SalesTargetManagementPage: React.FC = () => {
               className="bg-transparent text-xs font-bold text-gray-900 outline-none cursor-pointer"
             />
           </div>
+        </div>
 
-          {/* Nút thiết lập chỉ tiêu mới (dành cho QL kinh doanh / Admin) */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Nút thiết lập chỉ tiêu mới (Chỉ dành cho Admin / Quản lý kinh doanh) */}
           {isManagerOrAdmin && (
             <button
               type="button"
@@ -240,146 +266,56 @@ export const SalesTargetManagementPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Tabs chuyển đổi: Tiến độ cá nhân vs Quản trị toàn đội ngũ */}
-      <div className="flex items-center gap-2 border-b border-gray-200 pb-1">
-        <button
-          type="button"
-          onClick={() => setActiveTab('MY_PROGRESS')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-            activeTab === 'MY_PROGRESS'
-              ? 'bg-[#F85606] text-white shadow-xs shadow-orange-500/20'
-              : 'bg-white text-gray-600 hover:bg-orange-50/60 hover:text-[#F85606] border border-gray-200'
-          }`}
-        >
-          <Award size={15} />
-          <span>
-            Tiến độ của tôi ({myProgress && myProgress.targetAmount > 0 && myProgress.salesRepName ? myProgress.salesRepName : (user?.fullName || 'Cá nhân')})
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('ALL_TARGETS')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-            activeTab === 'ALL_TARGETS'
-              ? 'bg-[#F85606] text-white shadow-xs shadow-orange-500/20'
-              : 'bg-white text-gray-600 hover:bg-orange-50/60 hover:text-[#F85606] border border-gray-200'
-          }`}
-        >
-          <TrendingUp size={15} />
-          <span>Bảng cấu hình & Tiến độ toàn đội ngũ ({targets.length})</span>
-        </button>
-      </div>
-
-      {/* 3. NỘI DUNG TAB 1: TIẾN ĐỘ CỦA TÔI */}
-      {activeTab === 'MY_PROGRESS' && (
-        myProgress && myProgress.targetAmount > 0 ? (
-          <div className="space-y-4 animate-fade-in">
-            {/* Card Hero: Tiến độ doanh số cá nhân (Clean White & Lazada Orange Brand Theme) */}
-            <div className="bg-white p-6 rounded-3xl border border-gray-200/80 shadow-2xs relative overflow-hidden space-y-5">
-              {/* Hàng tiêu đề & Thời gian còn lại */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
-                <div>
-                  <span className="text-[11px] font-bold text-[#F85606] uppercase tracking-wider block">
-                    Tiến độ hoàn thành chỉ tiêu tháng {myProgress.period}
-                  </span>
-                  <h2 className="text-xl sm:text-2xl font-black text-gray-900 mt-0.5">
-                    {myProgress.salesRepName || user?.fullName || 'Cá nhân'}
-                  </h2>
-                </div>
-
-                <div className="flex items-center gap-2 bg-orange-50 border border-orange-200/80 text-[#F85606] px-3.5 py-1.5 rounded-xl self-start sm:self-auto text-xs font-bold">
-                  <Calendar size={14} className="text-[#F85606]" />
-                  <span>Còn <strong>{myProgress.daysRemainingInMonth} ngày</strong> để về đích</span>
-                </div>
+      {/* 2. GIAO DIỆN DÀNH CHO ADMIN / QUẢN LÝ: XEM VÀ QUẢN LÝ TIẾN ĐỘ CỦA NHÂN VIÊN */}
+      {isManagerOrAdmin ? (
+        <div className="space-y-4 animate-fade-in">
+          {/* 4 Thẻ chỉ số tổng quan tiến độ toàn đội ngũ */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="p-4 bg-white rounded-2xl border border-gray-200 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-gray-500">
+                <span className="text-xs font-medium">Tổng chỉ tiêu đội ngũ</span>
+                <Target size={16} className="text-[#F85606]" />
               </div>
-
-              {/* 3 Thẻ chỉ số trực quan */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                {/* Doanh số thực đạt */}
-                <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100 space-y-1">
-                  <span className="text-xs font-semibold text-emerald-800 block">Doanh số thực đạt:</span>
-                  <span className="text-2xl sm:text-3xl font-black text-emerald-600 font-mono block">
-                    {formatCurrencyVND(myProgress.actualAmount)}
-                  </span>
-                </div>
-
-                {/* Mục tiêu cam kết */}
-                <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200/80 space-y-1">
-                  <span className="text-xs font-semibold text-gray-600 block">Mục tiêu cam kết (KPI):</span>
-                  <span className="text-2xl sm:text-3xl font-black text-gray-900 font-mono block">
-                    {formatCurrencyVND(myProgress.targetAmount)}
-                  </span>
-                </div>
-
-                {/* Số tiền còn thiếu */}
-                <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-100 space-y-1">
-                  <span className="text-xs font-semibold text-amber-800 block">Số tiền còn thiếu:</span>
-                  <span className="text-2xl sm:text-3xl font-black text-amber-600 font-mono block">
-                    {formatCurrencyVND(myProgress.remainingAmount)}
-                  </span>
-                </div>
+              <div className="text-xl font-black font-mono text-gray-900">
+                {formatCurrencyVND(teamStats.totalTarget)}
               </div>
+              <span className="text-[11px] text-gray-400 block">Kỳ {selectedPeriod}</span>
+            </div>
 
-              {/* Thanh Progress Bar trực quan */}
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-gray-700">Tỷ lệ hoàn thành mục tiêu:</span>
-                  <span className="text-base font-black text-[#F85606] font-mono">
-                    {myProgress.completionRate}%
-                  </span>
-                </div>
-                <div className="w-full h-3.5 bg-gray-100 rounded-full overflow-hidden p-0.5 border border-gray-200">
-                  <div
-                    className="h-full rounded-full transition-all duration-700 bg-gradient-to-r from-orange-500 to-[#F85606]"
-                    style={{ width: `${Math.min(100, myProgress.completionRate)}%` }}
-                  />
-                </div>
+            <div className="p-4 bg-white rounded-2xl border border-gray-200 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-gray-500">
+                <span className="text-xs font-medium">Doanh số thực đạt</span>
+                <DollarSign size={16} className="text-emerald-600" />
               </div>
+              <div className="text-xl font-black font-mono text-emerald-600">
+                {formatCurrencyVND(teamStats.totalActual)}
+              </div>
+              <span className="text-[11px] text-gray-400 block">Đã ghi nhận trong kỳ</span>
+            </div>
+
+            <div className="p-4 bg-white rounded-2xl border border-gray-200 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-gray-500">
+                <span className="text-xs font-medium">Tiến độ trung bình</span>
+                <TrendingUp size={16} className="text-orange-500" />
+              </div>
+              <div className="text-xl font-black font-mono text-orange-600">
+                {teamStats.avgRate}%
+              </div>
+              <span className="text-[11px] text-gray-400 block">Mức hoàn thành đội ngũ</span>
+            </div>
+
+            <div className="p-4 bg-white rounded-2xl border border-gray-200 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-gray-500">
+                <span className="text-xs font-medium">Chỉ tiêu đã giao</span>
+                <Users size={16} className="text-blue-500" />
+              </div>
+              <div className="text-xl font-black font-mono text-gray-900">
+                {targets.length} <span className="text-xs font-normal text-gray-500">mục</span>
+              </div>
+              <span className="text-[11px] text-gray-400 block">{teamStats.countReps} nhân viên kinh doanh</span>
             </div>
           </div>
-        ) : (
-          <div className="bg-white p-10 sm:p-14 rounded-3xl border border-gray-200/80 shadow-2xs text-center space-y-4 animate-fade-in">
-            <div className="w-16 h-16 rounded-2xl bg-orange-50 text-[#F85606] flex items-center justify-center mx-auto border border-orange-100 shadow-2xs">
-              <Target size={32} />
-            </div>
-            <div className="max-w-md mx-auto space-y-1.5">
-              <h3 className="text-base font-bold text-gray-900">
-                Chưa có chỉ tiêu doanh số cho kỳ {selectedPeriod}
-              </h3>
-              <p className="text-xs text-gray-500 leading-relaxed">
-                {isManagerOrAdmin
-                  ? 'Tài khoản cấp Quản lý / Quản trị viên chưa được phân bổ chỉ tiêu cá nhân trong kỳ này. Bạn có thể thiết lập chỉ tiêu cho nhân viên hoặc khu vực ở tab cấu hình.'
-                  : 'Bạn chưa được giao chỉ tiêu doanh số trong kỳ này. Vui lòng liên hệ Quản lý kinh doanh để được thiết lập chỉ tiêu.'}
-              </p>
-            </div>
-            {isManagerOrAdmin && (
-              <div className="pt-2 flex flex-wrap justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#F85606] hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs shadow-orange-500/20 active:scale-95"
-                >
-                  <Plus size={15} />
-                  <span>Thiết lập chỉ tiêu</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('ALL_TARGETS')}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95"
-                >
-                  <TrendingUp size={15} />
-                  <span>Xem bảng cấu hình ({targets.length})</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )
-      )}
 
-      {/* 4. NỘI DUNG TAB 2: BẢNG CẤU HÌNH & TIẾN ĐỘ TOÀN ĐỘI NGŨ */}
-      {activeTab === 'ALL_TARGETS' && (
-        <div className="space-y-3 animate-fade-in">
           {/* Lọc loại chỉ tiêu */}
           <div className="flex items-center gap-2 bg-white p-3 rounded-2xl border border-gray-200 shadow-2xs">
             <span className="text-xs font-bold text-gray-500 whitespace-nowrap">Phân loại:</span>
@@ -403,7 +339,7 @@ export const SalesTargetManagementPage: React.FC = () => {
             ))}
           </div>
 
-          {/* Bảng danh sách chỉ tiêu */}
+          {/* Bảng danh sách chỉ tiêu của nhân viên & khu vực */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
@@ -424,7 +360,7 @@ export const SalesTargetManagementPage: React.FC = () => {
                       <td colSpan={7} className="py-14 text-center text-gray-400">
                         <div className="flex flex-col items-center gap-2">
                           <RefreshCw size={20} className="animate-spin text-[#F85606]" />
-                          <span>Đang tải danh sách chỉ tiêu...</span>
+                          <span>Đang tải danh sách chỉ tiêu của nhân viên...</span>
                         </div>
                       </td>
                     </tr>
@@ -524,10 +460,96 @@ export const SalesTargetManagementPage: React.FC = () => {
             </div>
           </div>
         </div>
+      ) : (
+        /* 3. GIAO DIỆN DÀNH CHO NHÂN VIÊN: CHỈ XEM ĐƯỢC CỦA BẢN THÂN */
+        <div className="space-y-4 animate-fade-in">
+          {loading ? (
+            <div className="bg-white p-12 rounded-3xl border border-gray-200 shadow-2xs text-center text-gray-400">
+              <RefreshCw size={24} className="animate-spin text-[#F85606] mx-auto mb-2" />
+              <p className="text-xs">Đang tải tiến độ doanh số của bạn...</p>
+            </div>
+          ) : myProgress && myProgress.targetAmount > 0 ? (
+            <div className="bg-white p-6 rounded-3xl border border-gray-200/80 shadow-2xs relative overflow-hidden space-y-5">
+              {/* Hàng tiêu đề & Thời gian còn lại */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
+                <div>
+                  <span className="text-[11px] font-bold text-[#F85606] uppercase tracking-wider block">
+                    Tiến độ hoàn thành chỉ tiêu tháng {myProgress.period}
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-black text-gray-900 mt-0.5">
+                    {myProgress.salesRepName || user?.fullName || 'Nhân viên kinh doanh'}
+                  </h2>
+                </div>
+
+                <div className="flex items-center gap-2 bg-orange-50 border border-orange-200/80 text-[#F85606] px-3.5 py-1.5 rounded-xl self-start sm:self-auto text-xs font-bold">
+                  <Calendar size={14} className="text-[#F85606]" />
+                  <span>Còn <strong>{myProgress.daysRemainingInMonth} ngày</strong> để về đích</span>
+                </div>
+              </div>
+
+              {/* 3 Thẻ chỉ số trực quan */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                {/* Doanh số thực đạt */}
+                <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100 space-y-1">
+                  <span className="text-xs font-semibold text-emerald-800 block">Doanh số thực đạt:</span>
+                  <span className="text-2xl sm:text-3xl font-black text-emerald-600 font-mono block">
+                    {formatCurrencyVND(myProgress.actualAmount)}
+                  </span>
+                </div>
+
+                {/* Mục tiêu cam kết */}
+                <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200/80 space-y-1">
+                  <span className="text-xs font-semibold text-gray-600 block">Mục tiêu cam kết (KPI):</span>
+                  <span className="text-2xl sm:text-3xl font-black text-gray-900 font-mono block">
+                    {formatCurrencyVND(myProgress.targetAmount)}
+                  </span>
+                </div>
+
+                {/* Số tiền còn thiếu */}
+                <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-100 space-y-1">
+                  <span className="text-xs font-semibold text-amber-800 block">Số tiền còn thiếu:</span>
+                  <span className="text-2xl sm:text-3xl font-black text-amber-600 font-mono block">
+                    {formatCurrencyVND(myProgress.remainingAmount)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Thanh Progress Bar trực quan */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="text-gray-700">Tỷ lệ hoàn thành mục tiêu:</span>
+                  <span className="text-base font-black text-[#F85606] font-mono">
+                    {myProgress.completionRate}%
+                  </span>
+                </div>
+                <div className="w-full h-3.5 bg-gray-100 rounded-full overflow-hidden p-0.5 border border-gray-200">
+                  <div
+                    className="h-full rounded-full transition-all duration-700 bg-gradient-to-r from-orange-500 to-[#F85606]"
+                    style={{ width: `${Math.min(100, myProgress.completionRate)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white p-10 sm:p-14 rounded-3xl border border-gray-200/80 shadow-2xs text-center space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-orange-50 text-[#F85606] flex items-center justify-center mx-auto border border-orange-100 shadow-2xs">
+                <Target size={32} />
+              </div>
+              <div className="max-w-md mx-auto space-y-1.5">
+                <h3 className="text-base font-bold text-gray-900">
+                  Chưa có chỉ tiêu doanh số cho kỳ {selectedPeriod}
+                </h3>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Bạn chưa được giao chỉ tiêu doanh số trong kỳ này. Vui lòng liên hệ Quản lý kinh doanh để được thiết lập chỉ tiêu.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
-      {/* 5. MODAL THIẾT LẬP CHỈ TIÊU MỚI (AC1) */}
-      {showCreateModal && (
+      {/* 4. MODAL THIẾT LẬP CHỈ TIÊU MỚI (CHỈ ADMIN / MANAGER) */}
+      {isManagerOrAdmin && showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#F85606] to-orange-600 text-white">
@@ -664,8 +686,8 @@ export const SalesTargetManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* 6. MODAL ĐIỀU CHỈNH CHỈ TIÊU & YÊU CẦU LÝ DO (AC3) */}
-      {editingTarget && (
+      {/* 5. MODAL ĐIỀU CHỈNH CHỈ TIÊU & YÊU CẦU LÝ DO (CHỈ ADMIN / MANAGER) */}
+      {isManagerOrAdmin && editingTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#F85606] to-orange-600 text-white">

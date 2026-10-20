@@ -148,7 +148,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     group: 'Bán hàng',
     icon: 'TrendingUp',
     epic: 'Bán hàng & Doanh số',
-    description: 'Cấu hình chỉ tiêu doanh số tháng cho nhân viên, khu vực và thanh tiến độ thực tế',
+    description: '',
     allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_SALES_REP', 'ROLE_ADMIN']
   },
 
