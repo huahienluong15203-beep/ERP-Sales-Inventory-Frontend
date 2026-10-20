@@ -941,7 +941,9 @@ export const AppRoutes: React.FC = () => {
                 'ROLE_SALES_REP',
                 'ROLE_SALES_MANAGER',
                 'ROLE_ADMIN',
-                'ROLE_ACCOUNTANT'
+                'ROLE_ACCOUNTANT',
+                'ROLE_WH_MANAGER',
+                'ROLE_WAREHOUSE'
               ]}
             >
               <SalesReturnListPage />
@@ -956,7 +958,9 @@ export const AppRoutes: React.FC = () => {
                 'ROLE_SALES_REP',
                 'ROLE_SALES_MANAGER',
                 'ROLE_ADMIN',
-                'ROLE_ACCOUNTANT'
+                'ROLE_ACCOUNTANT',
+                'ROLE_WH_MANAGER',
+                'ROLE_WAREHOUSE'
               ]}
             >
               <CreateSalesReturnPage />

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
   FileText,
@@ -761,178 +762,184 @@ export const StockAdjustmentDetailPage: React.FC = () => {
       </div>
 
       {/* ================= MODAL PHÊ DUYỆT (AC3) ================= */}
-      {isApproveOpen && (
-        <div
-          onClick={() => setIsApproveOpen(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-[1px] animate-in fade-in"
-        >
+      {isApproveOpen &&
+        createPortal(
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4"
+            onClick={() => setIsApproveOpen(false)}
+            className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/15 backdrop-blur-xs animate-in fade-in duration-150"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <CheckCircle size={22} />
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <CheckCircle size={22} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-gray-900">Phê Duyệt Phiếu Điều Chỉnh</h3>
+                  <p className="text-xs text-gray-500">Mã phiếu: {adjustment.code}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-sm text-gray-900">Phê Duyệt Phiếu Điều Chỉnh</h3>
-                <p className="text-xs text-gray-500">Mã phiếu: {adjustment.code}</p>
+
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
+                <strong className="block font-bold">Xác nhận xuất kho xử lý hao hụt:</strong>
+                <p>
+                  - Tổng giá trị tổn thất: <strong className="text-rose-600">{formatVnd(adjustment.totalLossValue)}</strong>
+                </p>
+                <p>- Tồn kho thực tế tại kho <strong>{adjustment.warehouseName}</strong> sẽ bị trừ ngay lập tức.</p>
+                <p>- Mọi thay đổi sẽ tự động ghi nhận vào Thẻ kho (Stock Movement).</p>
+              </div>
+
+              <div className="space-y-1.5 text-xs">
+                <label className="font-bold text-gray-800 text-sm">Ghi chú duyệt (không bắt buộc)</label>
+                <textarea
+                  value={approveNotes}
+                  onChange={(e) => setApproveNotes(e.target.value)}
+                  rows={4}
+                  placeholder="Nhập ý kiến phê duyệt hoặc chỉ đạo xử lý..."
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsApproveOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 font-bold text-xs hover:bg-gray-50 transition cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  onClick={handleConfirmApprove}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1.5"
+                >
+                  {actionLoading && <RefreshCw size={13} className="animate-spin" />}
+                  <span>Xác nhận phê duyệt & Xuất kho</span>
+                </button>
               </div>
             </div>
-
-            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
-              <strong className="block font-bold">Xác nhận xuất kho xử lý hao hụt:</strong>
-              <p>
-                - Tổng giá trị tổn thất: <strong className="text-rose-600">{formatVnd(adjustment.totalLossValue)}</strong>
-              </p>
-              <p>- Tồn kho thực tế tại kho <strong>{adjustment.warehouseName}</strong> sẽ bị trừ ngay lập tức.</p>
-              <p>- Mọi thay đổi sẽ tự động ghi nhận vào Thẻ kho (Stock Movement).</p>
-            </div>
-
-            <div className="space-y-1.5 text-xs">
-              <label className="font-bold text-gray-800 text-sm">Ghi chú duyệt (không bắt buộc)</label>
-              <textarea
-                value={approveNotes}
-                onChange={(e) => setApproveNotes(e.target.value)}
-                rows={4}
-                placeholder="Nhập ý kiến phê duyệt hoặc chỉ đạo xử lý..."
-                className="w-full p-3 border border-gray-300 rounded-xl focus:border-emerald-500 focus:outline-none"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => setIsApproveOpen(false)}
-                className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 font-bold text-xs hover:bg-gray-50 transition cursor-pointer"
-              >
-                Hủy bỏ
-              </button>
-              <button
-                type="button"
-                disabled={actionLoading}
-                onClick={handleConfirmApprove}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1.5"
-              >
-                {actionLoading && <RefreshCw size={13} className="animate-spin" />}
-                <span>Xác nhận phê duyệt & Xuất kho</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* ================= MODAL TỪ CHỐI DUYỆT ================= */}
-      {isRejectOpen && (
-        <div
-          onClick={() => setIsRejectOpen(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-[1px] animate-in fade-in"
-        >
+      {isRejectOpen &&
+        createPortal(
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4"
+            onClick={() => setIsRejectOpen(false)}
+            className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/15 backdrop-blur-xs animate-in fade-in duration-150"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                <XCircle size={22} />
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                  <XCircle size={22} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-gray-900">Từ Chối Phê Duyệt Phiếu</h3>
+                  <p className="text-xs text-gray-500">Mã phiếu: {adjustment.code}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-sm text-gray-900">Từ Chối Phê Duyệt Phiếu</h3>
-                <p className="text-xs text-gray-500">Mã phiếu: {adjustment.code}</p>
+
+              <div className="space-y-1.5 text-xs">
+                <label className="font-bold text-gray-800 text-sm">
+                  Lý do từ chối <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  rows={4}
+                  placeholder="Nhập rõ lý do từ chối để thủ kho nắm thông tin điều chỉnh lại..."
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:border-rose-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsRejectOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 font-bold text-xs hover:bg-gray-50 transition cursor-pointer"
+                >
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  disabled={actionLoading || !rejectReason.trim()}
+                  onClick={handleConfirmReject}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {actionLoading && <RefreshCw size={13} className="animate-spin" />}
+                  <span>Xác nhận từ chối</span>
+                </button>
               </div>
             </div>
-
-            <div className="space-y-1.5 text-xs">
-              <label className="font-bold text-gray-800 text-sm">
-                Lý do từ chối <span className="text-rose-500">*</span>
-              </label>
-              <textarea
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                rows={4}
-                placeholder="Nhập rõ lý do từ chối để thủ kho nắm thông tin điều chỉnh lại..."
-                className="w-full p-3 border border-gray-300 rounded-xl focus:border-rose-500 focus:outline-none"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => setIsRejectOpen(false)}
-                className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 font-bold text-xs hover:bg-gray-50 transition cursor-pointer"
-              >
-                Đóng
-              </button>
-              <button
-                type="button"
-                disabled={actionLoading || !rejectReason.trim()}
-                onClick={handleConfirmReject}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-              >
-                {actionLoading && <RefreshCw size={13} className="animate-spin" />}
-                <span>Xác nhận từ chối</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* ================= MODAL HUỶ PHIẾU ================= */}
-      {isCancelOpen && (
-        <div
-          onClick={() => setIsCancelOpen(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-[1px] animate-in fade-in"
-        >
+      {isCancelOpen &&
+        createPortal(
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4"
+            onClick={() => setIsCancelOpen(false)}
+            className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/15 backdrop-blur-xs animate-in fade-in duration-150"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gray-100 text-gray-600 flex items-center justify-center shrink-0">
-                <Trash2 size={22} />
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gray-100 text-gray-600 flex items-center justify-center shrink-0">
+                  <Trash2 size={22} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-gray-900">Xác Nhận Huỷ Phiếu Điều Chỉnh</h3>
+                  <p className="text-xs text-gray-500">Mã phiếu: {adjustment.code}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-sm text-gray-900">Xác Nhận Huỷ Phiếu Điều Chỉnh</h3>
-                <p className="text-xs text-gray-500">Mã phiếu: {adjustment.code}</p>
+
+              <p className="text-xs text-gray-600">
+                Bạn có chắc chắn muốn huỷ phiếu điều chỉnh này không? Sau khi huỷ, phiếu sẽ chuyển sang trạng thái <strong>ĐÃ HUỶ</strong> và không thể hoàn tác.
+              </p>
+
+              <div className="space-y-1.5 text-xs">
+                <label className="font-bold text-gray-800 text-sm">Lý do huỷ phiếu (tuỳ chọn)</label>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  rows={3}
+                  placeholder="Nhập lý do huỷ..."
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:border-gray-400 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCancelOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 font-bold text-xs hover:bg-gray-50 transition cursor-pointer"
+                >
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  onClick={handleConfirmCancel}
+                  className="px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-800 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1.5"
+                >
+                  {actionLoading && <RefreshCw size={13} className="animate-spin" />}
+                  <span>Xác nhận huỷ</span>
+                </button>
               </div>
             </div>
-
-            <p className="text-xs text-gray-600">
-              Bạn có chắc chắn muốn huỷ phiếu điều chỉnh này không? Sau khi huỷ, phiếu sẽ chuyển sang trạng thái <strong>ĐÃ HUỶ</strong> và không thể hoàn tác.
-            </p>
-
-            <div className="space-y-1.5 text-xs">
-              <label className="font-bold text-gray-800 text-sm">Lý do huỷ phiếu (tuỳ chọn)</label>
-              <textarea
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                rows={3}
-                placeholder="Nhập lý do huỷ..."
-                className="w-full p-3 border border-gray-300 rounded-xl focus:border-gray-400 focus:outline-none"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => setIsCancelOpen(false)}
-                className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 font-bold text-xs hover:bg-gray-50 transition cursor-pointer"
-              >
-                Đóng
-              </button>
-              <button
-                type="button"
-                disabled={actionLoading}
-                onClick={handleConfirmCancel}
-                className="px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-800 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1.5"
-              >
-                {actionLoading && <RefreshCw size={13} className="animate-spin" />}
-                <span>Xác nhận huỷ</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

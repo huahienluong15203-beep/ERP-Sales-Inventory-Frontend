@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
 import {
@@ -581,175 +582,181 @@ export const StockAdjustmentListPage: React.FC = () => {
       </div>
 
       {/* ================= MODAL PHÊ DUYỆT (AC3) ================= */}
-      {approvingItem && (
-        <div
-          onClick={() => setApprovingItem(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-[1px] animate-in fade-in"
-        >
+      {approvingItem &&
+        createPortal(
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4"
+            onClick={() => setApprovingItem(null)}
+            className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/15 backdrop-blur-xs animate-in fade-in duration-150"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <CheckCircle size={22} />
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <CheckCircle size={22} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-gray-900">Phê Duyệt Phiếu Điều Chỉnh</h3>
+                  <p className="text-xs text-gray-500">Mã phiếu: {approvingItem.code}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-sm text-gray-900">Phê Duyệt Phiếu Điều Chỉnh</h3>
-                <p className="text-xs text-gray-500">Mã phiếu: {approvingItem.code}</p>
+
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
+                <strong className="block font-bold">Xác nhận xuất kho xử lý hao hụt:</strong>
+                <p>
+                  - Tổng giá trị tổn thất: <strong className="text-rose-600">{formatVnd(approvingItem.totalLossValue)}</strong>
+                </p>
+                <p>- Tồn kho thực tế tại kho <strong>{approvingItem.warehouseName}</strong> sẽ bị trừ ngay lập tức.</p>
+                <p>- Mọi thay đổi sẽ tự động ghi nhận vào Thẻ kho (Stock Movement).</p>
+              </div>
+
+              <div className="space-y-1.5 text-xs">
+                <label className="font-bold text-gray-800 text-sm">Ghi chú duyệt (không bắt buộc)</label>
+                <textarea
+                  value={approveNotes}
+                  onChange={(e) => setApproveNotes(e.target.value)}
+                  rows={4}
+                  placeholder="Ví dụ: Đã kiểm tra thực tế hàng vỡ tại kho, đồng ý duyệt..."
+                  className="w-full px-3.5 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:border-emerald-500 focus:bg-white focus:outline-none transition min-h-[96px]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setApprovingItem(null)}
+                  className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer"
+                >
+                  Quay lại
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmApprove}
+                  disabled={actionLoading}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  {actionLoading ? 'Đang duyệt...' : 'Xác Nhận Duyệt'}
+                </button>
               </div>
             </div>
-
-            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
-              <strong className="block font-bold">Xác nhận xuất kho xử lý hao hụt:</strong>
-              <p>
-                - Tổng giá trị tổn thất: <strong className="text-rose-600">{formatVnd(approvingItem.totalLossValue)}</strong>
-              </p>
-              <p>- Tồn kho thực tế tại kho <strong>{approvingItem.warehouseName}</strong> sẽ bị trừ ngay lập tức.</p>
-              <p>- Mọi thay đổi sẽ tự động ghi nhận vào Thẻ kho (Stock Movement).</p>
-            </div>
-
-            <div className="space-y-1.5 text-xs">
-              <label className="font-bold text-gray-800 text-sm">Ghi chú duyệt (không bắt buộc)</label>
-              <textarea
-                value={approveNotes}
-                onChange={(e) => setApproveNotes(e.target.value)}
-                rows={4}
-                placeholder="Ví dụ: Đã kiểm tra thực tế hàng vỡ tại kho, đồng ý duyệt..."
-                className="w-full px-3.5 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:border-emerald-500 focus:bg-white focus:outline-none transition min-h-[96px]"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => setApprovingItem(null)}
-                className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer"
-              >
-                Quay lại
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmApprove}
-                disabled={actionLoading}
-                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-xs disabled:opacity-50"
-              >
-                {actionLoading ? 'Đang duyệt...' : 'Xác Nhận Duyệt'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* ================= MODAL TỪ CHỐI DUYỆT ================= */}
-      {rejectingItem && (
-        <div
-          onClick={() => setRejectingItem(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-[1px] animate-in fade-in"
-        >
+      {rejectingItem &&
+        createPortal(
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4"
+            onClick={() => setRejectingItem(null)}
+            className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/15 backdrop-blur-xs animate-in fade-in duration-150"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                <XCircle size={22} />
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                  <XCircle size={22} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-gray-900">Từ Chối Phê Duyệt Phiếu</h3>
+                  <p className="text-xs text-gray-500">Mã phiếu: {rejectingItem.code}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-sm text-gray-900">Từ Chối Phê Duyệt Phiếu</h3>
-                <p className="text-xs text-gray-500">Mã phiếu: {rejectingItem.code}</p>
+
+              <div className="space-y-1.5 text-xs">
+                <label className="font-bold text-gray-800 text-sm flex items-center gap-1">
+                  <span>Lý do từ chối</span>
+                  <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  rows={5}
+                  placeholder="Nhập lý do không đồng ý duyệt phiếu điều chỉnh..."
+                  className="w-full px-3.5 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:border-rose-500 focus:bg-white focus:outline-none transition min-h-[120px]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setRejectingItem(null)}
+                  className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer"
+                >
+                  Quay lại
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmReject}
+                  disabled={actionLoading || !rejectReason.trim()}
+                  className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  {actionLoading ? 'Đang từ chối...' : 'Xác Nhận Từ Chối'}
+                </button>
               </div>
             </div>
-
-            <div className="space-y-1.5 text-xs">
-              <label className="font-bold text-gray-800 text-sm flex items-center gap-1">
-                <span>Lý do từ chối</span>
-                <span className="text-rose-500">*</span>
-              </label>
-              <textarea
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                rows={5}
-                placeholder="Nhập lý do không đồng ý duyệt phiếu điều chỉnh..."
-                className="w-full px-3.5 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:border-rose-500 focus:bg-white focus:outline-none transition min-h-[120px]"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => setRejectingItem(null)}
-                className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer"
-              >
-                Quay lại
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmReject}
-                disabled={actionLoading || !rejectReason.trim()}
-                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer shadow-xs disabled:opacity-50"
-              >
-                {actionLoading ? 'Đang từ chối...' : 'Xác Nhận Từ Chối'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* ================= MODAL HUỶ PHIẾU ================= */}
-      {cancellingItem && (
-        <div
-          onClick={() => setCancellingItem(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-[1px] animate-in fade-in"
-        >
+      {cancellingItem &&
+        createPortal(
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4"
+            onClick={() => setCancellingItem(null)}
+            className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/15 backdrop-blur-xs animate-in fade-in duration-150"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gray-100 text-gray-700 flex items-center justify-center shrink-0">
-                <Trash2 size={22} />
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-xl p-6 space-y-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gray-100 text-gray-700 flex items-center justify-center shrink-0">
+                  <Trash2 size={22} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-gray-900">Huỷ Phiếu Điều Chỉnh</h3>
+                  <p className="text-xs text-gray-500">Mã phiếu: {cancellingItem.code}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-sm text-gray-900">Huỷ Phiếu Điều Chỉnh</h3>
-                <p className="text-xs text-gray-500">Mã phiếu: {cancellingItem.code}</p>
+
+              <div className="space-y-1.5 text-xs">
+                <label className="font-bold text-gray-800 text-sm flex items-center gap-1">
+                  <span>Lý do huỷ phiếu</span>
+                  <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  rows={5}
+                  placeholder="Nhập lý do huỷ phiếu này..."
+                  className="w-full px-3.5 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:border-gray-500 focus:bg-white focus:outline-none transition min-h-[120px]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setCancellingItem(null)}
+                  className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer"
+                >
+                  Quay lại
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmCancel}
+                  disabled={actionLoading || !cancelReason.trim()}
+                  className="px-5 py-2 rounded-xl bg-gray-800 hover:bg-gray-900 text-white font-bold text-xs transition cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  {actionLoading ? 'Đang huỷ...' : 'Xác Nhận Huỷ'}
+                </button>
               </div>
             </div>
-
-            <div className="space-y-1.5 text-xs">
-              <label className="font-bold text-gray-800 text-sm flex items-center gap-1">
-                <span>Lý do huỷ phiếu</span>
-                <span className="text-rose-500">*</span>
-              </label>
-              <textarea
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                rows={5}
-                placeholder="Nhập lý do huỷ phiếu này..."
-                className="w-full px-3.5 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:border-gray-500 focus:bg-white focus:outline-none transition min-h-[120px]"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => setCancellingItem(null)}
-                className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer"
-              >
-                Quay lại
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmCancel}
-                disabled={actionLoading || !cancelReason.trim()}
-                className="px-5 py-2 rounded-xl bg-gray-800 hover:bg-gray-900 text-white font-bold text-xs transition cursor-pointer shadow-xs disabled:opacity-50"
-              >
-                {actionLoading ? 'Đang huỷ...' : 'Xác Nhận Huỷ'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

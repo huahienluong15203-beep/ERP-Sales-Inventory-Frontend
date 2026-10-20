@@ -72,6 +72,7 @@ export interface StockCardFilterParams {
   fromDate?: string;           // YYYY-MM-DD
   toDate?: string;             // YYYY-MM-DD
   type?: string;               // RECEIPT, SALES_DISPATCH, etc.
+  sortDirection?: 'ASC' | 'DESC'; // Thứ tự sắp xếp theo thời gian
   page?: number;               // 0-indexed
   size?: number;               // default 50
 }

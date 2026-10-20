@@ -11,7 +11,9 @@ import {
   FileSpreadsheet,
   X,
   Eye,
-  User
+  User,
+  ArrowDown,
+  ArrowUp
 } from 'lucide-react';
 import type {
   StockCardResponse,
@@ -58,6 +60,7 @@ export const StockCardPage: React.FC = () => {
   });
   const [movementType, setMovementType] = useState<string>('ALL');
   const [activeQuickRange, setActiveQuickRange] = useState<number | 'thisMonth' | 'lastMonth' | 'today' | null>(30);
+  const [sortDirection, setSortDirection] = useState<'ASC' | 'DESC'>('DESC');
 
   // Phân trang
   const [page, setPage] = useState<number>(0);
@@ -201,6 +204,7 @@ export const StockCardPage: React.FC = () => {
       from = fromDate,
       to = toDate,
       type = movementType,
+      targetSort = sortDirection,
       targetPage = page,
       targetSize = size
     ) => {
@@ -214,6 +218,7 @@ export const StockCardPage: React.FC = () => {
           fromDate: from || undefined,
           toDate: to || undefined,
           type: type !== 'ALL' ? type : undefined,
+          sortDirection: targetSort,
           page: targetPage,
           size: targetSize
         };
@@ -229,19 +234,19 @@ export const StockCardPage: React.FC = () => {
         setLoading(false);
       }
     },
-    [selectedWarehouseId, selectedProductId, fromDate, toDate, movementType, page, size, showToast]
+    [selectedWarehouseId, selectedProductId, fromDate, toDate, movementType, sortDirection, page, size, showToast]
   );
 
   // Tải dữ liệu khi bộ lọc hoặc phân trang thay đổi
   useEffect(() => {
-    loadStockCard(selectedWarehouseId, selectedProductId, fromDate, toDate, movementType, page, size);
-  }, [selectedWarehouseId, selectedProductId, fromDate, toDate, movementType, page, size, loadStockCard]);
+    loadStockCard(selectedWarehouseId, selectedProductId, fromDate, toDate, movementType, sortDirection, page, size);
+  }, [selectedWarehouseId, selectedProductId, fromDate, toDate, movementType, sortDirection, page, size, loadStockCard]);
 
   // Thao tác nút Lọc
   const handleFilterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(0);
-    loadStockCard(selectedWarehouseId, selectedProductId, fromDate, toDate, movementType, 0, size);
+    loadStockCard(selectedWarehouseId, selectedProductId, fromDate, toDate, movementType, sortDirection, 0, size);
   };
 
   // Chọn khoảng ngày nhanh
@@ -668,29 +673,61 @@ export const StockCardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Dòng bổ trợ: Loại nghiệp vụ & Phím tắt chọn nhanh ngày */}
+          {/* Dòng bổ trợ: Loại nghiệp vụ, Thứ tự & Phím tắt chọn nhanh ngày */}
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 pt-2 border-t border-gray-100">
-            {/* Loại nghiệp vụ */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">Nghiệp vụ:</span>
-              <select
-                value={movementType}
-                onChange={(e) => {
-                  setMovementType(e.target.value);
-                  setPage(0);
-                }}
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#F85606] cursor-pointer text-gray-700"
-              >
-                <option value="ALL">Tất cả nghiệp vụ</option>
-                <option value="RECEIPT">🟢 Nhập kho</option>
-                <option value="SALES_DISPATCH">🟠 Xuất bán </option>
-                <option value="DELIVERY_RETURN">🟣 Nhập hàng hoàn </option>
-                <option value="SALES_RETURN">🟢 Nhập trả hàng </option>
-                <option value="TRANSFER_OUT">🟡 Xuất chuyển kho</option>
-                <option value="TRANSFER_IN">🔵 Nhận chuyển kho </option>
-                <option value="STOCKTAKE_ADJUST">🔴 Điều chỉnh kiểm kê </option>
-                <option value="STOCK_ADJUSTMENT">🔴 Xuất hủy hao hụt </option>
-              </select>
+            {/* Loại nghiệp vụ & Thứ tự */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">Nghiệp vụ:</span>
+                <select
+                  value={movementType}
+                  onChange={(e) => {
+                    setMovementType(e.target.value);
+                    setPage(0);
+                  }}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#F85606] cursor-pointer text-gray-700"
+                >
+                  <option value="ALL">Tất cả nghiệp vụ</option>
+                  <option value="RECEIPT">🟢 Nhập kho</option>
+                  <option value="SALES_DISPATCH">🟠 Xuất bán </option>
+                  <option value="DELIVERY_RETURN">🟣 Nhập hàng hoàn </option>
+                  <option value="SALES_RETURN">🟢 Nhập trả hàng </option>
+                  <option value="TRANSFER_OUT">🟡 Xuất chuyển kho</option>
+                  <option value="TRANSFER_IN">🔵 Nhận chuyển kho </option>
+                  <option value="STOCKTAKE_ADJUST">🔴 Điều chỉnh kiểm kê </option>
+                  <option value="STOCK_ADJUSTMENT">🔴 Xuất hủy hao hụt </option>
+                </select>
+              </div>
+
+              {/* Nút đảo thứ tự Mới nhất / Cũ nhất */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">Thứ tự:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSortDirection((prev) => (prev === 'DESC' ? 'ASC' : 'DESC'));
+                    setPage(0);
+                  }}
+                  className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition cursor-pointer flex items-center gap-1.5 ${
+                    sortDirection === 'DESC'
+                      ? 'border-orange-300 bg-orange-50 text-[#F85606]'
+                      : 'border-blue-300 bg-blue-50 text-blue-700'
+                  }`}
+                  title="Bấm để đổi thứ tự xem phát sinh: Mới nhất trước hoặc Cũ nhất trước"
+                >
+                  {sortDirection === 'DESC' ? (
+                    <>
+                      <ArrowDown className="w-3.5 h-3.5" />
+                      <span>Mới nhất trước</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowUp className="w-3.5 h-3.5" />
+                      <span>Cũ nhất trước</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Phím tắt chọn ngày nhanh */}
@@ -808,7 +845,23 @@ export const StockCardPage: React.FC = () => {
               <thead className="bg-gray-50 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b border-gray-200">
                 <tr>
                   <th className="py-3 px-2 text-center">STT</th>
-                  <th className="py-3 px-3">Thời Gian</th>
+                  <th
+                    className="py-3 px-3 cursor-pointer hover:bg-orange-50/60 transition select-none group"
+                    onClick={() => {
+                      setSortDirection((prev) => (prev === 'DESC' ? 'ASC' : 'DESC'));
+                      setPage(0);
+                    }}
+                    title="Bấm để đổi thứ tự sắp xếp thời gian (Mới nhất / Cũ nhất)"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="group-hover:text-[#F85606] transition">Thời Gian</span>
+                      {sortDirection === 'DESC' ? (
+                        <ArrowDown className="w-3.5 h-3.5 text-[#F85606]" />
+                      ) : (
+                        <ArrowUp className="w-3.5 h-3.5 text-blue-600" />
+                      )}
+                    </div>
+                  </th>
                   <th className="py-3 px-3">Chứng Từ Gốc</th>
                   <th className="py-3 px-3">Nghiệp Vụ</th>
                   <th className="py-3 px-3">Sản Phẩm</th>

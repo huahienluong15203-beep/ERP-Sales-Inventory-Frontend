@@ -585,7 +585,7 @@ export const CreateSalesReturnPage: React.FC = () => {
                             {formatCurrencyVND(inv.totalAmount || 0)}
                           </div>
                           <span
-                            className={`inline-block text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                            className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded ${
                               inv.paymentStatus === 'PAID'
                                 ? 'bg-emerald-50 text-emerald-700'
                                 : inv.paymentStatus === 'PARTIALLY_PAID'
@@ -594,9 +594,9 @@ export const CreateSalesReturnPage: React.FC = () => {
                             }`}
                           >
                             {inv.paymentStatus === 'PAID'
-                              ? 'Đã trả hết'
+                              ? 'Đã thanh toán đủ'
                               : inv.paymentStatus === 'PARTIALLY_PAID'
-                              ? 'Đã trả 1 phần'
+                              ? 'Thanh toán 1 phần'
                               : 'Chưa thanh toán'}
                           </span>
                         </div>

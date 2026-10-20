@@ -32,6 +32,9 @@ export async function fetchStockCard(params?: StockCardFilterParams): Promise<St
   if (params?.type && params.type !== 'ALL') {
     query.set('type', params.type.trim());
   }
+  if (params?.sortDirection) {
+    query.set('sortDirection', params.sortDirection);
+  }
   if (params?.page !== undefined) {
     query.set('page', String(params.page));
   }
