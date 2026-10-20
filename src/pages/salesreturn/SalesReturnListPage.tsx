@@ -46,14 +46,18 @@ export const SalesReturnListPage: React.FC = () => {
   const { showToast, currentRole, user } = useAuth();
 
   const roleStr = String(currentRole || '');
-  const isWarehouseOrAdmin =
+  const userRoles = user?.roles || [];
+  const isAuthorizedToReceive =
     roleStr.includes('ADMIN') ||
     roleStr.includes('WH_MANAGER') ||
-    roleStr.includes('WAREHOUSE');
+    roleStr.includes('SALES_MANAGER') ||
+    userRoles.some((r) =>
+      ['ROLE_ADMIN', 'ROLE_WH_MANAGER', 'ROLE_SALES_MANAGER'].includes(r)
+    );
 
   const canCreateReturn =
-    ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN'].includes(currentRole ?? '') ||
-    Boolean(user?.roles?.some((r) => ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN'].includes(r)));
+    ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_WH_MANAGER', 'ROLE_WAREHOUSE'].includes(currentRole ?? '') ||
+    Boolean(userRoles.some((r) => ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_WH_MANAGER', 'ROLE_WAREHOUSE'].includes(r)));
 
   // Filter states
   const [keyword, setKeyword] = useState<string>('');
@@ -570,8 +574,8 @@ export const SalesReturnListPage: React.FC = () => {
                           <Eye size={14} />
                         </button>
 
-                        {/* Quản lý kho xác nhận nhận hàng mới cộng tồn (AC4) */}
-                        {item.status === 'PENDING_RECEIPT' && isWarehouseOrAdmin && (
+                        {/* Quản lý kho, QLKD hoặc Admin xác nhận nhận hàng mới cộng tồn */}
+                        {item.status === 'PENDING_RECEIPT' && isAuthorizedToReceive && (
                           <button
                             type="button"
                             onClick={() => {
@@ -832,6 +836,21 @@ export const SalesReturnListPage: React.FC = () => {
               >
                 Đóng
               </button>
+              {detailItem.status === 'PENDING_RECEIPT' && isAuthorizedToReceive && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const it = detailItem;
+                    setDetailItem(null);
+                    setReceivingItem(it);
+                    setReceiveNotes('');
+                  }}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                >
+                  <CheckCircle2 size={14} />
+                  <span>Xác nhận nhận hàng & Nhập kho</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
