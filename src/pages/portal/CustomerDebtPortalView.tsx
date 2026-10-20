@@ -25,6 +25,7 @@ import {
   type PortalInvoiceDebtItem
 } from '../../services/portalApi';
 import { InvoicePrintModal } from '../../components/payment/InvoicePrintModal';
+import { AgencyReconciliationPanel } from '../../components/debt/AgencyReconciliationPanel';
 
 export const CustomerDebtPortalView: React.FC = () => {
   // Dữ liệu tóm tắt công nợ & hạn mức từ Backend (/api/portal/debt)
@@ -199,6 +200,9 @@ export const CustomerDebtPortalView: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* S7-06: Biên bản đối chiếu công nợ - đại lý xác nhận hoặc báo lệch */}
+      <AgencyReconciliationPanel />
 
       {/* 3. Bảng Danh Sách Hoá Đơn Kèm Tìm Kiếm & Lọc */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden space-y-4 p-4 sm:p-6">
