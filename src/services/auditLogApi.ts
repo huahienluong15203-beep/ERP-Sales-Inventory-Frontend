@@ -55,6 +55,22 @@ export const AUDIT_MODULE_OPTIONS: AuditModuleOption[] = [
     badgeColor: '#9D174D',
     iconName: 'Users',
     description: 'Cập nhật phân loại đại lý cấp 1/cấp 2, thông tin pháp lý và mã số thuế'
+  },
+  {
+    value: 'SALES_TARGET',
+    label: 'Chỉ tiêu doanh số',
+    badgeBg: '#FFF7ED',
+    badgeColor: '#C2410C',
+    iconName: 'Target',
+    description: 'Thiết lập, điều chỉnh chỉ tiêu doanh số theo tháng của nhân viên và khu vực'
+  },
+  {
+    value: 'ORDER',
+    label: 'Đơn hàng bán',
+    badgeBg: '#EFF6FF',
+    badgeColor: '#1D4ED8',
+    iconName: 'ShoppingCart',
+    description: 'Tạo, duyệt, đổi trạng thái và điều chỉnh đơn hàng bán'
   }
 ];
 

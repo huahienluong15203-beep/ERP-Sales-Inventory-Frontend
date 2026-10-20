@@ -24,6 +24,7 @@ import {
   updateSalesTarget
 } from '../../services/salesTargetApi';
 import { fetchActiveSalesReps } from '../../services/agencyApi';
+import { fetchAdminFormOptions } from '../../services/api';
 import type {
   SalesTargetResponse,
   MySalesProgressResponse,
@@ -42,9 +43,9 @@ export const SalesTargetManagementPage: React.FC = () => {
 
   const currentPeriod = new Date().toISOString().slice(0, 7);
 
-  // Kỳ chọn (tháng YYYY-MM)
+  // Kỳ chọn (tháng YYYY-MM) - mặc định lọc theo Nhân viên (REP)
   const [selectedPeriod, setSelectedPeriod] = useState<string>(currentPeriod);
-  const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [typeFilter, setTypeFilter] = useState<string>('REP');
 
   // Dữ liệu
   const [myProgress, setMyProgress] = useState<MySalesProgressResponse | null>(null);
@@ -55,6 +56,7 @@ export const SalesTargetManagementPage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [newTargetType, setNewTargetType] = useState<SalesTargetType>('REP');
   const [newSalesRepId, setNewSalesRepId] = useState<string>('101');
+  const [newRegionId, setNewRegionId] = useState<string>('1');
   const [newRegion, setNewRegion] = useState<string>('Miền Bắc');
   const [newTargetAmountStr, setNewTargetAmountStr] = useState<string>((500000000).toLocaleString('vi-VN'));
   const [newNote, setNewNote] = useState<string>('');
@@ -82,7 +84,14 @@ export const SalesTargetManagementPage: React.FC = () => {
     { id: '105', code: 'NVKD-05', name: 'Vũ Đức Thành' }
   ]);
 
-  // Tải danh sách nhân viên thực tế khi là Admin/Manager
+  // Danh sách khu vực thị trường chuẩn theo phân quyền (MB, MT, MN)
+  const [regionOptions, setRegionOptions] = useState<Array<{ id: number; code: string; name: string }>>([
+    { id: 1, code: 'MB', name: 'Miền Bắc' },
+    { id: 2, code: 'MT', name: 'Miền Trung' },
+    { id: 3, code: 'MN', name: 'Miền Nam' }
+  ]);
+
+  // Tải danh sách nhân viên và khu vực thực tế từ hệ thống khi là Admin/Manager
   useEffect(() => {
     if (isManagerOrAdmin) {
       fetchActiveSalesReps(true)
@@ -101,11 +110,20 @@ export const SalesTargetManagementPage: React.FC = () => {
         .catch((err) => {
           console.warn('Lỗi khi tải danh sách NVKD:', err);
         });
+
+      fetchAdminFormOptions()
+        .then((opts) => {
+          if (opts?.regions && opts.regions.length > 0) {
+            setRegionOptions(opts.regions);
+            setNewRegionId(String(opts.regions[0].id));
+            setNewRegion(opts.regions[0].name);
+          }
+        })
+        .catch((err) => {
+          console.warn('Lỗi khi tải danh mục khu vực:', err);
+        });
     }
   }, [isManagerOrAdmin]);
-
-  // Danh sách khu vực thị trường
-  const regionOptions = ['Miền Bắc', 'Miền Trung', 'Miền Nam', 'Đồng bằng Sông Cửu Long', 'Tây Nguyên'];
 
   // Tải dữ liệu theo vai trò
   const loadData = useCallback(async () => {
@@ -133,22 +151,15 @@ export const SalesTargetManagementPage: React.FC = () => {
 
   // Thống kê tổng hợp cho Admin / Quản lý
   const teamStats = useMemo(() => {
-    // Khi chọn ALL: ưu tiên tính chỉ tiêu theo Nhân viên (REP) để không bị trùng lặp số tiền với khu vực (REGION)
-    const targetSource =
-      typeFilter === 'ALL'
-        ? targets.filter((t) => t.targetType === 'REP')
-        : targets;
-    const finalTargets = targetSource.length > 0 ? targetSource : targets;
-
-    const totalTarget = finalTargets.reduce((acc, t) => acc + (t.targetAmount || 0), 0);
-    const totalActual = finalTargets.reduce((acc, t) => acc + (t.actualAmount || 0), 0);
+    const totalTarget = targets.reduce((acc, t) => acc + (t.targetAmount || 0), 0);
+    const totalActual = targets.reduce((acc, t) => acc + (t.actualAmount || 0), 0);
     const countReps = targets.filter((t) => t.targetType === 'REP').length;
     const avgRate =
-      finalTargets.length > 0
-        ? Math.round(finalTargets.reduce((acc, t) => acc + (t.completionRate || 0), 0) / finalTargets.length)
+      targets.length > 0
+        ? Math.round(targets.reduce((acc, t) => acc + (t.completionRate || 0), 0) / targets.length)
         : 0;
     return { totalTarget, totalActual, countReps, avgRate };
-  }, [targets, typeFilter]);
+  }, [targets]);
 
   // Xử lý tạo mới chỉ tiêu
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -165,6 +176,7 @@ export const SalesTargetManagementPage: React.FC = () => {
         period: selectedPeriod,
         targetType: newTargetType,
         salesRepId: newTargetType === 'REP' ? Number(newSalesRepId) : undefined,
+        regionId: newTargetType === 'REGION' ? Number(newRegionId) : undefined,
         region: newTargetType === 'REGION' ? newRegion : undefined,
         targetAmount: amount,
         note: newNote.trim() || undefined
@@ -203,18 +215,31 @@ export const SalesTargetManagementPage: React.FC = () => {
       showToast('Vui lòng nhập số tiền chỉ tiêu hợp lệ lớn hơn 0', 'error');
       return;
     }
-    if (!editReason.trim()) {
-      showToast('Bắt buộc phải nhập lý do điều chỉnh chỉ tiêu', 'error');
+    if (!editReason.trim() || editReason.trim().length < 5) {
+      showToast('Bắt buộc phải nhập lý do điều chỉnh chỉ tiêu (tối thiểu 5 ký tự)', 'error');
       return;
     }
 
     try {
       setSubmittingEdit(true);
-      await updateSalesTarget(editingTarget.id, {
-        targetAmount: amount,
-        note: editNote.trim(),
-        reason: editReason.trim()
-      });
+      if (editingTarget.id && editingTarget.id > 0) {
+        await updateSalesTarget(editingTarget.id, {
+          targetAmount: amount,
+          note: editNote.trim(),
+          reason: editReason.trim()
+        });
+      } else {
+        await createSalesTarget({
+          period: selectedPeriod,
+          targetType: editingTarget.targetType,
+          salesRepId: editingTarget.salesRepId,
+          regionId: editingTarget.regionId,
+          region: editingTarget.region || editingTarget.regionName,
+          targetAmount: amount,
+          note: editNote.trim() || undefined,
+          reason: editReason.trim()
+        });
+      }
 
       showToast('Điều chỉnh chỉ tiêu doanh số thành công!', 'success');
       setEditingTarget(null);
@@ -327,11 +352,10 @@ export const SalesTargetManagementPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Lọc loại chỉ tiêu */}
+          {/* Lọc loại chỉ tiêu (Bỏ 'Tất cả', chỉ giữ 'Theo Nhân viên' và 'Theo Khu vực') */}
           <div className="flex items-center gap-2 bg-white p-3 rounded-2xl border border-gray-200 shadow-2xs">
             <span className="text-xs font-bold text-gray-500 whitespace-nowrap">Phân loại:</span>
             {[
-              { key: 'ALL', label: 'Tất cả' },
               { key: 'REP', label: 'Theo Nhân viên' },
               { key: 'REGION', label: 'Theo Khu vực' }
             ].map((f) => (
@@ -371,38 +395,40 @@ export const SalesTargetManagementPage: React.FC = () => {
                       <td colSpan={7} className="py-14 text-center text-gray-400">
                         <div className="flex flex-col items-center gap-2">
                           <RefreshCw size={20} className="animate-spin text-[#F85606]" />
-                          <span>Đang tải danh sách chỉ tiêu của nhân viên...</span>
+                          <span>Đang tải danh sách chỉ tiêu...</span>
                         </div>
                       </td>
                     </tr>
                   ) : targets.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-14 text-center text-gray-400">
-                        Chưa có chỉ tiêu nào được thiết lập cho kỳ này.
+                        Chưa có dữ liệu chỉ tiêu nào cho kỳ này.
                       </td>
                     </tr>
                   ) : (
                     targets.map((tgt) => (
-                      <tr key={tgt.id} className="hover:bg-orange-50/30 transition">
+                      <tr key={tgt.id ? tgt.id : `region-${tgt.regionId || tgt.region}`} className="hover:bg-orange-50/30 transition">
                         <td className="py-3.5 px-4 font-semibold text-gray-900">
                           {tgt.targetType === 'REP' ? (
                             <div className="flex items-center gap-2">
                               <User size={14} className="text-[#F85606] shrink-0" />
                               <div>
                                 <span>{tgt.salesRepName}</span>
-                                <span className="text-[10px] text-gray-400 font-mono block">
-                                  {tgt.salesRepCode}
-                                </span>
+                                {tgt.salesRepCode && (
+                                  <span className="text-[10px] text-gray-400 font-mono block">
+                                    {tgt.salesRepCode}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
                               <MapPin size={14} className="text-emerald-600 shrink-0" />
-                              <span className="font-bold text-emerald-900">Toàn khu vực {tgt.region}</span>
+                              <span className="font-bold text-emerald-900">Toàn khu vực {tgt.region || tgt.regionName}</span>
                             </div>
                           )}
                         </td>
-                        <td className="py-3.5 px-4 text-gray-600 whitespace-nowrap">{tgt.region}</td>
+                        <td className="py-3.5 px-4 text-gray-600 whitespace-nowrap">{tgt.region || tgt.regionName || '-'}</td>
                         <td className="py-3.5 px-4 text-right font-mono font-bold text-gray-900 whitespace-nowrap">
                           {formatCurrencyVND(tgt.targetAmount)}
                         </td>
@@ -428,7 +454,7 @@ export const SalesTargetManagementPage: React.FC = () => {
                           </div>
                         </td>
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          {tgt.isLocked ? (
+                          {tgt.isLocked || tgt.locked || tgt.period < currentPeriod ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-100 text-gray-700 border border-gray-300">
                               <Lock size={11} />
                               <span>Đã khoá</span>
@@ -455,11 +481,15 @@ export const SalesTargetManagementPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => openEditModal(tgt)}
-                              title={tgt.isLocked ? 'Điều chỉnh chỉ tiêu kỳ đã khoá (cần lý do)' : 'Chỉnh sửa chỉ tiêu'}
+                              title={
+                                tgt.isLocked || tgt.locked || tgt.period < currentPeriod
+                                  ? 'Điều chỉnh chỉ tiêu kỳ đã khoá (cần lý do)'
+                                  : ((!tgt.id || tgt.id <= 0) ? 'Thiết lập chỉ tiêu khu vực' : 'Chỉnh sửa chỉ tiêu')
+                              }
                               className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-[#F85606] bg-orange-50 hover:bg-orange-100 border border-orange-200/80 rounded-lg transition cursor-pointer"
                             >
                               <Edit3 size={12} />
-                              <span>Điều chỉnh</span>
+                              <span>{(!tgt.id || tgt.id <= 0) ? 'Thiết lập' : 'Điều chỉnh'}</span>
                             </button>
                           )}
                         </td>
@@ -630,14 +660,21 @@ export const SalesTargetManagementPage: React.FC = () => {
                 <div className="space-y-1">
                   <label className="font-bold text-gray-700 block">Khu vực thị trường:</label>
                   <SearchSelect
-                    value={newRegion}
-                    onChange={(e) => setNewRegion(e.target.value)}
+                    value={String(newRegionId)}
+                    onChange={(e) => {
+                      const idStr = e.target.value;
+                      setNewRegionId(idStr);
+                      const found = regionOptions.find((reg) => String(reg.id) === idStr);
+                      if (found) {
+                        setNewRegion(found.name);
+                      }
+                    }}
                     searchPlaceholder="Gõ để tìm khu vực..."
                     className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
                   >
                     {regionOptions.map((reg) => (
-                      <option key={reg} value={reg}>
-                        Khu vực {reg}
+                      <option key={reg.id} value={String(reg.id)}>
+                        Khu vực {reg.name}
                       </option>
                     ))}
                   </SearchSelect>
@@ -729,8 +766,8 @@ export const SalesTargetManagementPage: React.FC = () => {
                 <span className="text-gray-500 block">Đối tượng:</span>
                 <span className="font-bold text-gray-900 text-sm">
                   {editingTarget.targetType === 'REP'
-                    ? `${editingTarget.salesRepName} (${editingTarget.salesRepCode})`
-                    : `Toàn khu vực ${editingTarget.region}`}
+                    ? `${editingTarget.salesRepName}${editingTarget.salesRepCode ? ` (${editingTarget.salesRepCode})` : ''}`
+                    : `Toàn khu vực ${editingTarget.region || editingTarget.regionName}`}
                 </span>
                 <span className="text-gray-500 block mt-1">
                   Chỉ tiêu hiện tại: <strong>{formatCurrencyVND(editingTarget.targetAmount)}</strong>

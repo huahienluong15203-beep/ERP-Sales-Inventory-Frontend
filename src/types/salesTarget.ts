@@ -7,10 +7,14 @@ export interface SalesTargetResponse {
   salesRepId?: number;
   salesRepCode?: string;
   salesRepName?: string;
+  regionId?: number;
+  regionName?: string;
   region?: string;
   targetAmount: number;
   actualAmount: number;
+  achievementPercent?: number;
   completionRate: number; // Tỷ lệ hoàn thành % (ví dụ 82.5)
+  locked?: boolean;
   isLocked: boolean; // Kỳ đã qua thì bị khoá
   note?: string;
   updatedAt?: string;
@@ -31,9 +35,11 @@ export interface SalesTargetCreateRequest {
   period: string;
   targetType: SalesTargetType;
   salesRepId?: number;
+  regionId?: number;
   region?: string;
   targetAmount: number;
   note?: string;
+  reason?: string;
 }
 
 export interface SalesTargetUpdateRequest {
