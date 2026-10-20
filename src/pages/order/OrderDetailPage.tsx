@@ -17,7 +17,6 @@ import {
   RefreshCw,
   RotateCcw,
   History,
-  Ban,
   Printer,
   Truck,
   CreditCard,
@@ -43,7 +42,6 @@ import { useNavigate, useParams } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
 import { OrderApprovalActionModal, type ApprovalActionType } from '../../components/order/OrderApprovalActionModal';
 import { OrderLifecycleTimeline } from '../../components/order/OrderLifecycleTimeline';
-import { OrderCancelModal } from '../../components/order/OrderCancelModal';
 import { OrderPdfPreviewModal } from '../../components/order/OrderPdfPreviewModal';
 import { OrderDispatchModal } from '../../components/order/OrderDispatchModal';
 import { AgencyDeliveryTimeline } from '../../components/portal/AgencyDeliveryTimeline';
@@ -66,7 +64,6 @@ export const OrderDetailPage: React.FC = () => {
     isOpen: boolean;
     actionType: ApprovalActionType;
   }>({ isOpen: false, actionType: 'APPROVE' });
-  const [isCancelModalOpen, setIsCancelModalOpen] = useState<boolean>(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
   const [proofModalState, setProofModalState] = useState<{
     isOpen: boolean;
@@ -519,21 +516,6 @@ export const OrderDetailPage: React.FC = () => {
             >
               <Archive size={14} className={updatingStatus ? 'animate-spin' : ''} />
               <span>Hoàn tất đơn</span>
-            </button>
-          )}
-
-          {/* Nút hủy đơn hàng */}
-          {!['CANCELLED', 'REJECTED', 'CLOSED', 'COMPLETED', 'DISPATCHED', 'DELIVERED'].includes(order.status) &&
-            (currentRole === 'ROLE_CUSTOMER'
-              ? ['PENDING_APPROVAL', 'DRAFT'].includes(order.status)
-              : ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP'].includes(currentRole ?? '')) && (
-            <button
-              type="button"
-              onClick={() => setIsCancelModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl border border-rose-300 text-rose-700 hover:bg-rose-50 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
-            >
-              <Ban size={14} />
-              <span>Hủy đơn</span>
             </button>
           )}
         </div>
@@ -1166,14 +1148,6 @@ export const OrderDetailPage: React.FC = () => {
         order={order}
         actionType={approvalModalState.actionType}
         onClose={() => setApprovalModalState((s) => ({ ...s, isOpen: false }))}
-        onSuccess={() => loadOrderDetail()}
-      />
-
-      {/* MODAL HỦY ĐƠN HÀNG (S4-06) */}
-      <OrderCancelModal
-        isOpen={isCancelModalOpen}
-        order={order}
-        onClose={() => setIsCancelModalOpen(false)}
         onSuccess={() => loadOrderDetail()}
       />
 
