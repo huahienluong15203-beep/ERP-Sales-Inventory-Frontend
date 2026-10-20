@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ConfirmModal, type ConfirmModalProps } from './ConfirmModal';
 
 type ConfirmOptions = Pick<ConfirmModalProps, 'title' | 'message' | 'confirmLabel' | 'cancelLabel' | 'variant' | 'icon'>;

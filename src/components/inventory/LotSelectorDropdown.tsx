@@ -37,9 +37,13 @@ export const LotSelectorDropdown: React.FC<LotSelectorDropdownProps> = ({
   const [lots, setLots] = useState<ProductLotResponse[]>([]);
   const [hasBatchManagement, setHasBatchManagement] = useState(false);
   const [manualReason, setManualReason] = useState('');
-  const [overrideReason, setOverrideReason] = useState('');
   const [isOverrideConfirmed, setIsOverrideConfirmed] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
+  const [pendingLot, setPendingLot] = useState<ProductLotResponse | null>(null);
+  const [modalReason, setModalReason] = useState('');
+  const [modalOverrideChecked, setModalOverrideChecked] = useState(false);
+  const [modalError, setModalError] = useState('');
 
   const isWhManagerOrAdmin =
     currentRole === 'ROLE_WH_MANAGER' ||
@@ -102,35 +106,52 @@ export const LotSelectorDropdown: React.FC<LotSelectorDropdownProps> = ({
     const isDifferent = suggestedLot && lot.batchNumber !== suggestedLot.batchNumber;
     const isExpired = lot.daysToExpiration <= 0 || lot.expiryStatus === 'EXPIRED';
 
-    let reasonToSend: string | undefined = undefined;
-    if (isDifferent) {
-      reasonToSend = manualReason.trim() || 'Thủ kho chọn lô xuất khác lô gợi ý ban đầu';
-    }
-    if (isExpired && isWhManagerOrAdmin) {
-      reasonToSend = overrideReason.trim() || 'Quản lý kho xác nhận ghi đè xuất lô quá hạn';
-    }
+    setIsOpen(false);
 
-    onChange(lot.batchNumber, reasonToSend, isExpired);
-    if (!isDifferent && !isExpired) {
-      setIsOpen(false);
+    if (isDifferent || isExpired) {
+      // Khi chọn lô khác hoặc lô quá hạn -> Hiển thị popup ra màn hình để nhập lý do
+      setPendingLot(lot);
+      setModalReason(manualReason || '');
+      setModalOverrideChecked(isOverrideConfirmed);
+      setModalError('');
+      setIsReasonModalOpen(true);
+    } else {
+      // Chọn đúng lô gợi ý FEFO và còn hạn -> Gán trực tiếp
+      onChange(lot.batchNumber, undefined, false);
+      setManualReason('');
+      setIsOverrideConfirmed(false);
     }
   };
 
-  const handleManualReasonBlur = () => {
-    if (selectedBatchNumber) {
-      onChange(selectedBatchNumber, manualReason.trim(), isSelectedExpired && isOverrideConfirmed);
+  const handleConfirmModal = () => {
+    if (!pendingLot) return;
+    const isExpired = pendingLot.daysToExpiration <= 0 || pendingLot.expiryStatus === 'EXPIRED';
+
+    if (isExpired && !modalOverrideChecked) {
+      setModalError('Quản lý kho phải tích xác nhận ghi đè cho phép xuất lô quá hạn.');
+      return;
     }
+
+    if (!modalReason.trim()) {
+      setModalError('Vui lòng nhập hoặc chọn lý do cụ thể.');
+      return;
+    }
+
+    const trimmedReason = modalReason.trim();
+    setManualReason(trimmedReason);
+    if (isExpired) {
+      setIsOverrideConfirmed(modalOverrideChecked);
+    }
+
+    onChange(pendingLot.batchNumber, trimmedReason, isExpired && modalOverrideChecked);
+    setIsReasonModalOpen(false);
+    setPendingLot(null);
   };
 
-  const handleOverrideConfirmToggle = (checked: boolean) => {
-    setIsOverrideConfirmed(checked);
-    if (selectedBatchNumber) {
-      onChange(
-        selectedBatchNumber,
-        checked ? overrideReason.trim() || 'Quản lý kho xác nhận ghi đè xuất lô' : manualReason.trim(),
-        checked
-      );
-    }
+  const handleCancelModal = () => {
+    setIsReasonModalOpen(false);
+    setPendingLot(null);
+    setModalError('');
   };
 
   if (!hasBatchManagement) {
@@ -229,7 +250,7 @@ export const LotSelectorDropdown: React.FC<LotSelectorDropdownProps> = ({
         <ChevronDown size={14} className={`text-gray-400 shrink-0 transition-transform ${isOpen ? 'rotate-180 text-orange-500' : ''}`} />
       </button>
 
-      {/* Menu danh sách các lô & Lý do xổ xuống dưới */}
+      {/* Menu danh sách các lô xổ xuống dưới (Chỉ hiển thị danh sách gọn gàng) */}
       {isOpen && (
         <>
           <div
@@ -242,7 +263,7 @@ export const LotSelectorDropdown: React.FC<LotSelectorDropdownProps> = ({
               <span className="text-[10px] text-orange-600 font-normal">Hạn gần nhất xếp trước</span>
             </div>
 
-            <div className="max-h-56 overflow-y-auto py-1 divide-y divide-gray-50">
+            <div className="max-h-60 overflow-y-auto py-1 divide-y divide-gray-50">
               {lots.map((lot) => {
                 const isSelected = lot.batchNumber === selectedBatchNumber;
                 const isSuggested = suggestedLot?.batchNumber === lot.batchNumber;
@@ -261,7 +282,7 @@ export const LotSelectorDropdown: React.FC<LotSelectorDropdownProps> = ({
                     } ${isLocked ? 'opacity-40 cursor-not-allowed bg-gray-50' : ''}`}
                   >
                     <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-mono font-bold text-gray-900">{lot.batchNumber}</span>
                         {isSuggested && (
                           <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
@@ -304,102 +325,165 @@ export const LotSelectorDropdown: React.FC<LotSelectorDropdownProps> = ({
                 );
               })}
             </div>
+          </div>
+        </>
+      )}
 
-            {/* YÊU CẦU NHẬP LÝ DO NẾU THỦ KHO CHỌN LÔ KHÁC VỚI LÔ GỢI Ý FEFO (Xổ xuống trong menu popup) */}
-            {isDifferentFromSuggested && !isSelectedExpired && (
-              <div className="p-3 bg-amber-50/90 border-t border-amber-200 text-xs text-amber-900 space-y-2">
-                <div className="flex items-center gap-1.5 font-bold text-amber-950">
-                  <AlertTriangle size={13} className="text-amber-600 shrink-0" />
-                  <span>Đang chọn khác lô gợi ý FEFO ({suggestedLot?.batchNumber})</span>
-                </div>
-                <p className="text-[11px] text-amber-800 leading-snug">
-                  Vui lòng chọn hoặc nhập lý do chọn lô này:
+      {/* POPUP MODAL NHẬP LÝ DO KHI CHỌN LÔ KHÁC HOẶC LÔ QUÁ HẠN (Hiển thị giữa màn hình) */}
+      {isReasonModalOpen && pendingLot && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className={`p-4 border-b flex items-center gap-2.5 ${
+              pendingLot.daysToExpiration <= 0 || pendingLot.expiryStatus === 'EXPIRED'
+                ? 'bg-rose-50 border-rose-200 text-rose-900'
+                : 'bg-amber-50 border-amber-200 text-amber-900'
+            }`}>
+              {pendingLot.daysToExpiration <= 0 || pendingLot.expiryStatus === 'EXPIRED' ? (
+                <XCircle className="w-5 h-5 text-rose-600 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+              )}
+              <div>
+                <h3 className="font-bold text-sm">
+                  {pendingLot.daysToExpiration <= 0 || pendingLot.expiryStatus === 'EXPIRED'
+                    ? 'Xác nhận xuất lô quá hạn sử dụng'
+                    : 'Lý do chọn lô khác gợi ý FEFO'}
+                </h3>
+                <p className="text-[11px] opacity-80 mt-0.5">
+                  {pendingLot.daysToExpiration <= 0 || pendingLot.expiryStatus === 'EXPIRED'
+                    ? 'Lô hàng đã hết hạn sử dụng. Cần Quản lý kho xác nhận ghi đè.'
+                    : 'Hệ thống khuyến nghị ưu tiên xuất lô cận hạn nhất trước (FEFO).'}
                 </p>
-                <div className="flex flex-wrap gap-1">
-                  {['Đại lý yêu cầu date xa', 'Hàng góc trong khó lấy', 'Khách chỉ định lô'].map((tag, tIdx) => (
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4 space-y-3.5 text-xs">
+              {/* So sánh lô gợi ý vs lô chọn */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-200 space-y-1">
+                  <div className="text-[10px] font-bold text-gray-500 uppercase">Gợi ý FEFO</div>
+                  <div className="font-mono font-bold text-gray-900 text-xs truncate">
+                    {suggestedLot?.batchNumber || 'N/A'}
+                  </div>
+                  <div className="text-[10px] text-gray-500">
+                    HSD: {suggestedLot?.expiredDate || 'N/A'}
+                  </div>
+                  <div className="text-[10px] text-gray-500">
+                    Tồn: <strong>{suggestedLot?.quantity || 0}</strong> {baseUnit}
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-amber-50/60 border border-amber-200 space-y-1">
+                  <div className="text-[10px] font-bold text-amber-700 uppercase">Lô bạn chọn</div>
+                  <div className="font-mono font-bold text-gray-900 text-xs truncate">
+                    {pendingLot.batchNumber}
+                  </div>
+                  <div className="text-[10px] text-gray-600">
+                    HSD: {pendingLot.expiredDate}
+                  </div>
+                  <div className="text-[10px] text-gray-600">
+                    Tồn: <strong>{pendingLot.quantity}</strong> {baseUnit}
+                  </div>
+                </div>
+              </div>
+
+              {/* Gợi ý chọn nhanh lý do */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-bold text-gray-700">
+                  Chọn nhanh lý do:
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'Đại lý yêu cầu date xa',
+                    'Hàng góc trong khó lấy',
+                    'Khách chỉ định lô này',
+                    'Bao bì phù hợp vận chuyển'
+                  ].map((tag, tIdx) => (
                     <button
                       key={tIdx}
                       type="button"
-                      disabled={disabled}
                       onClick={() => {
-                        setManualReason(tag);
-                        if (selectedBatchNumber) {
-                          onChange(selectedBatchNumber, tag, false);
-                        }
+                        setModalReason(tag);
+                        setModalError('');
                       }}
-                      className="text-[10px] px-2 py-0.5 rounded-md bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 font-medium cursor-pointer shadow-2xs"
+                      className="text-[11px] px-2.5 py-1 rounded-lg bg-gray-50 hover:bg-orange-50 hover:border-orange-300 text-gray-700 border border-gray-200 font-medium cursor-pointer transition shadow-2xs"
                     >
                       + {tag}
                     </button>
                   ))}
                 </div>
-                <input
-                  type="text"
-                  value={manualReason}
-                  disabled={disabled}
-                  onChange={(e) => setManualReason(e.target.value)}
-                  onBlur={handleManualReasonBlur}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleManualReasonBlur();
-                    }
+              </div>
+
+              {/* Nhập lý do chi tiết */}
+              <div className="space-y-1">
+                <label className="block text-[11px] font-bold text-gray-700">
+                  Nhập lý do cụ thể <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={modalReason}
+                  onChange={(e) => {
+                    setModalReason(e.target.value);
+                    if (modalError) setModalError('');
                   }}
-                  placeholder="Nhập lý do cụ thể..."
-                  className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                  placeholder="Nhập lý do tại sao không xuất theo lô FEFO gợi ý..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 resize-none text-gray-900"
                 />
               </div>
-            )}
 
-            {/* CẢNH BÁO VÀ XÁC NHẬN GHI ĐÈ NẾU LÔ QUÁ HẠN (Xổ xuống trong menu popup) */}
-            {isSelectedExpired && (
-              <div className="p-3 bg-rose-50 border-t border-rose-300 text-xs text-rose-900 space-y-2">
-                <div className="flex items-center gap-1.5 font-bold text-rose-950">
-                  <XCircle size={14} className="text-rose-600 shrink-0" />
-                  <span>Cảnh báo nghiêm ngặt: Lô hàng đã quá hạn sử dụng!</span>
-                </div>
-                <p className="text-[11px] leading-relaxed text-rose-800">
-                  Hệ thống không cho phép xuất lô đã quá hạn trừ khi <strong>Quản lý kho</strong> xác nhận ghi đè kèm lý do.
-                </p>
-
-                {isWhManagerOrAdmin ? (
-                  <div className="space-y-1.5 pt-1 border-t border-rose-200">
-                    <label className="flex items-center gap-2 cursor-pointer font-bold text-rose-950">
+              {/* Ghi đè lô quá hạn nếu áp dụng */}
+              {(pendingLot.daysToExpiration <= 0 || pendingLot.expiryStatus === 'EXPIRED') && (
+                <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 space-y-2">
+                  {isWhManagerOrAdmin ? (
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-rose-950">
                       <input
                         type="checkbox"
-                        checked={isOverrideConfirmed}
-                        disabled={disabled}
-                        onChange={(e) => handleOverrideConfirmToggle(e.target.checked)}
+                        checked={modalOverrideChecked}
+                        onChange={(e) => {
+                          setModalOverrideChecked(e.target.checked);
+                          if (modalError) setModalError('');
+                        }}
                         className="rounded border-rose-400 text-rose-600 focus:ring-rose-500 w-4 h-4 cursor-pointer"
                       />
-                      <span>Quản lý kho xác nhận ghi đè cho phép xuất</span>
+                      <span>Quản lý kho xác nhận cho phép xuất lô quá hạn</span>
                     </label>
-                    {isOverrideConfirmed && (
-                      <input
-                        type="text"
-                        value={overrideReason}
-                        disabled={disabled}
-                        onChange={(e) => setOverrideReason(e.target.value)}
-                        onBlur={() =>
-                          onChange(
-                            selectedBatchNumber || '',
-                            overrideReason.trim() || 'Quản lý kho xác nhận xuất lô quá hạn',
-                            true
-                          )
-                        }
-                        placeholder="Nhập lý do cho phép xuất lô quá hạn (bắt buộc)..."
-                        className="w-full px-2.5 py-1.5 bg-white border border-rose-300 rounded-lg text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-[11px] font-bold text-rose-700 bg-rose-100/70 p-1.5 rounded-lg">
-                    Bạn đang ở vai trò Nhân viên kho. Vui lòng liên hệ Quản lý kho để thực hiện ghi đè nếu muốn xuất lô này.
-                  </div>
-                )}
-              </div>
-            )}
+                  ) : (
+                    <div className="text-[11px] text-rose-700 font-semibold">
+                      ⚠️ Bạn không có quyền Quản lý kho để xuất lô quá hạn. Vui lòng liên hệ Quản lý kho.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Thông báo lỗi nếu có */}
+              {modalError && (
+                <div className="text-xs text-rose-600 bg-rose-50 px-2.5 py-1.5 rounded-lg border border-rose-200 font-medium">
+                  {modalError}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="p-3.5 bg-gray-50/80 border-t border-gray-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleCancelModal}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-200 transition cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmModal}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 transition cursor-pointer shadow-xs active:scale-95"
+              >
+                Xác nhận đổi lô
+              </button>
+            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

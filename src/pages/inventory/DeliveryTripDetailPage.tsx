@@ -440,7 +440,7 @@ export const DeliveryTripDetailPage: React.FC = () => {
                 <th className="py-2.5 px-3 w-44">Người nhận & SĐT</th>
                 <th className="py-2.5 px-3 text-right w-32">Tiền hàng (COD)</th>
                 <th className="py-2.5 px-3 text-center w-36">Trạng thái</th>
-                <th className="py-2.5 px-3 text-center w-48">Thao tác</th>
+                <th className="py-2.5 px-3 text-center w-28">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -504,10 +504,11 @@ export const DeliveryTripDetailPage: React.FC = () => {
                     )}
                   </td>
                   <td className="py-2.5 px-3 text-center">
-                    <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                    <div className="flex items-center justify-center gap-1.5">
                       {isWarehouseStaff && trip.status === 'IN_PROGRESS' && stop.status === 'DISPATCHED' && (
                         <>
                           <button
+                            type="button"
                             onClick={() =>
                               setProofModalState({
                                 isOpen: true,
@@ -520,13 +521,13 @@ export const DeliveryTripDetailPage: React.FC = () => {
                                 mode: 'CONFIRM'
                               })
                             }
-                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                            title="Xác nhận giao thành công & Tải ảnh biên bản có chữ ký (POD)"
+                            className="w-7 h-7 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all flex items-center justify-center cursor-pointer shadow-2xs active:scale-95"
+                            title="Xác nhận giao thành công"
                           >
-                            <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                            <span>Xác nhận</span>
+                            <Check className="w-4 h-4 stroke-[2.5]" />
                           </button>
                           <button
+                            type="button"
                             onClick={() =>
                               setProofModalState({
                                 isOpen: true,
@@ -539,17 +540,17 @@ export const DeliveryTripDetailPage: React.FC = () => {
                                 mode: 'FAIL'
                               })
                             }
-                            className="px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer border border-red-200"
-                            title="Ghi nhận giao không thành công (chọn lý do, hàng quay về kho)"
+                            className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-all flex items-center justify-center cursor-pointer border border-red-200 shadow-2xs active:scale-95"
+                            title="Giao không thành công"
                           >
-                            <X className="w-3.5 h-3.5 stroke-[2.5]" />
-                            <span>Thất bại</span>
+                            <X className="w-4 h-4 stroke-[2.5]" />
                           </button>
                         </>
                       )}
 
                       {stop.status === 'DELIVERED' && (
                         <button
+                          type="button"
                           onClick={() =>
                             setProofModalState({
                               isOpen: true,
@@ -562,17 +563,18 @@ export const DeliveryTripDetailPage: React.FC = () => {
                               mode: 'VIEW'
                             })
                           }
-                          className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer border border-blue-200"
+                          className="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer border border-blue-200"
                           title="Xem ảnh biên bản giao hàng có chữ ký khách hàng"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Xem POD</span>
+                          <span>POD</span>
                         </button>
                       )}
 
                       <button
+                        type="button"
                         onClick={() => navigate(`/orders/${stop.orderId}`)}
-                        className="p-1.5 text-gray-400 hover:text-[#F85606] hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
+                        className="w-7 h-7 text-gray-400 hover:text-[#F85606] hover:bg-orange-50 rounded-lg transition-colors flex items-center justify-center cursor-pointer"
                         title="Xem chi tiết đơn hàng"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />

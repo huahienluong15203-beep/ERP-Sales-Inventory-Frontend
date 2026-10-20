@@ -89,11 +89,6 @@ export const OrderListPage: React.FC = () => {
     );
   }, [user, currentRole]);
 
-  // Chỉ Quản lý kinh doanh được duyệt đơn
-  const isSalesManager = useMemo(() => {
-    const roles = user?.roles || [];
-    return currentRole === 'ROLE_SALES_MANAGER' || roles.includes('ROLE_SALES_MANAGER');
-  }, [user, currentRole]);
 
   const isSalesRep = currentRole === 'ROLE_SALES_REP' || Boolean(user?.roles?.includes('ROLE_SALES_REP'));
 
