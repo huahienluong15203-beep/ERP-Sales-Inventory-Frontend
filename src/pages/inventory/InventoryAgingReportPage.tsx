@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Clock,
   DollarSign,
@@ -80,6 +80,54 @@ export const InventoryAgingReportPage: React.FC = () => {
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, totalItems);
   const currentItems = items.slice(startIndex, endIndex);
+
+  // Sắp xếp nhóm hàng theo phân cấp cây DFS trực quan cho combobox lọc (Style cây DFS, truyền id chuẩn xác)
+  const hierarchicalCategoryOptions = useMemo(() => {
+    if (!categories || !categories.length) return [];
+    const map = new Map<string | null, CategoryWithCount[]>();
+    for (const c of categories) {
+      const pid = c.parentId ?? null;
+      if (!map.has(pid)) map.set(pid, []);
+      map.get(pid)!.push(c);
+    }
+    const result: { value: string; label: string; level: number; productCount: number }[] = [];
+    const traverse = (parentId: string | null, depth: number) => {
+      const list = map.get(parentId) || [];
+      list.sort((a, b) => a.code.localeCompare(b.code));
+      for (const item of list) {
+        let prefix = '';
+        if (depth === 2) prefix = '└─ ';
+        else if (depth === 3) prefix = '└── ';
+        else if (depth > 3) prefix = `${'──'.repeat(depth - 1)} `;
+
+        const badge = item.level === 1 ? '[Ngành]' : item.level === 2 ? '[Nhóm]' : '';
+        const countText = item.productCount > 0 ? ` (${item.productCount} SP)` : '';
+        result.push({
+          value: String(item.id),
+          label: `${prefix}${badge} ${item.name}${countText}`.trim(),
+          level: item.level,
+          productCount: item.productCount,
+        });
+        traverse(item.id, depth + 1);
+      }
+    };
+    traverse(null, 1);
+    return result;
+  }, [categories]);
+
+  // Danh sách trang hiển thị kèm dấu ... khi có nhiều trang
+  const getPageNumbers = (): (number | string)[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, 5, '...', totalPages];
+    }
+    if (currentPage >= totalPages - 3) {
+      return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+  };
 
   // Xuất file Excel báo cáo luân chuyển kho
   const handleExportExcel = () => {
@@ -279,10 +327,10 @@ export const InventoryAgingReportPage: React.FC = () => {
               searchPlaceholder="Gõ để tìm nhóm hàng..."
               className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
             >
-              <option value="ALL">Tất cả nhóm hàng</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.name}>
-                  {c.name}
+              <option value="ALL">Tất cả nhóm hàng ({categories.length})</option>
+              {hierarchicalCategoryOptions.map((opt, idx) => (
+                <option key={`${opt.value}-${idx}`} value={opt.value}>
+                  {opt.label}
                 </option>
               ))}
             </SearchSelect>
@@ -412,7 +460,7 @@ export const InventoryAgingReportPage: React.FC = () => {
           </table>
         </div>
 
-        {/* Thanh phân trang ở cuối trang (S8-07: Cần có thanh này ở cuối trang vì nhiều sản phẩm) */}
+        {/* Thanh phân trang ở cuối trang */}
         {totalItems > 0 && (
           <div className="p-3.5 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-600">
             <div className="flex items-center gap-3">
@@ -442,38 +490,42 @@ export const InventoryAgingReportPage: React.FC = () => {
                 type="button"
                 disabled={currentPage <= 1}
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition cursor-pointer"
+                aria-label="Trang trước"
+                className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-xs transition cursor-pointer"
               >
-                Trước
+                &lt;
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                .map((p, idx, arr) => {
-                  const prev = arr[idx - 1];
+              {getPageNumbers().map((pageItem, idx) => {
+                if (typeof pageItem === 'string') {
                   return (
-                    <React.Fragment key={p}>
-                      {prev && p - prev > 1 && <span className="px-1 text-gray-400">...</span>}
-                      <button
-                        type="button"
-                        onClick={() => setCurrentPage(p)}
-                        className={`w-7 h-7 rounded-lg text-xs font-bold transition cursor-pointer ${
-                          currentPage === p
-                            ? 'bg-orange-500 text-white shadow-2xs'
-                            : 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-700'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    </React.Fragment>
+                    <span key={`ellipsis-${idx}`} className="px-1 text-gray-400 font-bold text-xs">
+                      ...
+                    </span>
                   );
-                })}
+                }
+                return (
+                  <button
+                    key={pageItem}
+                    type="button"
+                    onClick={() => setCurrentPage(pageItem)}
+                    className={`w-7 h-7 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      currentPage === pageItem
+                        ? 'bg-orange-500 text-white shadow-2xs'
+                        : 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    {pageItem}
+                  </button>
+                );
+              })}
               <button
                 type="button"
                 disabled={currentPage >= totalPages}
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition cursor-pointer"
+                aria-label="Trang sau"
+                className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-xs transition cursor-pointer"
               >
-                Sau
+                &gt;
               </button>
             </div>
           </div>
