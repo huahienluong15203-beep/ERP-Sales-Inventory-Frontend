@@ -142,11 +142,13 @@ export const OrderApprovalActionModal: React.FC<OrderApprovalActionModalProps> =
     }
   };
 
-  // Lấy danh sách lý do vi phạm (từ PendingOrderResponse hoặc fallback)
+  // Lấy danh sách lý do vi phạm (từ PendingOrderResponse hoặc OrderBackendResponse)
   const reasons: ApprovalReason[] =
     'reasons' in order && Array.isArray((order as PendingOrderResponse).reasons)
       ? (order as PendingOrderResponse).reasons
-      : [];
+      : ('approvalReasons' in order && Array.isArray((order as OrderBackendResponse).approvalReasons)
+        ? (order as OrderBackendResponse).approvalReasons ?? []
+        : []);
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">

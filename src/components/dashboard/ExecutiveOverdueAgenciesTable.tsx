@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from '../../routes/Router';
+import { useAuth } from '../../contexts/AuthContext';
 import { AlertCircle, ChevronRight, Phone, UserCheck, ShieldAlert } from 'lucide-react';
 import type { ExecutiveOverdueAgencies } from '../../types/dashboard';
 
@@ -13,6 +14,11 @@ export const ExecutiveOverdueAgenciesTable: React.FC<ExecutiveOverdueAgenciesTab
   loading = false
 }) => {
   const navigate = useNavigate();
+  const { currentRole, user } = useAuth();
+
+  const canViewDebtLedger =
+    ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP'].includes(currentRole ?? '') ||
+    Boolean(user?.roles?.some((r) => ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP'].includes(r)));
 
   const formatVnd = (amount: number) => {
     return (Number(amount) || 0).toLocaleString('vi-VN') + ' đ';
@@ -63,14 +69,16 @@ export const ExecutiveOverdueAgenciesTable: React.FC<ExecutiveOverdueAgenciesTab
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => navigate('/debts/ledger')}
-          className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1 transition cursor-pointer self-start sm:self-auto"
-        >
-          <span>Xem sổ công nợ toàn diện</span>
-          <ChevronRight size={14} />
-        </button>
+        {canViewDebtLedger && (
+          <button
+            type="button"
+            onClick={() => navigate('/debts/ledger')}
+            className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1 transition cursor-pointer self-start sm:self-auto"
+          >
+            <span>Xem sổ công nợ toàn diện</span>
+            <ChevronRight size={14} />
+          </button>
+        )}
       </div>
 
       {/* Table */}
@@ -157,13 +165,17 @@ export const ExecutiveOverdueAgenciesTable: React.FC<ExecutiveOverdueAgenciesTab
 
                     {/* Thao tác */}
                     <td className="py-2.5 px-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/debts/ledger?customerId=${agency.customerId}`)}
-                        className="px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold text-[11px] transition cursor-pointer"
-                      >
-                        Sổ nợ &gt;
-                      </button>
+                      {canViewDebtLedger ? (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/debts/ledger?customerId=${agency.customerId}`)}
+                          className="px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold text-[11px] transition cursor-pointer"
+                        >
+                          Sổ nợ &gt;
+                        </button>
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
                     </td>
                   </tr>
                 ))

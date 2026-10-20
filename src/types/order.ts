@@ -230,6 +230,8 @@ export interface OrderBackendResponse {
   // Xuất kho, đơn nợ hàng và thông tin giao hàng
   fulfillment?: OrderFulfillmentInfo | null;
   paymentMethod?: 'CREDIT' | 'COD' | string | null;
+  approvalReasons?: ApprovalReason[] | null;
+  reasons?: ApprovalReason[] | null;
 }
 
 export interface OrderFulfillmentInfo {

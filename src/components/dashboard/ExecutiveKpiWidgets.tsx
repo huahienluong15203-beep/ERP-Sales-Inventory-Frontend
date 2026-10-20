@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from '../../routes/Router';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   DollarSign,
   TrendingUp,
@@ -24,6 +25,11 @@ export const ExecutiveKpiWidgets: React.FC<ExecutiveKpiWidgetsProps> = ({
   loading = false
 }) => {
   const navigate = useNavigate();
+  const { currentRole, user } = useAuth();
+
+  const canViewDebtLedger =
+    ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP'].includes(currentRole ?? '') ||
+    Boolean(user?.roles?.some((r) => ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP'].includes(r)));
 
   const formatVnd = (amount: number | null | undefined) => {
     return (Number(amount) || 0).toLocaleString('vi-VN') + ' đ';
@@ -108,9 +114,9 @@ export const ExecutiveKpiWidgets: React.FC<ExecutiveKpiWidgetsProps> = ({
 
         {/* 5. Công nợ quá hạn */}
         <div
-          onClick={() => navigate('/debts/ledger')}
-          className="erp-stat-card border-l-4 border-l-rose-500 p-4 cursor-pointer hover:bg-rose-50/20 transition"
-          title="Bấm để xem sổ công nợ"
+          onClick={canViewDebtLedger ? () => navigate('/debts/ledger') : undefined}
+          className={`erp-stat-card border-l-4 border-l-rose-500 p-4 transition ${canViewDebtLedger ? 'cursor-pointer hover:bg-rose-50/20' : ''}`}
+          title={canViewDebtLedger ? 'Bấm để xem sổ công nợ' : 'Công nợ quá hạn'}
         >
           <div className="erp-stat-card-top">
             <span className="erp-stat-label">CÔNG NỢ QUÁ HẠN</span>
@@ -122,7 +128,7 @@ export const ExecutiveKpiWidgets: React.FC<ExecutiveKpiWidgetsProps> = ({
             {loading ? '...' : formatVnd(summary?.overdueDebtAmount)}
           </div>
           <div className="text-[10px] text-rose-600 font-bold mt-1">
-            <span>Cảnh báo thu hồi nợ &gt;</span>
+            <span>{canViewDebtLedger ? 'Cảnh báo thu hồi nợ >' : 'Cảnh báo thu hồi nợ'}</span>
           </div>
         </div>
 

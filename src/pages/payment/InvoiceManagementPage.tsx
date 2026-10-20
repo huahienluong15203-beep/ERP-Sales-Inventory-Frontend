@@ -22,9 +22,11 @@ import { Pagination } from '../../components/common/Pagination';
 
 export const InvoiceManagementPage: React.FC = () => {
   const navigate = useNavigate();
-  const { showToast, currentRole } = useAuth();
+  const { showToast, currentRole, user } = useAuth();
 
-  const isAccountantOrAdmin = ['ROLE_ACCOUNTANT', 'ROLE_ADMIN'].includes(currentRole ?? '');
+  const isAccountantOrAdmin =
+    ['ROLE_ACCOUNTANT', 'ROLE_ADMIN'].includes(currentRole ?? '') ||
+    Boolean(user?.roles?.some((r) => ['ROLE_ACCOUNTANT', 'ROLE_ADMIN'].includes(r)));
 
   // Dữ liệu bảng & phân trang
   const [invoices, setInvoices] = useState<InvoiceSummaryResponse[]>([]);
