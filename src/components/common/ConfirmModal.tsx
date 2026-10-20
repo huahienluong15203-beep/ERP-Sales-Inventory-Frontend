@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, Trash2, X, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export interface ConfirmModalProps {
@@ -45,7 +46,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   const defaultConfirmLabel = confirmLabel || (isDanger ? 'Xác nhận xóa' : isSuccess ? 'Xác nhận nộp quỹ' : 'Xác nhận');
 
-  return (
+  // Render ra thẳng document.body để nền phủ kín toàn màn hình,
+  // không bị khung trang cha (có transform/animation) cắt mất như ở trang Điều chỉnh tồn kho.
+  return createPortal(
     <div
       className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={() => {
@@ -138,6 +141,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
