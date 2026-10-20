@@ -254,8 +254,8 @@ export const OrderListPage: React.FC = () => {
     setIsApprovalModalOpen(true);
   };
 
-  // Mục 8: chỉ đơn Chờ duyệt mới tick được, và chỉ Quản lý kinh doanh (giống nút Duyệt từng đơn)
-  const canBulkApprove = isSalesManager;
+  // Mục 8: chỉ đơn Chờ duyệt mới tick được, và Quản lý kinh doanh & Admin (giống nút Duyệt từng đơn)
+  const canBulkApprove = isManagerOrAdmin;
   const isSelectable = (o: OrderSummaryItem) => canBulkApprove && o.status === 'PENDING_APPROVAL';
   const selectableOnPage = orders.filter(isSelectable);
   const allOnPageSelected =
@@ -631,8 +631,8 @@ export const OrderListPage: React.FC = () => {
           <RefreshCw size={14} className={loading ? 'animate-spin text-[#F85606]' : ''} />
         </button>
 
-        {/* Nút đơn nháp ở vị trí khoanh màu xanh */}
-        {!isWarehouseRole && (
+        {/* Nút đơn nháp */}
+        {canCreateOrder && (
           <button
             type="button"
             onClick={() => {
@@ -652,7 +652,7 @@ export const OrderListPage: React.FC = () => {
           </button>
         )}
 
-        {!isWarehouseRole && (
+        {canCreateOrder && (
           <button
             type="button"
             onClick={() => navigate('/orders/create')}
@@ -1228,19 +1228,19 @@ export const OrderListPage: React.FC = () => {
                               label: 'Phê duyệt đơn hàng',
                               icon: <CheckCircle2 size={14} />,
                               onClick: () => openApprovalModal(o, 'APPROVE'),
-                              hidden: !(o.status === 'PENDING_APPROVAL' && isSalesManager),
+                              hidden: !(o.status === 'PENDING_APPROVAL' && (isManagerOrAdmin || isSalesRep)),
                             },
                             {
                               label: 'Trả lại NVKD sửa',
                               icon: <RotateCcw size={14} />,
                               onClick: () => openApprovalModal(o, 'RETURN'),
-                              hidden: !(o.status === 'PENDING_APPROVAL' && isSalesManager),
+                              hidden: !(o.status === 'PENDING_APPROVAL' && (isManagerOrAdmin || isSalesRep)),
                             },
                             {
                               label: 'Từ chối đơn hàng',
                               icon: <XCircle size={14} />,
                               onClick: () => openApprovalModal(o, 'REJECT'),
-                              hidden: !(o.status === 'PENDING_APPROVAL' && isSalesManager),
+                              hidden: !(o.status === 'PENDING_APPROVAL' && (isManagerOrAdmin || isSalesRep)),
                               danger: true,
                             },
                           ]}

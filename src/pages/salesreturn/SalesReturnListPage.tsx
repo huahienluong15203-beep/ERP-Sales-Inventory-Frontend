@@ -43,13 +43,17 @@ const DEFAULT_WAREHOUSES: Warehouse[] = [
 
 export const SalesReturnListPage: React.FC = () => {
   const navigate = useNavigate();
-  const { showToast, currentRole } = useAuth();
+  const { showToast, currentRole, user } = useAuth();
 
   const roleStr = String(currentRole || '');
   const isWarehouseOrAdmin =
     roleStr.includes('ADMIN') ||
     roleStr.includes('WH_MANAGER') ||
     roleStr.includes('WAREHOUSE');
+
+  const canCreateReturn =
+    ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT'].includes(currentRole ?? '') ||
+    Boolean(user?.roles?.some((r) => ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT'].includes(r)));
 
   // Filter states
   const [keyword, setKeyword] = useState<string>('');
@@ -403,14 +407,16 @@ export const SalesReturnListPage: React.FC = () => {
           ))}
         </div>
 
-        <button
-          type="button"
-          onClick={() => navigate('/sales-returns/create')}
-          className="mb-2.5 px-4 py-2 rounded-xl bg-[#F85606] hover:bg-[#E04D05] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95 self-start sm:self-auto"
-        >
-          <Plus size={16} />
-          <span>Lập Phiếu Trả Hàng Mới</span>
-        </button>
+        {canCreateReturn && (
+          <button
+            type="button"
+            onClick={() => navigate('/sales-returns/create')}
+            className="mb-2.5 px-4 py-2 rounded-xl bg-[#F85606] hover:bg-[#E04D05] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer active:scale-95 self-start sm:self-auto"
+          >
+            <Plus size={16} />
+            <span>Lập Phiếu Trả Hàng Mới</span>
+          </button>
+        )}
       </div>
 
       {/* 3. Thanh tìm kiếm & bộ lọc */}

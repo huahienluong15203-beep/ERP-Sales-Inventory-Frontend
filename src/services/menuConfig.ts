@@ -89,7 +89,7 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     icon: 'RotateCcw',
     epic: 'Bán hàng & Kho vận',
     description: 'Lập phiếu hoàn hàng từ đại lý theo hoá đơn, nhập kho theo lô & kiểm duyệt nhập kho (S8-01)',
-    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ACCOUNTANT']
+    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
   },
 
   {
@@ -439,6 +439,34 @@ export function getAuthorizedMenus(roles: RoleName | RoleName[]): MenuItem[] {
 }
 
 /**
+ * Danh sách phân quyền chi tiết cho các trang con / tác vụ đặc thù (khớp với AppRoutes.tsx)
+ */
+export const SPECIFIC_SUBROUTE_ROLES: Record<string, RoleName[]> = {
+  '/sales-returns': ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT'],
+  '/sales-returns/create': ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT'],
+  '/customers/create': ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER'],
+  '/customers/transfer': ['ROLE_ADMIN', 'ROLE_SALES_MANAGER'],
+  '/products/import': ['ROLE_SALES_MANAGER', 'ROLE_ADMIN'],
+  '/pricing/create': ['ROLE_ADMIN', 'ROLE_SALES_MANAGER'],
+  '/price-lists/create': ['ROLE_ADMIN', 'ROLE_SALES_MANAGER'],
+  '/orders/create': ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN'],
+  '/invoices/create': ['ROLE_ACCOUNTANT', 'ROLE_ADMIN'],
+  '/payments/adjustments': ['ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/receipts/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/goods-receipts/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/transfers/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/transfers/create/products': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/stocktakes/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/stock-takes/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/stock-adjustments/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/lots/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/picking-lists/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/delivery-trips/create': ['ROLE_WH_MANAGER', 'ROLE_WAREHOUSE', 'ROLE_ADMIN'],
+  '/reports/sales': ['ROLE_SALES_MANAGER', 'ROLE_ADMIN'],
+  '/categories': ['ROLE_SALES_MANAGER', 'ROLE_ADMIN'],
+};
+
+/**
  * Kiểm tra xem người dùng (với 1 hoặc nhiều vai trò) có quyền truy cập vào một đường dẫn hay không
  */
 export function checkPathPermission(path: string, roles: RoleName | RoleName[]): boolean {
@@ -456,6 +484,16 @@ export function checkPathPermission(path: string, roles: RoleName | RoleName[]):
     cleanPath.startsWith('/users/')
   ) {
     return roleList.includes('ROLE_ADMIN');
+  }
+
+  // Tuyến đường chỉnh sửa bảng giá
+  if (/^\/(pricing|price-lists)\/[^/]+\/edit$/.test(cleanPath)) {
+    return roleList.some((r) => ['ROLE_ADMIN', 'ROLE_SALES_MANAGER'].includes(r));
+  }
+
+  // Kiểm tra trước danh sách tuyến con đặc thù
+  if (SPECIFIC_SUBROUTE_ROLES[cleanPath]) {
+    return SPECIFIC_SUBROUTE_ROLES[cleanPath].some((r) => roleList.includes(r));
   }
 
   const targetMenu = ALL_SYSTEM_MENUS.find((item) => {
@@ -478,6 +516,14 @@ export function getAllowedRolesForPath(path: string): RoleName[] {
 
   if (cleanPath === '/admin/users' || cleanPath.startsWith('/admin/users/')) {
     return ['ROLE_ADMIN'];
+  }
+
+  if (/^\/(pricing|price-lists)\/[^/]+\/edit$/.test(cleanPath)) {
+    return ['ROLE_ADMIN', 'ROLE_SALES_MANAGER'];
+  }
+
+  if (SPECIFIC_SUBROUTE_ROLES[cleanPath]) {
+    return SPECIFIC_SUBROUTE_ROLES[cleanPath];
   }
 
   const targetMenu = ALL_SYSTEM_MENUS.find((item) => {

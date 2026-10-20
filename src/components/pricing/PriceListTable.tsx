@@ -275,51 +275,54 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
                           <Icons.Eye size={16} />
                         </button>
 
-                        {/* Sửa bảng giá */}
-                        <button
-                          onClick={() => {
-                            if (item.hasOrders) {
-                              onCloneVersion(item);
-                            } else {
-                              onEdit(item);
+                        {/* Sửa bảng giá (chỉ Admin & QL kinh doanh) */}
+                        {canManage && (
+                          <button
+                            onClick={() => {
+                              if (item.hasOrders) {
+                                onCloneVersion(item);
+                              } else {
+                                onEdit(item);
+                              }
+                            }}
+                            title={
+                              item.hasOrders
+                                ? 'Bảng giá đã có đơn hàng (bấm để tạo phiên bản mới)'
+                                : 'Chỉnh sửa bảng giá và các dòng giá'
                             }
-                          }}
-                          title={
-                            item.hasOrders
-                              ? 'Bảng giá đã có đơn hàng (bấm để tạo phiên bản mới)'
-                              : 'Chỉnh sửa bảng giá và các dòng giá'
-                          }
-                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                            item.hasOrders
-                              ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
-                              : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
-                          }`}
-                        >
-                          <Icons.Edit size={16} />
-                        </button>
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                              item.hasOrders
+                                ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
+                                : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                            }`}
+                          >
+                            <Icons.Edit size={16} />
+                          </button>
+                        )}
 
                         {/* Thao tác phụ (tạo phiên bản mới, xoá) gom vào menu "⋯" */}
-                        <RowActionMenu
-                          className="p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors cursor-pointer"
-                          items={[
-                            {
-                              label: 'Tạo phiên bản mới',
-                              icon: <Icons.Copy size={14} />,
-                              title: 'Tạo phiên bản mới từ bảng giá này (v2, v3...)',
-                              onClick: () => onCloneVersion(item),
-                            },
-                            {
-                              label: 'Xoá bảng giá',
-                              icon: <Icons.Trash2 size={14} />,
-                              title: item.hasOrders
-                                ? 'Bảng giá đã có đơn hàng (xem thông tin ràng buộc)'
-                                : 'Xoá bảng giá',
-                              onClick: () => onDelete(item),
-                              hidden: !canManage,
-                              danger: true,
-                            },
-                          ]}
-                        />
+                        {canManage && (
+                          <RowActionMenu
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors cursor-pointer"
+                            items={[
+                              {
+                                label: 'Tạo phiên bản mới',
+                                icon: <Icons.Copy size={14} />,
+                                title: 'Tạo phiên bản mới từ bảng giá này (v2, v3...)',
+                                onClick: () => onCloneVersion(item),
+                              },
+                              {
+                                label: 'Xoá bảng giá',
+                                icon: <Icons.Trash2 size={14} />,
+                                title: item.hasOrders
+                                  ? 'Bảng giá đã có đơn hàng (xem thông tin ràng buộc)'
+                                  : 'Xoá bảng giá',
+                                onClick: () => onDelete(item),
+                                danger: true,
+                              },
+                            ]}
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>
