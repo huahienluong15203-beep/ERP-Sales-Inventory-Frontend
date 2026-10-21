@@ -169,37 +169,33 @@ export const DashboardPage: React.FC = () => {
     async function loadOperationalData() {
       setIsLoading(true);
       try {
-        // 1. Lấy dữ liệu sản phẩm
-        try {
-          const prodRes = await productService.getProducts({ page: 0, size: 1 });
-          if (isMounted) {
-            setProductCount(prodRes.totalElements);
-          }
-        } catch (err) {
-          console.warn('Không tải được danh mục sản phẩm từ backend:', err);
-        }
-
-        // 2. Lấy dữ liệu đại lý
-        const canViewCustomers =
-          currentRole === 'ROLE_ADMIN' ||
-          currentRole === 'ROLE_SALES_MANAGER' ||
-          currentRole === 'ROLE_ACCOUNTANT' ||
-          currentRole === 'ROLE_SALES_REP' ||
-          Boolean(
-            user?.roles?.some((r) =>
-              ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_ACCOUNTANT', 'ROLE_SALES_REP'].includes(r)
-            )
-          );
-
-        if (canViewCustomers) {
+        // Chỉ tải thông số thẻ vận hành khi không phải role điều hành (tiết kiệm tài nguyên, tăng tốc tải < 2s)
+        if (!isExecutiveRole) {
+          // 1. Lấy dữ liệu sản phẩm
           try {
-            const agencyStats = await fetchAgencyStats();
+            const prodRes = await productService.getProducts({ page: 0, size: 1 });
             if (isMounted) {
-              setAgencyCount(agencyStats.total);
-              setActiveAgenciesCount(agencyStats.active);
+              setProductCount(prodRes.totalElements);
             }
           } catch (err) {
-            console.warn('Không tải được danh sách đại lý từ backend:', err);
+            console.warn('Không tải được danh mục sản phẩm từ backend:', err);
+          }
+
+          // 2. Lấy dữ liệu đại lý (cho nhân viên kinh doanh)
+          const canViewCustomers =
+            currentRole === 'ROLE_SALES_REP' ||
+            Boolean(user?.roles?.some((r) => r === 'ROLE_SALES_REP'));
+
+          if (canViewCustomers) {
+            try {
+              const agencyStats = await fetchAgencyStats();
+              if (isMounted) {
+                setAgencyCount(agencyStats.total);
+                setActiveAgenciesCount(agencyStats.active);
+              }
+            } catch (err) {
+              console.warn('Không tải được danh sách đại lý từ backend:', err);
+            }
           }
         }
 
@@ -233,60 +229,63 @@ export const DashboardPage: React.FC = () => {
               backendOrders = data.content || [];
             }
 
-            let backendRevenue = 0;
-            let backendOfficialOrdersCount = 0;
-            let hasBackendTotals = false;
+            if (!isExecutiveRole) {
+              let backendRevenue = 0;
+              let backendOfficialOrdersCount = 0;
+              let hasBackendTotals = false;
 
-            try {
-              const [revTotalsRes, officialTotalsRes] = await Promise.all([
-                authFetch(`${API_BASE_URL}/api/orders/totals?status=DISPATCHED,DELIVERED,CLOSED`),
-                authFetch(
-                  `${API_BASE_URL}/api/orders/totals?status=PENDING_APPROVAL,APPROVED,PICKING,DISPATCHED,DELIVERED,CLOSED`
-                )
-              ]);
+              try {
+                const [revTotalsRes, officialTotalsRes] = await Promise.all([
+                  authFetch(`${API_BASE_URL}/api/orders/totals?status=DISPATCHED,DELIVERED,CLOSED`),
+                  authFetch(
+                    `${API_BASE_URL}/api/orders/totals?status=PENDING_APPROVAL,APPROVED,PICKING,DISPATCHED,DELIVERED,CLOSED`
+                  )
+                ]);
 
-              if (revTotalsRes.ok) {
-                const revData = await revTotalsRes.json();
-                backendRevenue = Number(revData.totalAmount) || 0;
-                hasBackendTotals = true;
+                if (revTotalsRes.ok) {
+                  const revData = await revTotalsRes.json();
+                  backendRevenue = Number(revData.totalAmount) || 0;
+                  hasBackendTotals = true;
+                }
+
+                if (officialTotalsRes.ok) {
+                  const officialData = await officialTotalsRes.json();
+                  backendOfficialOrdersCount = Number(officialData.orderCount) || 0;
+                }
+              } catch (errTotals) {
+                console.warn('Fallback tính từ danh sách đơn:', errTotals);
               }
 
-              if (officialTotalsRes.ok) {
-                const officialData = await officialTotalsRes.json();
-                backendOfficialOrdersCount = Number(officialData.orderCount) || 0;
+              const REVENUE_ELIGIBLE_STATUSES = ['DISPATCHED', 'DELIVERED', 'CLOSED', 'COMPLETED'];
+              const OFFICIAL_ORDER_STATUSES = [
+                'PENDING_APPROVAL',
+                'APPROVED',
+                'CONFIRMED',
+                'PICKING',
+                'PREPARING',
+                'DISPATCHED',
+                'DELIVERED',
+                'CLOSED',
+                'COMPLETED'
+              ];
+
+              let finalRevenue = hasBackendTotals
+                ? backendRevenue
+                : backendOrders
+                    .filter((o: any) => REVENUE_ELIGIBLE_STATUSES.includes(String(o.status || '').toUpperCase()))
+                    .reduce((sum: number, o: any) => sum + (Number(o.totalAmount) || 0), 0);
+
+              if (isMounted) {
+                setTotalRevenue(finalRevenue);
+                setOrdersCount(
+                  hasBackendTotals && backendOfficialOrdersCount > 0
+                    ? backendOfficialOrdersCount
+                    : backendOrders.filter((o: any) =>
+                        OFFICIAL_ORDER_STATUSES.includes(String(o.status || '').toUpperCase())
+                      ).length
+                );
               }
-            } catch (errTotals) {
-              console.warn('Fallback tính từ danh sách đơn:', errTotals);
             }
-
-            const REVENUE_ELIGIBLE_STATUSES = ['DISPATCHED', 'DELIVERED', 'CLOSED', 'COMPLETED'];
-            const OFFICIAL_ORDER_STATUSES = [
-              'PENDING_APPROVAL',
-              'APPROVED',
-              'CONFIRMED',
-              'PICKING',
-              'PREPARING',
-              'DISPATCHED',
-              'DELIVERED',
-              'CLOSED',
-              'COMPLETED'
-            ];
-
-            let finalRevenue = hasBackendTotals
-              ? backendRevenue
-              : backendOrders
-                  .filter((o: any) => REVENUE_ELIGIBLE_STATUSES.includes(String(o.status || '').toUpperCase()))
-                  .reduce((sum: number, o: any) => sum + (Number(o.totalAmount) || 0), 0);
-
-            if (isMounted) {
-              setTotalRevenue(finalRevenue);
-              setOrdersCount(
-                hasBackendTotals && backendOfficialOrdersCount > 0
-                  ? backendOfficialOrdersCount
-                  : backendOrders.filter((o: any) =>
-                      OFFICIAL_ORDER_STATUSES.includes(String(o.status || '').toUpperCase())
-                    ).length
-              );
 
               const formattedRecent: RecentOrderItem[] = backendOrders.slice(0, 10).map((o) => {
                 const status = String(o.status || 'DRAFT').toUpperCase();
@@ -336,7 +335,6 @@ export const DashboardPage: React.FC = () => {
               });
 
               setRecentOrders(formattedRecent);
-            }
           } catch (err) {
             console.warn('Lỗi tải đơn hàng:', err);
           }
