@@ -38,14 +38,17 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
       return [];
     }
   });
+  const saveClosedGroups = (next: string[]) => {
+    try {
+      localStorage.setItem('erp_sidebar_closed_groups', JSON.stringify(next));
+    } catch {
+      // Trình duyệt chặn lưu trữ: vẫn thu gọn trong phiên hiện tại
+    }
+  };
   const toggleGroup = (group: string) => {
     setClosedGroups((prev) => {
       const next = prev.includes(group) ? prev.filter((g) => g !== group) : [...prev, group];
-      try {
-        localStorage.setItem('erp_sidebar_closed_groups', JSON.stringify(next));
-      } catch {
-        // Trình duyệt chặn lưu trữ: vẫn thu gọn trong phiên hiện tại
-      }
+      saveClosedGroups(next);
       return next;
     });
   };
@@ -171,6 +174,19 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
     if (matchingMenus.length === 0) return null;
     return matchingMenus.reduce((prev, curr) => (curr.path.length > prev.path.length ? curr : prev));
   }, [displayedMenus, currentPath]);
+
+  // Chuyển sang trang thuộc nhóm đang thu gọn -> tự mở nhóm đó (người dùng vẫn bấm thu gọn lại được)
+  const activeGroup = activeMenu?.group;
+  useEffect(() => {
+    if (!activeGroup) return;
+    setClosedGroups((prev) => {
+      if (!prev.includes(activeGroup)) return prev;
+      const next = prev.filter((g) => g !== activeGroup);
+      saveClosedGroups(next);
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPath]);
 
   const currentMenu = activeMenu || menus.find((m) => m.path === currentPath);
   const isPickingListRoute = location.pathname.startsWith('/inventory/picking-lists');
@@ -322,10 +338,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
                 const isActive = activeMenu?.path === item.path;
                 // Gom nhóm theo chức năng: hiện tiêu đề nhóm khi sang nhóm mới
                 const showGroup = Boolean(item.group) && item.group !== displayedMenus[idx - 1]?.group;
-                // Nhóm đang chứa trang hiện tại luôn mở để không "mất" mục đang xem
-                const groupHasActive = Boolean(item.group) && activeMenu?.group === item.group;
-                const groupOpen =
-                  isSidebarCollapsed || !item.group || groupHasActive || !closedGroups.includes(item.group);
+                const groupOpen = isSidebarCollapsed || !item.group || !closedGroups.includes(item.group);
                 return (
                   <Fragment key={item.path}>
                     {showGroup && (
