@@ -14,10 +14,8 @@ import { useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
 import type { InvoiceSummaryResponse } from '../../types/invoice';
 import { searchInvoices } from '../../services/invoiceApi';
-import { fetchAgencies } from '../../services/agencyApi';
-import type { Agency } from '../../types/agency';
 import { InvoicePrintModal } from '../../components/payment/InvoicePrintModal';
-import { SearchSelect } from '../../components/common/SearchSelect';
+import { AgencySelect } from '../../components/common/AgencySelect';
 import { Pagination } from '../../components/common/Pagination';
 import { RowActionMenu } from '../../components/common/RowActionMenu';
 
@@ -43,54 +41,9 @@ export const InvoiceManagementPage: React.FC = () => {
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
 
-  // Danh sách đại lý cho filter (hỗ trợ tìm kiếm FE & BE + tải phân trang theo cuộn)
-  const [agencies, setAgencies] = useState<Agency[]>([]);
-  const [agencyPage, setAgencyPage] = useState<number>(0);
-  const [hasMoreAgencies, setHasMoreAgencies] = useState<boolean>(true);
-  const [loadingAgencies, setLoadingAgencies] = useState<boolean>(false);
-  const [agencySearchKeyword, setAgencySearchKeyword] = useState<string>('');
 
   // Modal in hoá đơn
   const [printModalInvoiceId, setPrintModalInvoiceId] = useState<number | null>(null);
-
-  // Tải danh sách đại lý (FE & BE search + cuộn load thêm)
-  const loadFilterAgencies = async (targetPage: number, kw: string, isAppend: boolean) => {
-    setLoadingAgencies(true);
-    try {
-      const res = await fetchAgencies({
-        page: targetPage,
-        size: 20,
-        keyword: kw.trim() || undefined,
-        status: 'ACTIVE'
-      });
-      const items = res.content || [];
-      setAgencies((prev) => {
-        if (!isAppend) return items;
-        const existingIds = new Set(prev.map((a) => a.id));
-        return [...prev, ...items.filter((a) => !existingIds.has(a.id))];
-      });
-      setAgencyPage(targetPage);
-      setHasMoreAgencies(targetPage + 1 < res.totalPages);
-    } catch {
-      // Giữ nguyên danh sách hiện tại nếu có lỗi
-    } finally {
-      setLoadingAgencies(false);
-    }
-  };
-
-  useEffect(() => {
-    loadFilterAgencies(0, '', false);
-  }, []);
-
-  const handleAgencySearch = (val: string) => {
-    setAgencySearchKeyword(val);
-    loadFilterAgencies(0, val, false);
-  };
-
-  const handleAgencyLoadMore = () => {
-    if (loadingAgencies || !hasMoreAgencies) return;
-    loadFilterAgencies(agencyPage + 1, agencySearchKeyword, true);
-  };
 
   // Tải danh sách hoá đơn
   const loadInvoices = async (targetPage = page, currentSize = pageSize) => {
@@ -129,8 +82,6 @@ export const InvoiceManagementPage: React.FC = () => {
     setSelectedCustomerId(undefined);
     setFromDate('');
     setToDate('');
-    setAgencySearchKeyword('');
-    loadFilterAgencies(0, '', false);
   };
 
   // Tính tổng tiền các hoá đơn trong trang hiện tại
@@ -220,23 +171,12 @@ export const InvoiceManagementPage: React.FC = () => {
 
           {/* Customer select có tìm kiếm FE & BE + cuộn load thêm */}
           <div>
-            <SearchSelect
+            <AgencySelect
               value={selectedCustomerId ?? ''}
-              onChange={(e) => setSelectedCustomerId(e.target.value ? Number(e.target.value) : undefined)}
+              onChange={(id) => setSelectedCustomerId(id ? Number(id) : undefined)}
+              allLabel="Tất cả đại lý"
               className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:border-[#F85606] focus:outline-none bg-white"
-              searchPlaceholder="Tìm tên hoặc mã đại lý..."
-              onSearchChange={handleAgencySearch}
-              onLoadMore={handleAgencyLoadMore}
-              hasMore={hasMoreAgencies}
-              isLoading={loadingAgencies}
-            >
-              <option value="">Tất cả đại lý</option>
-              {agencies.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name} ({a.code})
-                </option>
-              ))}
-            </SearchSelect>
+            />
           </div>
 
           {/* From date */}

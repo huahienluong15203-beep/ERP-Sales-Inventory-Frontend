@@ -23,6 +23,8 @@ import {
 } from '../../services/stockAdjustmentApi';
 import { authFetch, API_BASE_URL } from '../../services/api';
 import type { StockAdjustment } from '../../types/stockAdjustment';
+import { Pagination } from '../../components/common/Pagination';
+import { useServerSearch } from '../../hooks/useServerSearch';
 
 export const StockAdjustmentListPage: React.FC = () => {
   const { user, currentRole } = useAuth();
@@ -46,6 +48,7 @@ export const StockAdjustmentListPage: React.FC = () => {
   const [totalElements, setTotalElements] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [currentPage, setCurrentPage] = useState<number>(0);
+  const [pageSize, setPageSize] = useState<number>(20);
 
   // Filters
   const [warehouses, setWarehouses] = useState<any[]>([]);
@@ -55,6 +58,8 @@ export const StockAdjustmentListPage: React.FC = () => {
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
   const [keyword, setKeyword] = useState<string>('');
+  // Chỉ gọi API khi gõ đủ 2 ký tự và ngừng gõ
+  const { serverKeyword } = useServerSearch(keyword);
 
   // Modals
   const [approvingItem, setApprovingItem] = useState<StockAdjustment | null>(null);
@@ -91,9 +96,9 @@ export const StockAdjustmentListPage: React.FC = () => {
         reason: selectedReason !== 'ALL' ? selectedReason : undefined,
         fromDate: fromDate || undefined,
         toDate: toDate || undefined,
-        keyword: keyword || undefined,
+        keyword: serverKeyword || undefined,
         page: currentPage,
-        size: 15
+        size: pageSize
       });
       setAdjustments(data.content || []);
       setTotalElements(data.totalElements || 0);
@@ -103,7 +108,7 @@ export const StockAdjustmentListPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedWarehouseId, selectedStatus, selectedReason, fromDate, toDate, keyword, currentPage]);
+  }, [selectedWarehouseId, selectedStatus, selectedReason, fromDate, toDate, serverKeyword, currentPage, pageSize]);
 
   useEffect(() => {
     loadAdjustments();
@@ -539,44 +544,21 @@ export const StockAdjustmentListPage: React.FC = () => {
           </table>
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="p-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-            <span>
-              Tổng số <strong>{totalElements}</strong> phiếu điều chỉnh (Trang {currentPage + 1}/{totalPages})
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                disabled={currentPage === 0}
-                onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-                className="px-2.5 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition cursor-pointer"
-              >
-                Trước
-              </button>
-              {Array.from({ length: totalPages }).map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setCurrentPage(i)}
-                  className={`w-7 h-7 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    currentPage === i
-                      ? 'bg-orange-600 text-white'
-                      : 'border border-gray-200 hover:bg-gray-50 text-gray-700'
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                type="button"
-                disabled={currentPage >= totalPages - 1}
-                onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
-                className="px-2.5 py-1 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition cursor-pointer"
-              >
-                Sau
-              </button>
-            </div>
+        {/* Phân trang dùng chung toàn hệ thống */}
+        {totalElements > 0 && (
+          <div className="px-3 py-3 border-t border-gray-100">
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              totalElements={totalElements}
+              size={pageSize}
+              itemLabel="phiếu điều chỉnh"
+              onPageChange={(p) => setCurrentPage(p)}
+              onSizeChange={(sz) => {
+                setPageSize(sz);
+                setCurrentPage(0);
+              }}
+            />
           </div>
         )}
       </div>

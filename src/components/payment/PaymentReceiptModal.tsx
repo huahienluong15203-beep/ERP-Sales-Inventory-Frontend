@@ -24,7 +24,7 @@ import {
   submitRouteCashCollection,
   fetchPaymentCollectors
 } from '../../services/paymentApi';
-import { fetchAgencies } from '../../services/agencyApi';
+import { fetchAgencyById } from '../../services/agencyApi';
 import type { Agency, CreditStatusResponse } from '../../types/agency';
 import type {
   PaymentReceipt,
@@ -34,6 +34,7 @@ import type {
   PaymentCollector
 } from '../../types/payment';
 import { SearchSelect } from '../common/SearchSelect';
+import { AgencySelect } from '../common/AgencySelect';
 import { PaymentReceiptPrintModal } from './PaymentReceiptPrintModal';
 
 interface PaymentReceiptModalProps {
@@ -51,12 +52,11 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 }) => {
   const { user, showToast } = useAuth();
 
-  // Danh sách đại lý để chọn nếu chưa truyền initialCustomerId
-  const [agencies, setAgencies] = useState<Agency[]>([]);
+  // Đại lý đang chọn (đủ địa chỉ / SĐT để in phiếu thu)
+  const [selectedAgencyInfo, setSelectedAgencyInfo] = useState<Agency | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
     initialCustomerId ? String(initialCustomerId) : ''
   );
-  const [loadingAgencies, setLoadingAgencies] = useState<boolean>(false);
 
   // Dữ liệu công nợ & hoá đơn của khách hàng được chọn
   const [creditStatus, setCreditStatus] = useState<CreditStatusResponse | null>(null);
@@ -152,24 +152,14 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     setSpecificAllocations({});
     setNotes('');
 
+    // Không tự chọn đại lý đầu danh sách: kế toán phải chọn đúng đại lý nộp tiền
+    setSelectedCustomerId(initialCustomerId ? String(initialCustomerId) : '');
+    setSelectedAgencyInfo(null);
     if (initialCustomerId) {
-      setSelectedCustomerId(String(initialCustomerId));
+      fetchAgencyById(initialCustomerId)
+        .then((ag) => setSelectedAgencyInfo(ag))
+        .catch(() => setSelectedAgencyInfo(null));
     }
-
-    setLoadingAgencies(true);
-    fetchAgencies({ size: 100 })
-      .then((res) => {
-        setAgencies(res.content || []);
-        if (!initialCustomerId && res.content?.length > 0) {
-          setSelectedCustomerId(String(res.content[0].id));
-        }
-      })
-      .catch((err) => {
-        console.warn('Lỗi tải danh mục đại lý:', err);
-      })
-      .finally(() => {
-        setLoadingAgencies(false);
-      });
   }, [isOpen, initialCustomerId]);
 
   // Tải danh sách nhân sự đủ điều kiện lập phiếu thu / thu tiền (Kế toán, Quản trị, Sales)
@@ -386,7 +376,12 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     setValidationError(null);
 
     try {
-      const selectedAgency = agencies.find((a) => String(a.id) === String(selectedCustomerId));
+      const selectedAgency: Partial<Agency> | null =
+        selectedAgencyInfo && String(selectedAgencyInfo.id) === String(selectedCustomerId)
+          ? selectedAgencyInfo
+          : creditStatus
+          ? { code: creditStatus.customerCode, name: creditStatus.customerName }
+          : null;
       const selectedCollector = collectors.find((c) => String(c.id) === String(selectedCollectorId));
       let created: PaymentReceipt;
 
@@ -479,14 +474,14 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
       <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
         <div className="relative w-full max-w-4xl xl:max-w-5xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[92vh] my-auto">
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-emerald-600 to-teal-700 text-white">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#F85606] to-orange-600 text-white">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-xs text-white">
                 <CreditCard size={22} />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-white">Lập phiếu thu tiền & Đối trừ công nợ</h2>
-                <p className="text-xs text-emerald-100">
+                <p className="text-xs text-orange-100">
                   Ghi nhận thanh toán đa phương thức, tự động hoặc chỉ định đối trừ từng hoá đơn
                 </p>
               </div>
@@ -515,7 +510,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             <div className="bg-slate-50 border border-gray-200 rounded-xl p-4 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <User size={15} className="text-emerald-600" />
+                  <User size={15} className="text-orange-600" />
                   <span>Khách hàng / Đại lý thanh toán *</span>
                 </label>
 
@@ -523,27 +518,28 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   <button
                     type="button"
                     onClick={handleSelectFullDebt}
-                    className="text-xs text-emerald-700 hover:text-emerald-800 font-bold underline cursor-pointer self-start sm:self-auto"
+                    className="text-xs text-orange-700 hover:text-orange-800 font-bold underline cursor-pointer self-start sm:self-auto"
                   >
                     Thu toàn bộ nợ còn lại ({formatCurrencyVND(totalRemainingDebt)})
                   </button>
                 )}
               </div>
 
-              <SearchSelect
+              <AgencySelect
                 value={selectedCustomerId}
-                onChange={(e) => setSelectedCustomerId(e.target.value)}
-                disabled={loadingAgencies || !!initialCustomerId}
-                searchPlaceholder="Gõ để tìm kiếm đại lý..."
-                className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="">-- Chọn đại lý thanh toán --</option>
-                {agencies.map((ag) => (
-                  <option key={ag.id} value={ag.id}>
-                    {ag.code} - {ag.name} ({ag.customerGroupName || 'Đại lý'})
-                  </option>
-                ))}
-              </SearchSelect>
+                onChange={(id, ag) => {
+                  setSelectedCustomerId(id);
+                  setSelectedAgencyInfo(ag);
+                }}
+                disabled={!!initialCustomerId}
+                placeholder="-- Chọn đại lý thanh toán --"
+                selectedLabel={
+                  creditStatus && String(creditStatus.customerId) === String(selectedCustomerId)
+                    ? `[${creditStatus.customerCode}] ${creditStatus.customerName}`
+                    : undefined
+                }
+                className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
 
               {/* Thẻ trạng thái công nợ nhanh */}
               {loadingDebtData ? (
@@ -569,7 +565,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   </div>
                   <div className="bg-white p-2.5 rounded-lg border border-gray-200">
                     <span className="text-gray-500 block text-[11px]">Hạn mức khả dụng:</span>
-                    <span className="font-bold text-emerald-600 font-mono text-sm">
+                    <span className="font-bold text-orange-600 font-mono text-sm">
                       {formatCurrencyVND(creditStatus.availableCredit)}
                     </span>
                   </div>
@@ -589,11 +585,11 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               <div className="space-y-1.5 sm:col-span-2">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <DollarSign size={15} className="text-emerald-600" />
+                    <DollarSign size={15} className="text-orange-600" />
                     <span>Số tiền thu thực tế (VNĐ) *</span>
                   </span>
                   {amount > 0 && (
-                    <span className="text-xs text-emerald-700 font-bold font-mono">
+                    <span className="text-xs text-orange-700 font-bold font-mono">
                       {formatCurrencyVND(amount)}
                     </span>
                   )}
@@ -606,7 +602,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   onFocus={handleAmountFocus}
                   onChange={handleAmountChange}
                   onBlur={handleAmountBlur}
-                  className="w-full px-4 py-3 bg-white border-2 border-emerald-500/80 rounded-xl text-lg font-black text-emerald-800 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-3 bg-white border-2 border-orange-500/80 rounded-xl text-lg font-black text-orange-800 font-mono focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
                 {amount > 0 && (
                   <p className="text-xs text-gray-600 italic mt-1">
@@ -618,13 +614,13 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               {/* Hình thức thanh toán */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <CreditCard size={15} className="text-emerald-600" />
+                  <CreditCard size={15} className="text-orange-600" />
                   <span>Hình thức thanh toán *</span>
                 </label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="BANK_TRANSFER">Chuyển khoản qua ngân hàng</option>
                   <option value="CASH">Tiền mặt tại quỹ / điểm bán</option>
@@ -635,14 +631,14 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               {/* Ngày thu tiền */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <Calendar size={15} className="text-emerald-600" />
+                  <Calendar size={15} className="text-orange-600" />
                   <span>Ngày thu tiền *</span>
                 </label>
                 <input
                   type="date"
                   value={paymentDate}
                   onChange={(e) => setPaymentDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
 
@@ -650,7 +646,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <User size={15} className="text-emerald-600" />
+                    <User size={15} className="text-orange-600" />
                     <span>Người nộp tiền / Tài xế bàn giao</span>
                   </span>
                   <span className="text-[10px] text-gray-500 font-normal">Tự nhập khi tài xế nộp thay</span>
@@ -660,7 +656,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   value={payerName}
                   onChange={(e) => setPayerName(e.target.value)}
                   placeholder="Nhập tên người nộp / tài xế bàn giao (để trống sẽ tự lấy tên đại lý)..."
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
                 <p className="text-[11px] text-gray-500">
                   Nếu tài xế giao hàng hoặc người khác nộp thay tiền mặt, hãy nhập họ tên vào đây. Nếu để trống, hệ thống sẽ tự động ghi nhận theo tên đại lý.
@@ -670,7 +666,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               {/* Người thu tiền */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <User size={15} className="text-emerald-600" />
+                  <User size={15} className="text-orange-600" />
                   <span>Người thu tiền / Kế toán lập phiếu *</span>
                 </label>
                 <SearchSelect
@@ -685,7 +681,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   }}
                   searchPlaceholder="Gõ để tìm tên người lập..."
                   isLoading={loadingCollectors}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   {collectors.length === 0 ? (
                     <option value="" disabled>
@@ -707,7 +703,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               {/* Ghi chú */}
               <div className="space-y-1.5 sm:col-span-2">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <FileText size={15} className="text-emerald-600" />
+                  <FileText size={15} className="text-orange-600" />
                   <span>Ghi chú / Diễn giải chứng từ</span>
                 </label>
                 <input
@@ -715,7 +711,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Ví dụ: Thanh toán tiền hàng đợt 2 theo hợp đồng"
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
             </div>
@@ -758,7 +754,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   </label>
 
                   {receiptImage ? (
-                    <div className="relative inline-block border-2 border-emerald-500 rounded-xl overflow-hidden shadow-sm">
+                    <div className="relative inline-block border-2 border-orange-500 rounded-xl overflow-hidden shadow-sm">
                       <img src={receiptImage} alt="Ảnh biên lai" className="h-32 w-auto object-cover" />
                       <button
                         type="button"
@@ -794,7 +790,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <ListOrdered size={15} className="text-emerald-600" />
+                  <ListOrdered size={15} className="text-orange-600" />
                   <span>Phương thức đối trừ vào hoá đơn</span>
                 </label>
               </div>
@@ -803,7 +799,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                 <label
                   onClick={() => setAllocationType('FIFO')}
                   className={`p-3.5 rounded-xl border-2 flex items-start gap-3 cursor-pointer transition ${allocationType === 'FIFO'
-                      ? 'border-emerald-600 bg-emerald-50/60 text-emerald-950 shadow-xs'
+                      ? 'border-orange-600 bg-orange-50/60 text-orange-950 shadow-xs'
                       : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
                     }`}
                 >
@@ -812,7 +808,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                     name="allocationType"
                     checked={allocationType === 'FIFO'}
                     onChange={() => setAllocationType('FIFO')}
-                    className="mt-1 text-emerald-600 focus:ring-emerald-500"
+                    className="mt-1 text-orange-600 focus:ring-orange-500"
                   />
                   <div>
                     <span className="font-bold text-sm block">Tự động đối trừ hoá đơn cũ nhất trước (FIFO)</span>
@@ -825,7 +821,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                 <label
                   onClick={() => setAllocationType('SPECIFIC')}
                   className={`p-3.5 rounded-xl border-2 flex items-start gap-3 cursor-pointer transition ${allocationType === 'SPECIFIC'
-                      ? 'border-emerald-600 bg-emerald-50/60 text-emerald-950 shadow-xs'
+                      ? 'border-orange-600 bg-orange-50/60 text-orange-950 shadow-xs'
                       : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
                     }`}
                 >
@@ -834,7 +830,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                     name="allocationType"
                     checked={allocationType === 'SPECIFIC'}
                     onChange={() => setAllocationType('SPECIFIC')}
-                    className="mt-1 text-emerald-600 focus:ring-emerald-500"
+                    className="mt-1 text-orange-600 focus:ring-orange-500"
                   />
                   <div>
                     <span className="font-bold text-sm block">Chỉ định đối trừ vào từng hoá đơn cụ thể</span>
@@ -856,7 +852,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                   {allocationType === 'SPECIFIC' && (
                     <span
                       className={`text-xs font-bold font-mono px-2 py-0.5 rounded ${totalSpecificAllocated === amount
-                          ? 'bg-emerald-100 text-emerald-800'
+                          ? 'bg-orange-100 text-orange-800'
                           : 'bg-amber-100 text-amber-800'
                         }`}
                     >
@@ -897,7 +893,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                         {fifoAllocationsPreview.map(({ invoice: inv, allocated, remainingAfter }) => (
                           <tr
                             key={inv.id}
-                            className={allocated > 0 ? 'bg-emerald-50/40 font-medium' : 'hover:bg-gray-50'}
+                            className={allocated > 0 ? 'bg-orange-50/40 font-medium' : 'hover:bg-gray-50'}
                           >
                             <td className="px-3 py-2 font-mono font-bold text-gray-900">{inv.code}</td>
                             <td className="px-3 py-2 text-gray-600">{inv.invoiceDate}</td>
@@ -907,7 +903,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                             <td className="px-3 py-2 text-right font-mono text-rose-600 font-bold">
                               {formatCurrencyVND(inv.remainingAmount)}
                             </td>
-                            <td className="px-3 py-2 text-right font-mono font-bold text-emerald-700">
+                            <td className="px-3 py-2 text-right font-mono font-bold text-orange-700">
                               {allocated > 0 ? `-${formatCurrencyVND(allocated)}` : '-'}
                             </td>
                             <td className="px-3 py-2 text-right font-mono text-gray-800">
@@ -928,7 +924,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                           value={invoiceSearchText}
                           onChange={(e) => setInvoiceSearchText(e.target.value)}
                           placeholder="Gõ để tìm mã hoá đơn, ngày lập..."
-                          className="w-full px-2.5 py-1 text-xs bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium text-gray-800"
+                          className="w-full px-2.5 py-1 text-xs bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 font-medium text-gray-800"
                         />
                       </div>
                       <table className="w-full text-xs text-left">
@@ -972,14 +968,14 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                                           inv.remainingAmount
                                         )
                                       }
-                                      className="w-full px-2 py-1 text-right font-mono font-bold text-xs bg-white border border-gray-300 rounded focus:ring-1 focus:ring-emerald-500"
+                                      className="w-full px-2 py-1 text-right font-mono font-bold text-xs bg-white border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                                     />
                                   </td>
                                   <td className="px-3 py-2 text-center">
                                     <button
                                       type="button"
                                       onClick={() => handleAllocateMaxForInvoice(inv)}
-                                      className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded transition cursor-pointer"
+                                      className="text-[11px] font-bold text-orange-700 hover:text-orange-900 bg-orange-50 hover:bg-orange-100 px-2 py-1 rounded transition cursor-pointer"
                                     >
                                       Điền hết
                                     </button>
@@ -1010,7 +1006,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               <button
                 type="submit"
                 disabled={submitting || amount <= 0}
-                className="px-6 py-2.5 text-xs sm:text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center gap-2 cursor-pointer active:scale-95"
+                className="px-6 py-2.5 text-xs sm:text-sm font-bold text-white bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-md shadow-orange-600/20 transition flex items-center gap-2 cursor-pointer active:scale-95"
               >
                 {submitting ? (
                   <>

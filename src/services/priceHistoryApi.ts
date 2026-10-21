@@ -6,7 +6,7 @@
  * - Lịch sử bất biến (Immutable): KHÔNG CHO PHÉP SỬA HOẶC XOÁ.
  */
 
-import * as XLSX from 'xlsx';
+import { downloadJsonAsXlsx } from '../utils/styledExcel';
 import type {
   PriceChangeRecord,
   PriceHistoryFilterParams,
@@ -746,8 +746,6 @@ export function exportPriceHistoryToExcel(
     'Trạng Thái Dữ Liệu': 'Bất biến (Immutable Audit Trail)'
   }));
 
-  const worksheet = XLSX.utils.json_to_sheet(exportData);
-
   // Căn chỉnh độ rộng cột tự động
   const colWidths = [
     { wch: 6 },   // STT
@@ -768,10 +766,6 @@ export function exportPriceHistoryToExcel(
     { wch: 60 },  // Giải thích đại lý
     { wch: 25 }   // Trạng thái
   ];
-  worksheet['!cols'] = colWidths;
-
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Lịch Sử Thay Đổi Giá');
 
   const now = new Date();
   const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(
@@ -780,5 +774,5 @@ export function exportPriceHistoryToExcel(
     now.getMinutes()
   ).padStart(2, '0')}`;
 
-  XLSX.writeFile(workbook, `${filenamePrefix}_${dateStr}.xlsx`);
+  downloadJsonAsXlsx(`${filenamePrefix}_${dateStr}.xlsx`, 'Lịch Sử Thay Đổi Giá', exportData, colWidths.map((c) => c.wch));
 }

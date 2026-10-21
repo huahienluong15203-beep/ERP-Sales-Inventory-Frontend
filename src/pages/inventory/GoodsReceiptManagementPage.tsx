@@ -20,6 +20,8 @@ import { useLocation, useNavigate } from '../../routes/Router';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { GoodsReceiptDraftsModal } from '../../components/inventory/GoodsReceiptDraftsModal';
 import { getAllowedWarehouses } from '../../types/inventory';
+import { Pagination } from '../../components/common/Pagination';
+import { useClientPagination } from '../../hooks/useClientPagination';
 
 export const GoodsReceiptManagementPage: React.FC = () => {
   const { user, showToast, currentRole } = useAuth();
@@ -88,6 +90,8 @@ export const GoodsReceiptManagementPage: React.FC = () => {
   // Phân loại: Phiếu nháp đưa vào nút / modal; Bảng chính chỉ hiển thị phiếu đã xác nhận (không hiển thị phiếu nháp)
   const draftReceipts = receipts.filter((r) => r.status === 'DRAFT');
   const confirmedReceipts = receipts.filter((r) => r.status === 'CONFIRMED');
+  // Phân trang tại chỗ, cùng kiểu với các trang danh sách khác
+  const pager = useClientPagination(confirmedReceipts);
   const draftCount = draftReceipts.length;
   const confirmedCount = confirmedReceipts.length;
   const totalBaseUnits = confirmedReceipts.reduce((s, r) => s + r.totalBaseQuantity, 0);
@@ -249,7 +253,7 @@ export const GoodsReceiptManagementPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                confirmedReceipts.map((r) => (
+                pager.pageItems.map((r) => (
                   <tr key={r.id} className="hover:bg-orange-50/20 transition-colors">
                     <td className="py-3 px-4 font-mono font-bold text-[#F85606]">
                       <button
@@ -304,6 +308,20 @@ export const GoodsReceiptManagementPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        {/* Phân trang dùng chung toàn hệ thống */}
+        {pager.totalElements > 0 && (
+          <div className="px-4 py-3 border-t border-gray-100">
+            <Pagination
+              page={pager.page}
+              totalPages={pager.totalPages}
+              totalElements={pager.totalElements}
+              size={pager.size}
+              itemLabel="phiếu nhập"
+              onPageChange={pager.setPage}
+              onSizeChange={pager.setSize}
+            />
+          </div>
+        )}
       </div>
 
       {/* Modal Quản lý Phiếu Nhập Kho Nháp */}

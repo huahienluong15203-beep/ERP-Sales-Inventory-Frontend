@@ -4,7 +4,7 @@
  * Có bộ dữ liệu mẫu dự phòng chuẩn hóa nghiệp vụ để demo và kiểm thử độc lập.
  */
 
-import * as XLSX from 'xlsx';
+import { downloadJsonAsXlsx } from '../utils/styledExcel';
 import type {
   AuditLogItem,
   AuditLogFilterParams,
@@ -702,11 +702,7 @@ export function exportAuditLogsToExcel(logs: AuditLogItem[], fileName = 'Nhat_Ky
     'Tính Bất Biến': 'Bất biến (Chỉ đọc - Cấm sửa/xóa)'
   }));
 
-  const worksheet = XLSX.utils.json_to_sheet(exportData);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Nhat_Ky_Audit_Log');
-
-  worksheet['!cols'] = [
+  const colWidths = [
     { wch: 6 },
     { wch: 12 },
     { wch: 20 },
@@ -725,7 +721,7 @@ export function exportAuditLogsToExcel(logs: AuditLogItem[], fileName = 'Nhat_Ky
     { wch: 25 }
   ];
 
-  XLSX.writeFile(workbook, `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  downloadJsonAsXlsx(`${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`, 'Nhat_Ky_Audit_Log', exportData, colWidths.map((c) => c.wch));
 }
 
 export function formatDateTime(isoString?: string): string {

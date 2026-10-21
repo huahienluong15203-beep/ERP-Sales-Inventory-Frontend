@@ -23,6 +23,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from '../../routes/Router';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { RowActionMenu } from '../../components/common/RowActionMenu';
+import { Pagination } from '../../components/common/Pagination';
+import { useClientPagination } from '../../hooks/useClientPagination';
 
 /**
  * S5-07 (Nguyễn Văn Minh): Phân hệ Quản lý Phiếu Chuyển Kho Nội Bộ
@@ -53,6 +55,8 @@ export const StockTransferManagementPage: React.FC = () => {
     Boolean(user?.roles?.some((r) => r === 'ROLE_WH_MANAGER' || r === 'ROLE_ADMIN'));
 
   const [transfers, setTransfers] = useState<StockTransfer[]>([]);
+  // Phân trang tại chỗ, cùng kiểu với các trang danh sách khác
+  const pager = useClientPagination(transfers);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Bộ lọc
@@ -338,7 +342,7 @@ export const StockTransferManagementPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {transfers.map((item) => {
+                {pager.pageItems.map((item) => {
                   const totalQty = item.lines.reduce((s, l) => s + l.transferQuantity, 0);
 
                   return (
@@ -437,6 +441,20 @@ export const StockTransferManagementPage: React.FC = () => {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        {/* Phân trang dùng chung toàn hệ thống */}
+        {pager.totalElements > 0 && (
+          <div className="px-4 py-3 border-t border-gray-100">
+            <Pagination
+              page={pager.page}
+              totalPages={pager.totalPages}
+              totalElements={pager.totalElements}
+              size={pager.size}
+              itemLabel="phiếu chuyển"
+              onPageChange={pager.setPage}
+              onSizeChange={pager.setSize}
+            />
           </div>
         )}
       </div>

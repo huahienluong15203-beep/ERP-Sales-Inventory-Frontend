@@ -12,8 +12,6 @@ import {
   Lock,
   Unlock,
   Edit,
-  ChevronLeft,
-  ChevronRight,
   SlidersHorizontal
 } from 'lucide-react';
 import {
@@ -32,6 +30,7 @@ import { ProductLotCreateModal } from '../../components/inventory/ProductLotCrea
 import { ProductLotUpdateModal } from '../../components/inventory/ProductLotUpdateModal';
 import { ProductLotLockConfirmModal } from '../../components/inventory/ProductLotLockConfirmModal';
 import { ProductBatchManagementConfigModal } from '../../components/inventory/ProductBatchManagementConfigModal';
+import { Pagination } from '../../components/common/Pagination';
 
 export const ProductLotManagementPage: React.FC = () => {
   const navigate = useNavigate();
@@ -43,7 +42,7 @@ export const ProductLotManagementPage: React.FC = () => {
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(0);
-  const [size] = useState(20);
+  const [size, setSize] = useState<number>(20);
 
   // State bộ lọc
   const [keyword, setKeyword] = useState('');
@@ -574,33 +573,21 @@ export const ProductLotManagementPage: React.FC = () => {
           </table>
         </div>
 
-        {/* Phân trang */}
-        {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between gap-4 bg-gray-50/50">
-            <span className="text-xs text-gray-500">
-              Hiển thị <strong>{lots.length}</strong> / <strong>{totalElements}</strong> lô hàng
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                disabled={page === 0}
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                className="p-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 disabled:opacity-40 transition cursor-pointer"
-              >
-                <ChevronLeft size={15} />
-              </button>
-              <span className="text-xs font-semibold px-2 text-gray-700">
-                Trang {page + 1} / {totalPages}
-              </span>
-              <button
-                type="button"
-                disabled={page >= totalPages - 1}
-                onClick={() => setPage((p) => p + 1)}
-                className="p-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 disabled:opacity-40 transition cursor-pointer"
-              >
-                <ChevronRight size={15} />
-              </button>
-            </div>
+        {/* Phân trang dùng chung toàn hệ thống */}
+        {totalElements > 0 && (
+          <div className="px-4 py-3 border-t border-gray-100">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalElements={totalElements}
+              size={size}
+              itemLabel="lô hàng"
+              onPageChange={(p) => setPage(p)}
+              onSizeChange={(sz) => {
+                setSize(sz);
+                setPage(0);
+              }}
+            />
           </div>
         )}
       </div>

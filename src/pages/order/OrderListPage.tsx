@@ -17,8 +17,6 @@ import {
   Edit,
   Copy,
   Printer,
-  ChevronLeft,
-  ChevronRight,
   TrendingUp,
   AlertCircle,
   ShieldCheck
@@ -41,8 +39,9 @@ import {
   cancelOrder,
   fetchBackorders
 } from '../../services/orderService';
-import { fetchAgencies, fetchAgencyFormOptions } from '../../services/agencyApi';
-import type { Agency, RegionOption, SalesRepOption } from '../../types/agency';
+import { fetchAgencyFormOptions } from '../../services/agencyApi';
+import { AgencySelect } from '../../components/common/AgencySelect';
+import type { RegionOption, SalesRepOption } from '../../types/agency';
 import type {
   OrderSummaryItem,
   OrderTotalsSummary,
@@ -57,6 +56,7 @@ import { OrderPdfPreviewModal } from '../../components/order/OrderPdfPreviewModa
 import { OrderDraftsModal } from '../../components/order/OrderDraftsModal';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { RowActionMenu } from '../../components/common/RowActionMenu';
+import { Pagination } from '../../components/common/Pagination';
 
 // Danh sách tabs trạng thái nhanh
 const STATUS_TABS = [
@@ -130,7 +130,6 @@ export const OrderListPage: React.FC = () => {
   }, [isWarehouseRole]);
 
   // State danh mục hỗ trợ lọc
-  const [agencies, setAgencies] = useState<Agency[]>([]);
   const [regions, setRegions] = useState<RegionOption[]>([]);
   const [salesReps, setSalesReps] = useState<SalesRepOption[]>([]);
 
@@ -346,10 +345,6 @@ export const OrderListPage: React.FC = () => {
 
   // Tải danh mục phục vụ bộ lọc (Đại lý, Khu vực, NVKD)
   useEffect(() => {
-    fetchAgencies({ size: 100 })
-      .then((res) => setAgencies(res.content || []))
-      .catch((err) => console.warn('Lỗi tải danh sách đại lý:', err));
-
     fetchAgencyFormOptions()
       .then((opts) => {
         setRegions(opts.regions || []);
@@ -797,21 +792,15 @@ export const OrderListPage: React.FC = () => {
             <label className="text-[11px] font-bold text-gray-600 uppercase">Đại lý</label>
             <div className="relative">
               <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              <SearchSelect
+              <AgencySelect
                 value={selectedAgencyId}
-                onChange={(e) => {
-                  setSelectedAgencyId(e.target.value);
+                onChange={(id) => {
+                  setSelectedAgencyId(id);
                   setPage(0);
                 }}
+                allLabel="Tất cả đại lý"
                 className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#F85606] focus:bg-white transition appearance-none cursor-pointer"
-              >
-                <option value="">Tất cả đại lý</option>
-                {agencies.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({a.code})
-                  </option>
-                ))}
-              </SearchSelect>
+              />
             </div>
           </div>
 
@@ -1249,56 +1238,21 @@ export const OrderListPage: React.FC = () => {
           </table>
         </div>
 
-        {/* 5. PHÂN TRANG (PAGINATION BAR) */}
+        {/* 5. PHÂN TRANG dùng chung toàn hệ thống */}
         {!loading && totalElements > 0 && (
-          <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50/60">
-            <div className="text-xs text-gray-500">
-              Hiển thị <strong>{page * pageSize + 1}</strong> -{' '}
-              <strong>{Math.min((page + 1) * pageSize, totalElements)}</strong> trong tổng số{' '}
-              <strong>{formatQuantity(totalElements)}</strong> đơn hàng
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">Hiển thị:</span>
-              <SearchSelect
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setPage(0);
-                }}
-                className="px-2 py-1 text-xs bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-[#F85606] cursor-pointer"
-              >
-                <option value={10}>10 dòng</option>
-                <option value={20}>20 dòng</option>
-                <option value={50}>50 dòng</option>
-              </SearchSelect>
-
-              <div className="flex items-center gap-1 pl-2">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={page === 0}
-                  className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                  title="Trang trước"
-                >
-                  <ChevronLeft size={15} />
-                </button>
-
-                <span className="px-2.5 py-1 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-lg">
-                  {page + 1} / {Math.max(1, totalPages)}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                  disabled={page >= totalPages - 1}
-                  className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                  title="Trang sau"
-                >
-                  <ChevronRight size={15} />
-                </button>
-              </div>
-            </div>
+          <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/60">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalElements={totalElements}
+              size={pageSize}
+              itemLabel="đơn hàng"
+              onPageChange={(p) => setPage(p)}
+              onSizeChange={(sz) => {
+                setPageSize(sz);
+                setPage(0);
+              }}
+            />
           </div>
         )}
       </div>

@@ -11,16 +11,19 @@ import {
 import { useNavigate } from '../../routes/Router';
 import { formatCurrencyVND } from '../../services/orderService';
 import { fetchDebtAdjustments } from '../../services/debtAdjustmentApi';
-import { fetchAgencies } from '../../services/agencyApi';
 import type { DebtAdjustment } from '../../types/debtAdjustment';
-import type { Agency } from '../../types/agency';
-import { SearchSelect } from '../../components/common/SearchSelect';
+import { AgencySelect } from '../../components/common/AgencySelect';
 import { DebtAdjustmentModal } from '../../components/payment/DebtAdjustmentModal';
+import { useServerSearch } from '../../hooks/useServerSearch';
+import { useAuth } from '../../contexts/AuthContext';
+import { Pagination } from '../../components/common/Pagination';
+import { useClientPagination } from '../../hooks/useClientPagination';
 
 export const DebtAdjustmentPage: React.FC = () => {
   const navigate = useNavigate();
   const [adjustments, setAdjustments] = useState<DebtAdjustment[]>([]);
-  const [agencies, setAgencies] = useState<Agency[]>([]);
+  // Phân trang tại chỗ, cùng kiểu với các trang danh sách khác
+  const pager = useClientPagination(adjustments);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Bộ lọc
@@ -32,12 +35,9 @@ export const DebtAdjustmentPage: React.FC = () => {
   const [selectedAdjustment, setSelectedAdjustment] = useState<DebtAdjustment | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchAgencies({ size: 100 })
-      .then((res) => setAgencies(res.content || []))
-      .catch((err) => console.warn('Lỗi tải đại lý:', err));
-  }, []);
+  const { showToast } = useAuth();
+  // Chỉ gọi API khi gõ đủ 2 ký tự và ngừng gõ (trước đây mỗi phím gõ gọi API 1 lần)
+  const { serverKeyword } = useServerSearch(keyword);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -46,17 +46,19 @@ export const DebtAdjustmentPage: React.FC = () => {
       const data = await fetchDebtAdjustments({
         status: statusFilter,
         customerId: selectedCustomerId,
-        keyword
+        keyword: serverKeyword
       });
       setAdjustments(data);
     } catch (err) {
       console.error('Lỗi tải danh sách chứng từ điều chỉnh:', err);
       setAdjustments([]);
-      setLoadError(err instanceof Error ? err.message : 'Không tải được danh sách chứng từ điều chỉnh');
+      const msg = err instanceof Error ? err.message : 'Không tải được danh sách chứng từ điều chỉnh';
+      setLoadError(msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, selectedCustomerId, keyword]);
+  }, [statusFilter, selectedCustomerId, serverKeyword, showToast]);
 
   useEffect(() => {
     loadData();
@@ -152,19 +154,12 @@ export const DebtAdjustmentPage: React.FC = () => {
 
           {/* SearchSelect Đại lý */}
           <div>
-            <SearchSelect
-              value={selectedCustomerId}
-              onChange={(e) => setSelectedCustomerId(e.target.value)}
-              searchPlaceholder="Gõ để tìm đại lý..."
+            <AgencySelect
+              value={selectedCustomerId === 'ALL' ? '' : selectedCustomerId}
+              onChange={(id) => setSelectedCustomerId(id || 'ALL')}
+              allLabel="Tất cả đại lý / Khách hàng"
               className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
-            >
-              <option value="ALL">Tất cả đại lý / Khách hàng</option>
-              {agencies.map((ag) => (
-                <option key={ag.id} value={ag.id}>
-                  [{ag.code}] {ag.name}
-                </option>
-              ))}
-            </SearchSelect>
+            />
           </div>
 
           {/* Lọc trạng thái (Pills) */}
@@ -227,7 +222,7 @@ export const DebtAdjustmentPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                adjustments.map((adj) => (
+                pager.pageItems.map((adj) => (
                   <tr key={adj.id} className="hover:bg-orange-50/20 transition">
                     <td className="py-3 px-4 font-mono font-bold text-gray-900 whitespace-nowrap">
                       {adj.adjustmentCode || <span className="text-gray-400 font-normal">Chưa cấp số</span>}
@@ -279,6 +274,20 @@ export const DebtAdjustmentPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        {/* Phân trang dùng chung toàn hệ thống */}
+        {pager.totalElements > 0 && (
+          <div className="px-4 py-3 border-t border-gray-100">
+            <Pagination
+              page={pager.page}
+              totalPages={pager.totalPages}
+              totalElements={pager.totalElements}
+              size={pager.size}
+              itemLabel="chứng từ"
+              onPageChange={pager.setPage}
+              onSizeChange={pager.setSize}
+            />
+          </div>
+        )}
       </div>
 
       {/* Modal duyệt chứng từ điều chỉnh */}

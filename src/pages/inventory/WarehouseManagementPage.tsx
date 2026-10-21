@@ -25,6 +25,7 @@ import { WarehouseFormModal } from '../../components/warehouse/WarehouseFormModa
 import { WarehouseLocationFormModal } from '../../components/warehouse/WarehouseLocationFormModal';
 import { WarehouseDeleteConfirmModal } from '../../components/warehouse/WarehouseDeleteConfirmModal';
 import { useAuth } from '../../contexts/AuthContext';
+import { Pagination } from '../../components/common/Pagination';
 
 const LOCATION_TABS: { key: '' | LocationType; label: string; icon: string }[] = [
   { key: '', label: 'Tất cả vị trí', icon: 'All' },
@@ -620,63 +621,22 @@ export const WarehouseManagementPage: React.FC = () => {
                     </table>
                   </div>
 
-                  {/* Thanh phân trang danh sách kho */}
+                  {/* Phân trang dùng chung toàn hệ thống (trang đếm từ 1 trong state này) */}
                   {warehouses.length > 0 && (
-                    <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-800/20 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-                      <div className="text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                        <span>
-                          Hiển thị <strong>{(currentPage - 1) * pageSize + 1}</strong> - <strong>{Math.min(currentPage * pageSize, warehouses.length)}</strong> trên tổng số <strong>{warehouses.length}</strong> kho
-                        </span>
-                        <span>•</span>
-                        <select
-                          value={pageSize}
-                          onChange={(e) => {
-                            setPageSize(Number(e.target.value));
-                            setCurrentPage(1);
-                          }}
-                          className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
-                        >
-                          <option value={30}>30 kho / trang</option>
-                          <option value={50}>50 kho / trang</option>
-                        </select>
-                      </div>
-
-                      {totalPages > 1 && (
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            disabled={currentPage === 1}
-                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                            className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
-                          >
-                            Trước
-                          </button>
-
-                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                            <button
-                              key={pageNum}
-                              type="button"
-                              onClick={() => setCurrentPage(pageNum)}
-                              className={`w-7 h-7 rounded-lg font-bold text-xs transition-colors ${
-                                currentPage === pageNum
-                                  ? 'bg-orange-600 text-white shadow-2xs'
-                                  : 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
-                              }`}
-                            >
-                              {pageNum}
-                            </button>
-                          ))}
-
-                          <button
-                            type="button"
-                            disabled={currentPage === totalPages}
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                            className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
-                          >
-                            Sau
-                          </button>
-                        </div>
-                      )}
+                    <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800">
+                      <Pagination
+                        page={currentPage - 1}
+                        totalPages={totalPages}
+                        totalElements={warehouses.length}
+                        size={pageSize}
+                        sizeOptions={[30, 50]}
+                        itemLabel="kho"
+                        onPageChange={(p) => setCurrentPage(p + 1)}
+                        onSizeChange={(sz) => {
+                          setPageSize(sz);
+                          setCurrentPage(1);
+                        }}
+                      />
                     </div>
                   )}
                 </>

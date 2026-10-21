@@ -13,8 +13,7 @@ import {
 import { useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatCurrencyVND } from '../../services/orderService';
-import { fetchAgencies } from '../../services/agencyApi';
-import type { Agency } from '../../types/agency';
+import { AgencySelect } from '../../components/common/AgencySelect';
 import type { CustomerDebtStatement } from '../../types/customerDebtStatement';
 import {
   fetchCustomerDebtStatement,
@@ -26,9 +25,6 @@ export const CustomerDebtStatementPage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useAuth();
 
-  // Danh sách đại lý phục vụ chọn nhanh
-  const [agencies, setAgencies] = useState<Agency[]>([]);
-  const [loadingAgencies, setLoadingAgencies] = useState<boolean>(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number>(() => {
     const params = new URLSearchParams(window.location.search);
     const cid = params.get('customerId');
@@ -48,22 +44,6 @@ export const CustomerDebtStatementPage: React.FC = () => {
   const [statement, setStatement] = useState<CustomerDebtStatement | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
-
-  // Tải danh sách đại lý khi vào trang
-  useEffect(() => {
-    const loadAgencies = async () => {
-      setLoadingAgencies(true);
-      try {
-        const res = await fetchAgencies({ page: 0, size: 100, status: 'ACTIVE' });
-        setAgencies(res.content || []);
-      } catch {
-        // ignore
-      } finally {
-        setLoadingAgencies(false);
-      }
-    };
-    loadAgencies();
-  }, []);
 
   // Tải dữ liệu sổ chi tiết công nợ
   const loadStatementData = async () => {
@@ -179,28 +159,16 @@ export const CustomerDebtStatementPage: React.FC = () => {
               <Building2 size={13} className="text-[#F85606]" />
               <span>Chọn đại lý / Khách hàng:</span>
             </label>
-            <select
-              value={selectedCustomerId}
-              onChange={(e) => setSelectedCustomerId(Number(e.target.value))}
-              disabled={loadingAgencies}
+            <AgencySelect
+              value={selectedCustomerId || ''}
+              onChange={(id) => id && setSelectedCustomerId(Number(id))}
+              selectedLabel={
+                statement && String(statement.customerId) === String(selectedCustomerId)
+                  ? `[${statement.customerCode}] ${statement.customerName}`
+                  : undefined
+              }
               className="w-full h-9 px-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#F85606] focus:bg-white transition cursor-pointer"
-            >
-              {agencies.length > 0 ? (
-                agencies.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({a.code})
-                  </option>
-                ))
-              ) : (
-                <>
-                  <option value={1}>Đại lý Bia Nước Giải Khát Tuấn Hưng (DL-001)</option>
-                  <option value={2}>Đại lý Thực phẩm & Bách hóa Mai Linh (DL-002)</option>
-                  <option value={3}>KhoMega - Trung tâm phân phối Miền Bắc (DN-HN-003)</option>
-                  <option value={4}>Công ty TNHH Water Thành Công (DL-TN-THANHCONG)</option>
-                  <option value={5}>Kho Đài Tư - Tổng kho Thực phẩm (DL-HN-001)</option>
-                </>
-              )}
-            </select>
+            />
           </div>
 
           {/* Chọn khoảng ngày */}
