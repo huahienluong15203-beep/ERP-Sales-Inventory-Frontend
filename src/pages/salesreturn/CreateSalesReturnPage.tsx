@@ -6,6 +6,7 @@ import {
   Receipt,
   CheckCircle2,
   Check,
+  AlertTriangle,
   Layers,
   Search,
   Building2
@@ -43,6 +44,17 @@ const RETURN_REASONS = [
   'Bao bì móp méo / Hỏng khi vận chuyển',
   'Lý do khác'
 ];
+
+const isDamagedReturnReason = (reason: string): boolean => {
+  const lower = (reason || '').toLowerCase();
+  return (
+    lower.includes('lỗi') ||
+    lower.includes('hỏng') ||
+    lower.includes('móp méo') ||
+    lower.includes('hết hạn') ||
+    lower.includes('cận date')
+  );
+};
 
 const DEFAULT_WAREHOUSES: Warehouse[] = [
   { id: 1, code: 'KHO-HN', name: 'Kho Tổng Hà Nội', address: 'KCN Tiên Sơn, Bắc Ninh', status: 'ACTIVE', locationCount: 1, activeLocationCount: 1 },
@@ -162,7 +174,7 @@ export const CreateSalesReturnPage: React.FC = () => {
           batchNumber: l.batchNumber || '',
           manufactureDate: l.manufactureDate || '',
           expiredDate: l.expiredDate || '',
-          isDamaged: false,
+          isDamaged: isDamagedReturnReason(returnReason),
           lineNotes: '',
           error: undefined
         };
@@ -409,6 +421,17 @@ export const CreateSalesReturnPage: React.FC = () => {
     }
   };
 
+  const handleReturnReasonChange = (newReason: string) => {
+    setReturnReason(newReason);
+    const damaged = isDamagedReturnReason(newReason);
+    setLineItems((prev) =>
+      prev.map((item) => ({
+        ...item,
+        isDamaged: damaged
+      }))
+    );
+  };
+
   // Trích xuất danh sách đại lý duy nhất từ các hoá đơn hiện có
   const customerOptions = useMemo(() => {
     const map = new Map<number, { id: number; code: string; name: string }>();
@@ -627,7 +650,7 @@ export const CreateSalesReturnPage: React.FC = () => {
               </label>
               <select
                 value={returnReason}
-                onChange={(e) => setReturnReason(e.target.value)}
+                onChange={(e) => handleReturnReasonChange(e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:border-[#F85606] focus:bg-white focus:outline-none transition cursor-pointer"
               >
                 {RETURN_REASONS.map((r) => (
@@ -771,7 +794,7 @@ export const CreateSalesReturnPage: React.FC = () => {
                   <th className="p-3 w-28 text-right">Đơn giá</th>
                   <th className="p-3 w-32 text-right">Thành tiền</th>
                   <th className="p-3 min-w-[160px]">Thông tin Lô (nếu có)</th>
-                  <th className="p-3 w-28 text-center">Hàng hỏng / lỗi</th>
+                  <th className="p-3 w-36 text-center">Tình trạng hàng</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -938,30 +961,44 @@ export const CreateSalesReturnPage: React.FC = () => {
                         )}
                       </td>
 
-                      {/* Checkbox Hàng lỗi/hỏng (AC3) */}
+                      {/* Tình trạng hàng (AC3) - Bấm chuyển đổi trạng thái thay vì ô tích để tránh nhầm lẫn tích 2 đầu */}
                       <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                        <label className="inline-flex items-center gap-1 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={item.isDamaged}
-                            disabled={!canReturn}
-                            onChange={(e) =>
-                              handleUpdateLineField(
-                                item.invoiceLineId,
-                                'isDamaged',
-                                e.target.checked
-                              )
+                        <button
+                          type="button"
+                          disabled={!canReturn}
+                          onClick={() => {
+                            if (!item.selected && canReturn) {
+                              handleToggleSelectLine(item.invoiceLineId);
                             }
-                            className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
-                          />
-                          <span
-                            className={`text-[10px] font-bold ${
-                              item.isDamaged ? 'text-rose-700 font-black' : 'text-gray-500'
-                            }`}
-                          >
-                            Hàng lỗi
-                          </span>
-                        </label>
+                            handleUpdateLineField(
+                              item.invoiceLineId,
+                              'isDamaged',
+                              !item.isDamaged
+                            );
+                          }}
+                          className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border shadow-2xs ${
+                            item.isDamaged
+                              ? 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                          } ${!canReturn ? 'opacity-40 cursor-not-allowed' : ''}`}
+                          title={
+                            item.isDamaged
+                              ? 'Hàng lỗi / hỏng: Sẽ nhập vào kho hàng hỏng cách ly'
+                              : 'Hàng còn nguyên vẹn: Sẽ được cộng lại vào tồn kho bán'
+                          }
+                        >
+                          {item.isDamaged ? (
+                            <>
+                              <AlertTriangle size={13} className="text-rose-600" />
+                              <span>Hàng lỗi / hỏng</span>
+                            </>
+                          ) : (
+                            <>
+                              <Check size={13} className="text-emerald-600" />
+                              <span>Còn nguyên vẹn</span>
+                            </>
+                          )}
+                        </button>
                       </td>
                     </tr>
                   );
