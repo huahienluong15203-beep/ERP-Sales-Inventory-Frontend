@@ -3,6 +3,7 @@ import {
   RotateCcw,
   Plus,
   Search,
+  Check,
   CheckCircle2,
   XCircle,
   Eye,
@@ -583,11 +584,10 @@ export const SalesReturnListPage: React.FC = () => {
                               setReceivingItem(item);
                               setReceiveNotes('');
                             }}
-                            className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 transition cursor-pointer shadow-2xs"
+                            className="p-1.5 rounded-lg border border-gray-200 hover:bg-emerald-50 text-emerald-600 transition cursor-pointer"
                             title="Xác nhận nhận hàng & Nhập kho"
                           >
-                            <CheckCircle2 size={12} />
-                            <span>Nhận hàng</span>
+                            <Check size={14} />
                           </button>
                         )}
 
