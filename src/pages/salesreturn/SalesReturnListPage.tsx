@@ -50,14 +50,15 @@ export const SalesReturnListPage: React.FC = () => {
   const isAuthorizedToReceive =
     roleStr.includes('ADMIN') ||
     roleStr.includes('WH_MANAGER') ||
+    roleStr.includes('WAREHOUSE') ||
     roleStr.includes('SALES_MANAGER') ||
     userRoles.some((r) =>
-      ['ROLE_ADMIN', 'ROLE_WH_MANAGER', 'ROLE_SALES_MANAGER'].includes(r)
+      ['ROLE_ADMIN', 'ROLE_WH_MANAGER', 'ROLE_WAREHOUSE', 'ROLE_SALES_MANAGER'].includes(r)
     );
 
   const canCreateReturn =
-    ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_WH_MANAGER', 'ROLE_WAREHOUSE'].includes(currentRole ?? '') ||
-    Boolean(userRoles.some((r) => ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_WH_MANAGER', 'ROLE_WAREHOUSE'].includes(r)));
+    ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_WH_MANAGER', 'ROLE_WAREHOUSE'].includes(currentRole ?? '') ||
+    Boolean(userRoles.some((r) => ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_WH_MANAGER', 'ROLE_WAREHOUSE'].includes(r)));
 
   // Filter states
   const [keyword, setKeyword] = useState<string>('');
