@@ -71,7 +71,8 @@ export const ProductLotManagementPage: React.FC = () => {
   const isWhManagerOrAdmin =
     currentRole === 'ROLE_WH_MANAGER' ||
     currentRole === 'ROLE_ADMIN' ||
-    Boolean(user?.roles?.some((r) => ['ROLE_WH_MANAGER', 'ROLE_ADMIN'].includes(r)));
+    currentRole === 'ROLE_WAREHOUSE' ||
+    Boolean(user?.roles?.some((r) => ['ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_WAREHOUSE'].includes(r)));
 
   // Tải danh mục cho dropdown lọc
   useEffect(() => {
@@ -137,7 +138,7 @@ export const ProductLotManagementPage: React.FC = () => {
   // Mở modal xác nhận Khóa / Mở khóa một lô hàng
   const handleOpenLockModal = (lot: ProductLotResponse) => {
     if (!isWhManagerOrAdmin) {
-      showToast?.('Chỉ Quản lý kho hoặc Admin mới có quyền khóa/mở khóa lô', 'error');
+      showToast?.('Chỉ Quản lý kho, Thủ kho hoặc Admin mới có quyền khóa/mở khóa lô', 'error');
       return;
     }
     setLotToToggleLock(lot);
@@ -147,7 +148,7 @@ export const ProductLotManagementPage: React.FC = () => {
   const handleConfirmToggleLock = async () => {
     if (!lotToToggleLock) return;
     if (!isWhManagerOrAdmin) {
-      showToast?.('Chỉ Quản lý kho hoặc Admin mới có quyền khóa/mở khóa lô', 'error');
+      showToast?.('Chỉ Quản lý kho, Thủ kho hoặc Admin mới có quyền khóa/mở khóa lô', 'error');
       return;
     }
     const nextStatus = lotToToggleLock.status === 'ACTIVE' ? 'LOCKED' : 'ACTIVE';
