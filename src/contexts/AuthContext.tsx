@@ -15,6 +15,9 @@ import { SessionExpiredModal } from '../components/common/SessionExpiredModal';
 import { Icons } from '../components/common/Icons';
 
 export type ToastType = 'success' | 'error' | 'info' | 'logout';
+const TOAST_TYPES: ToastType[] = ['success', 'error', 'info', 'logout'];
+/** Giá trị loại thông báo có thể bị truyền nhầm vào vị trí message (gồm cả 'warning' hiển thị như 'info'). */
+const TOAST_TYPE_ALIASES = ['success', 'error', 'info', 'warning'];
 
 export interface ToastNotification {
   title: string;
@@ -102,11 +105,23 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setToast(null);
   }, []);
 
-  const showToast = useCallback((title: string, message: string = '', type: ToastType = 'success', duration: number = 1800) => {
+  const showToast = useCallback((title: string, message: string = '', type?: ToastType, duration: number = 1800) => {
     if (toastTimerRef.current) {
       clearTimeout(toastTimerRef.current);
     }
-    setToast({ title, message, type });
+    // Nhiều trang gọi kiểu rút gọn showToast('Nội dung', 'error'): tham số 2 thực chất là loại thông báo.
+    // Trước đây trường hợp này hiện thành thông báo XANH "thành công" kèm chữ "error" -> chuẩn hoá lại cho mọi trang.
+    let finalMessage = message;
+    let finalType: string | undefined = type;
+    if (finalType === undefined && TOAST_TYPE_ALIASES.includes(message)) {
+      finalType = message;
+      finalMessage = '';
+    }
+    if (finalType === 'warning') {
+      finalType = 'info';
+    }
+    const resolvedType: ToastType = TOAST_TYPES.includes(finalType as ToastType) ? (finalType as ToastType) : 'success';
+    setToast({ title, message: finalMessage, type: resolvedType });
     toastTimerRef.current = setTimeout(() => {
       setToast(null);
       toastTimerRef.current = null;
