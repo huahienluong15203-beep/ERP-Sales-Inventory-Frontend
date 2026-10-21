@@ -415,6 +415,7 @@ export async function fetchAuditLogs(
           actorId?: number;
           actorUsername?: string;
           actorFullName?: string;
+          actorRole?: string;
           actorAvatarUrl?: string;
           oldValue?: string;
           newValue?: string;

@@ -449,7 +449,7 @@ export function getAuthorizedMenus(roles: RoleName | RoleName[]): MenuItem[] {
  * Danh sách phân quyền chi tiết cho các trang con / tác vụ đặc thù (khớp với AppRoutes.tsx)
  */
 export const SPECIFIC_SUBROUTE_ROLES: Record<string, RoleName[]> = {
-  '/sales-returns': ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT'],
+  '/sales-returns': ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_WH_MANAGER', 'ROLE_WAREHOUSE'],
   '/sales-returns/create': ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT'],
   '/customers/create': ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER'],
   '/customers/transfer': ['ROLE_ADMIN', 'ROLE_SALES_MANAGER'],
