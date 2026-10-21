@@ -9,7 +9,7 @@ import {
   X,
   Download
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { downloadJsonAsXlsx } from '../../utils/styledExcel';
 import type {
   StockLedgerRow,
   StockLedgerSummary,
@@ -166,10 +166,7 @@ export const StockLedgerThreeColumnsTab: React.FC = () => {
       const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const fileName = `Bao_cao_ton_kho_${whCode}_${todayStr}.xlsx`;
 
-      const ws = XLSX.utils.json_to_sheet(exportRows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'So_ton_kho_3_cot');
-      XLSX.writeFile(wb, fileName);
+      downloadJsonAsXlsx(fileName, 'So_ton_kho_3_cot', exportRows);
     } catch (err: unknown) {
       console.error('Lỗi xuất Excel tồn kho:', err);
     } finally {

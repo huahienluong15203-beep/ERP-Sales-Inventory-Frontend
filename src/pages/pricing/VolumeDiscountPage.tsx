@@ -217,7 +217,7 @@ export const VolumeDiscountPage: React.FC = () => {
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-2xs transition-colors hover:bg-gray-50 h-9 cursor-pointer"
           >
             <Icons.ClipboardList size={14} className="text-gray-500" />
-            <span>Xuất CSV / Excel</span>
+            <span>Xuất Excel</span>
           </button>
 
           {canManage && (

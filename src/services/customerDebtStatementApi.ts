@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import { downloadXlsx, type ExcelCell } from '../utils/styledExcel';
 import { authFetch, API_BASE_URL } from './api';
 import type {
   CustomerDebtStatement,
@@ -91,9 +91,7 @@ export async function fetchCustomerDebtStatement(
 export function exportCustomerDebtStatementExcel(
   statement: CustomerDebtStatement
 ): void {
-  const wb = XLSX.utils.book_new();
-
-  const titleRows = [
+  const titleRows: ExcelCell[][] = [
     ['CÔNG TY CỔ PHẦN PHÂN PHỐI TIÊU DÙNG TOÀN CẦU'],
     ['Tòa nhà Discovery, 302 Cầu Giấy, Hà Nội · MST: 0108888888 · SĐT: (024) 3888 9999'],
     [],
@@ -161,11 +159,15 @@ export function exportCustomerDebtStatementExcel(
     statement.closingBalance
   ]);
 
-  const ws = XLSX.utils.aoa_to_sheet(titleRows);
-  XLSX.utils.book_append_sheet(wb, ws, 'SoChiTietCongNo');
-
-  XLSX.writeFile(
-    wb,
-    `so-chi-tiet-cong-no-${statement.customerCode}-${statement.fromDate}-den-${statement.toDate}.xlsx`
-  );
+  // Dòng 11 (chỉ số 10) là tên cột: in đậm + tô nền; tiêu đề sổ và 2 dòng tổng cuối in đậm
+  const last = titleRows.length - 1;
+  downloadXlsx(`so-chi-tiet-cong-no-${statement.customerCode}-${statement.fromDate}-den-${statement.toDate}.xlsx`, [
+    {
+      name: 'SoChiTietCongNo',
+      rows: titleRows,
+      headerRows: [10],
+      boldRows: [0, 3, 6, last - 1, last],
+      colWidths: [6, 12, 18, 18, 48, 16, 16, 18]
+    }
+  ]);
 }

@@ -7,7 +7,7 @@
 
 import { authFetch, API_BASE_URL } from './api';
 import type { StockCardFilterParams, StockCardResponse, StockCardRow } from '../types/stockCard';
-import * as XLSX from 'xlsx';
+import { downloadJsonAsXlsx } from '../utils/styledExcel';
 
 const STOCK_CARD_URL = `${API_BASE_URL}/api/inventory/stock-card`;
 
@@ -181,10 +181,8 @@ export function exportStockCardToExcel(
   }
 
   // Tạo Sheet & Workbook
-  const worksheet = XLSX.utils.json_to_sheet(exportData);
-
   // Định dạng độ rộng cột (Column Widths)
-  worksheet['!cols'] = [
+  const colWidths = [
     { wch: 6 },  // STT
     { wch: 20 }, // Thời gian phát sinh
     { wch: 20 }, // Số chứng từ
@@ -200,13 +198,10 @@ export function exportStockCardToExcel(
     { wch: 18 }  // Người thực hiện
   ];
 
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'The_Kho');
-
   const skuPart = meta?.productSku ? `_${meta.productSku}` : '';
   const whPart = meta?.warehouseCode ? `_${meta.warehouseCode}` : '';
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const fileName = `TheKho${skuPart}${whPart}_${datePart}.xlsx`;
 
-  XLSX.writeFile(workbook, fileName);
+  downloadJsonAsXlsx(fileName, 'The_Kho', exportData, colWidths.map((c) => c.wch));
 }

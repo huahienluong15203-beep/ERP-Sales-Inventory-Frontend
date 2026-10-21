@@ -26,6 +26,7 @@ import type {
 } from '../types/discount';
 import type { CatalogProduct } from '../types/pricing';
 import { API_BASE_URL, authFetch } from './api';
+import { downloadXlsx, type ExcelCell } from '../utils/styledExcel';
 
 const BASE = `${API_BASE_URL}/api/discount-policies`;
 
@@ -553,7 +554,8 @@ export async function simulateBestDeal(
 }
 
 /**
- * Xuất danh sách chính sách ra CSV
+ * Xuất danh sách chính sách ra Excel (.xlsx), dòng tên cột in đậm.
+ * (Trước đây xuất CSV nên không định dạng được tên cột.)
  */
 export function exportPoliciesToCsv(policies: VolumeDiscountPolicy[]): void {
   const headers = [
@@ -572,47 +574,38 @@ export function exportPoliciesToCsv(policies: VolumeDiscountPolicy[]): void {
     'Ghi chú quy tắc'
   ];
 
-  const rows = policies.map((p) => {
+  const rows: ExcelCell[][] = policies.map((p) => {
     const tiersStr = p.tiers
       .map(
         (t) =>
-          `[Bậc ${t.tierOrder}: từ ${t.minQuantity} đến ${
-            t.maxQuantity ?? 'vô cùng'
-          } -> ${
-            t.discountType === 'PERCENT'
-              ? `${t.discountValue}%`
-              : `${t.discountValue.toLocaleString('vi-VN')} đ/đv`
+          `[Bậc ${t.tierOrder}: từ ${t.minQuantity} đến ${t.maxQuantity ?? 'vô cùng'} -> ${
+            t.discountType === 'PERCENT' ? `${t.discountValue}%` : `${t.discountValue.toLocaleString('vi-VN')} đ/đv`
           }]`
       )
       .join('; ');
-
     return [
-      `"${p.code}"`,
-      `"${p.name.replace(/"/g, '""')}"`,
-      `"${p.scopeType === 'SKU' ? 'Theo SKU' : 'Theo Nhóm hàng'}"`,
-      `"${p.targetId}"`,
-      `"${p.targetName.replace(/"/g, '""')}"`,
-      `"${p.customerGroupLabel || p.customerGroup}"`,
-      `"${p.startDate}"`,
-      `"${p.endDate || 'Vô thời hạn'}"`,
-      `"${p.status === 'ACTIVE' ? 'Đang hiệu lực' : p.status === 'INACTIVE' ? 'Tạm dừng' : 'Hết hạn'}"`,
-      `"${tiersStr}"`,
+      p.code,
+      p.name,
+      p.scopeType === 'SKU' ? 'Theo SKU' : 'Theo Nhóm hàng',
+      p.targetId,
+      p.targetName,
+      p.customerGroupLabel || p.customerGroup,
+      p.startDate,
+      p.endDate || 'Vô thời hạn',
+      p.status === 'ACTIVE' ? 'Đang hiệu lực' : p.status === 'INACTIVE' ? 'Tạm dừng' : 'Hết hạn',
+      tiersStr,
       p.appliedOrdersCount || 0,
       p.totalDiscountGiven || 0,
-      `"${(p.bestDealRuleNote || '').replace(/"/g, '""')}"`
-    ].join(',');
+      p.bestDealRuleNote || ''
+    ];
   });
 
-  const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute(
-    'download',
-    `Chinh_sach_chiet_khau_san_luong_${new Date().toISOString().slice(0, 10)}.csv`
-  );
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  downloadXlsx(`Chinh_sach_chiet_khau_san_luong_${new Date().toISOString().slice(0, 10)}.xlsx`, [
+    {
+      name: 'ChietKhauSanLuong',
+      rows: [headers, ...rows],
+      headerRows: [0],
+      colWidths: [14, 30, 14, 14, 30, 20, 12, 12, 14, 60, 12, 18, 40]
+    }
+  ]);
 }

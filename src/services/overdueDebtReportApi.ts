@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import { downloadXlsx } from '../utils/styledExcel';
 import { authFetch, API_BASE_URL } from './api';
 import type {
   OverdueReportResponse,
@@ -52,8 +52,6 @@ export async function fetchOverdueDebtReport(
  * Hàm hỗ trợ tạo tệp Excel 3 sheet chuẩn S8-09 từ dữ liệu thực tế
  */
 export function exportOverdueReportToXlsx(report: OverdueReportResponse): void {
-  const wb = XLSX.utils.book_new();
-
   // Sheet 1: Xếp hạng rủi ro
   const s1Data: any[] = [
     ['BÁO CÁO CÔNG NỢ QUÁ HẠN – XẾP HẠNG RỦI RO'],
@@ -104,8 +102,6 @@ export function exportOverdueReportToXlsx(report: OverdueReportResponse): void {
     ''
   ]);
 
-  const ws1 = XLSX.utils.aoa_to_sheet(s1Data);
-  XLSX.utils.book_append_sheet(wb, ws1, 'XepHangRuiRo');
 
   // Sheet 2: Theo nhóm tuổi nợ
   const s2Data: any[] = [
@@ -120,8 +116,6 @@ export function exportOverdueReportToXlsx(report: OverdueReportResponse): void {
   });
   s2Data.push(['TỔNG CỘNG', '', (report.byBucket || []).reduce((s, b) => s + b.amount, 0)]);
 
-  const ws2 = XLSX.utils.aoa_to_sheet(s2Data);
-  XLSX.utils.book_append_sheet(wb, ws2, 'TheoNhomTuoiNo');
 
   // Sheet 3: Theo NV phụ trách
   const s3Data: any[] = [
@@ -167,10 +161,12 @@ export function exportOverdueReportToXlsx(report: OverdueReportResponse): void {
     ''
   ]);
 
-  const ws3 = XLSX.utils.aoa_to_sheet(s3Data);
-  XLSX.utils.book_append_sheet(wb, ws3, 'TheoNhanVien');
-
-  XLSX.writeFile(wb, `bao-cao-no-qua-han-${report.asOf}.xlsx`);
+  // Dòng 4 (chỉ số 3) mỗi sheet là tên cột: in đậm + tô nền; tiêu đề và dòng TỔNG CỘNG in đậm
+  downloadXlsx(`bao-cao-no-qua-han-${report.asOf}.xlsx`, [
+    { name: 'XepHangRuiRo', rows: s1Data, headerRows: [3], boldRows: [0, s1Data.length - 1], colWidths: [7, 14, 30, 22, 12, 40, 16, 16, 16, 16, 14] },
+    { name: 'TheoNhomTuoiNo', rows: s2Data, headerRows: [3], boldRows: [0, s2Data.length - 1], colWidths: [24, 12, 18] },
+    { name: 'TheoNhanVien', rows: s3Data, headerRows: [3], boldRows: [0, s3Data.length - 1], colWidths: [24, 14, 14, 16, 16, 16, 16, 16, 16] }
+  ]);
 }
 
 /**
