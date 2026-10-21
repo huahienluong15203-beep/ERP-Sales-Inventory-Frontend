@@ -5,7 +5,7 @@ import type { MenuItem, RoleName } from '../types/user';
  * Tuân thủ phạm vi Sprint 1: Bàn làm việc, Quản lý tài khoản (Admin), Hồ sơ cá nhân.
  */
 export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
-  // 1. Dashboard chung
+  // Sắp theo nhóm chức năng: mỗi "group" là 1 tiêu đề trên Sidebar
   {
     title: 'Bàn làm việc',
     path: '/dashboard',
@@ -18,48 +18,164 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
       'ROLE_SALES_MANAGER',
       'ROLE_WAREHOUSE',
       'ROLE_WH_MANAGER',
-      'ROLE_ACCOUNTANT',
-      'ROLE_CUSTOMER'
+      'ROLE_ACCOUNTANT'
     ]
   },
 
-  // 2. Quản lý tài khoản (Chỉ Quản trị viên hệ thống - Sprint 1 S1-08 / S1-09 / S1-10)
   {
-    title: 'Quản lý tài khoản',
-    path: '/users',
-    icon: 'Users',
-    epic: 'Hệ Thống & Tài Khoản',
-    description: 'Quản lý danh sách nhân sự, phân quyền và khóa tài khoản',
-    allowedRoles: ['ROLE_ADMIN']
+    title: 'Cổng đặt hàng đại lý',
+    path: '/portal',
+    group: 'Bán hàng',
+    icon: 'ShoppingBag',
+    epic: 'Đặt hàng & Duyệt ngoại lệ',
+    description: 'Cổng đại lý tự đặt hàng trực tuyến B2B, quản lý công nợ',
+    allowedRoles: ['ROLE_CUSTOMER']
   },
 
-  // 2b. Nhật ký thao tác hệ thống (Sprint 2: S2-04 - Quản trị hệ thống, Kế toán, Quản lý kho, Quản lý KD)
-  {
-    title: 'Nhật ký thao tác',
-    path: '/audit-logs',
-    icon: 'ShieldCheck',
-    epic: 'Hệ Thống & Tài Khoản',
-    description: 'Truy vết thao tác điều chỉnh tồn kho khi kiểm kê lệch và công nợ',
-    allowedRoles: ['ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_WH_MANAGER', 'ROLE_SALES_MANAGER']
-  },
-
-  // 3. Quản lý hồ sơ đại lý (Sprint 3: S3-03 / SCRUM-85 / EP-03 - Kế toán công nợ & Quản lý KD)
   {
     title: 'Hồ sơ đại lý',
     path: '/customers',
+    group: 'Bán hàng',
     icon: 'Building2',
     epic: 'Đại lý & Hạn mức nợ',
-    description: 'Quản lý danh sách khách hàng chuẩn hóa, bảng giá và trạng thái giao dịch',
+    description: '',
     allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
   },
 
-  // 4. Quản lý danh mục sản phẩm (Sprint 2: S2-05)
+  {
+    title: 'Danh sách đơn hàng',
+    path: '/orders',
+    group: 'Bán hàng',
+    icon: 'ShoppingCart',
+    epic: 'Đặt hàng & Duyệt ngoại lệ',
+    description: '',
+    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_WAREHOUSE', 'ROLE_WH_MANAGER']
+  },
+
+  {
+    title: 'Tạo đơn mới',
+    path: '/orders/create',
+    group: 'Bán hàng',
+    icon: 'ShoppingBag',
+    epic: 'Đặt hàng & Duyệt ngoại lệ',
+    description: '',
+    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+  },
+
+  {
+    title: 'Duyệt giảm trừ công nợ',
+    path: '/payments/adjustments',
+    group: 'Bán hàng',
+    icon: 'FileCheck',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: 'Duyệt chứng từ giảm trừ công nợ khi trả hàng theo đúng giá bán hoá đơn gốc',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+  },
+
+  {
+    title: 'Hóa đơn bán hàng',
+    path: '/invoices',
+    group: 'Bán hàng',
+    icon: 'Receipt',
+    epic: 'Bán hàng & Hóa đơn',
+    description: 'Phát hành hoá đơn từ phiếu đã giao (POD), gộp nhiều phiếu, xuất mẫu in A4',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
+  },
+
+  {
+    title: 'Trả hàng đại lý',
+    path: '/sales-returns',
+    group: 'Bán hàng',
+    icon: 'RotateCcw',
+    epic: 'Bán hàng & Kho vận',
+    description: 'Lập phiếu hoàn hàng từ đại lý theo hoá đơn, nhập kho theo lô & kiểm duyệt nhập kho (S8-01)',
+    allowedRoles: [
+      'ROLE_SALES_REP',
+      'ROLE_SALES_MANAGER',
+      'ROLE_ADMIN',
+      'ROLE_WH_MANAGER',
+      'ROLE_WAREHOUSE',
+      'ROLE_ACCOUNTANT'
+    ]
+  },
+
+  {
+    title: 'Đối chiếu thu tiền tuyến',
+    path: '/payments/reconciliation',
+    group: 'Bán hàng',
+    icon: 'Receipt',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: 'Đối chiếu tiền đã thu trên tuyến với tiền đã nộp về công ty mà không tranh cãi ',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
+  },
+
+  {
+    title: 'Sổ công nợ & Tuổi nợ',
+    path: '/debts/ledger',
+    group: 'Bán hàng',
+    icon: 'Table',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: 'Sổ công nợ theo đại lý với phân tích tuổi nợ 0-30, 31-60, 61-90, trên 90 ngày',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
+  },
+
+  {
+    title: 'Sổ chi tiết công nợ',
+    path: '/debts/statement',
+    group: 'Bán hàng',
+    icon: 'BookOpenCheck',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: '',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP', 'ROLE_CUSTOMER']
+  },
+
+  {
+    title: 'Báo cáo nợ quá hạn',
+    path: '/reports/overdue-debts',
+    group: 'Bán hàng',
+    icon: 'AlertTriangle',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: '',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
+  },
+
+  {
+    title: 'Đối chiếu công nợ',
+    path: '/debts/reconciliation',
+    group: 'Bán hàng',
+    icon: 'FileText',
+    epic: 'Đại lý & Hạn mức nợ',
+    description: 'Biên bản đối chiếu công nợ định kỳ với đại lý, chốt số dư và xuất mẫu A4',
+    allowedRoles: ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_CUSTOMER']
+  },
+
+  {
+    title: 'Chỉ tiêu doanh số ',
+    path: '/kpi/targets',
+    group: 'Bán hàng',
+    icon: 'TrendingUp',
+    epic: 'Bán hàng & Doanh số',
+    description: '',
+    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_SALES_REP', 'ROLE_ADMIN']
+  },
+
+  {
+    title: 'Báo cáo doanh số',
+    path: '/reports/sales',
+    group: 'Bán hàng',
+    icon: 'BarChart3',
+    epic: 'Bán hàng & Doanh số',
+    description: '',
+    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+  },
+
   {
     title: 'Danh mục sản phẩm',
     path: '/products',
+    group: 'Sản phẩm & Kho',
     icon: 'Package',
     epic: 'Sản phẩm & Tồn kho',
-    description: 'Quản lý chuẩn hóa danh mục sản phẩm, mã SKU và bảo mật giá vốn',
+    description: '',
     allowedRoles: [
       'ROLE_SALES_MANAGER',
       'ROLE_ADMIN',
@@ -70,13 +186,23 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     ]
   },
 
-  // 4b. Danh mục nhà cung cấp (S2-09 / SCRUM-46: Kho & Nguồn hàng)
+  {
+    title: 'Quản lý nhóm hàng',
+    path: '/categories',
+    group: 'Sản phẩm & Kho',
+    icon: 'Boxes',
+    epic: 'Sản phẩm & Bảng giá',
+    description: 'Cấu trúc nhóm hàng ≥ 3 cấp & xem doanh số theo ngành hàng',
+    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+  },
+
   {
     title: 'Danh mục nhà cung cấp',
     path: '/suppliers',
+    group: 'Sản phẩm & Kho',
     icon: 'Truck',
     epic: 'Sản phẩm & Tồn kho',
-    description: 'Quản lý nguồn hàng và đối tác cung ứng, gắn vào phiếu nhập kho để truy nguyên lô lỗi',
+    description: '',
     allowedRoles: [
       'ROLE_ADMIN',
       'ROLE_WH_MANAGER',
@@ -86,59 +212,192 @@ export const ALL_SYSTEM_MENUS: (MenuItem & { allowedRoles: RoleName[] })[] = [
     ]
   },
 
-  // 5. Bảng giá sản phẩm (S2-10 / SCRUM-55: EP-02 Sản phẩm & Bảng giá)
+  {
+    title: 'Phiếu nhập kho',
+    path: '/inventory/receipts',
+    group: 'Sản phẩm & Kho',
+    icon: 'ClipboardList',
+    epic: 'Sản phẩm & Tồn kho',
+    description: '',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
+  },
+
+  {
+    title: 'Phiếu chuyển kho',
+    path: '/inventory/transfers',
+    group: 'Sản phẩm & Kho',
+    icon: 'ArrowLeftRight',
+    epic: 'Sản phẩm & Tồn kho',
+    description: '',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
+  },
+
+  {
+    title: 'Quản lý tồn kho',
+    path: '/inventory/ledger',
+    group: 'Sản phẩm & Kho',
+    icon: 'Warehouse',
+    epic: 'Sản phẩm & Tồn kho',
+    description: '',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER']
+  },
+
+  {
+    title: 'Thẻ kho chi tiết',
+    path: '/inventory/stock-card',
+    group: 'Sản phẩm & Kho',
+    icon: 'BookOpenCheck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: '',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER']
+  },
+
+  {
+    title: 'Kiểm kê kho',
+    path: '/inventory/stocktakes',
+    group: 'Sản phẩm & Kho',
+    icon: 'CheckSquare',
+    epic: 'Sản phẩm & Tồn kho',
+    description: '',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
+  },
+
+  {
+    title: 'Điều chỉnh tồn kho',
+    path: '/inventory/stock-adjustments',
+    group: 'Sản phẩm & Kho',
+    icon: 'FileText',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Xử lý hàng hỏng, mất hoặc hết hạn huỷ bỏ có quy trình 2 bước phê duyệt minh bạch (S8-03)',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']
+  },
+
+  {
+    title: 'Phiếu soạn hàng',
+    path: '/inventory/picking-lists',
+    group: 'Sản phẩm & Kho',
+    icon: 'ClipboardCheck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: '',
+    allowedRoles: ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER']
+  },
+
+  {
+    title: 'Chuyến giao hàng',
+    path: '/inventory/delivery-trips',
+    group: 'Sản phẩm & Kho',
+    icon: 'Truck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Phân tuyến giao hàng theo khu vực, gán tài xế & phương tiện, in danh sách điểm giao',
+    allowedRoles: ['ROLE_WH_MANAGER', 'ROLE_WAREHOUSE', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER']
+  },
+
+  {
+    title: 'Danh mục kho & vị trí',
+    path: '/inventory/warehouses',
+    group: 'Sản phẩm & Kho',
+    icon: 'Layers',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Quản lý danh sách kho hàng, phân khu (Zone), kệ (Rack), tầng (Shelf) và ô chứa (Bin)',
+    allowedRoles: [
+      'ROLE_WAREHOUSE',
+      'ROLE_WH_MANAGER',
+      'ROLE_ADMIN',
+      'ROLE_ACCOUNTANT',
+      'ROLE_SALES_MANAGER'
+    ]
+  },
+
+  {
+    title: 'Quản lý lô hàng',
+    path: '/inventory/lots',
+    group: 'Sản phẩm & Kho',
+    icon: 'Boxes',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Theo dõi lô sản xuất, hạn sử dụng, cảnh báo cận date và quy tắc xuất FEFO',
+    allowedRoles: [
+      'ROLE_WAREHOUSE',
+      'ROLE_WH_MANAGER',
+      'ROLE_ADMIN',
+      'ROLE_ACCOUNTANT',
+      'ROLE_SALES_MANAGER'
+    ]
+  },
+
+  {
+    title: 'Luân chuyển kho & Tuổi',
+    path: '/inventory/aging',
+    group: 'Sản phẩm & Kho',
+    icon: 'Clock',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Báo cáo vòng quay hàng tồn, số ngày lưu kho bình quân và cảnh báo hàng chậm luân chuyển',
+    allowedRoles: [
+      'ROLE_WAREHOUSE',
+      'ROLE_WH_MANAGER',
+      'ROLE_ADMIN',
+      'ROLE_ACCOUNTANT',
+      'ROLE_SALES_MANAGER'
+    ]
+  },
+
+  {
+    title: 'Hàng đang đi đường',
+    path: '/inventory/in-transit',
+    group: 'Sản phẩm & Kho',
+    icon: 'Truck',
+    epic: 'Sản phẩm & Tồn kho',
+    description: 'Theo dõi hàng đã xuất kho nhưng đang trên đường giao, cảnh báo giao trễ',
+    allowedRoles: [
+      'ROLE_WAREHOUSE',
+      'ROLE_WH_MANAGER',
+      'ROLE_ADMIN',
+      'ROLE_ACCOUNTANT',
+      'ROLE_SALES_MANAGER'
+    ]
+  },
+
   {
     title: 'Bảng giá sản phẩm',
     path: '/pricing',
+    group: 'Giá & Chiết khấu',
     icon: 'Tags',
     epic: 'Sản phẩm & Bảng giá',
-    description: 'Khai báo bảng giá theo nhóm khách hàng, thời gian hiệu lực và giá sàn',
+    description: '',
     allowedRoles: ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
   },
 
-  // 6. Lịch sử thay đổi giá (Sprint 3: S3-02 / SCRUM-13 / EP-02 - Quản lý kinh doanh & Admin)
-  {
-    title: 'Lịch sử thay đổi giá',
-    path: '/pricing/history',
-    icon: 'History',
-    epic: 'Sản phẩm & Bảng giá',
-    description: 'Xem lịch sử thay đổi giá cũ - mới, người sửa và căn cứ giải thích cho đại lý',
-    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
-  },
-
-  // 6b. Chiết khấu sản lượng (Sprint 3: S3-01 / SCRUM-12 / SCRUM-77 / EP-02 - Quản lý kinh doanh)
   {
     title: 'Chiết khấu sản lượng',
     path: '/pricing/discounts',
+    group: 'Giá & Chiết khấu',
     icon: 'Percent',
     epic: 'Sản phẩm & Bảng giá',
-    description: 'Khai báo bậc chiết khấu theo số lượng SKU/nhóm hàng và quy tắc có lợi nhất cho khách',
+    description: '',
     allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_SALES_REP', 'ROLE_ACCOUNTANT']
   },
 
-  // 6c. Đặt hàng đại lý (Sprint 3: S3-09 / SCRUM-14 / EP-04: Đặt hàng & Duyệt ngoại lệ)
   {
-    title: 'Đơn hàng đại lý',
-    path: '/orders/create',
-    icon: 'ShoppingCart',
-    epic: 'Đặt hàng & Duyệt ngoại lệ',
-    description: 'Lên đơn nhanh tại điểm bán, tự động áp giá & chiết khấu sản lượng',
-    // Kế toán không tạo đơn (Backend chặn) -> không hiện menu để tránh bị văng ra màn đăng nhập
-    allowedRoles: ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+    title: 'Quản lý tài khoản',
+    path: '/users',
+    group: 'Hệ thống',
+    icon: 'Users',
+    epic: 'Hệ Thống & Tài Khoản',
+    description: '',
+    allowedRoles: ['ROLE_ADMIN']
   },
 
-
-  // 7. Quản lý nhóm hàng nhiều cấp (EP-02: Dành cho Quản lý kinh doanh & Admin)
   {
-    title: 'Quản lý nhóm hàng',
-    path: '/categories',
-    icon: 'Boxes',
-    epic: 'Sản phẩm & Bảng giá',
-    description: 'Cấu trúc nhóm hàng ≥ 3 cấp & xem doanh số theo ngành hàng',
-    allowedRoles: ['ROLE_SALES_MANAGER', 'ROLE_ADMIN']
+    title: 'Nhật ký hệ thống',
+    path: '/logs',
+    group: 'Hệ thống',
+    icon: 'ShieldCheck',
+    epic: 'Hệ Thống & Tài Khoản',
+    description: 'Nhật ký thao tác và lịch sử thay đổi giá trong một trang, lọc theo loại nhật ký',
+    // Hợp quyền của 2 tab; trong trang chỉ hiện tab đúng quyền
+    // (Nhật ký thao tác S2-04: Admin, Kế toán, QL kho, QL KD; Lịch sử giá S3-02: Admin, Kế toán, QL KD, NV KD)
+    allowedRoles: ['ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_WH_MANAGER', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP']
   },
 
-  // 8. Hồ sơ cá nhân (Luôn ở dưới cùng các tính năng nghiệp vụ, ngay trên Đăng xuất)
   {
     title: 'Hồ sơ cá nhân',
     path: '/profile',
@@ -172,6 +431,7 @@ export function getAuthorizedMenus(roles: RoleName | RoleName[]): MenuItem[] {
     path: item.path,
     icon: item.icon,
     epic: item.epic,
+    group: item.group,
     description: item.description,
     badge: item.badge
   }));
@@ -184,6 +444,34 @@ export function getAuthorizedMenus(roles: RoleName | RoleName[]): MenuItem[] {
   }
   return nonProfile;
 }
+
+/**
+ * Danh sách phân quyền chi tiết cho các trang con / tác vụ đặc thù (khớp với AppRoutes.tsx)
+ */
+export const SPECIFIC_SUBROUTE_ROLES: Record<string, RoleName[]> = {
+  '/sales-returns': ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_WH_MANAGER', 'ROLE_WAREHOUSE'],
+  '/sales-returns/create': ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT'],
+  '/customers/create': ['ROLE_ACCOUNTANT', 'ROLE_ADMIN', 'ROLE_SALES_MANAGER'],
+  '/customers/transfer': ['ROLE_ADMIN', 'ROLE_SALES_MANAGER'],
+  '/products/import': ['ROLE_SALES_MANAGER', 'ROLE_ADMIN'],
+  '/pricing/create': ['ROLE_ADMIN', 'ROLE_SALES_MANAGER'],
+  '/price-lists/create': ['ROLE_ADMIN', 'ROLE_SALES_MANAGER'],
+  '/orders/create': ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN'],
+  '/invoices/create': ['ROLE_ACCOUNTANT', 'ROLE_ADMIN'],
+  '/payments/adjustments': ['ROLE_ACCOUNTANT', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/receipts/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/goods-receipts/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/transfers/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/transfers/create/products': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/stocktakes/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/stock-takes/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/stock-adjustments/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/lots/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/picking-lists/create': ['ROLE_WAREHOUSE', 'ROLE_WH_MANAGER', 'ROLE_ADMIN'],
+  '/inventory/delivery-trips/create': ['ROLE_WH_MANAGER', 'ROLE_WAREHOUSE', 'ROLE_ADMIN'],
+  '/reports/sales': ['ROLE_SALES_MANAGER', 'ROLE_ADMIN'],
+  '/categories': ['ROLE_SALES_MANAGER', 'ROLE_ADMIN'],
+};
 
 /**
  * Kiểm tra xem người dùng (với 1 hoặc nhiều vai trò) có quyền truy cập vào một đường dẫn hay không
@@ -203,6 +491,16 @@ export function checkPathPermission(path: string, roles: RoleName | RoleName[]):
     cleanPath.startsWith('/users/')
   ) {
     return roleList.includes('ROLE_ADMIN');
+  }
+
+  // Tuyến đường chỉnh sửa bảng giá
+  if (/^\/(pricing|price-lists)\/[^/]+\/edit$/.test(cleanPath)) {
+    return roleList.some((r) => ['ROLE_ADMIN', 'ROLE_SALES_MANAGER'].includes(r));
+  }
+
+  // Kiểm tra trước danh sách tuyến con đặc thù
+  if (SPECIFIC_SUBROUTE_ROLES[cleanPath]) {
+    return SPECIFIC_SUBROUTE_ROLES[cleanPath].some((r) => roleList.includes(r));
   }
 
   const targetMenu = ALL_SYSTEM_MENUS.find((item) => {
@@ -225,6 +523,14 @@ export function getAllowedRolesForPath(path: string): RoleName[] {
 
   if (cleanPath === '/admin/users' || cleanPath.startsWith('/admin/users/')) {
     return ['ROLE_ADMIN'];
+  }
+
+  if (/^\/(pricing|price-lists)\/[^/]+\/edit$/.test(cleanPath)) {
+    return ['ROLE_ADMIN', 'ROLE_SALES_MANAGER'];
+  }
+
+  if (SPECIFIC_SUBROUTE_ROLES[cleanPath]) {
+    return SPECIFIC_SUBROUTE_ROLES[cleanPath];
   }
 
   const targetMenu = ALL_SYSTEM_MENUS.find((item) => {

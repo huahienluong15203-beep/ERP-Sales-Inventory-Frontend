@@ -23,6 +23,8 @@ export interface OrderItemUnitOption {
   conversionFactor: number; // Hệ số nhân so với đơn vị tính cơ sở (vd: Thùng 24 lon => factor = 24)
   isBaseUnit: boolean;
   unitPrice: number;        // Đơn giá bán theo đơn vị này (đã nhân hệ số và tính theo bảng giá)
+  floorPrice?: number;      // Giá sàn theo đơn vị này
+  availableStock?: number;  // Tồn khả dụng theo đơn vị này (S4-03)
 }
 
 /**
@@ -46,6 +48,20 @@ export interface OrderItem {
   finalAmount: number;      // Thành tiền sau chiết khấu = rawAmount - discountAmount
   appliedDiscountNote?: string; // Ghi chú chính sách chiết khấu đã hưởng
   availableUnits: OrderItemUnitOption[]; // Danh sách đơn vị tính hỗ trợ quy đổi
+  // S4-01: Áp giá tự động & Sửa giá thủ công
+  originalUnitPrice?: number; // Đơn giá gốc từ bảng giá hiệu lực
+  floorPrice?: number;        // Giá sàn theo đơn vị tính đã chọn
+  isCustomPrice?: boolean;    // Cờ đánh dấu đã sửa giá thủ công
+  isBelowFloor?: boolean;     // Cờ đánh dấu bán dưới giá sàn
+  // S4-03: Quản lý tồn khả dụng & Chặn đặt vượt tồn
+  warehouseCode?: string;     // Mã kho phục vụ đại lý (vd: WH-MB01)
+  warehouseName?: string;     // Tên kho phục vụ đại lý (vd: Kho Tổng Miền Bắc)
+  physicalStock?: number;     // Tồn thực tế trong kho (theo ĐVT cơ sở)
+  reservedStock?: number;     // Tồn đang giữ chỗ cho đơn khác (theo ĐVT cơ sở)
+  availableStock?: number;    // Tồn khả dụng = physicalStock - reservedStock (theo ĐVT cơ sở)
+  availableInSelectedUnit?: number; // Tồn khả dụng theo ĐVT đã chọn
+  isOverStock?: boolean;      // Cờ đặt vượt tồn khả dụng
+  maxAllowedQuantity?: number;// Số lượng tối đa còn đặt được theo ĐVT đã chọn
 }
 
 /**
@@ -81,6 +97,7 @@ export interface OrderDraft {
   deliveryRouteNotes?: string;
   // Kế hoạch giao hàng
   expectedDeliveryDate: string;     // YYYY-MM-DD (>= ngày hiện tại)
+  paymentMethod?: 'CREDIT' | 'COD'; // Hình thức thanh toán: Mua nợ gối đầu hoặc COD
   note?: string;                    // Ghi chú của sales rep
   // Danh sách dòng hàng
   items: OrderItem[];
@@ -137,11 +154,13 @@ export interface OrderDraftBackendRequest {
   customerId: number;
   deliveryAddressId?: number | null;
   desiredDeliveryDate?: string | null;
+  paymentMethod?: 'CREDIT' | 'COD' | string | null;
   note?: string | null;
   lines: Array<{
     productSku: string;
     unitName?: string | null;
     quantity: number;
+    unitPrice?: number | null;
   }>;
 }
 
@@ -164,6 +183,16 @@ export interface OrderLineBackendResponse {
   discountPolicyCode?: string | null;
   discountAmount: number;
   netAmount: number;
+  // S5-01: Giao hàng & theo dõi giao thiếu
+  deliveredQuantity?: number | null;
+  shortageQuantity?: number | null;
+  isShortage?: boolean | null;
+  shortageReason?: string | null;
+  // S6-04: Quản lý số lô & FEFO
+  batchNumber?: string | null;
+  suggestedBatchNumber?: string | null;
+  lotChangeReason?: string | null;
+  lotExpiredDate?: string | null;
 }
 
 export interface OrderBackendResponse {
@@ -192,6 +221,56 @@ export interface OrderBackendResponse {
   createdAt?: string;
   updatedAt?: string;
   warnings?: string[];
+  // Cảnh báo giao thiếu hàng
+  hasShortage?: boolean | null;
+  shortageLineCount?: number | null;
+  // Huỷ đơn / Từ chối duyệt
+  cancelReason?: string | null;
+  lastApprovalComment?: string | null;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
+  approvedByUsername?: string | null;
+  cancelledAt?: string | null;
+  cancelledByUsername?: string | null;
+  // Xuất kho, đơn nợ hàng và thông tin giao hàng
+  fulfillment?: OrderFulfillmentInfo | null;
+  paymentMethod?: 'CREDIT' | 'COD' | string | null;
+  approvalReasons?: ApprovalReason[] | null;
+  reasons?: ApprovalReason[] | null;
+}
+
+export interface OrderFulfillmentInfo {
+  dispatchedAt?: string | null;
+  dispatchedByUsername?: string | null;
+  dispatchNote?: string | null;
+  backorder?: boolean;
+  parentOrderId?: number | null;
+  parentOrderCode?: string | null;
+  backorderCodes?: string[];
+  receiverName?: string | null;
+  deliveredAt?: string | null;
+  deliveryConfirmedAt?: string | null;
+  deliveryConfirmedByUsername?: string | null;
+  hasDeliveryProof?: boolean;
+  deliveryFailedReason?: string | null;
+  deliveryFailedAt?: string | null;
+}
+
+export interface OrderDispatchRequest {
+  lines?: Array<{
+    lineId: number;
+    dispatchedQuantity: number;
+    shortageReason?: string;
+    batchNumber?: string;
+    lotChangeReason?: string;
+  }>;
+  note?: string;
+  createBackorder?: boolean;
+}
+
+export interface OrderDispatchResponse {
+  order: OrderBackendResponse;
+  backorder?: OrderBackendResponse | null;
 }
 
 export interface ProductOptionBackendResponse {
@@ -205,6 +284,184 @@ export interface ProductOptionBackendResponse {
   }>;
   priceAvailable: boolean;
   unitPrice?: number | null;
+  floorPrice?: number | null;
   priceListCode?: string | null;
   message?: string | null;
+  warehouseCode?: string | null;
+  warehouseName?: string | null;
+  physicalStock?: number | null;
+  reservedStock?: number | null;
+  availableStock?: number | null;
 }
+
+/**
+ * S4-07: Một dòng trong danh sách đơn hàng (khớp OrderSummaryResponse backend)
+ */
+export interface OrderSummaryItem {
+  id: number;
+  code: string;
+  status: string;
+  customerId: number;
+  customerCode: string;
+  customerName: string;
+  desiredDeliveryDate?: string | null;
+  lineCount: number;
+  totalAmount: number;
+  createdByUsername?: string | null;
+  updatedAt?: string | null;
+  salesRepId?: number | null;
+  // Cảnh báo giao thiếu hàng và đơn nợ hàng (Backorder)
+  hasShortage?: boolean | null;
+  backorder?: boolean | null;
+  parentOrderCode?: string | null;
+  salesRepName?: string | null;
+  regionId?: number | null;
+  regionName?: string | null;
+  createdAt: string;
+  paymentMethod?: 'CREDIT' | 'COD' | string | null;
+}
+
+/**
+ * S4-07: Tổng số đơn và tổng tiền toàn bộ kết quả đang lọc (khớp OrderTotalsResponse backend)
+ */
+export interface OrderTotalsSummary {
+  orderCount: number;
+  totalAmount: number;
+}
+
+/**
+ * S4-07: Tiêu chí lọc danh sách đơn hàng
+ */
+export interface OrderFilterCriteria {
+  statuses?: string[];
+  customerId?: number | string | null;
+  salesRepId?: number | string | null;
+  regionId?: number | string | null;
+  fromDate?: string | null;
+  toDate?: string | null;
+  keyword?: string | null;
+  page?: number;
+  size?: number;
+}
+
+/**
+ * S4-07: Phân trang danh sách đơn hàng từ Backend
+ */
+export interface OrderPageResponse {
+  content: OrderSummaryItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+/**
+ * Story S4-04: Xem lịch sử mua hàng của đại lý khi gõ đơn hàng
+ * 1. Hiển thị các mặt hàng đại lý đã mua trong 3 tháng gần nhất kèm số lượng bình quân (AC1)
+ * 2. Thêm nhanh cả nhóm hàng đã mua lần trước vào đơn mới (AC2)
+ * 3. Chỉ hiện với đại lý mà nhân viên được phân công (AC3)
+ */
+export interface CustomerPurchaseHistoryItem {
+  productId: string | number;
+  sku: string;
+  name: string;
+  category?: string;
+  baseUnit: string;
+  preferredUnit: string;             // ĐVT đại lý hay đặt nhất (vd: Thùng)
+  preferredConversionFactor: number; // Hệ số quy đổi của ĐVT hay đặt
+  totalQuantity3M: number;           // Tổng số lượng mua trong 3 tháng gần nhất (theo preferredUnit)
+  orderCount3M: number;              // Số đơn hàng trong 3 tháng có chứa sản phẩm này
+  avgQuantityPerMonth: number;       // Số lượng bình quân mỗi tháng (totalQuantity3M / 3)
+  avgQuantityPerOrder: number;       // Số lượng bình quân mỗi lần đặt
+  lastOrderedDate: string;           // Ngày đặt mua gần nhất (YYYY-MM-DD)
+  lastUnitPrice: number;             // Đơn giá mua lần gần nhất (VND)
+  currentUnitPrice?: number;         // Đơn giá hiện tại theo bảng giá hiệu lực
+  availableStock?: number;           // Tồn khả dụng hiện tại (ĐVT cơ sở)
+  availableInPreferredUnit?: number; // Tồn khả dụng theo ĐVT hay mua
+}
+
+export interface CustomerLastOrderItem {
+  productId: string | number;
+  sku: string;
+  name: string;
+  unitName: string;
+  conversionFactor: number;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface CustomerLastOrderSummary {
+  orderId: string | number;
+  orderCode: string;                 // Mã đơn hàng gần nhất (vd: DH2609-0012)
+  orderDate: string;                 // Ngày tạo đơn (YYYY-MM-DD)
+  itemCount: number;                 // Số loại mặt hàng
+  totalQuantity: number;             // Tổng số kiện hàng
+  totalAmount: number;               // Tổng tiền đơn hàng trước
+  items: CustomerLastOrderItem[];    // Chi tiết danh sách sản phẩm để thêm nhanh
+}
+
+export interface CustomerPurchaseHistoryData {
+  customerId: string;
+  customerCode: string;
+  customerName: string;
+  assignedRepId?: string;
+  assignedRepName?: string;
+  threeMonthsSummary: {
+    totalOrders: number;
+    totalRevenue: number;
+    distinctProductCount: number;
+    startDate: string;
+    endDate: string;
+  };
+  frequentProducts: CustomerPurchaseHistoryItem[];
+  lastOrder: CustomerLastOrderSummary | null;
+}
+
+/**
+ * S4-05: Lý do đơn cần duyệt và mức vi phạm
+ */
+export interface ApprovalReason {
+  code: string;
+  label: string;
+  detail: string;
+  violationAmount?: number;
+  violationPercent?: number;
+}
+
+/**
+ * S4-05: Đơn hàng trong danh sách chờ duyệt
+ */
+export interface PendingOrderResponse {
+  id: number;
+  code: string;
+  customerId: number;
+  customerCode: string;
+  customerName: string;
+  lineCount: number;
+  totalAmount: number;
+  submittedByUsername: string;
+  submittedAt: string;
+  reasons: ApprovalReason[];
+  desiredDeliveryDate?: string | null;
+}
+
+/**
+ * S4-05: Lịch sử phê duyệt đơn hàng (chỉ đọc, không sửa / xóa)
+ */
+export interface OrderApprovalHistoryResponse {
+  id: number;
+  action: string;
+  actionLabel: string;
+  fromStatus: string;
+  toStatus: string;
+  comment?: string;
+  actorUsername: string;
+  actorFullName: string;
+  createdAt: string;
+}
+
+export interface OrderApprovalActionRequest {
+  comment?: string;
+  confirmedDeliveryDate?: string | null;
+}
+

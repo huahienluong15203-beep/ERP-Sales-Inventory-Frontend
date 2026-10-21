@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from '../../routes/Router';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Supplier, SupplierStatus } from '../../types/supplier';
 import {
@@ -17,18 +18,19 @@ import { Icons } from '../../components/common/Icons';
 import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 
 export const SupplierManagementPage: React.FC = () => {
+  const navigate = useNavigate();
   const { currentRole, user, showToast } = useAuth();
 
-  // Quyền quản lý (ADMIN, Quản lý kho WH_MANAGER, Nhân viên kho WAREHOUSE)
+  // Quyền quản lý nhà cung cấp: Chỉ ADMIN và Quản lý kho (WH_MANAGER). Thủ kho (ROLE_WAREHOUSE) chỉ có quyền tra cứu/xem phục vụ nhập kho (S2-09 / S5-04)
   const canManage = useMemo(() => {
-    if (!currentRole) return true;
+    if (!currentRole) return false;
     const r = currentRole.toUpperCase();
-    if (r.includes('ADMIN') || r.includes('WH_MANAGER') || r.includes('WAREHOUSE')) {
+    if (r.includes('ADMIN') || r.includes('WH_MANAGER')) {
       return true;
     }
     return (user?.roles || []).some((userRole) => {
       const ur = String(userRole).toUpperCase();
-      return ur.includes('ADMIN') || ur.includes('WH_MANAGER') || ur.includes('WAREHOUSE');
+      return ur.includes('ADMIN') || ur.includes('WH_MANAGER');
     });
   }, [currentRole, user]);
 
@@ -110,10 +112,9 @@ export const SupplierManagementPage: React.FC = () => {
     }
   };
 
-  // Mở modal tạo mới
+  // Điều hướng sang trang riêng Khai báo đối tác cung ứng mới
   const handleOpenCreate = () => {
-    setEditingSupplier(null);
-    setIsFormOpen(true);
+    navigate('/suppliers/create');
   };
 
   // Mở modal sửa
@@ -178,27 +179,27 @@ export const SupplierManagementPage: React.FC = () => {
   useClampPage(currentPage, totalPages, setCurrentPage, loading);
 
   return (
-    <div className="w-full min-w-0 space-y-6 animate-in fade-in duration-200">
+    <div className="w-full min-w-0 space-y-3.5 animate-in fade-in duration-200">
       {/* Tiêu đề trang & Nút thao tác chính */}
-      <div className="flex items-center justify-end gap-2.5">
+      <div className="flex items-center justify-end gap-2">
         {/* Thanh tác vụ */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             onClick={loadData}
             disabled={loading}
             title="Làm mới danh sách nhà cung cấp"
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:text-[#F85606] hover:border-orange-300 rounded-xl hover:bg-orange-50/40 text-sm font-semibold transition-all cursor-pointer shadow-xs min-h-[44px]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:text-[#F85606] hover:border-orange-300 rounded-lg hover:bg-orange-50/40 text-xs font-semibold transition-all cursor-pointer shadow-2xs h-9"
           >
-            <Icons.RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <Icons.RefreshCw size={14} />
             <span>Làm mới</span>
           </button>
 
           {canManage && (
             <button
               onClick={handleOpenCreate}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs hover:shadow transition-all cursor-pointer min-h-[44px]"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow transition-all cursor-pointer h-9"
             >
-              <Icons.Plus size={18} />
+              <Icons.Plus size={16} />
               <span>Thêm đối tác mới</span>
             </button>
           )}

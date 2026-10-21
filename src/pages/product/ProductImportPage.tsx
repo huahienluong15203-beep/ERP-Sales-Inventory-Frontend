@@ -146,7 +146,17 @@ export const ProductImportPage: React.FC = () => {
     if (!analysis) return [];
     return analysis.rows.filter((r) => {
       if (filterAction !== 'ALL' && r.action !== filterAction) return false;
-      return matchesKeyword(keyword, r.sku, r.name, r.category, r.errors.join(' '), String(r.rowNumber));
+      return matchesKeyword(
+        keyword,
+        r.sku,
+        r.name,
+        r.category,
+        r.categoryPath,
+        r.department,
+        r.subCategory,
+        r.errors.join(' '),
+        String(r.rowNumber)
+      );
     });
   }, [analysis, filterAction, keyword]);
 
@@ -205,9 +215,21 @@ export const ProductImportPage: React.FC = () => {
   );
 
   return (
-    <div className="w-full min-w-0 space-y-5">
+    <div className="w-full min-w-0 space-y-4">
+      {/* Nút quay lại ở góc trên bên trái */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => navigate('/products')}
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-700 hover:text-[#F85606] hover:bg-orange-50 hover:border-orange-200 transition cursor-pointer shadow-2xs active:scale-95"
+        >
+          <Icons.ChevronLeft size={16} />
+          <span>Về danh mục sản phẩm</span>
+        </button>
+      </div>
+
       {/* Tiêu đề trang */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs">
+      <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs">
         <div className="flex items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-[#F85606] border border-orange-200/60">
             <Icons.ClipboardList size={22} />
@@ -221,14 +243,6 @@ export const ProductImportPage: React.FC = () => {
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate('/products')}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 min-h-[44px] shrink-0"
-        >
-          <Icons.ChevronLeft size={16} />
-          <span>Về danh mục sản phẩm</span>
-        </button>
       </div>
 
       {/* Các bước */}
@@ -345,17 +359,27 @@ export const ProductImportPage: React.FC = () => {
               <div>
                 <h4 className="font-bold text-gray-900">Tệp mẫu chuẩn hoá danh mục sản phẩm</h4>
                 <p className="text-gray-600 mt-0.5 text-xs sm:text-sm">
-                  Có sẵn các cột: Mã SKU, Tên sản phẩm, Nhóm hàng, ĐVT, Quy cách, Giá vốn, Mã vạch, Trạng thái.
+                  Có sẵn các cột: Mã SKU, Tên sản phẩm, Ngành hàng (Cấp 1), Nhóm hàng (Cấp 2), Phân nhóm (Cấp 3), ĐVT, Giá niêm yết, Giá vốn, Mã vạch.
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleDownloadTemplate}
-              className="rounded-xl bg-[#F85606] hover:bg-[#E04D05] px-4 py-2.5 font-bold text-white shrink-0 min-h-[44px]"
-            >
-              ↓ Tải tệp mẫu (.xlsx)
-            </button>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                className="rounded-xl border border-orange-300 bg-white hover:bg-orange-50 px-3.5 py-2.5 font-bold text-[#F85606] text-xs sm:text-sm shrink-0 min-h-[44px] transition-all cursor-pointer shadow-2xs"
+              >
+                ↓ Tải tệp mẫu trống (.xlsx)
+              </button>
+              <a
+                href="/Mau_Nhap_5000_SanPham_ERP.xlsx"
+                download="Mau_Nhap_5000_SanPham_ERP.xlsx"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#F85606] hover:bg-[#E04D05] px-4 py-2.5 font-bold text-white text-xs sm:text-sm shrink-0 min-h-[44px] shadow-xs hover:shadow transition-all"
+              >
+                <Icons.FileSpreadsheet size={16} />
+                <span>Tải dữ liệu mẫu 5.000 sản phẩm (.xlsx)</span>
+              </a>
+            </div>
           </div>
 
           <div
@@ -489,7 +513,7 @@ export const ProductImportPage: React.FC = () => {
                     <th className="px-3 py-3 text-center w-28">Phân loại</th>
                     <th className="px-3 py-3">Mã SKU</th>
                     <th className="px-4 py-3">Tên sản phẩm</th>
-                    <th className="px-3 py-3">Nhóm hàng</th>
+                    <th className="px-3 py-3">Cây phân cấp / Nhóm hàng</th>
                     <th className="px-3 py-3">ĐVT / Quy cách</th>
                     <th className="px-3 py-3 text-right">Giá vốn</th>
                     <th className="px-4 py-3">Chi tiết / Báo lỗi</th>
@@ -532,7 +556,22 @@ export const ProductImportPage: React.FC = () => {
                         </td>
                         <td className="px-3 py-2.5 font-mono font-bold text-gray-900 whitespace-nowrap">{row.sku || '—'}</td>
                         <td className="px-4 py-2.5 font-medium text-gray-900">{row.name || '—'}</td>
-                        <td className="px-3 py-2.5 text-gray-600">{row.category}</td>
+                        <td className="px-3 py-2.5 text-gray-700">
+                          <div className="font-medium text-gray-900 flex items-center gap-1.5 flex-wrap">
+                            <span>{row.categoryPath || row.category}</span>
+                            {row.categoryLevel != null && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                Cấp {row.categoryLevel}
+                              </span>
+                            )}
+                          </div>
+                          {(row.department || row.subCategory) && (
+                            <div className="text-[11px] text-gray-400 mt-0.5">
+                              {row.department && <span>Ngành: {row.department}</span>}
+                              {row.subCategory && <span className="ml-2">Phân nhóm: {row.subCategory}</span>}
+                            </div>
+                          )}
+                        </td>
                         <td className="px-3 py-2.5 text-gray-600">
                           <div className="font-medium text-gray-800">{row.baseUnit || '—'}</div>
                           {row.packagingSpec && <div className="text-xs text-gray-400">{row.packagingSpec}</div>}
@@ -554,7 +593,19 @@ export const ProductImportPage: React.FC = () => {
                               ))}
                             </ul>
                           ) : row.action === 'UPDATE' ? (
-                            <span className="text-xs text-amber-700">SKU đã có — sẽ ghi đè thông tin mới</span>
+                            row.levelChanged ? (
+                              <div className="flex flex-col gap-0.5">
+                                <span className="inline-flex items-center gap-1 text-xs text-amber-800 font-semibold bg-amber-100/80 border border-amber-300 rounded px-1.5 py-0.5 w-fit">
+                                  <Icons.RefreshCw size={12} className="shrink-0" />
+                                  Ghi đè & đổi cấp cây
+                                </span>
+                                <span className="text-[11px] text-gray-500">
+                                  Cập nhật cấp cây: {row.categoryPath || row.category}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-amber-700">SKU đã có — sẽ ghi đè thông tin mới</span>
+                            )
                           ) : (
                             <span className="text-xs text-emerald-600">Hợp lệ để tạo mới</span>
                           )}
@@ -583,7 +634,7 @@ export const ProductImportPage: React.FC = () => {
           {/* Tuỳ chọn */}
           <div className="space-y-2 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-700">
             <p>
-              <strong>SKU đã có trên hệ thống</strong> sẽ được cập nhật theo file ({analysis.updateCount.toLocaleString('vi-VN')} sản
+              <strong>SKU đã có trên hệ thống hoặc lặp lại trong file</strong> sẽ được cập nhật/ghi đè theo thông tin và cấp cây mới nhất ({analysis.updateCount.toLocaleString('vi-VN')} sản
               phẩm). Ô Giá vốn / Trạng thái để trống thì giữ nguyên giá trị cũ.
             </p>
             {analysis.errorCount > 0 && (

@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from '../../routes/Router';
 import type { PriceList, CustomerGroupType } from '../../types/pricing';
 import {
   fetchPriceLists,
   fetchPriceListStats,
-  changePriceListStatus
+  changePriceListStatus,
+  deletePriceList
 } from '../../services/pricingApi';
 import type { PriceListStatsData } from '../../services/pricingApi';
 import { useUrlPaging } from '../../hooks/useUrlParams';
@@ -15,9 +17,11 @@ import { PriceListTable } from '../../components/pricing/PriceListTable';
 import { PriceListDetailModal } from '../../components/pricing/PriceListDetailModal';
 import { PriceListFormModal } from '../../components/pricing/PriceListFormModal';
 import { CloneVersionModal } from '../../components/pricing/CloneVersionModal';
+import { DeletePriceListModal } from '../../components/pricing/DeletePriceListModal';
 import { Icons } from '../../components/common/Icons';
 
 export const PriceListPage: React.FC = () => {
+  const navigate = useNavigate();
   const { currentRole, user, showToast } = useAuth();
 
   // Kiểm tra quyền hạn theo quy định RBAC S2-10
@@ -61,6 +65,7 @@ export const PriceListPage: React.FC = () => {
   const [formModalOpen, setFormModalOpen] = useState<boolean>(false);
   const [editingItem, setEditingItem] = useState<PriceList | null>(null);
   const [cloneModalItem, setCloneModalItem] = useState<PriceList | null>(null);
+  const [deleteModalItem, setDeleteModalItem] = useState<PriceList | null>(null);
 
   // Tải 1 trang bảng giá (Backend lọc + phân trang) và số liệu thẻ đầu trang
   const loadData = useCallback(async () => {
@@ -112,22 +117,20 @@ export const PriceListPage: React.FC = () => {
       );
       loadData();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi đổi trạng thái');
+      showToast?.('Lỗi', err instanceof Error ? err.message : 'Lỗi khi đổi trạng thái', 'error');
     }
   };
 
   const handleOpenCreate = () => {
-    setEditingItem(null);
-    setFormModalOpen(true);
+    navigate('/pricing/create');
   };
 
   const handleOpenEdit = (item: PriceList) => {
     if (item.hasOrders) {
-      alert('Bảng giá đã phát sinh đơn hàng nên không thể sửa. Vui lòng tạo phiên bản mới.');
+      showToast?.('Không thể sửa', 'Bảng giá đã phát sinh đơn hàng nên không thể sửa. Vui lòng tạo phiên bản mới.', 'info');
       return;
     }
-    setEditingItem(item);
-    setFormModalOpen(true);
+    navigate(`/pricing/${item.id}/edit`);
   };
 
   const handleOpenClone = (item: PriceList) => {
@@ -152,27 +155,41 @@ export const PriceListPage: React.FC = () => {
     loadData();
   };
 
+  const handleDeletePriceList = (item: PriceList) => {
+    setDeleteModalItem(item);
+  };
+
+  const handleConfirmDeletePriceList = async (item: PriceList) => {
+    await deletePriceList(item.id);
+    showToast?.(
+      'Thành công',
+      `Đã xoá bảng giá ${item.code} thành công!`,
+      'success'
+    );
+    loadData();
+  };
+
   return (
-    <div className="w-full min-w-0 space-y-6">
+    <div className="w-full min-w-0 space-y-3.5">
       {/* Nút thao tác chính */}
-      <div className="flex items-center justify-end gap-2.5">
+      <div className="flex items-center justify-end gap-2">
         {/* Thanh tác vụ */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             onClick={loadData}
             disabled={loading}
             title="Làm mới danh sách bảng giá"
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:text-[#F85606] hover:border-orange-200 rounded-xl hover:bg-gray-50 text-xs sm:text-sm font-semibold transition-colors cursor-pointer shadow-xs min-h-[44px]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:text-[#F85606] hover:border-orange-200 rounded-lg hover:bg-gray-50 text-xs font-semibold transition-colors cursor-pointer shadow-2xs h-9"
           >
-            <Icons.RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <Icons.RefreshCw size={14} />
             <span>Làm mới</span>
           </button>
 
           <a
             href="/pricing/discounts"
-            className="min h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-300 rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition-colors"
+            className="h-9 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-300 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
           >
-            <Icons.Percent size={16} className="text-indigo-600" />
+            <Icons.Percent size={14} className="text-indigo-600" />
             <span className="hidden sm:inline">Chiết khấu sản lượng</span>
             <span className="sm:hidden">CK Sản lượng</span>
           </a>
@@ -180,9 +197,9 @@ export const PriceListPage: React.FC = () => {
           {canManage && (
             <button
               onClick={handleOpenCreate}
-              className="min h-[43px] inline-flex items-center gap-2 px-4 py-2.5 bg-[#F85606] hover:bg-[#E04D05] text-white text-xs sm:text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+              className="h-9 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#F85606] hover:bg-[#E04D05] text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow transition-all cursor-pointer"
             >
-              <Icons.Plus size={18} />
+              <Icons.Plus size={16} />
               <span>Khai báo bảng giá mới</span>
             </button>
           )}
@@ -231,6 +248,7 @@ export const PriceListPage: React.FC = () => {
           onEdit={handleOpenEdit}
           onCloneVersion={handleOpenClone}
           onToggleStatus={handleToggleStatus}
+          onDelete={handleDeletePriceList}
           keyword={keywordInput}
           onKeywordChange={setKeywordInput}
           selectedGroup={urlParams.group}
@@ -285,6 +303,20 @@ export const PriceListPage: React.FC = () => {
           originalList={cloneModalItem}
           onClose={() => setCloneModalItem(null)}
           onSuccess={handleCloneSuccess}
+        />
+      )}
+
+      {/* Modal Xác nhận xoá bảng giá */}
+      {deleteModalItem && (
+        <DeletePriceListModal
+          isOpen={!!deleteModalItem}
+          priceList={deleteModalItem}
+          onClose={() => setDeleteModalItem(null)}
+          onConfirm={handleConfirmDeletePriceList}
+          onCloneVersion={(item) => {
+            setDeleteModalItem(null);
+            handleOpenClone(item);
+          }}
         />
       )}
     </div>

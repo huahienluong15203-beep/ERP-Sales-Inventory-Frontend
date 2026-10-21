@@ -8,14 +8,48 @@ import {
   productService
 } from '../../../services/productService';
 import { fetchCategories, type CategoryWithCount } from '../../../services/categoryApi';
+import { toggleProductBatchManagement } from '../../../services/productLotApi';
 import { useAuth } from '../../../contexts/AuthContext';
 import { Icons } from '../../../components/common/Icons';
+import { SearchSelect } from '../../../components/common/SearchSelect';
+import { NumberInput } from '../../../components/common/NumberInput';
 
 interface ProductFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (message: string) => void;
   productToEdit?: Product | null;
+}
+ 
+/**
+ * Kiểm tra tính hợp lệ của đường dẫn ảnh sản phẩm.
+ * - Cho phép rỗng (ảnh không bắt buộc).
+ * - Bắt buộc phải là HTTP/HTTPS và có tên miền hợp lệ.
+ * - Kiểm tra định dạng đuôi tệp phổ biến nếu có phần mở rộng.
+ */
+export function validateImageUrl(url: string): string | null {
+  if (!url || !url.trim()) return null;
+  const trimmed = url.trim();
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return 'Đường dẫn ảnh phải bắt đầu bằng http:// hoặc https://';
+    }
+    if (!parsed.hostname.includes('.') && parsed.hostname !== 'localhost') {
+      return 'Tên miền không hợp lệ (ví dụ: https://example.com/anh.jpg)';
+    }
+    const pathname = parsed.pathname.toLowerCase();
+    const hasExtension = /\.[a-z0-9]+$/i.test(pathname);
+    if (hasExtension) {
+      const isImageExt = /\.(jpe?g|png|webp|gif|svg|avif|bmp|ico)$/i.test(pathname);
+      if (!isImageExt) {
+        return 'Định dạng tệp không được hỗ trợ (vui lòng dùng link ảnh .jpg, .png, .webp, .gif, .svg)';
+      }
+    }
+    return null;
+  } catch {
+    return 'Đường dẫn ảnh không đúng định dạng URL hợp lệ';
+  }
 }
 
 export const ProductFormModal: React.FC<ProductFormModalProps> = ({
@@ -38,11 +72,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [costPrice, setCostPrice] = useState<number | string>(0);
   const [imageUrl, setImageUrl] = useState('');
   const [status, setStatus] = useState<ProductStatus>('ACTIVE');
+  const [hasBatchManagement, setHasBatchManagement] = useState(false);
 
   const [skuError, setSkuError] = useState<string | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreviewError, setImagePreviewError] = useState(false);
+  const [imageUrlError, setImageUrlError] = useState<string | null>(null);
 
   const isEditing = Boolean(productToEdit);
 
@@ -79,6 +115,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         setCostPrice(productToEdit.costPrice || 0);
         setImageUrl(productToEdit.imageUrl || '');
         setStatus(productToEdit.status || 'ACTIVE');
+        setHasBatchManagement(Boolean(productToEdit.hasBatchManagement));
       } else {
         setSku('');
         setName('');
@@ -89,10 +126,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         setCostPrice(0);
         setImageUrl('');
         setStatus('ACTIVE');
+        setHasBatchManagement(false);
       }
       setSkuError(null);
       setGeneralError(null);
       setImagePreviewError(false);
+      setImageUrlError(null);
     }
   }, [isOpen, productToEdit]);
 
@@ -174,6 +213,17 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }
   };
 
+  const handleImageUrlChange = (val: string) => {
+    setImageUrl(val);
+    setImagePreviewError(false);
+    if (!val.trim()) {
+      setImageUrlError(null);
+      return;
+    }
+    const err = validateImageUrl(val);
+    setImageUrlError(err);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralError(null);
@@ -203,6 +253,20 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       return;
     }
 
+    if (imageUrl.trim()) {
+      const urlErr = validateImageUrl(imageUrl);
+      if (urlErr) {
+        setImageUrlError(urlErr);
+        setGeneralError(urlErr);
+        return;
+      }
+      if (imagePreviewError) {
+        setImageUrlError('Không thể tải hình ảnh từ đường dẫn này.');
+        setGeneralError('Hình ảnh không hợp lệ hoặc không tải được. Vui lòng kiểm tra lại liên kết ảnh hoặc xóa trống.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const parsedCost = canEditCost ? Number(costPrice) || 0 : productToEdit?.costPrice || 0;
@@ -223,6 +287,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
         const res = await productService.updateProduct(productToEdit.id, updatePayload, currentRole);
         if (res.success) {
+          if (hasBatchManagement !== Boolean(productToEdit.hasBatchManagement)) {
+            await toggleProductBatchManagement(productToEdit.id, hasBatchManagement).catch(() => {});
+          }
           onSuccess(res.message);
           onClose();
         } else {
@@ -243,6 +310,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
         const res = await productService.createProduct(createPayload, currentRole);
         if (res.success) {
+          if (res.product?.id && hasBatchManagement) {
+            await toggleProductBatchManagement(res.product.id, true).catch(() => {});
+          }
           onSuccess(res.message);
           onClose();
         } else {
@@ -261,7 +331,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] my-auto flex flex-col shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95">
+      <div className="bg-white rounded-2xl max-w-4xl lg:max-w-5xl w-full max-h-[92vh] my-auto flex flex-col shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95">
         {/* Header Modal */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-orange-50/70 to-white shrink-0">
           <div className="flex items-center gap-3">
@@ -297,27 +367,71 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               </div>
             )}
 
-            {/* 1. Mã SKU & Trạng thái kinh doanh */}
-            {isEditing ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+            {/* 1. Mã SKU & 2. Tên sản phẩm (Căn đều 50% - 50% thẳng hàng với các dòng dưới) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
                     1. Mã SKU duy nhất <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={sku}
-                    disabled
-                    className="w-full px-3.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-sm font-mono font-semibold uppercase tracking-wider text-gray-700 opacity-80 cursor-not-allowed min-h-[44px]"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">Mã SKU cố định không được thay đổi</p>
+                  {!isEditing ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      Mặc định: Đang kinh doanh
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-gray-400 font-medium">Mã cố định</span>
+                  )}
                 </div>
+                <input
+                  type="text"
+                  value={sku}
+                  disabled={isEditing || isSubmitting}
+                  onChange={(e) => handleSkuChange(e.target.value)}
+                  placeholder="VD: SP-COCA-330"
+                  className={`w-full px-3.5 py-2.5 rounded-xl text-sm font-mono font-semibold uppercase tracking-wider min-h-[44px] transition-all ${
+                    isEditing
+                      ? 'bg-gray-100 border border-gray-200 text-gray-700 opacity-80 cursor-not-allowed'
+                      : skuError
+                      ? 'bg-gray-50 border border-red-400 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 text-gray-900'
+                      : 'bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-gray-900'
+                  }`}
+                />
+                {skuError && !isEditing ? (
+                  <p className="text-xs text-red-600 font-medium mt-1">{skuError}</p>
+                ) : (
+                  <p className="text-xs text-gray-400 mt-1">
+                    {isEditing
+                      ? 'Mã SKU cố định không được thay đổi'
+                      : 'Mã nhận diện duy nhất toàn hệ thống (không trùng lặp)'}
+                  </p>
+                )}
+              </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+                  2. Tên sản phẩm chuẩn hóa <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="VD: Nước ngọt có gas Coca-Cola lon 330ml"
+                  disabled={isSubmitting}
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
+                />
+                <p className="text-xs text-gray-400 mt-1">Tên chuẩn hóa dùng trên chứng từ và thẻ kho</p>
+              </div>
+            </div>
+
+            {/* Trạng thái kinh doanh (chỉ hiển thị khi chỉnh sửa sản phẩm) */}
+            {isEditing && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
                     Trạng thái kinh doanh <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <SearchSelect
                     value={status}
                     onChange={(e) => setStatus(e.target.value as ProductStatus)}
                     disabled={isSubmitting}
@@ -325,68 +439,44 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   >
                     <option value="ACTIVE">Đang kinh doanh (ACTIVE)</option>
                     <option value="INACTIVE">Ngừng kinh doanh (INACTIVE)</option>
-                  </select>
+                  </SearchSelect>
                   <p className="text-xs text-gray-400 mt-1">Chuyển sang "Ngừng kinh doanh" khi sản phẩm ngừng lưu hành</p>
                 </div>
-              </div>
-            ) : (
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    1. Mã SKU duy nhất <span className="text-red-500">*</span>
-                  </label>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    Mặc định: Đang kinh doanh
-                  </span>
+                <div className="flex items-center">
+                  <div
+                    className={`p-3 rounded-xl border w-full text-xs flex items-center gap-2 ${
+                      status === 'ACTIVE'
+                        ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
+                        : 'bg-amber-50/80 border-amber-200 text-amber-800'
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full shrink-0 ${
+                        status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-amber-500'
+                      }`}
+                    />
+                    <span>
+                      {status === 'ACTIVE'
+                        ? 'Sản phẩm đang kinh doanh: cho phép xuất nhập kho và lên đơn bán hàng.'
+                        : 'Ngừng kinh doanh: không cho phép tạo mới đơn hàng bán cho sản phẩm này.'}
+                    </span>
+                  </div>
                 </div>
-                <input
-                  type="text"
-                  value={sku}
-                  onChange={(e) => handleSkuChange(e.target.value)}
-                  placeholder="VD: SP-COCA-330"
-                  disabled={isSubmitting}
-                  className={`w-full px-3.5 py-2.5 bg-gray-50 border rounded-xl text-sm font-mono font-semibold uppercase tracking-wider text-gray-900 focus:outline-none focus:ring-2 transition-all min-h-[44px] ${
-                    skuError
-                      ? 'border-red-400 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-gray-200 focus:ring-orange-500/20 focus:border-orange-500'
-                  }`}
-                />
-                {skuError ? (
-                  <p className="text-xs text-red-600 font-medium mt-1">{skuError}</p>
-                ) : (
-                  <p className="text-xs text-gray-400 mt-1">Mã nhận diện duy nhất toàn hệ thống (không trùng lặp)</p>
-                )}
               </div>
             )}
-
-            {/* 2. Tên sản phẩm */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
-                2. Tên sản phẩm chuẩn hóa <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="VD: Nước ngọt có gas Coca-Cola lon 330ml"
-                disabled={isSubmitting}
-                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
-              />
-            </div>
 
             {/* 3. Nhóm hàng & 4. ĐVT cơ sở */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    3. Nhóm hàng (Cây S2-06) <span className="text-red-500">*</span>
+                    3. Nhóm hàng (Cây phân cấp) <span className="text-red-500">*</span>
                   </label>
                   {loadingCategories && (
                     <span className="text-[11px] text-gray-400">Đang tải cây...</span>
                   )}
                 </div>
-                <select
+                <SearchSelect
                   value={categoryId || category}
                   onChange={(e) => handleCategoryChange(e.target.value)}
                   disabled={isSubmitting}
@@ -406,7 +496,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       </option>
                     ))
                   )}
-                </select>
+                </SearchSelect>
                 {selectedCategoryPath && (
                   <div className="mt-1.5 flex items-center gap-1.5 text-xs text-orange-700 bg-orange-50/80 px-2.5 py-1 rounded-lg border border-orange-200/50">
                     <Icons.Building2 size={13} className="shrink-0 text-orange-600" />
@@ -420,7 +510,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
                   4. Đơn vị tính cơ sở <span className="text-red-500">*</span>
                 </label>
-                <select
+                <SearchSelect
                   value={baseUnit}
                   onChange={(e) => setBaseUnit(e.target.value)}
                   disabled={isSubmitting}
@@ -431,80 +521,84 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       {u}
                     </option>
                   ))}
-                </select>
+                </SearchSelect>
                 <p className="text-xs text-gray-400 mt-1">Đơn vị nhỏ nhất dùng để ghi sổ thẻ kho và tính tồn</p>
               </div>
             </div>
 
-            {/* 5. Quy cách đóng gói */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
-                5. Quy cách đóng gói
-              </label>
-              <input
-                type="text"
-                value={packagingSpec}
-                onChange={(e) => setPackagingSpec(e.target.value)}
-                placeholder="VD: 24 lon / thùng (4 lốc x 6 lon)"
-                disabled={isSubmitting}
-                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
-              />
-            </div>
-
-            {/* 6. GIÁ VỐN (Bảo mật RBAC EP-02) */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                  6. Giá vốn (VNĐ)
+            {/* 5. Quy cách đóng gói & 6. GIÁ VỐN (Bảo mật RBAC EP-02) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+                  5. Quy cách đóng gói
                 </label>
-                {canEditCost ? (
-                  <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
-                    Quyền hạn: Quản lý KD / Admin
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
-                    <Icons.Lock size={12} />
-                    Bảo mật: Bị khóa theo vai trò
-                  </span>
-                )}
+                <input
+                  type="text"
+                  value={packagingSpec}
+                  onChange={(e) => setPackagingSpec(e.target.value)}
+                  placeholder="VD: 24 lon / thùng (4 lốc x 6 lon)"
+                  disabled={isSubmitting}
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
+                />
+                <p className="text-xs text-gray-400 mt-1">VD: 24 lon / thùng, 12 chai / két...</p>
               </div>
 
-              {canEditCost ? (
-                <div>
-                  <div className="flex rounded-xl border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-500 transition-all overflow-hidden min-h-[44px]">
-                    <input
-                      type="number"
-                      min="0"
-                      step="1000"
-                      value={costPrice}
-                      onChange={(e) => setCostPrice(e.target.value)}
-                      disabled={isSubmitting}
-                      placeholder="VD: 215000"
-                      className="flex-1 px-3.5 py-2.5 bg-transparent text-sm font-semibold text-gray-900 focus:outline-none min-h-[44px]"
-                    />
-                    <span className="bg-gray-100 px-3.5 flex items-center justify-center border-l border-gray-200 text-xs font-bold text-gray-500 select-none shrink-0">
-                      VNĐ
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                    6. Giá vốn (VNĐ)
+                  </label>
+                  {canEditCost ? (
+                    <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
+                      Quyền hạn: Quản lý KD / Admin
                     </span>
-                  </div>
-                  {Number(costPrice) > 0 && (
-                    <div className="mt-1.5 flex items-center justify-between text-[11px] text-gray-500">
-                      <span>Quy đổi:</span>
-                      <span className="font-bold text-orange-600 font-mono">
-                        {formatCurrencyVND(Number(costPrice) || 0)}
-                      </span>
-                    </div>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
+                      <Icons.Lock size={12} />
+                      Bảo mật: Bị khóa theo vai trò
+                    </span>
                   )}
                 </div>
-              ) : (
-                <div className="relative">
-                  <input
-                    type="text"
-                    disabled
-                    value="•••••• (Bạn không có quyền xem/sửa giá vốn)"
-                    className="w-full px-3.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-400 cursor-not-allowed italic min-h-[44px]"
-                  />
-                </div>
-              )}
+
+                {canEditCost ? (
+                  <div>
+                    <div className="flex rounded-xl border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-500 transition-all overflow-hidden min-h-[44px]">
+                      <NumberInput
+                        min="0"
+                        step="1000"
+                        value={costPrice}
+                        onChange={(e) => setCostPrice(e.target.value)}
+                        disabled={isSubmitting}
+                        placeholder="VD: 215000"
+                        className="flex-1 px-3.5 py-2.5 bg-transparent text-sm font-semibold text-gray-900 focus:outline-none min-h-[44px]"
+                      />
+                      <span className="bg-gray-100 px-3.5 flex items-center justify-center border-l border-gray-200 text-xs font-bold text-gray-500 select-none shrink-0">
+                        VNĐ
+                      </span>
+                    </div>
+                    {Number(costPrice) > 0 ? (
+                      <div className="mt-1.5 flex items-center justify-between text-[11px] text-gray-500">
+                        <span>Quy đổi:</span>
+                        <span className="font-bold text-orange-600 font-mono">
+                          {formatCurrencyVND(Number(costPrice) || 0)}
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 mt-1">Giá vốn ban đầu tính theo ĐVT cơ sở</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      disabled
+                      value="•••••• (Bạn không có quyền xem/sửa giá vốn)"
+                      className="w-full px-3.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-400 cursor-not-allowed italic min-h-[44px]"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Chỉ Quản lý KD / Admin xem được giá vốn</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 7. URL Ảnh sản phẩm */}
@@ -512,32 +606,110 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
                 7. Đường dẫn hình ảnh (URL)
               </label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={(e) => {
-                    setImageUrl(e.target.value);
-                    setImagePreviewError(false);
-                  }}
-                  placeholder="https://example.com/images/coca-cola-330ml.jpg"
-                  disabled={isSubmitting}
-                  className="flex-1 px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
-                />
+              <div className="flex items-start gap-3">
+                <div className="flex-1">
+                  <div className="relative">
+                    <input
+                      type="url"
+                      value={imageUrl}
+                      onChange={(e) => handleImageUrlChange(e.target.value)}
+                      placeholder="https://example.com/images/coca-cola-330ml.jpg"
+                      disabled={isSubmitting}
+                      className={`w-full px-3.5 py-2.5 rounded-xl text-sm transition-all min-h-[44px] ${
+                        imageUrlError || imagePreviewError
+                          ? 'bg-red-50/50 border border-red-300 text-red-900 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                          : 'bg-gray-50 border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500'
+                      }`}
+                    />
+                    {imageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => handleImageUrlChange('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 rounded-lg cursor-pointer"
+                        title="Xóa link ảnh"
+                      >
+                        <Icons.X size={15} />
+                      </button>
+                    )}
+                  </div>
 
-                <div className="w-11 h-11 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0">
-                  {imageUrl && !imagePreviewError ? (
+                  {/* Thông báo trạng thái / lỗi URL ảnh */}
+                  {imageUrlError ? (
+                    <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1.5 font-medium">
+                      <Icons.AlertCircle size={14} className="shrink-0 text-red-500" />
+                      <span>{imageUrlError}</span>
+                    </p>
+                  ) : imagePreviewError ? (
+                    <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1.5 font-medium">
+                      <Icons.AlertCircle size={14} className="shrink-0 text-red-500" />
+                      <span>Không thể tải hình ảnh từ liên kết này (link lỗi, 404 hoặc không phải ảnh).</span>
+                    </p>
+                  ) : imageUrl.trim() ? (
+                    <p className="text-xs text-emerald-600 mt-1.5 flex items-center gap-1.5">
+                      <Icons.CheckCircle2 size={14} className="shrink-0 text-emerald-500" />
+                      <span>Đường dẫn ảnh hợp lệ</span>
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Hỗ trợ link ảnh trực tiếp từ internet (.jpg, .png, .webp...). Bỏ trống nếu chưa có ảnh.
+                    </p>
+                  )}
+                </div>
+
+                {/* Hộp xem trước ảnh (Preview) */}
+                <div
+                  className={`w-11 h-11 rounded-xl border flex items-center justify-center overflow-hidden shrink-0 transition-all ${
+                    imageUrlError || imagePreviewError
+                      ? 'bg-red-50 border-red-300 text-red-500 shadow-2xs'
+                      : imageUrl.trim()
+                      ? 'bg-white border-orange-200 shadow-2xs'
+                      : 'bg-gray-100 border-gray-200 text-gray-400'
+                  }`}
+                  title={
+                    imageUrlError || imagePreviewError
+                      ? 'Ảnh không hợp lệ hoặc không tải được'
+                      : imageUrl.trim()
+                      ? 'Ảnh xem trước'
+                      : 'Chưa có ảnh'
+                  }
+                >
+                  {imageUrl.trim() && !imageUrlError && !imagePreviewError ? (
                     <img
-                      src={imageUrl}
+                      src={imageUrl.trim()}
                       alt="Preview"
+                      onLoad={() => setImagePreviewError(false)}
                       onError={() => setImagePreviewError(true)}
                       className="w-full h-full object-cover"
                     />
+                  ) : imageUrlError || imagePreviewError ? (
+                    <Icons.AlertTriangle size={20} className="text-red-500" />
                   ) : (
                     <Icons.Package size={20} className="text-gray-400" />
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* 8. QUẢN LÝ THEO LÔ & HẠN SỬ DỤNG (FEFO) */}
+            <div className="p-3.5 rounded-xl bg-orange-50/50 border border-orange-200/80 flex items-center justify-between gap-3">
+              <div>
+                <label className="text-xs font-bold text-gray-900 block">
+                  Bật quản lý theo lô & hạn sử dụng (FEFO)
+                </label>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  Theo dõi số lô, ngày sản xuất và hạn sử dụng khi nhập xuất kho cho sản phẩm này.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={hasBatchManagement}
+                  onChange={(e) => setHasBatchManagement(e.target.checked)}
+                  disabled={isSubmitting}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F85606]"></div>
+              </label>
             </div>
           </div>
 
@@ -553,7 +725,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || Boolean(skuError)}
+              disabled={isSubmitting || Boolean(skuError) || Boolean(imageUrlError) || imagePreviewError}
               className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-sm font-semibold shadow-xs hover:shadow transition-all duration-200 flex items-center gap-2 min-h-[44px] disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (

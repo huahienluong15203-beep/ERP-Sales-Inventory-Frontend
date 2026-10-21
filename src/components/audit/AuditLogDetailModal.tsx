@@ -12,7 +12,8 @@ import {
   Copy,
   TrendingDown,
   TrendingUp,
-  ShieldCheck
+  ShieldCheck,
+  ArrowRight
 } from '../common/Icons';
 
 interface AuditLogDetailModalProps {
@@ -37,6 +38,47 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
   const isDecrease = log.deltaType === 'decrease';
   const isIncrease = log.deltaType === 'increase';
 
+  const STATUS_TRANSLATIONS: Record<string, string> = {
+    // Trạng thái đơn hàng
+    'PENDING_APPROVAL': 'Chờ phê duyệt',
+    'APPROVED': 'Đã duyệt',
+    'PICKING': 'Đang soạn hàng',
+    'DISPATCHED': 'Đã xuất kho',
+    'DELIVERED': 'Đã giao hàng',
+    'DELIVERY_FAILED': 'Giao thất bại',
+    'COMPLETED': 'Đã hoàn thành',
+    'CLOSED': 'Đã hoàn thành',
+    'CANCELLED': 'Đã hủy',
+    'REJECTED': 'Từ chối duyệt',
+    'DRAFT': 'Bản nháp',
+    // Trạng thái đối tượng / kho
+    'ACTIVE': 'Đang hoạt động',
+    'INACTIVE': 'Ngừng hoạt động',
+    'LOCKED': 'Đã khóa',
+    'EXPIRED': 'Đã hết hạn',
+    'SAFE': 'An toàn',
+    'NEAR_EXPIRATION': 'Cận hạn',
+    'OUT_OF_STOCK': 'Hết hàng',
+    // Loại thực thể
+    'SALES_ORDER': 'Đơn đặt hàng',
+    'CUSTOMER': 'Đại lý / Khách hàng',
+    'PRODUCT': 'Sản phẩm',
+    'PRODUCT_LOT': 'Lô sản phẩm',
+    'GOODS_RECEIPT': 'Phiếu nhập kho',
+    'STOCK_TRANSFER': 'Phiếu chuyển kho',
+    'STOCK_TAKE': 'Phiếu kiểm kê',
+    'STOCK_ADJUSTMENT': 'Phiếu điều chỉnh tồn',
+    'PRICE_LIST': 'Bảng giá',
+    'SALES_INVOICE': 'Hóa đơn bán hàng',
+    'PAYMENT_RECEIPT': 'Phiếu thu tiền',
+    'SALES_RETURN': 'Phiếu trả hàng'
+  };
+
+  const translateEnum = (val: string): string => {
+    const trimmed = val.trim();
+    return STATUS_TRANSLATIONS[trimmed] || STATUS_TRANSLATIONS[trimmed.toUpperCase()] || trimmed;
+  };
+
   // Hàm format phòng thủ bảo đảm hiển thị thân thiện tiếng Việt kể cả khi dữ liệu là JSON thô
   const formatDetailValue = (val: string | undefined): string => {
     if (!val || val === '—') return '—';
@@ -52,15 +94,22 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
         if ('transactionLocked' in obj) {
           return obj.transactionLocked ? 'Đã khóa giao dịch' : 'Đang mở giao dịch';
         }
+        if ('price' in obj) {
+          return `${Number(obj.price || 0).toLocaleString('vi-VN')} đ`;
+        }
+        // Format tổng quát các keys
+        return Object.entries(obj)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(' • ');
       } catch {
         // Fallback giữ nguyên chuỗi
       }
     }
-    return val;
+    return translateEnum(val);
   };
 
   const formatDeltaValue = (delta: string | undefined): string => {
-    if (!delta || delta === '—') return '—';
+    if (!delta || delta === '—') return '';
     // Phòng ngừa trường hợp chuỗi delta bị ghép thô từ JSON {"creditLimit":...} ➔ {"creditLimit":...}
     if (delta.includes('➔') && delta.includes('creditLimit')) {
       const parts = delta.split('➔').map((s) => s.trim());
@@ -73,32 +122,40 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
         if (diffLim !== 0) {
           return `${diffLim > 0 ? '+' : ''}${diffLim.toLocaleString('vi-VN')} đ`;
         }
-        return '—';
+        return '';
       } catch {
         // Fallback
       }
     }
-    return delta;
+    // Dịch các mũi tên chuyển trạng thái (PENDING_APPROVAL ➔ APPROVED hoặc PENDING_APPROVAL -> APPROVED)
+    if (delta.includes('➔') || delta.includes('->')) {
+      const sep = delta.includes('➔') ? '➔' : '->';
+      const parts = delta.split(sep).map((s) => s.trim());
+      if (parts.length === 2) {
+        return `${translateEnum(parts[0])} → ${translateEnum(parts[1])}`;
+      }
+    }
+    return translateEnum(delta);
   };
 
   const displayOld = formatDetailValue(log.oldValue);
   const displayNew = formatDetailValue(log.newValue);
   const displayDelta = formatDeltaValue(log.deltaFormatted);
 
+  const hasDelta = Boolean(displayDelta && displayDelta !== '—');
+  const hasBothOldAndNew = displayOld !== '—' && displayNew !== '—';
+
   const handleCopyTrace = () => {
     const traceText = `[BẰNG CHỨNG KIỂM TOÁN HỆ THỐNG ERP]
 Mã Nhật Ký: #${log.id}
 Thời Điểm: ${formatDateTime(log.createdAt)}
 Người Thực Hiện: ${log.actorFullName} (@${log.actorUsername}) - ${log.actorRole || 'Nhân sự'}
-Phân Hệ: ${log.moduleLabel} (${log.module})
-Hành Động: ${log.actionLabel || log.action}
+Phân Hệ: ${log.moduleLabel}
 Đối Tượng: ${cleanTargetCode} (${log.targetName || ''})
 Giá Trị Trước: ${displayOld}
 Giá Trị Sau: ${displayNew}
 Chênh Lệch: ${displayDelta || 'N/A'}
-Lý Do & Căn Cứ: ${log.reason}
-Địa Chỉ IP: ${log.ipAddress || '127.0.0.1'}
-Yêu Cầu HTTP: ${log.httpMethod || 'POST'} ${log.requestUri || ''}`;
+Lý Do & Căn Cứ: ${log.reason}`;
 
     navigator.clipboard.writeText(traceText);
     setCopied(true);
@@ -163,16 +220,16 @@ Yêu Cầu HTTP: ${log.httpMethod || 'POST'} ${log.requestUri || ''}`;
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-4">
             <div>
               <span
-                className="text-xs font-bold px-2 py-0.5 rounded-md inline-block uppercase tracking-wider"
+                className="text-xs font-bold px-2.5 py-0.5 rounded-md inline-block uppercase tracking-wider"
                 style={{
                   backgroundColor: moduleMeta?.badgeBg || '#F1F5F9',
                   color: moduleMeta?.badgeColor || '#334155'
                 }}
               >
-                {log.moduleLabel} ({log.actionLabel || log.action})
+                {log.moduleLabel}
               </span>
               <h4 className="text-base font-bold text-slate-900 mt-1.5">
-                {log.targetName || log.targetType}
+                {log.targetName ? translateEnum(log.targetName) : translateEnum(log.targetType)}
               </h4>
               <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
                 <span>
@@ -189,7 +246,7 @@ Yêu Cầu HTTP: ${log.httpMethod || 'POST'} ${log.requestUri || ''}`;
                 )}
                 <span>•</span>
                 <span>
-                  Loại thực thể: <strong className="text-slate-700">{log.targetType}</strong>
+                  Loại thực thể: <strong className="text-slate-700">{translateEnum(log.targetType)}</strong>
                 </span>
               </div>
             </div>
@@ -202,61 +259,96 @@ Yêu Cầu HTTP: ${log.httpMethod || 'POST'} ${log.requestUri || ''}`;
             </div>
           </div>
 
-          {/* Đối chiếu so sánh: Trước (Cũ) ➔ Sau (Mới) ➔ Chênh lệch */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {/* Trước điều chỉnh */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center min-w-0 overflow-hidden flex flex-col justify-between">
-              <div>
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                  Giá Trị Trước (Cũ)
+          {/* Đối chiếu so sánh linh hoạt theo phân hệ */}
+          {hasDelta ? (
+            /* Dạng 3 cột: Có số liệu chênh lệch (Tồn kho, kiểm kê, đơn vị tính...) */
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Trước điều chỉnh */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center min-w-0 overflow-hidden flex flex-col justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                    Giá Trị Trước (Cũ)
+                  </span>
+                  <div className="mt-2 text-sm sm:text-base font-bold text-slate-600 line-through break-words [overflow-wrap:anywhere]">
+                    {displayOld}
+                  </div>
+                </div>
+                <span className="text-[11px] text-slate-400 mt-2 block">
+                  Ghi nhận trước thời điểm sửa
                 </span>
-                <div className="mt-2 text-sm sm:text-base font-bold text-slate-600 line-through break-words [overflow-wrap:anywhere]">
+              </div>
+
+              {/* Mức chênh lệch */}
+              <div
+                className={`p-4 rounded-xl border text-center flex flex-col justify-between items-center min-w-0 overflow-hidden ${
+                  isDecrease
+                    ? 'bg-rose-50/70 border-rose-200 text-rose-700'
+                    : isIncrease
+                    ? 'bg-emerald-50/70 border-emerald-200 text-emerald-700'
+                    : 'bg-slate-50 border-slate-200 text-slate-600'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
+                  {isIncrease && <TrendingUp size={15} />}
+                  {isDecrease && <TrendingDown size={15} />}
+                  <span>
+                    {isDecrease ? 'Lệch Giảm / Hao Hụt' : isIncrease ? 'Lệch Tăng / Bổ Sung' : 'Điều Chỉnh'}
+                  </span>
+                </div>
+                <div className="my-2 text-sm sm:text-base md:text-lg font-black tracking-tight break-words [overflow-wrap:anywhere]">
+                  {displayDelta}
+                </div>
+                <span className="text-[11px] opacity-80 block">Biến động số liệu thực tế</span>
+              </div>
+
+              {/* Sau điều chỉnh */}
+              <div className="p-4 rounded-xl bg-orange-50/60 border border-orange-200 text-center min-w-0 overflow-hidden flex flex-col justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-orange-700 uppercase tracking-wider block">
+                    Giá Trị Sau (Mới)
+                  </span>
+                  <div className="mt-2 text-sm sm:text-base font-extrabold text-orange-900 break-words [overflow-wrap:anywhere]">
+                    {displayNew}
+                  </div>
+                </div>
+                <span className="text-[11px] text-orange-600/80 mt-2 block font-medium">
+                  Áp dụng kể từ khi lưu vết
+                </span>
+              </div>
+            </div>
+          ) : hasBothOldAndNew ? (
+            /* Dạng 2 cột có mũi tên chuyển giao: Đổi trạng thái, đổi người phụ trách, đổi cấu hình */
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 min-w-0">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                  Thông Tin Ban Đầu (Trước Sửa)
+                </span>
+                <div className="text-sm font-semibold text-slate-700 break-words [overflow-wrap:anywhere]">
                   {displayOld}
                 </div>
               </div>
-              <span className="text-[11px] text-slate-400 mt-2 block">
-                Ghi nhận trước thời điểm sửa
-              </span>
-            </div>
 
-            {/* Mức chênh lệch */}
-            <div
-              className={`p-4 rounded-xl border text-center flex flex-col justify-between items-center min-w-0 overflow-hidden ${
-                isDecrease
-                  ? 'bg-rose-50/70 border-rose-200 text-rose-700'
-                  : isIncrease
-                  ? 'bg-emerald-50/70 border-emerald-200 text-emerald-700'
-                  : 'bg-slate-50 border-slate-200 text-slate-600'
-              }`}
-            >
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
-                {isIncrease && <TrendingUp size={15} />}
-                {isDecrease && <TrendingDown size={15} />}
-                <span>
-                  {isDecrease ? 'Lệch Giảm / Hao Hụt' : isIncrease ? 'Lệch Tăng / Bổ Sung' : 'Điều Chỉnh'}
+              <div className="p-4 rounded-xl bg-orange-50/70 border border-orange-200 min-w-0">
+                <span className="text-xs font-semibold text-orange-700 uppercase tracking-wider block mb-1 flex items-center gap-1.5">
+                  <ArrowRight size={14} className="text-[#F85606]" />
+                  Thông Tin Áp Dụng (Sau Sửa)
                 </span>
-              </div>
-              <div className="my-2 text-sm sm:text-base md:text-lg font-black tracking-tight break-words [overflow-wrap:anywhere]">
-                {displayDelta || 'Thay đổi trạng thái'}
-              </div>
-              <span className="text-[11px] opacity-80 block">Biến động số liệu thực tế</span>
-            </div>
-
-            {/* Sau điều chỉnh */}
-            <div className="p-4 rounded-xl bg-orange-50/60 border border-orange-200 text-center min-w-0 overflow-hidden flex flex-col justify-between">
-              <div>
-                <span className="text-xs font-semibold text-orange-700 uppercase tracking-wider block">
-                  Giá Trị Sau (Mới)
-                </span>
-                <div className="mt-2 text-sm sm:text-base font-extrabold text-orange-900 break-words [overflow-wrap:anywhere]">
+                <div className="text-sm font-bold text-orange-950 break-words [overflow-wrap:anywhere]">
                   {displayNew}
                 </div>
               </div>
-              <span className="text-[11px] text-orange-600/80 mt-2 block font-medium">
-                Áp dụng kể từ khi lưu vết
-              </span>
             </div>
-          </div>
+          ) : (
+            /* Dạng đơn: Khởi tạo mới hoặc xóa */
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                Chi Tiết Dữ Liệu Ghi Nhận
+              </span>
+              <div className="text-sm font-medium text-slate-800 break-words [overflow-wrap:anywhere]">
+                {displayNew !== '—' ? displayNew : displayOld}
+              </div>
+            </div>
+          )}
 
           {/* Căn cứ & Lý do điều chỉnh (Then chốt để giải trình kiểm kê) */}
           <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/90 space-y-1.5">
@@ -269,15 +361,14 @@ Yêu Cầu HTTP: ${log.httpMethod || 'POST'} ${log.requestUri || ''}`;
             </p>
           </div>
 
-          {/* Chi tiết người thực hiện & Thông tin kỹ thuật mạng */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Thông tin nhân sự - Đồng bộ Avatar */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                <User size={15} className="text-emerald-500" />
-                <span>Nhân Sự Thực Hiện Thao Tác</span>
-              </div>
-              <div className="flex items-center gap-3 pt-1 border-b border-slate-100 pb-2">
+          {/* Chi tiết người thực hiện */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-white">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5">
+              <User size={15} className="text-emerald-500" />
+              <span>Nhân Sự Thực Hiện Thao Tác</span>
+            </div>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-orange-100 border border-orange-200 flex items-center justify-center text-[#F85606] font-bold overflow-hidden shrink-0 shadow-2xs">
                   {log.actorAvatarUrl ? (
                     <img
@@ -301,42 +392,14 @@ Yêu Cầu HTTP: ${log.httpMethod || 'POST'} ${log.requestUri || ''}`;
                     </span>
                   )}
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0">
                   <div className="font-bold text-slate-900 text-sm truncate">{log.actorFullName}</div>
                   <div className="text-xs text-orange-600 font-mono">@{log.actorUsername}</div>
                 </div>
               </div>
-              <div className="text-xs space-y-1.5 pt-1">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Vị trí / Phụ trách:</span>
-                  <span className="text-slate-700 font-medium">{log.actorRole || 'Chưa cập nhật'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Thông số kỹ thuật ghi vết */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                <ShieldCheck size={15} className="text-blue-500" />
-                <span>Giao Thức Mạng & IP Client</span>
-              </div>
-              <div className="text-xs space-y-1.5 pt-1">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Địa chỉ IP:</span>
-                  <span className="font-mono font-bold text-slate-800">
-                    {log.ipAddress || '192.168.1.100'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Phương thức & URI:</span>
-                  <span className="font-mono text-blue-600 font-semibold">
-                    {log.httpMethod || 'POST'} {log.requestUri || '/api/inventory'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Bảo mật:</span>
-                  <span className="text-emerald-700 font-medium">Bảo toàn băm SHA-256</span>
-                </div>
+              <div className="text-xs text-slate-600 flex items-center gap-2 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200/80">
+                <span className="text-slate-400">Vị trí / Phụ trách:</span>
+                <span className="font-semibold text-slate-800">{log.actorRole || 'Chưa cập nhật'}</span>
               </div>
             </div>
           </div>

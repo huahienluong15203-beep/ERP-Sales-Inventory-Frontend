@@ -16,6 +16,7 @@ import {
   ArrowRight,
   Building2
 } from '../common/Icons';
+import { SearchSelect } from '../common/SearchSelect';
 
 interface TransferTerritoryModalProps {
   isOpen: boolean;
@@ -47,13 +48,15 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      fetchAgencyFormOptions()
+      fetchAgencyFormOptions(true)
         .then((options) => {
           setRegions(options.regions);
           if (options.salesReps.length > 0) {
             setSalesReps(options.salesReps);
-            setFromRepId(options.salesReps[0]?.id || '');
-            setToRepId(options.salesReps[1]?.id || options.salesReps[0]?.id || '');
+            const firstId = options.salesReps[0]?.id || '';
+            const secondId = options.salesReps.find((r) => r.id !== firstId)?.id || firstId;
+            setFromRepId(firstId);
+            setToRepId(secondId);
           }
         })
         .catch(() => setError('Không tải được danh sách khu vực và nhân viên kinh doanh.'));
@@ -62,6 +65,16 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
       setError(null);
     }
   }, [isOpen]);
+
+  const handleFromRepChange = (newFromId: string) => {
+    setFromRepId(newFromId);
+    if (toRepId === newFromId) {
+      const alternative = salesReps.find((r) => r.id !== newFromId);
+      if (alternative) {
+        setToRepId(alternative.id);
+      }
+    }
+  };
 
   useEffect(() => {
     if (!isOpen || !/^\d+$/.test(fromRepId)) {
@@ -179,9 +192,9 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
               <label className="block text-[11px] font-bold text-red-700 uppercase tracking-wider mb-1.5">
                 Nhân Viên Bàn Giao <span className="text-red-500">*</span>
               </label>
-              <select
+              <SearchSelect
                 value={fromRepId}
-                onChange={(e) => setFromRepId(e.target.value)}
+                onChange={(e) => handleFromRepChange(e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-white rounded-lg border border-red-200 focus:border-red-400 outline-none font-medium"
               >
                 {salesReps.map((rep) => (
@@ -189,7 +202,7 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
                     {rep.fullName} {rep.phone ? `(${rep.phone})` : ''}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
               <span className="text-[10px] text-red-500 mt-1 block">Nhân viên sắp nghỉ hoặc luân chuyển</span>
             </div>
 
@@ -198,17 +211,17 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
               <label className="block text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-1.5">
                 Nhân Viên Tiếp Nhận <span className="text-red-500">*</span>
               </label>
-              <select
+              <SearchSelect
                 value={toRepId}
                 onChange={(e) => setToRepId(e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-white rounded-lg border border-emerald-200 focus:border-emerald-400 outline-none font-medium"
               >
                 {salesReps.map((rep) => (
                   <option key={rep.id} value={rep.id} disabled={rep.id === fromRepId}>
-                    {rep.fullName} {rep.phone ? `(${rep.phone})` : ''} {rep.id === fromRepId ? '(Trùng)' : ''}
+                    {rep.fullName} {rep.phone ? `(${rep.phone})` : ''} {rep.id === fromRepId ? '' : ''}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
               <span className="text-[10px] text-emerald-600 mt-1 block">Người chịu trách nhiệm chăm sóc mới</span>
             </div>
           </div>
@@ -218,7 +231,7 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
               Phạm Vi Khu Vực Áp Dụng
             </label>
-            <select
+            <SearchSelect
               value={selectedRegionId}
               onChange={(e) => setSelectedRegionId(e.target.value)}
               className="w-full px-3.5 py-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 outline-none font-medium"
@@ -229,7 +242,7 @@ export const TransferTerritoryModal: React.FC<TransferTerritoryModalProps> = ({
                   {r.name}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
 
           {/* Hộp xem trước số lượng đại lý sẽ chuyển */}

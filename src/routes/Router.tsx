@@ -62,7 +62,9 @@ export const BrowserRouter: React.FC<{ children: ReactNode }> = ({ children }) =
 
 export const useLocation = () => {
   const { pathname } = useContext(RouterContext);
-  return { pathname };
+  const [cleanPath, query] = pathname.split('?');
+  const search = query !== undefined ? `?${query}` : (typeof window !== 'undefined' ? window.location.search : '');
+  return { pathname: cleanPath || '/', search };
 };
 
 export const useNavigate = () => {
@@ -111,9 +113,22 @@ export const Routes: React.FC<RoutesProps> = ({ children }) => {
 
     const cleanRoutePath = path.replace(/\/+$/, '') || '/';
 
-    // Khớp chính xác (ưu tiên route cụ thể khai báo trước)
+    // 1. Khớp chính xác (ưu tiên route cụ thể khai báo trước)
     if (cleanRoutePath === cleanCurrentPath && !matchElement) {
       matchElement = element;
+      return;
+    }
+
+    // 2. Khớp dynamic route có tham số :param (vd: /inventory/receipts/:id)
+    if (cleanRoutePath.includes(':') && !matchElement) {
+      const routeParts = cleanRoutePath.split('/').filter(Boolean);
+      const currentParts = cleanCurrentPath.split('/').filter(Boolean);
+      if (routeParts.length === currentParts.length) {
+        const isMatch = routeParts.every((part, idx) => part.startsWith(':') || part === currentParts[idx]);
+        if (isMatch) {
+          matchElement = element;
+        }
+      }
     }
   });
 
@@ -126,6 +141,28 @@ export const Routes: React.FC<RoutesProps> = ({ children }) => {
   }
 
   return null;
+};
+
+export const useParams = <T extends Record<string, string> = Record<string, string>>(): T => {
+  const { pathname } = useContext(RouterContext);
+  const cleanCurrentPath = pathname.split('?')[0].replace(/\/+$/, '') || '/';
+  const segments = cleanCurrentPath.split('/').filter(Boolean);
+  const lastSegment = segments[segments.length - 1];
+
+  const searchParams = new URLSearchParams(
+    typeof window !== 'undefined' ? window.location.search : ''
+  );
+  const idFromQuery = searchParams.get('id');
+
+  const result: Record<string, string> = {
+    id: idFromQuery || lastSegment || ''
+  };
+
+  searchParams.forEach((value, key) => {
+    result[key] = value;
+  });
+
+  return result as unknown as T;
 };
 
 export interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {

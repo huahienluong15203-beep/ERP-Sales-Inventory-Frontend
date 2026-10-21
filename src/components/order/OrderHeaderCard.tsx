@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import type { Agency, DeliveryPoint } from '../../types/agency';
+import type { Agency, DeliveryPoint, CreditStatusResponse } from '../../types/agency';
 import { fetchAgencies, fetchDeliveryPoints } from '../../services/agencyApi';
-import { formatCurrencyVND } from '../../services/orderService';
+import { formatCurrencyVND, getServingWarehouseInfo } from '../../services/orderService';
 import {
   Building2,
   Truck,
@@ -11,8 +11,11 @@ import {
   MapPin,
   Phone,
   FileText,
-  BadgeDollarSign
+  BadgeDollarSign,
+  Package,
+  CreditCard
 } from '../common/Icons';
+import { SearchSelect } from '../common/SearchSelect';
 
 interface OrderHeaderCardProps {
   selectedAgency: Agency | null;
@@ -23,6 +26,10 @@ interface OrderHeaderCardProps {
   onChangeExpectedDeliveryDate: (date: string) => void;
   orderNote: string;
   onChangeOrderNote: (note: string) => void;
+  paymentMethod?: 'CREDIT' | 'COD';
+  onChangePaymentMethod?: (method: 'CREDIT' | 'COD') => void;
+  creditStatus?: CreditStatusResponse | null;
+  loadingCreditStatus?: boolean;
 }
 
 export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
@@ -33,7 +40,11 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
   expectedDeliveryDate,
   onChangeExpectedDeliveryDate,
   orderNote,
-  onChangeOrderNote
+  onChangeOrderNote,
+  paymentMethod = 'CREDIT',
+  onChangePaymentMethod,
+  creditStatus,
+  loadingCreditStatus
 }) => {
   const [agenciesList, setAgenciesList] = useState<Agency[]>([]);
   const [deliveryPoints, setDeliveryPoints] = useState<DeliveryPoint[]>([]);
@@ -43,14 +54,21 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
-  // Tải danh sách đại lý khi mount
+  // Tải danh sách đại lý khi mount và khi tìm kiếm theo từ khóa (kèm debounce)
   useEffect(() => {
-    fetchAgencies({ size: 100 })
-      .then((res) => {
-        setAgenciesList(res.content);
+    const timer = setTimeout(() => {
+      fetchAgencies({
+        keyword: agencySearchText.trim() || undefined,
+        size: 100
       })
-      .catch((err) => console.error('Lỗi tải đại lý:', err));
-  }, []);
+        .then((res) => {
+          setAgenciesList(res.content);
+        })
+        .catch((err) => console.error('Lỗi tải đại lý:', err));
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [agencySearchText]);
 
   // Tải danh sách điểm giao hàng của đại lý được chọn (S3-04)
   useEffect(() => {
@@ -113,6 +131,98 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
     );
   });
 
+  // Render danh sách dropdown chọn đại lý
+  const renderAgencyDropdown = () => (
+    <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-60 overflow-y-auto divide-y divide-gray-100 text-xs">
+      <div className="p-2 bg-gray-50 flex items-center justify-between border-b border-gray-100 sticky top-0 z-10">
+        <span className="text-[11px] text-gray-500 font-medium">
+          Tìm thấy {filteredAgencies.length} đại lý
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            setIsDropdownOpen(false);
+            setAgencySearchText('');
+          }}
+          className="text-gray-400 hover:text-gray-600 text-[11px] px-1.5 py-0.5 rounded hover:bg-gray-200"
+        >
+          ✕ Đóng
+        </button>
+      </div>
+
+      {filteredAgencies.length === 0 ? (
+        <div className="p-4 text-center text-gray-400">
+          Không tìm thấy đại lý phù hợp
+        </div>
+      ) : (
+        filteredAgencies.map((agency) => {
+          const isSuspended = agency.status === 'SUSPENDED';
+          const isLocked = agency.transactionLocked;
+          return (
+            <div
+              key={agency.id}
+              onClick={() => {
+                onSelectAgency(agency);
+                setIsDropdownOpen(false);
+                setAgencySearchText('');
+              }}
+              className={`p-2.5 hover:bg-orange-50/70 cursor-pointer transition flex items-center justify-between gap-2 ${
+                isSuspended ? 'bg-rose-50/40 hover:bg-rose-100/60' : isLocked ? 'bg-amber-50/30 hover:bg-amber-100/50' : ''
+              }`}
+            >
+              <div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-mono font-bold text-gray-700">
+                    {agency.code}
+                  </span>
+                  <strong className="text-gray-900 font-medium">
+                    {agency.name}
+                  </strong>
+                  {isSuspended && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-0.5">
+                      <AlertTriangle size={9} /> Ngừng giao dịch
+                    </span>
+                  )}
+                  {isLocked && !isSuspended && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-0.5">
+                      <Lock size={9} /> Bị khóa
+                    </span>
+                  )}
+                  {!isSuspended && !isLocked && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700">
+                      Đang giao dịch
+                    </span>
+                  )}
+                </div>
+                <div className="text-[10px] text-gray-400 flex items-center gap-2 mt-0.5">
+                  <span>{agency.customerGroupName}</span>
+                  <span>•</span>
+                  <span>{agency.regionName}</span>
+                  {!agency.priceList && (
+                    <>
+                      <span>•</span>
+                      <span className="text-amber-600 font-medium">Chưa có bảng giá</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="text-right text-[11px] shrink-0">
+                <span
+                  className={`font-mono block ${
+                    agency.totalDebt > 0 ? 'text-rose-600 font-semibold' : 'text-gray-600'
+                  }`}
+                >
+                  Nợ: {formatCurrencyVND(agency.totalDebt)}
+                </span>
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+
   return (
     <div className="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-4 sm:p-5 space-y-4">
       <div className="flex items-center justify-between pb-3 border-b border-gray-100">
@@ -131,9 +241,27 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
         </div>
 
         {selectedAgency && (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
-            {selectedAgency.customerGroupName}
-          </span>
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
+              {selectedAgency.customerGroupName}
+            </span>
+            {selectedAgency.status === 'SUSPENDED' ? (
+              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1 animate-pulse shadow-2xs">
+                <AlertTriangle size={11} className="text-rose-600" />
+                ĐÃ NGỪNG GIAO DỊCH
+              </span>
+            ) : selectedAgency.transactionLocked ? (
+              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1 shadow-2xs">
+                <Lock size={11} className="text-rose-600" />
+                BỊ KHÓA GIAO DỊCH
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                Đang giao dịch
+              </span>
+            )}
+          </div>
         )}
       </div>
 
@@ -146,61 +274,267 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
 
           {selectedAgency ? (
             <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-xs font-bold text-blue-700">
-                      {selectedAgency.code}
-                    </span>
-                    <strong className="text-xs text-gray-900">
-                      {selectedAgency.name}
-                    </strong>
+              {isDropdownOpen ? (
+                <div className="relative">
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        autoFocus
+                        placeholder="🔍 Nhập mã, tên hoặc SĐT đại lý cần đổi..."
+                        value={agencySearchText}
+                        onChange={(e) => setAgencySearchText(e.target.value)}
+                        className="w-full h-9 px-3 text-xs rounded-xl border border-orange-400 bg-white focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 outline-none transition"
+                      />
+                      {agencySearchText && (
+                        <button
+                          type="button"
+                          onClick={() => setAgencySearchText('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        setAgencySearchText('');
+                      }}
+                      className="px-2.5 py-1.5 text-xs rounded-xl border border-gray-200 bg-white text-gray-600 hover:text-gray-900 hover:bg-gray-100 font-medium shrink-0 transition"
+                    >
+                      Hủy
+                    </button>
                   </div>
-                  <div className="text-[11px] text-gray-500 flex flex-wrap items-center gap-2 mt-0.5">
-                    <span>MST: {selectedAgency.taxCode}</span>
-                    {selectedAgency.phone && (
-                      <span className="flex items-center gap-0.5">
-                        <Phone size={10} /> {selectedAgency.phone}
+
+                  {/* DROPDOWN CHỌN ĐẠI LÝ - NẰM NGAY TRÊN ĐẦU, DƯỚI Ô TÌM KIẾM */}
+                  {renderAgencyDropdown()}
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-mono text-xs font-bold text-blue-700">
+                        {selectedAgency.code}
                       </span>
+                      <strong className="text-xs text-gray-900">
+                        {selectedAgency.name}
+                      </strong>
+                      {selectedAgency.status === 'SUSPENDED' && (
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                          <AlertTriangle size={10} className="text-rose-600" /> Ngừng giao dịch
+                        </span>
+                      )}
+                      {selectedAgency.transactionLocked && (
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                          <Lock size={10} className="text-rose-600" /> Khóa giao dịch
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-gray-500 flex flex-wrap items-center gap-2 mt-0.5">
+                      <span>MST: {selectedAgency.taxCode}</span>
+                      {selectedAgency.phone && (
+                        <span className="flex items-center gap-0.5">
+                          <Phone size={10} /> {selectedAgency.phone}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDropdownOpen(true);
+                      setAgencySearchText('');
+                    }}
+                    className="px-2.5 py-1 text-[11px] rounded-lg border border-gray-200 bg-white text-gray-600 hover:text-[#F85606] hover:border-orange-200 transition-colors font-medium shrink-0"
+                  >
+                    Đổi đại lý
+                  </button>
+                </div>
+              )}
+
+              {/* Thông tin hạn mức, bảng giá tự động & kho phục vụ (S4-03 AC1) */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200/70 text-[11px]">
+                {selectedAgency.priceList ? (
+                  <span className="inline-flex items-center gap-1 text-gray-600">
+                    <BadgeDollarSign size={12} className="text-[#F85606]" />
+                    Bảng giá: <strong>{selectedAgency.priceList.name || selectedAgency.pricingTier?.name}</strong>
+                    {selectedAgency.priceList.code && (
+                      <span className="text-[10px] text-gray-500 font-mono">({selectedAgency.priceList.code})</span>
                     )}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-semibold">
+                    <AlertTriangle size={12} className="text-amber-500 shrink-0" />
+                    Chưa có bảng giá hiệu lực
+                  </span>
+                )}
+
+                <div className="inline-flex items-center gap-1.5 text-indigo-700 bg-indigo-50/80 px-2 py-0.5 rounded-md border border-indigo-200">
+                  <Package size={12} className="text-indigo-600 shrink-0" />
+                  <span>Kho xuất: <strong>{getServingWarehouseInfo(selectedAgency).name}</strong></span>
+                </div>
+
+                {/* S4-02: THÔNG TIN CÔNG NỢ, HẠN MỨC & PHẦN CÒN LẠI */}
+              </div>
+
+              {/* S4-02: BẢNG CHỈ SỐ CÔNG NỢ & HẠN MỨC */}
+              <div className="pt-2 border-t border-gray-200/80 space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-gray-700">
+                  <span className="flex items-center gap-1.5 text-gray-800">
+                    <CreditCard size={13} className="text-[#F85606]" />
+                    <span>Hạn Mức & Dư Nợ Đại Lý</span>
+                  </span>
+                  {loadingCreditStatus && (
+                    <span className="text-[10px] text-gray-400 font-normal animate-pulse">
+                      Đang đồng bộ số liệu nợ...
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {/* Hạn mức công nợ */}
+                  <div className="p-2 rounded-xl bg-white border border-gray-200 shadow-2xs">
+                    <span className="text-[10px] text-gray-500 block">Hạn mức cấp</span>
+                    <span className="text-xs font-bold font-mono text-gray-800">
+                      {formatCurrencyVND(creditStatus ? creditStatus.creditLimit : selectedAgency.creditLimit)}
+                    </span>
+                  </div>
+
+                  {/* Công nợ hiện tại */}
+                  <div className="p-2 rounded-xl bg-white border border-gray-200 shadow-2xs">
+                    <span className="text-[10px] text-gray-500 block">Nợ hiện tại</span>
+                    <span className="text-xs font-bold font-mono text-gray-800">
+                      {formatCurrencyVND(creditStatus ? creditStatus.currentDebt : selectedAgency.totalDebt)}
+                    </span>
+                  </div>
+
+                  {/* Phần còn lại */}
+                  {(() => {
+                    const avail = creditStatus ? creditStatus.availableCredit : (selectedAgency.creditLimit - selectedAgency.totalDebt);
+                    const isExceeded = avail < 0;
+                    return (
+                      <div className={`p-2 rounded-xl border shadow-2xs ${isExceeded
+                        ? 'bg-rose-50/80 border-rose-200 text-rose-800'
+                        : 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
+                        }`}>
+                        <span className="text-[10px] block opacity-80">Phần còn lại</span>
+                        <span className="text-xs font-bold font-mono">
+                          {formatCurrencyVND(avail)}
+                        </span>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Thời hạn nợ */}
+                  <div className="p-2 rounded-xl bg-white border border-gray-200 shadow-2xs">
+                    <span className="text-[10px] text-gray-500 block">Số ngày nợ tối đa</span>
+                    <span className="text-xs font-bold text-gray-700">
+                      {creditStatus?.maxDebtDays || selectedAgency.maxDebtDays || 30} ngày
+                    </span>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsDropdownOpen(true);
-                    setAgencySearchText('');
-                  }}
-                  className="px-2.5 py-1 text-[11px] rounded-lg border border-gray-200 bg-white text-gray-600 hover:text-[#F85606] hover:border-orange-200 transition-colors font-medium shrink-0"
-                >
-                  Đổi đại lý
-                </button>
+                {/* S4-02 AC3: CẢNH BÁO CHẶN TẠO ĐƠN HOÀN TOÀN KHI CÓ NỢ QUÁ HẠN */}
+                {creditStatus?.overdue && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-900 text-xs flex items-start gap-2 animate-in fade-in shadow-xs">
+                    <AlertTriangle size={16} className="text-rose-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="font-bold block text-rose-950 uppercase tracking-wide text-[11px]">
+                        Chặn tạo đơn hoàn toàn
+                      </strong>
+                      <span className="text-[11px] leading-relaxed block mt-0.5 text-rose-800">
+                        Đại lý có khoản nợ quá hạn <strong>{creditStatus.overdueDays} ngày</strong> (vượt quá {creditStatus.maxDebtDays || 30} ngày cho phép).
+                        Số tiền quá hạn: <strong>{formatCurrencyVND(creditStatus.overdueAmount)}</strong>.
+                        Hệ thống chặn tạo đơn mới hoàn toàn cho đến khi hoàn tất thanh toán nợ quá hạn.
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* S4-02 AC2: CẢNH BÁO ĐƠN LÀM VƯỢT HẠN MỨC CẦN DUYỆT */}
+                {creditStatus?.exceedsLimit && !creditStatus.overdue && !selectedAgency.transactionLocked && (
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-start gap-2 animate-in fade-in">
+                    <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="font-bold block text-amber-950 text-[11px]">
+                        Đơn hàng làm vượt hạn mức công nợ
+                      </strong>
+                      <span className="text-[11px] leading-relaxed block mt-0.5 text-amber-800">
+                        Tổng đơn + công nợ hiện tại = <strong>{formatCurrencyVND(creditStatus.debtAfterOrder)}</strong> (Vượt hạn mức <strong>{formatCurrencyVND(creditStatus.exceededAmount)}</strong>).
+                        Đơn hàng sẽ được đánh dấu <strong>Cần Quản lý duyệt</strong> khi chốt đơn.
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Thông tin hạn mức và bảng giá tự động */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200/70 text-[11px]">
-                <span className="inline-flex items-center gap-1 text-gray-600">
-                  <BadgeDollarSign size={12} className="text-[#F85606]" />
-                  Bảng giá: <strong>{selectedAgency.pricingTier.name} (CK {selectedAgency.pricingTier.discountPercent}%)</strong>
-                </span>
-                <span className="text-gray-500">
-                  Hạn mức: <strong className="text-gray-700">{formatCurrencyVND(selectedAgency.creditLimit)}</strong>
-                </span>
-              </div>
+              {/* CẢNH BÁO NẾU ĐẠI LÝ CHƯA CÓ BẢNG GIÁ HIỆU LỰC */}
+              {!selectedAgency.priceList && (
+                <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2 animate-in fade-in">
+                  <AlertTriangle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-bold block text-amber-900">
+                      Đại lý chưa có bảng giá hiệu lực!
+                    </strong>
+                    <span className="text-[11px] leading-tight block mt-0.5">
+                      Nhóm {selectedAgency.customerGroupName} hiện chưa có bảng giá nào đang hoạt động. Không thể tạo đơn hàng hoặc tính giá sản phẩm cho đại lý này.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* CẢNH BÁO NẾU ĐẠI LÝ ĐÃ NGỪNG GIAO DỊCH (INACTIVE / SUSPENDED) */}
+              {selectedAgency.status === 'SUSPENDED' && (
+                <div className="p-3 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-950 text-xs flex items-start gap-2.5 animate-in fade-in shadow-xs">
+                  <AlertTriangle size={17} className="text-rose-600 shrink-0 mt-0.5" />
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <strong className="font-bold text-rose-950 uppercase tracking-wide text-[11px]">
+                        Đại lý đã ngừng giao dịch (INACTIVE)
+                      </strong>
+                      <span className="text-[10px] bg-rose-200 text-rose-900 font-bold px-2 py-0.5 rounded">
+                        Chặn tạo đơn
+                      </span>
+                    </div>
+                    <span className="text-[11px] leading-relaxed block text-rose-800">
+                      Đại lý <strong>{selectedAgency.name} ({selectedAgency.code})</strong> hiện đang ở trạng thái <strong>Ngừng giao dịch</strong>
+                      {selectedAgency.suspendReason ? `: "${selectedAgency.suspendReason}"` : ''}.
+                      Hệ thống <strong>chặn hoàn toàn</strong> việc tính giá và tạo đơn hàng mới cho đại lý này.
+                    </span>
+                    <p className="text-[11px] text-gray-700 bg-white/85 border border-rose-200 rounded-md p-1.5 mt-1 leading-normal">
+                      💡 <strong>Hướng dẫn:</strong> Vui lòng bấm nút <strong>"Đổi đại lý"</strong> ở trên để chọn khách hàng khác, hoặc truy cập <a href="/customers" className="underline font-bold text-blue-700 hover:text-blue-900">Hồ sơ đại lý</a> để mở lại trạng thái giao dịch cho khách hàng này.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* CẢNH BÁO NẾU ĐẠI LÝ BỊ KHÓA GIAO DỊCH (S3-07 / Description 1) */}
               {selectedAgency.transactionLocked && (
                 <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2 animate-in fade-in">
                   <Lock size={15} className="text-rose-600 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="font-bold block text-rose-900">
-                      Đại lý đang bị khóa giao dịch!
-                    </strong>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <strong className="font-bold text-rose-900">
+                        Đại lý đang bị khóa giao dịch hành chính
+                      </strong>
+                      {((creditStatus?.currentDebt ?? selectedAgency.totalDebt ?? 0) <= 0) && (
+                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">
+                          Dư nợ hiện tại: 0 đ
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[11px] leading-tight block mt-0.5">
-                      Lý do: {selectedAgency.transactionLockReason || 'Có rủi ro công nợ quá hạn'}.
+                      Lý do khóa: <em>{selectedAgency.transactionLockReason || 'Có rủi ro công nợ quá hạn'}</em>.
                       Hệ thống nghiêm cấm tạo đơn mới cho đại lý này.
                     </span>
+                    {((creditStatus?.currentDebt ?? selectedAgency.totalDebt ?? 0) <= 0) && (
+                      <p className="text-[11px] text-amber-800 bg-amber-50/90 border border-amber-200 rounded-md p-1.5 mt-1.5 leading-normal">
+                        💡 <strong>Lưu ý:</strong> Đại lý này hiện <strong>không còn nợ tồn đọng (0 đ)</strong>. Lý do khóa trên là quyết định hành chính do Quản trị viên/Kế toán thiết lập trước đó. Nếu đại lý đã thanh toán xong nghĩa vụ, vui lòng vào <a href="/customers" className="underline font-bold text-amber-900 hover:text-amber-950">Hồ sơ đại lý</a> để thực hiện <strong>Mở khóa giao dịch</strong>.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -218,71 +552,7 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
                 onFocus={() => setIsDropdownOpen(true)}
                 className="w-full h-10 px-3 text-xs rounded-xl border border-gray-200 focus:border-[#F85606] focus:ring-2 focus:ring-orange-100 outline-none transition"
               />
-            </div>
-          )}
-
-          {/* DROPDOWN CHỌN ĐẠI LÝ */}
-          {isDropdownOpen && (
-            <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-60 overflow-y-auto divide-y divide-gray-100 text-xs">
-              <div className="p-2 bg-gray-50 flex items-center justify-between border-b border-gray-100">
-                <span className="text-[11px] text-gray-500 font-medium">
-                  Tìm thấy {filteredAgencies.length} đại lý
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsDropdownOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 text-[11px]"
-                >
-                  ✕ Đóng
-                </button>
-              </div>
-
-              {filteredAgencies.length === 0 ? (
-                <div className="p-4 text-center text-gray-400">
-                  Không tìm thấy đại lý phù hợp
-                </div>
-              ) : (
-                filteredAgencies.map((agency) => (
-                  <div
-                    key={agency.id}
-                    onClick={() => {
-                      onSelectAgency(agency);
-                      setIsDropdownOpen(false);
-                      setAgencySearchText('');
-                    }}
-                    className={`p-2.5 hover:bg-orange-50/70 cursor-pointer transition flex items-center justify-between gap-2 ${
-                      agency.transactionLocked ? 'bg-rose-50/30' : ''
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-bold text-gray-700">
-                          {agency.code}
-                        </span>
-                        <strong className="text-gray-900 font-medium">
-                          {agency.name}
-                        </strong>
-                        {agency.transactionLocked && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 flex items-center gap-0.5">
-                            <Lock size={9} /> Bị khóa
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-gray-400 flex items-center gap-2 mt-0.5">
-                        <span>{agency.customerGroupName}</span>
-                        <span>•</span>
-                        <span>{agency.regionName}</span>
-                      </div>
-                    </div>
-
-                    <div className="text-right text-[11px] shrink-0">
-                      <span className="font-mono text-gray-600 block">
-                        Nợ: {formatCurrencyVND(agency.totalDebt)}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
+              {isDropdownOpen && renderAgencyDropdown()}
             </div>
           )}
         </div>
@@ -338,7 +608,7 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
             )
           ) : (
             <div className="space-y-1.5">
-              <select
+              <SearchSelect
                 value={selectedDeliveryPoint?.id || ''}
                 onChange={(e) => {
                   const pt = deliveryPoints.find((p) => p.id === e.target.value);
@@ -348,10 +618,10 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
               >
                 {deliveryPoints.map((pt) => (
                   <option key={pt.id} value={pt.id}>
-                    {pt.name} {pt.isDefault ? '⭐ [Kho mặc định]' : ''} — {pt.address}
+                    {pt.name} {pt.isDefault ? '(Mặc định)' : ''} — {pt.address}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
 
               {selectedDeliveryPoint && (
                 <div className="p-2 bg-gray-50 rounded-lg text-[11px] text-gray-600 space-y-0.5 border border-gray-100">
@@ -374,6 +644,75 @@ export const OrderHeaderCard: React.FC<OrderHeaderCardProps> = ({
               )}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* HÌNH THỨC THANH TOÁN (CÔNG NỢ vs COD) */}
+      <div className="pt-1">
+        <label className="block text-xs font-bold text-gray-700 mb-2 flex items-center justify-between">
+          <span className="flex items-center gap-1.5">
+            <CreditCard size={14} className="text-[#F85606]" />
+            Hình Thức Thanh Toán <span className="text-red-500">*</span>
+          </span>
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => onChangePaymentMethod?.('CREDIT')}
+            className={`p-3 rounded-xl border-2 text-left transition cursor-pointer flex items-start gap-3 ${
+              paymentMethod === 'CREDIT'
+                ? 'border-blue-500 bg-blue-50/70 shadow-xs'
+                : 'border-gray-200 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div
+              className={`w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 flex items-center justify-center ${
+                paymentMethod === 'CREDIT' ? 'border-blue-600 bg-blue-600' : 'border-gray-300 bg-white'
+              }`}
+            >
+              {paymentMethod === 'CREDIT' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-900">Thanh Toán Tín Dụng (CREDIT)</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">
+                  Hạn mức tín dụng
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
+                Đại lý ký biên bản giao nhận. Ghi nhận công nợ và đối trừ sau theo chu kỳ.
+              </p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onChangePaymentMethod?.('COD')}
+            className={`p-3 rounded-xl border-2 text-left transition cursor-pointer flex items-start gap-3 ${
+              paymentMethod === 'COD'
+                ? 'border-amber-500 bg-amber-50/70 shadow-xs'
+                : 'border-gray-200 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div
+              className={`w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 flex items-center justify-center ${
+                paymentMethod === 'COD' ? 'border-amber-600 bg-amber-600' : 'border-gray-300 bg-white'
+              }`}
+            >
+              {paymentMethod === 'COD' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-900">Thanh Toán Khi Nhận Hàng (COD)</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                  Tài xế thu tiền
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
+                Tài xế giao hàng thu đủ tiền mặt / chuyển khoản mới tiến hành bàn giao đơn hàng.
+              </p>
+            </div>
+          </button>
         </div>
       </div>
 

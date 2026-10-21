@@ -21,6 +21,7 @@ export interface UserProfile {
   role: RoleName;
   roles: RoleName[];
   warehouse?: string;     // Kho làm việc (đối với nhân sự kho/admin)
+  warehouseCodes?: string[]; // Danh sách mã kho phụ trách
   workLocation?: string;  // Địa bàn làm việc (đối với kinh doanh/đại lý)
   avatar?: string;
   avatarUrl?: string;
@@ -35,6 +36,8 @@ export interface MenuItem {
   epic?: string;
   description?: string;
   badge?: string;
+  /** Nhóm chức năng hiển thị thành tiêu đề trên Sidebar (vd "Bán hàng") */
+  group?: string;
   allowedRoles?: RoleName[];
 }
 
@@ -117,7 +120,7 @@ export const ROLE_METADATA_MAP: Record<RoleName, RoleMetadata> = {
     description: 'Tự đặt hàng trực tuyến, theo dõi đơn giao và đối soát công nợ',
     badgeColor: '#16a34a',
     badgeBg: '#f0fdf4',
-    defaultPath: '/orders/create',
+    defaultPath: '/portal',
     sampleLocation: 'Điểm nhận hàng: Kho Đại lý Cần Thơ'
   }
 };

@@ -12,10 +12,21 @@ export interface PricingTier {
   id: string;
   code: string;
   name: string;
-  discountPercent: number;
-  description: string;
+  discountPercent?: number;
+  description?: string;
   badgeBg: string;
   badgeColor: string;
+}
+
+export interface PriceListOption {
+  id: number | string;
+  code: string;
+  name: string;
+  customerGroup: string;
+  customerGroupLabel?: string;
+  startDate?: string;
+  endDate?: string | null;
+  status?: string;
 }
 
 export interface CustomerGroupOption {
@@ -48,6 +59,7 @@ export interface Agency {
   customerGroup: CustomerGroupId; // Nhóm khách hàng
   customerGroupName: string;  // Tên nhóm hiển thị
   pricingTier: PricingTier;   // Bảng giá tự động áp dụng từ nhóm khách hàng
+  priceList?: { id: number | string; code: string; name: string } | null; // Bảng giá thực tế trong hệ thống
   regionId: string;           // Mã khu vực
   regionName: string;         // Tên khu vực (vd: Hà Nội, TP.HCM, Miền Tây...)
   assignedRepId: string;      // ID nhân viên kinh doanh phụ trách
@@ -69,6 +81,10 @@ export interface Agency {
   transactionLocked?: boolean;       // S3-07: Khóa giao dịch rủi ro công nợ (chặn tạo đơn mới trên mọi nền tảng)
   transactionLockReason?: string;   // S3-07: Lý do khóa / mở giao dịch (bắt buộc nhập)
   transactionLockedAt?: string;     // S3-07: Thời điểm khóa giao dịch
+  hasOverdueDebt?: boolean;         // S4-02: Có khoản nợ quá hạn
+  overdueDays?: number;             // S4-02: Số ngày quá hạn
+  portalUserId?: number;            // S4-10: ID tài khoản cổng đại lý (ROLE_CUSTOMER)
+  portalUserName?: string;          // S4-10: Họ tên / username tài khoản cổng đại lý
 }
 
 /**
@@ -119,6 +135,7 @@ export interface CreateAgencyPayload {
   email: string;
   address: string;
   creditLimit?: number;
+  portalUserId?: number | null;
 }
 
 export interface UpdateAgencyPayload {
@@ -133,6 +150,8 @@ export interface UpdateAgencyPayload {
   email: string;
   address: string;
   creditLimit?: number;
+  portalUserId?: number | null;
+  changePortalUser?: boolean;
 }
 
 export interface SuspendAgencyPayload {
@@ -196,6 +215,8 @@ export interface UserRef {
 export interface CustomerAssignmentHistory {
   id: string | number;
   changeType: AssignmentChangeType;
+  customer?: { id: string | number; code: string; name: string } | null;
+  region?: { id: string | number; code: string; name: string } | null;
   fromSalesRep?: UserRef | null;
   toSalesRep?: UserRef | null;
   changedBy?: UserRef | null;
@@ -238,4 +259,27 @@ export interface OrderCreationCheckResponse {
   creditLimit?: number;
   maxDebtDays?: number;
   transactionLocked: boolean;
+}
+
+/**
+ * S4-02: Tình trạng công nợ và hạn mức của đại lý khi tạo đơn
+ */
+export interface CreditStatusResponse {
+  customerId: number | string;
+  customerCode: string;
+  customerName: string;
+  creditLimit: number;
+  currentDebt: number;
+  availableCredit: number;
+  orderAmount: number;
+  debtAfterOrder: number;
+  exceedsLimit: boolean;
+  exceededAmount: number;
+  maxDebtDays?: number;
+  overdue: boolean;
+  overdueOrderCount: number;
+  overdueAmount: number;
+  overdueDays: number;
+  blocked: boolean;
+  message?: string | null;
 }

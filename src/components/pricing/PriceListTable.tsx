@@ -3,6 +3,8 @@ import type { PriceList, CustomerGroupType } from '../../types/pricing';
 import { CUSTOMER_GROUPS } from '../../types/pricing';
 import { Icons } from '../common/Icons';
 import { Pagination } from '../common/Pagination';
+import { SearchSelect } from '../common/SearchSelect';
+import { RowActionMenu } from '../common/RowActionMenu';
 
 interface PriceListTableProps {
   /** Các bảng giá của TRANG hiện tại (Backend đã lọc + phân trang). */
@@ -12,6 +14,7 @@ interface PriceListTableProps {
   onEdit: (priceList: PriceList) => void;
   onCloneVersion: (priceList: PriceList) => void;
   onToggleStatus: (priceList: PriceList) => void;
+  onDelete: (priceList: PriceList) => void;
   // Bộ lọc (lưu trên URL ở trang cha)
   keyword: string;
   onKeywordChange: (value: string) => void;
@@ -36,6 +39,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
   onEdit,
   onCloneVersion,
   onToggleStatus,
+  onDelete,
   keyword,
   onKeywordChange,
   selectedGroup,
@@ -106,7 +110,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
         {/* Bộ lọc nhóm khách hàng & trạng thái */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Nhóm khách hàng */}
-          <select
+          <SearchSelect
             value={selectedGroup}
             onChange={(e) => onGroupChange(e.target.value)}
             className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
@@ -115,10 +119,10 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
             <option value="DEALER_LEVEL_1">Đại lý cấp 1 (NPP)</option>
             <option value="DEALER_LEVEL_2">Đại lý cấp 2</option>
             <option value="RETAIL">Khách lẻ / Showroom</option>
-          </select>
+          </SearchSelect>
 
           {/* Trạng thái */}
-          <select
+          <SearchSelect
             value={selectedStatus}
             onChange={(e) => onStatusChange(e.target.value)}
             className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
@@ -126,7 +130,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
             <option value="ALL">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang áp dụng (Active)</option>
             <option value="INACTIVE">Ngừng áp dụng (Inactive)</option>
-          </select>
+          </SearchSelect>
 
           {/* Đếm số lượng */}
           <span className="text-xs text-gray-500 ml-1">
@@ -145,7 +149,6 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
               <th className="py-3 px-4">Nhóm khách hàng</th>
               <th className="py-3 px-4">Thời gian hiệu lực</th>
               <th className="py-3 px-4 text-center">Số SKU</th>
-              <th className="py-3 px-4 text-center">Đơn hàng</th>
               <th className="py-3 px-4 text-center">Trạng thái</th>
               <th className="py-3 px-4 text-right">Thao tác</th>
             </tr>
@@ -153,7 +156,7 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
           <tbody className="divide-y divide-gray-200 text-xs text-gray-700">
             {filteredLists.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-12 text-center text-gray-400">
+                <td colSpan={7} className="py-12 text-center text-gray-400">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <Icons.Tags size={36} className="text-gray-300" />
                     <p className="text-sm font-medium text-gray-600">
@@ -228,33 +231,6 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
                       </span>
                     </td>
 
-                    {/* Ràng buộc đơn hàng (Quy tắc S2-10) */}
-                    <td className="py-3.5 px-4 text-center">
-                      {item.hasOrders ? (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onCloneVersion(item);
-                          }}
-                          title="Bảng giá đã phát sinh đơn thì không sửa. Bấm vào đây để tạo phiên bản mới (v2, v3...)!"
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-300 hover:bg-rose-200 hover:border-rose-400 active:scale-95 transition-all cursor-pointer shadow-xs"
-                        >
-                          <Icons.ShieldAlert size={14} className="text-rose-600 shrink-0" />
-                          <span>Đã có đơn (Bấm tạo bản mới)</span>
-                        </button>
-                      ) : (
-                        <span
-                          title="Chưa phát sinh đơn hàng, cho phép chỉnh sửa trực tiếp"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        >
-                          <Icons.CheckSquare size={12} />
-                          <span>Chưa có đơn</span>
-                        </span>
-                      )}
-                    </td>
-
                     {/* Trạng thái Kích hoạt */}
                     <td className="py-3.5 px-4 text-center">
                       {canManage ? (
@@ -299,53 +275,54 @@ export const PriceListTable: React.FC<PriceListTableProps> = ({
                           <Icons.Eye size={16} />
                         </button>
 
-                        {/* Sửa bảng giá */}
-                        <button
-                          onClick={() => {
-                            if (item.hasOrders) {
-                              if (
-                                window.confirm(
-                                  `Bảng giá ${item.code} đã phát sinh đơn hàng nên không thể sửa trực tiếp. Bạn có muốn tạo phiên bản mới (v${(item.version || 1) + 1}) không?`
-                                )
-                              ) {
+                        {/* Sửa bảng giá (chỉ Admin & QL kinh doanh) */}
+                        {canManage && (
+                          <button
+                            onClick={() => {
+                              if (item.hasOrders) {
                                 onCloneVersion(item);
+                              } else {
+                                onEdit(item);
                               }
-                            } else {
-                              onEdit(item);
+                            }}
+                            title={
+                              item.hasOrders
+                                ? 'Bảng giá đã có đơn hàng (bấm để tạo phiên bản mới)'
+                                : 'Chỉnh sửa bảng giá và các dòng giá'
                             }
-                          }}
-                          title={
-                            item.hasOrders
-                              ? 'Bảng giá đã có đơn hàng (bấm để tạo phiên bản mới)'
-                              : 'Chỉnh sửa bảng giá và các dòng giá'
-                          }
-                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                            item.hasOrders
-                              ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
-                              : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
-                          }`}
-                        >
-                          <Icons.Edit size={16} />
-                        </button>
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                              item.hasOrders
+                                ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
+                                : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                            }`}
+                          >
+                            <Icons.Edit size={16} />
+                          </button>
+                        )}
 
-                        {/* Nút Tạo phiên bản mới luôn khả dụng */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onCloneVersion(item);
-                          }}
-                          title="Tạo phiên bản mới từ bảng giá này (v2, v3...)"
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-xs ${
-                            item.hasOrders
-                              ? 'bg-[#F85606] hover:bg-[#E04D05] text-white shadow-sm hover:shadow-md'
-                              : 'bg-orange-50 hover:bg-orange-100 text-[#F85606] border border-orange-200'
-                          }`}
-                        >
-                          <Icons.Copy size={13} />
-                          <span>Tạo bản mới</span>
-                        </button>
+                        {/* Thao tác phụ (tạo phiên bản mới, xoá) gom vào menu "⋯" */}
+                        {canManage && (
+                          <RowActionMenu
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors cursor-pointer"
+                            items={[
+                              {
+                                label: 'Tạo phiên bản mới',
+                                icon: <Icons.Copy size={14} />,
+                                title: 'Tạo phiên bản mới từ bảng giá này (v2, v3...)',
+                                onClick: () => onCloneVersion(item),
+                              },
+                              {
+                                label: 'Xoá bảng giá',
+                                icon: <Icons.Trash2 size={14} />,
+                                title: item.hasOrders
+                                  ? 'Bảng giá đã có đơn hàng (xem thông tin ràng buộc)'
+                                  : 'Xoá bảng giá',
+                                onClick: () => onDelete(item),
+                                danger: true,
+                              },
+                            ]}
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>

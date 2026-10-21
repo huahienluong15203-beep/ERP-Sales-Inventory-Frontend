@@ -4,7 +4,7 @@
  * để truy được ai đã điều chỉnh tồn khi cuối tháng kiểm kê bị lệch."
  */
 
-export type AuditModuleKey = 'INVENTORY' | 'DEBT_LIMIT' | 'PRICING' | 'INVOICE' | 'CUSTOMER';
+export type AuditModuleKey = 'INVENTORY' | 'DEBT_LIMIT' | 'PRICING' | 'INVOICE' | 'CUSTOMER' | 'SALES_TARGET' | 'ORDER';
 
 export interface AuditModuleOption {
   value: AuditModuleKey;

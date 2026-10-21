@@ -6,6 +6,7 @@
  */
 
 import { authFetch, API_BASE_URL } from './api';
+import { invalidateAgencyFormOptionsCache } from './agencyApi';
 import type {
   PriceList,
   PriceListRequest,
@@ -53,7 +54,11 @@ async function request<T>(url: string, init: RequestInit, fallback: string): Pro
   if (!res.ok) {
     throw new Error(await readError(res, fallback));
   }
-  return res.json() as Promise<T>;
+  if (res.status === 204) {
+    return undefined as unknown as T;
+  }
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 /**
@@ -106,67 +111,92 @@ export async function fetchPriceListById(id: number): Promise<PriceList> {
  * Tạo bảng giá mới (kèm danh sách dòng giá & giá sàn)
  */
 export async function createPriceList(payload: PriceListRequest): Promise<PriceList> {
-  return request<PriceList>(
+  const result = await request<PriceList>(
     PRICE_LISTS_URL,
     { method: 'POST', body: JSON.stringify(payload) },
     'Không thể tạo bảng giá'
   );
+  invalidateAgencyFormOptionsCache();
+  return result;
 }
 
 /**
  * Cập nhật bảng giá (chỉ khi chưa phát sinh đơn hàng; Backend kiểm)
  */
 export async function updatePriceList(id: number, payload: PriceListRequest): Promise<PriceList> {
-  return request<PriceList>(
+  const result = await request<PriceList>(
     `${PRICE_LISTS_URL}/${id}`,
     { method: 'PUT', body: JSON.stringify(payload) },
     'Không thể cập nhật bảng giá'
   );
+  invalidateAgencyFormOptionsCache();
+  return result;
 }
 
 /**
  * Tạo phiên bản mới từ một bảng giá đã phát sinh đơn
  */
 export async function clonePriceListVersion(id: number, payload?: Partial<PriceListRequest>): Promise<PriceList> {
-  return request<PriceList>(
+  const result = await request<PriceList>(
     `${PRICE_LISTS_URL}/${id}/clone-version`,
     { method: 'POST', body: JSON.stringify(payload || {}) },
     'Không thể tạo phiên bản mới cho bảng giá'
   );
+  invalidateAgencyFormOptionsCache();
+  return result;
 }
 
 /**
  * Bật/Tắt trạng thái bảng giá (ACTIVE | INACTIVE)
  */
 export async function changePriceListStatus(id: number, status: PriceListStatus): Promise<PriceList> {
-  return request<PriceList>(
+  const result = await request<PriceList>(
     `${PRICE_LISTS_URL}/${id}/status?status=${status}`,
     { method: 'PATCH' },
     'Không thể đổi trạng thái bảng giá'
   );
+  invalidateAgencyFormOptionsCache();
+  return result;
 }
 
 /**
  * Thêm hoặc cập nhật một dòng sản phẩm kèm giá sàn
  */
 export async function addOrUpdatePriceListItem(id: number, itemReq: PriceListItemRequest): Promise<PriceList> {
-  return request<PriceList>(
+  const result = await request<PriceList>(
     `${PRICE_LISTS_URL}/${id}/items`,
     { method: 'POST', body: JSON.stringify(itemReq) },
     'Không thể lưu dòng giá'
   );
+  invalidateAgencyFormOptionsCache();
+  return result;
 }
 
 /**
  * Xoá một dòng giá khỏi bảng giá (chỉ khi bảng giá chưa phát sinh đơn; Backend kiểm)
  */
 export async function deletePriceListItem(id: number, itemId: number): Promise<PriceList> {
-  return request<PriceList>(
+  const result = await request<PriceList>(
     `${PRICE_LISTS_URL}/${id}/items/${itemId}`,
     { method: 'DELETE' },
     'Không thể xoá dòng giá'
   );
+  invalidateAgencyFormOptionsCache();
+  return result;
 }
+
+/**
+ * Xoá toàn bộ bảng giá (chỉ khi bảng giá chưa phát sinh đơn hàng)
+ */
+export async function deletePriceList(id: number): Promise<void> {
+  await request<void>(
+    `${PRICE_LISTS_URL}/${id}`,
+    { method: 'DELETE' },
+    'Không thể xoá bảng giá'
+  );
+  invalidateAgencyFormOptionsCache();
+}
+
 
 /**
  * S2-10 Tra cứu nhanh giá bán niêm yết và mức giá sàn theo Nhóm khách hàng + SKU + Ngày

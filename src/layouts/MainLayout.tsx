@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { Fragment, useState, useEffect, useMemo } from 'react';
 import type { FC, ReactNode, FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation, Link } from '../routes/Router';
@@ -8,6 +8,8 @@ import { Icons, DynamicIcon } from '../components/common/Icons';
 import { changePasswordApi } from '../services/api';
 import { LogoutConfirmModal } from '../components/common/LogoutConfirmModal';
 import { UserAvatarMenu } from '../components/common/UserAvatarMenu';
+import { NotificationBell } from '../components/common/NotificationBell';
+import { SearchSelect } from '../components/common/SearchSelect';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -58,6 +60,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
   // Đóng Mobile Drawer khi đổi route
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
@@ -134,7 +137,21 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
 
   // Lấy tiêu đề và mô tả của trang hiện tại cho Header
-  const currentMenu = menus.find((m) => m.path === location.pathname);
+  // Bỏ phần ?query (vd /logs?tab=price) khi so khớp menu
+  const currentPath = location.pathname.split('?')[0];
+
+  // Tìm menu item khớp nhất (đường dẫn dài nhất) với currentPath
+  // Tránh lỗi nhiều tab cùng sáng màu (ví dụ /orders và /orders/create)
+  const activeMenu = useMemo(() => {
+    const matchingMenus = displayedMenus.filter(
+      (m) => currentPath === m.path || (m.path !== '/' && currentPath.startsWith(m.path + '/'))
+    );
+    if (matchingMenus.length === 0) return null;
+    return matchingMenus.reduce((prev, curr) => (curr.path.length > prev.path.length ? curr : prev));
+  }, [displayedMenus, currentPath]);
+
+  const currentMenu = activeMenu || menus.find((m) => m.path === currentPath);
+  const isPickingListRoute = location.pathname.startsWith('/inventory/picking-lists');
   const pageTitle =
     location.pathname === '/forbidden'
       ? '403 Truy Cập Bị Từ Chối'
@@ -142,13 +159,31 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
         ? 'Hồ Sơ Cá Nhân'
         : location.pathname === '/products/import'
           ? 'Nhập Sản Phẩm Từ Excel'
-          : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
+          : location.pathname === '/customers/create'
+            ? 'Khai Báo Hồ Sơ Đại Lý Mới'
+            : location.pathname === '/customers/transfer'
+              ? 'Chuyển Giao Địa Bàn Hàng Loạt'
+              : location.pathname === '/suppliers/create'
+                ? 'Thêm Mới Đối Tác Cung Ứng'
+                : location.pathname === '/inventory/picking-lists/create'
+                  ? 'Lập Phiếu Soạn Hàng Mới'
+                  : location.pathname.startsWith('/inventory/picking-lists/')
+                    ? 'Chi Tiết Phiếu Soạn Hàng'
+                    : currentMenu?.title || 'Bảng Điều Khiển Bán Hàng & Kho';
   const pageSubtitle =
-    location.pathname === '/profile'
-      ? 'Thông tin cá nhân & thiết lập an toàn tài khoản'
-      : location.pathname === '/products/import'
-        ? 'Tải tệp mẫu, xem trước từng dòng và nhập hàng loạt đến 5.000 SKU'
-        : currentMenu?.description || 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống';
+    isPickingListRoute
+      ? ''
+      : location.pathname === '/profile'
+        ? 'Thông tin cá nhân & thiết lập an toàn tài khoản'
+        : location.pathname === '/products/import'
+          ? 'Tải tệp mẫu, xem trước từng dòng và nhập hàng loạt đến 5.000 SKU'
+          : location.pathname === '/customers/create'
+            ? 'Khai báo thông tin pháp lý, nhóm khách hàng, cơ chế bảng giá và phân công địa bàn quản lý'
+            : location.pathname === '/customers/transfer'
+              ? 'Bàn giao toàn bộ hoặc theo khu vực cho nhân viên mới khi có luân chuyển công tác'
+              : location.pathname === '/suppliers/create'
+                ? 'Nguồn hàng chuẩn để gắn vào phiếu nhập kho truy nguyên nguồn gốc'
+                : (currentMenu?.description ?? 'Tổng quan hoạt động bán hàng, tồn kho và phân tích hệ thống');
 
   return (
     <div className="erp-app-shell">
@@ -199,11 +234,10 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             <div className="erp-sidebar-role-name flex items-center justify-between">
               {user?.roles && user.roles.length > 1 ? (
                 <div className="relative flex items-center w-full">
-                  <select
+                  <SearchSelect
                     value={effectiveRole}
                     onChange={(e) => switchRole(e.target.value as RoleName)}
-                    style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none' }}
-                    className="w-full bg-transparent font-bold text-gray-800 text-xs cursor-pointer border-none outline-none focus:ring-0 p-0 pr-5 truncate"
+                    className="w-full bg-transparent font-bold text-gray-800 text-xs cursor-pointer border-none outline-none focus:ring-0 p-0"
                     title="Chuyển đổi vai trò làm việc"
                   >
                     {user.roles.map((r) => (
@@ -211,8 +245,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
                         {ROLE_METADATA_MAP[r]?.label || r}
                       </option>
                     ))}
-                  </select>
-                  <Icons.ChevronDown size={14} className="absolute right-0 text-gray-400 pointer-events-none" />
+                  </SearchSelect>
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 overflow-hidden">
@@ -263,28 +296,37 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
             </div>
           ) : (
             <ul className="erp-menu-list">
-              {displayedMenus.map((item) => {
-                const isActive = location.pathname === item.path;
+              {displayedMenus.map((item, idx) => {
+                const isActive = activeMenu?.path === item.path;
+                // Gom nhóm theo chức năng: hiện tiêu đề nhóm khi sang nhóm mới
+                const showGroup = Boolean(item.group) && item.group !== displayedMenus[idx - 1]?.group;
                 return (
-                  <li key={item.path} className="erp-menu-item">
-                    <Link
-                      to={item.path}
-                      className={`erp-menu-link ${isActive ? 'active' : ''}`}
-                      title={item.title}
-                    >
-                      <span className="erp-menu-icon">
-                        <DynamicIcon name={item.icon} size={18} />
-                      </span>
-                      {!isSidebarCollapsed && (
-                        <>
-                          <span className="erp-menu-title">{item.title}</span>
-                          {item.badge && (
-                            <span className="erp-menu-badge">{item.badge}</span>
-                          )}
-                        </>
-                      )}
-                    </Link>
-                  </li>
+                  <Fragment key={item.path}>
+                    {showGroup && (
+                      <li className="erp-menu-group" aria-hidden={isSidebarCollapsed}>
+                        {isSidebarCollapsed ? <span className="erp-menu-group-divider" /> : item.group}
+                      </li>
+                    )}
+                    <li className="erp-menu-item">
+                      <Link
+                        to={item.path}
+                        className={`erp-menu-link ${isActive ? 'active' : ''}`}
+                        title={item.title}
+                      >
+                        <span className="erp-menu-icon">
+                          <DynamicIcon name={item.icon} size={18} />
+                        </span>
+                        {!isSidebarCollapsed && (
+                          <>
+                            <span className="erp-menu-title">{item.title}</span>
+                            {item.badge && (
+                              <span className="erp-menu-badge">{item.badge}</span>
+                            )}
+                          </>
+                        )}
+                      </Link>
+                    </li>
+                  </Fragment>
                 );
               })}
             </ul>
@@ -310,10 +352,16 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
             {/* Tiêu đề trang + mô tả hoạt động bên dưới */}
             <div className="erp-page-title-box">
-              <h1 className="erp-page-heading">{pageTitle}</h1>
-              {location.pathname !== '/categories' && (
-                <span className="erp-page-subheading">{pageSubtitle}</span>
-              )}
+              {!location.pathname.startsWith('/inventory/delivery-trips/') &&
+                location.pathname !== '/inventory/delivery-trips/create' && (
+                  <h1 className="erp-page-heading">{pageTitle}</h1>
+                )}
+              {!['/', '/dashboard', '/categories', '/invoices', '/invoices/create', '/payments/adjustments', '/debts/ledger', '/debts/reconciliation', '/debts/statement', '/reports/overdue-debts', '/sales-returns', '/sales-returns/create', '/inventory/stock-adjustments', '/inventory/stock-adjustments/create', '/reports/sales', '/payments/reconciliation', '/inventory/warehouses', '/inventory/lots', '/inventory/aging', '/inventory/in-transit', '/inventory/stock-ledger', '/inventory/ledger', '/inventory/stock-card', '/inventory/stocktakes', '/inventory/receipts', '/inventory/transfers', '/orders', '/orders/create', '/pricing', '/pricing/discounts', '/users', '/customers', '/customers/create', '/products', '/suppliers', '/kpi/targets'].includes(location.pathname) &&
+                !location.pathname.startsWith('/inventory/delivery-trips') &&
+                !location.pathname.startsWith('/inventory/stock-adjustments') &&
+                Boolean(pageSubtitle) && (
+                  <span className="erp-page-subheading">{pageSubtitle}</span>
+                )}
             </div>
           </div>
 
@@ -321,13 +369,19 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
 
 
-          {/* Menu Ảnh đại diện với 3 tùy chọn: 1 là Hồ sơ cá nhân, 2 là Chủ đề, 3 là Đăng xuất (Ảnh 3 / Ảnh 2) */}
-          <UserAvatarMenu
-            user={user}
-            currentRole={effectiveRole}
-            onOpenProfile={() => navigate('/profile')}
-            onLogout={() => setShowLogoutConfirm(true)}
-          />
+          {/* Khu vực bên phải Topbar: Chuông thông báo & Menu tài khoản */}
+          <div className="erp-topbar-right flex items-center gap-2 sm:gap-3">
+            {/* Chuông Thông Báo & Cảnh Báo Hệ Thống */}
+            <NotificationBell />
+
+            {/* Menu Ảnh đại diện với 3 tùy chọn: 1 là Hồ sơ cá nhân, 2 là Chủ đề, 3 là Đăng xuất */}
+            <UserAvatarMenu
+              user={user}
+              currentRole={effectiveRole}
+              onOpenProfile={() => navigate('/profile')}
+              onLogout={() => setShowLogoutConfirm(true)}
+            />
+          </div>
         </header>
 
         {/* Nội dung trang */}

@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { PriceList, CustomerGroupType, PriceListItemRequest } from '../../types/pricing';
-import { CUSTOMER_GROUPS, CATALOG_PRODUCTS } from '../../types/pricing';
+import { CUSTOMER_GROUPS } from '../../types/pricing';
 import { addOrUpdatePriceListItem, deletePriceListItem } from '../../services/pricingApi';
+import { productService } from '../../services/productService';
+import type { ProductOptionItem } from '../../services/productService';
 import { Icons } from '../common/Icons';
+import { SearchSelect } from '../common/SearchSelect';
+import { NumberInput } from '../common/NumberInput';
+import { useConfirmDialog } from '../common/useConfirmDialog';
 
 interface PriceListDetailModalProps {
   priceList: PriceList | null;
@@ -19,6 +24,7 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
   onRefresh,
   onOpenClone
 }) => {
+  const { confirm, confirmDialog } = useConfirmDialog();
   const [addingItem, setAddingItem] = useState<boolean>(false);
   const [sku, setSku] = useState<string>('');
   const [name, setName] = useState<string>('');
@@ -26,21 +32,57 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
   const [floorPrice, setFloorPrice] = useState<string>('');
   const [itemError, setItemError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [realProducts, setRealProducts] = useState<ProductOptionItem[]>([]);
+
+  // Tối ưu hóa khi bảng giá có nhiều sản phẩm: Tìm kiếm và phân trang nội bộ
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [itemPage, setItemPage] = useState<number>(0);
+  const pageSize = 25;
+
+  useEffect(() => {
+    productService
+      .searchProductOptions('', 40)
+      .then(setRealProducts)
+      .catch(() => { });
+  }, []);
 
   if (!priceList) return null;
 
   const groupInfo = CUSTOMER_GROUPS[priceList.customerGroup as CustomerGroupType];
   const items = priceList.items || [];
 
-  const handleSelectCatalogProduct = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  // Lọc sản phẩm theo từ khoá
+  const filteredItems = useMemo(() => {
+    if (!searchTerm.trim()) return items;
+    const q = searchTerm.toLowerCase().trim();
+    return items.filter(
+      (it) => it.productSku.toLowerCase().includes(q) || (it.productName || '').toLowerCase().includes(q)
+    );
+  }, [items, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const currentPage = Math.min(itemPage, totalPages - 1);
+  const pagedItems = useMemo(() => {
+    const start = currentPage * pageSize;
+    return filteredItems.slice(start, start + pageSize);
+  }, [filteredItems, currentPage, pageSize]);
+
+  const handleSelectRealProduct = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedSku = e.target.value;
     if (!selectedSku) return;
-    const prod = CATALOG_PRODUCTS.find((p) => p.sku === selectedSku);
+    const prod = realProducts.find((p) => p.sku === selectedSku);
     if (prod) {
       setSku(prod.sku);
       setName(prod.name);
-      setPrice(prod.suggestedRetailPrice.toString());
-      setFloorPrice(Math.round(prod.suggestedRetailPrice * 0.9).toString());
+      let defPrice = 100000;
+      let defFloor = 90000;
+      if (prod.costPrice && Number(prod.costPrice) > 0) {
+        const cost = Number(prod.costPrice);
+        defPrice = Math.round(cost * 1.2);
+        defFloor = Math.round(cost * 1.05);
+      }
+      setPrice(defPrice.toString());
+      setFloorPrice(defFloor.toString());
     }
   };
 
@@ -91,19 +133,26 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
   };
 
   const handleDeleteItem = async (itemId: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa dòng giá sản phẩm này khỏi bảng giá?')) {
+    const ok = await confirm({
+      title: 'Xoá dòng giá',
+      message: 'Bạn có chắc chắn muốn xóa dòng giá sản phẩm này khỏi bảng giá?',
+      variant: 'danger',
+      confirmLabel: 'Xoá dòng giá'
+    });
+    if (!ok) {
       return;
     }
     try {
       await deletePriceListItem(priceList.id, itemId);
       onRefresh();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi xóa dòng sản phẩm');
+      setItemError(err instanceof Error ? err.message : 'Lỗi khi xóa dòng sản phẩm');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/20 backdrop-blur-sm overflow-y-auto">
+      {confirmDialog}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl max-w-4xl w-full max-h-[92vh] my-auto flex flex-col overflow-hidden animate-in fade-in duration-200">
         {/* Header Modal */}
         <div className="p-5 border-b border-gray-200 flex items-start justify-between bg-gray-50/60">
@@ -123,11 +172,10 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
                 </span>
               )}
               <span
-                className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  priceList.status === 'ACTIVE'
+                className={`text-xs px-2 py-0.5 rounded-full font-medium ${priceList.status === 'ACTIVE'
                     ? 'bg-emerald-100 text-emerald-700'
                     : 'bg-gray-200 text-gray-600'
-                }`}
+                  }`}
               >
                 {priceList.status === 'ACTIVE' ? 'Đang áp dụng' : 'Ngừng áp dụng'}
               </span>
@@ -176,22 +224,53 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
 
         {/* Nội dung danh sách dòng giá */}
         <div className="p-5 flex-1 overflow-y-auto">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-2">
               <Icons.Tags size={18} className="text-[#F85606]" />
               <h3 className="text-sm font-semibold text-gray-900">
-                Chi tiết dòng giá niêm yết & Mức giá sàn ({items.length} mặt hàng)
+                Chi tiết dòng giá niêm yết & Mức giá sàn ({items.length.toLocaleString('vi-VN')} mặt hàng)
               </h3>
             </div>
-            {canManage && !priceList.hasOrders && (
-              <button
-                onClick={() => setAddingItem(!addingItem)}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#F85606] text-xs font-medium border border-orange-200 transition-colors cursor-pointer"
-              >
-                <Icons.Plus size={14} />
-                <span>{addingItem ? 'Đóng form thêm' : '+ Thêm dòng giá'}</span>
-              </button>
-            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Ô tìm kiếm dòng sản phẩm */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setItemPage(0);
+                  }}
+                  placeholder="Tìm SKU, tên sản phẩm..."
+                  className="w-48 sm:w-56 pl-7 pr-6 py-1 bg-white border border-gray-300 rounded-lg text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#F85606]"
+                />
+                <div className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
+                  <Icons.Search size={13} />
+                </div>
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setItemPage(0);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {canManage && !priceList.hasOrders && (
+                <button
+                  onClick={() => setAddingItem(!addingItem)}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#F85606] text-xs font-medium border border-orange-200 transition-colors cursor-pointer"
+                >
+                  <Icons.Plus size={14} />
+                  <span>{addingItem ? 'Đóng form thêm' : ' Thêm dòng giá'}</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Form thêm nhanh dòng sản phẩm (khi chưa khóa) */}
@@ -201,17 +280,17 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
                 <span className="text-xs font-semibold text-orange-900">
                   Thêm hoặc cập nhật giá sản phẩm:
                 </span>
-                <select
-                  onChange={handleSelectCatalogProduct}
-                  className="text-xs px-2 py-1 bg-white border border-orange-300 rounded-lg text-gray-700 cursor-pointer"
+                <SearchSelect
+                  onChange={handleSelectRealProduct}
+                  className="text-xs px-2 py-1 bg-white border border-orange-300 rounded-lg text-gray-700 cursor-pointer max-w-[280px]"
                 >
-                  <option value="">-- Chọn nhanh sản phẩm từ mẫu FMCG --</option>
-                  {CATALOG_PRODUCTS.map((p) => (
-                    <option key={p.sku} value={p.sku}>
+                  <option value="">-- Chọn nhanh sản phẩm trong hệ thống --</option>
+                  {realProducts.map((p) => (
+                    <option key={p.id} value={p.sku}>
                       {p.sku} - {p.name}
                     </option>
                   ))}
-                </select>
+                </SearchSelect>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-2">
@@ -244,8 +323,7 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
                   <label className="block text-[11px] font-medium text-gray-600 mb-0.5">
                     Giá niêm yết (VNĐ) *
                   </label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
                     placeholder="VD: 250000"
@@ -257,8 +335,7 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
                   <label className="block text-[11px] font-medium text-gray-600 mb-0.5">
                     Mức giá sàn (VNĐ) *
                   </label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={floorPrice}
                     onChange={(e) => setFloorPrice(e.target.value)}
                     placeholder="Dưới mức này phải duyệt"
@@ -311,23 +388,26 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-xs">
-                {items.length === 0 ? (
+                {filteredItems.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-gray-400">
-                      Chưa có mặt hàng nào trong bảng giá này.
+                      {searchTerm
+                        ? `Không tìm thấy sản phẩm nào khớp với từ khóa "${searchTerm}".`
+                        : 'Chưa có mặt hàng nào trong bảng giá này.'}
                     </td>
                   </tr>
                 ) : (
-                  items.map((item, idx) => {
+                  pagedItems.map((item, idx) => {
+                    const rowNumber = currentPage * pageSize + idx + 1;
                     const margin = item.price - item.floorPrice;
                     const marginPercent = item.price > 0 ? Math.round((margin / item.price) * 100) : 0;
                     return (
                       <tr
-                        key={item.id || idx}
+                        key={item.id || rowNumber}
                         className="hover:bg-gray-50/50"
                       >
                         <td className="py-2.5 px-3 text-center text-gray-400 font-mono text-[11px]">
-                          {idx + 1}
+                          {rowNumber}
                         </td>
                         <td className="py-2.5 px-3 font-mono font-bold text-gray-800">
                           {item.productSku}
@@ -366,6 +446,39 @@ export const PriceListDetailModal: React.FC<PriceListDetailModalProps> = ({
                 )}
               </tbody>
             </table>
+
+            {/* Thanh chuyển trang nội bộ cho bảng giá */}
+            {filteredItems.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-2.5 bg-gray-50/80 border-t border-gray-200 text-xs text-gray-600">
+                <div>
+                  Hiển thị <strong>{currentPage * pageSize + 1}</strong>–<strong>{Math.min((currentPage + 1) * pageSize, filteredItems.length)}</strong> / <strong>{filteredItems.length.toLocaleString('vi-VN')}</strong> dòng
+                  {filteredItems.length !== items.length && (
+                    <span className="text-gray-400 ml-1">(lọc từ tổng số {items.length.toLocaleString('vi-VN')} sản phẩm)</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setItemPage((p) => Math.max(0, p - 1))}
+                    disabled={currentPage === 0}
+                    className="px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-xs font-semibold transition-colors"
+                  >
+                    Trang trước
+                  </button>
+                  <span className="px-2 font-mono font-medium text-gray-800">
+                    Trang {currentPage + 1} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setItemPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={currentPage >= totalPages - 1}
+                    className="px-2.5 py-1 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-xs font-semibold transition-colors"
+                  >
+                    Trang sau
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

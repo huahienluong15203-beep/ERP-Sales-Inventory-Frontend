@@ -1,0 +1,789 @@
+import React, { useEffect, useState } from 'react';
+import {
+  X,
+  FileText,
+  Calendar,
+  Building2,
+  User,
+  MapPin,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Package,
+  Edit,
+  Copy,
+  Phone,
+  RefreshCw,
+  RotateCcw,
+  History,
+  Ban,
+  Printer,
+  Truck,
+  CheckCheck,
+  Archive
+} from 'lucide-react';
+import type { OrderBackendResponse, OrderApprovalHistoryResponse } from '../../types/order';
+import { fetchOrderDetail, fetchOrderApprovalHistory, formatCurrencyVND, formatQuantity, updateOrderStatus } from '../../services/orderService';
+import { useNavigate } from '../../routes/Router';
+import { useAuth } from '../../contexts/AuthContext';
+import { OrderApprovalActionModal, type ApprovalActionType } from './OrderApprovalActionModal';
+import { OrderLifecycleTimeline } from './OrderLifecycleTimeline';
+import { OrderCancelModal } from './OrderCancelModal';
+import { OrderPdfPreviewModal } from './OrderPdfPreviewModal';
+
+interface OrderDetailModalProps {
+  orderId: number | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onCloneOrder?: (orderId: number | string) => void;
+  onOrderUpdated?: () => void;
+}
+
+export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, isOpen, onClose, onCloneOrder, onOrderUpdated }) => {
+  const navigate = useNavigate();
+  const { user, currentRole, showToast } = useAuth();
+  const [loading, setLoading] = useState<boolean>(false);
+  const [order, setOrder] = useState<OrderBackendResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [approvalHistory, setApprovalHistory] = useState<OrderApprovalHistoryResponse[]>([]);
+  const [approvalModalState, setApprovalModalState] = useState<{
+    isOpen: boolean;
+    actionType: ApprovalActionType;
+  }>({ isOpen: false, actionType: 'APPROVE' });
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState<boolean>(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
+  const [updatingStatus, setUpdatingStatus] = useState<boolean>(false);
+
+  const isSalesManager =
+    currentRole === 'ROLE_SALES_MANAGER' ||
+    Boolean(user?.roles?.includes('ROLE_SALES_MANAGER'));
+
+  const isWarehouseOrAdmin =
+    currentRole === 'ROLE_ADMIN' ||
+    currentRole === 'ROLE_WH_MANAGER' ||
+    currentRole === 'ROLE_WAREHOUSE' ||
+    Boolean(user?.roles?.some((r) => ['ROLE_ADMIN', 'ROLE_WH_MANAGER', 'ROLE_WAREHOUSE'].includes(r)));
+
+  const canCreateOrder =
+    currentRole === 'ROLE_SALES_REP' ||
+    currentRole === 'ROLE_SALES_MANAGER' ||
+    currentRole === 'ROLE_ADMIN' ||
+    Boolean(user?.roles?.some((r) => ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN'].includes(r)));
+
+  const handleUpdateStatus = async (targetStatus: string, actionLabel: string) => {
+    if (!order?.id) return;
+    try {
+      setUpdatingStatus(true);
+      await updateOrderStatus(order.id, targetStatus);
+      showToast('Thành công', `Đơn hàng đã chuyển sang trạng thái "${actionLabel}"`, 'success');
+      loadOrderDetailAndHistory(Number(order.id));
+      if (onOrderUpdated) onOrderUpdated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Không thể chuyển trạng thái đơn hàng';
+      showToast('Lỗi thao tác', msg, 'error');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const loadOrderDetailAndHistory = (id: number) => {
+    setLoading(true);
+    setError(null);
+    fetchOrderDetail(id)
+      .then((data) => {
+        setOrder(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Lỗi tải chi tiết đơn hàng:', err);
+        setError(err.message || 'Không thể tải thông tin chi tiết đơn hàng');
+        setLoading(false);
+      });
+
+    fetchOrderApprovalHistory(id)
+      .then(setApprovalHistory)
+      .catch(() => setApprovalHistory([]));
+  };
+
+  useEffect(() => {
+    if (!isOpen || !orderId) {
+      return;
+    }
+
+    let isSubscribed = true;
+    const timer = setTimeout(() => {
+      if (isSubscribed) {
+        setLoading(true);
+        setError(null);
+      }
+    }, 0);
+
+    fetchOrderDetail(orderId)
+      .then((data) => {
+        if (isSubscribed) {
+          setOrder(data);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (isSubscribed) {
+          console.error('Lỗi tải chi tiết đơn hàng:', err);
+          setError(err.message || 'Không thể tải thông tin chi tiết đơn hàng');
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isSubscribed = false;
+      clearTimeout(timer);
+    };
+  }, [isOpen, orderId]);
+
+  const activeOrder = (!isOpen || !orderId) ? null : order;
+
+  // S4-10: Đơn đại lý tự đặt qua cổng (Backend ghi tiền tố này vào ghi chú) – NV kinh doanh phụ trách được xác nhận.
+  // Đơn có vi phạm (giá sàn, hạn mức, nợ quá hạn...) Backend vẫn bắt Quản lý KD duyệt (S4-02 & S4-05).
+  const isPortalOrder = Boolean(activeOrder?.note?.startsWith('[Đại lý tự đặt qua cổng]'));
+  const isSalesRep =
+    currentRole === 'ROLE_SALES_REP' || Boolean(user?.roles?.includes('ROLE_SALES_REP'));
+  const canDecideApproval = isSalesManager || (isSalesRep && isPortalOrder);
+
+  if (!isOpen) return null;
+
+  const renderStatusBadge = (status: string) => {
+    switch (status) {
+      case 'APPROVED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <CheckCircle2 size={13} />
+            <span>Đã duyệt</span>
+          </span>
+        );
+      case 'PENDING_APPROVAL':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+            <Clock size={13} />
+            <span>Chờ duyệt</span>
+          </span>
+        );
+      case 'DRAFT':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200">
+            <FileText size={13} />
+            <span>Đơn nháp</span>
+          </span>
+        );
+      case 'REJECTED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
+            <XCircle size={13} />
+            <span>Từ chối</span>
+          </span>
+        );
+      case 'COMPLETED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <CheckCircle2 size={13} />
+            <span>Hoàn thành</span>
+          </span>
+        );
+      case 'CLOSED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
+            <CheckCircle2 size={13} />
+            <span>Đã hoàn tất</span>
+          </span>
+        );
+      case 'DELIVERED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 border border-teal-200">
+            <CheckCircle2 size={13} />
+            <span>Đã giao hàng</span>
+          </span>
+        );
+      case 'PICKING':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+            <span>Đang soạn hàng</span>
+          </span>
+        );
+      case 'DISPATCHED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+            <span>Đã xuất kho</span>
+          </span>
+        );
+      case 'CANCELLED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-zinc-100 text-zinc-700 border border-zinc-200">
+            <XCircle size={13} />
+            <span>Đã hủy</span>
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+            <span>{status}</span>
+          </span>
+        );
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
+      <div
+        className="bg-white w-full max-w-4xl max-h-[92vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header Modal */}
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-orange-50/70 via-amber-50/30 to-white">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F85606] to-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-orange-500/20">
+              <FileText size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h3 className="text-base font-bold text-gray-900 font-mono">
+                  {activeOrder?.code || `Đơn hàng #${orderId}`}
+                </h3>
+                {activeOrder && renderStatusBadge(activeOrder.status)}
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Chi tiết dòng hàng và thông tin đặt hàng của đại lý
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 flex items-center justify-center transition"
+            aria-label="Đóng"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Nội dung Modal */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          {loading && (
+            <div className="py-16 flex flex-col items-center justify-center gap-2 text-gray-500">
+              <RefreshCw size={26} className="animate-spin text-[#F85606]" />
+              <span className="text-sm font-medium">Đang tải chi tiết đơn hàng...</span>
+            </div>
+          )}
+
+          {error && !loading && (
+            <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-3">
+              <AlertTriangle size={20} className="shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold">Không thể hiển thị đơn hàng</p>
+                <p className="text-xs mt-0.5">{error}</p>
+              </div>
+            </div>
+          )}
+
+          {!loading && activeOrder && (
+            <>
+              {/* S4-06: TIMELINE HÀNH TRÌNH VÒNG ĐỜI ĐƠN HÀNG */}
+              <OrderLifecycleTimeline
+                status={activeOrder.status}
+                cancelReason={((activeOrder as unknown as { lastApprovalComment?: string }).lastApprovalComment) || undefined}
+                approvalHistory={approvalHistory}
+                createdAt={activeOrder.createdAt}
+                desiredDeliveryDate={activeOrder.desiredDeliveryDate || undefined}
+              />
+
+              {/* Khối 1: Thông tin đại lý & Người phụ trách */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-gray-50/70 border border-gray-100 space-y-2.5">
+                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Building2 size={14} className="text-[#F85606]" />
+                    <span>Thông tin đại lý</span>
+                  </h4>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-gray-900">{activeOrder.customerName}</p>
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <span className="font-mono bg-white px-2 py-0.5 rounded border border-gray-200">
+                        {activeOrder.customerCode}
+                      </span>
+                      <span>•</span>
+                      <span className="px-2 py-0.5 rounded bg-orange-100/70 text-[#F85606] font-semibold text-[11px]">
+                        {activeOrder.customerGroupLabel || activeOrder.customerGroup}
+                      </span>
+                    </div>
+                  </div>
+                  {activeOrder.deliveryAddress && (
+                    <div className="pt-2 border-t border-gray-200/60 text-xs text-gray-600 space-y-1">
+                      <div className="flex items-start gap-1.5">
+                        <MapPin size={13} className="text-gray-400 mt-0.5 shrink-0" />
+                        <span className="line-clamp-2">
+                          <strong>{activeOrder.deliveryAddress.label}:</strong> {activeOrder.deliveryAddress.address}
+                        </span>
+                      </div>
+                      {activeOrder.deliveryAddress.receiverName && (
+                        <div className="flex items-center gap-2 text-[11px] text-gray-500 pl-4.5">
+                          <span>Người nhận: {activeOrder.deliveryAddress.receiverName}</span>
+                          {activeOrder.deliveryAddress.receiverPhone && (
+                            <>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <Phone size={10} /> {activeOrder.deliveryAddress.receiverPhone}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-4 rounded-xl bg-gray-50/70 border border-gray-100 space-y-2.5">
+                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Calendar size={14} className="text-[#F85606]" />
+                    <span>Thời gian & Người lập đơn</span>
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-gray-500 block">Ngày tạo:</span>
+                      <span className="font-semibold text-gray-800">
+                        {activeOrder.createdAt ? new Date(activeOrder.createdAt).toLocaleDateString('vi-VN') : '—'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block">Ngày giao dự kiến:</span>
+                      <span className="font-semibold text-gray-800">
+                        {activeOrder.desiredDeliveryDate
+                          ? new Date(activeOrder.desiredDeliveryDate).toLocaleDateString('vi-VN')
+                          : '—'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block">Người tạo:</span>
+                      <span className="font-semibold text-gray-800 flex items-center gap-1 mt-0.5">
+                        <User size={12} className="text-gray-400" />
+                        <span>{activeOrder.createdByUsername || 'sales_rep'}</span>
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block">Cập nhật lúc:</span>
+                      <span className="font-semibold text-gray-800">
+                        {activeOrder.updatedAt ? new Date(activeOrder.updatedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      </span>
+                    </div>
+                  </div>
+                  {activeOrder.note && (
+                    <div className="pt-2 border-t border-gray-200/60 text-xs text-gray-600">
+                      <strong>Ghi chú:</strong> <em>{activeOrder.note}</em>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Khối Cảnh báo vi phạm / Cần phê duyệt (nếu có) */}
+              {activeOrder.warnings && activeOrder.warnings.length > 0 && (
+                <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs space-y-1">
+                  <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                    <AlertTriangle size={14} />
+                    <span>Cảnh báo duyệt ngoại lệ:</span>
+                  </div>
+                  <ul className="list-disc list-inside space-y-0.5 pl-1">
+                    {activeOrder.warnings.map((w, idx) => (
+                      <li key={idx}>{w}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* S5-01: Cảnh báo đơn hàng giao thiếu */}
+              {activeOrder.hasShortage && (
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs space-y-1">
+                  <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                    <AlertTriangle size={15} className="text-amber-600" />
+                    <span>Cảnh báo đơn hàng giao thiếu ({activeOrder.shortageLineCount || 1} mặt hàng):</span>
+                  </div>
+                  <p className="text-amber-800 pl-5">
+                    Hệ thống ghi nhận đơn hàng có mặt hàng thực tế giao ít hơn số lượng đặt. Quý khách vui lòng đối chiếu cột <strong>Thực giao</strong> bên dưới.
+                  </p>
+                </div>
+              )}
+
+              {/* Khối 2: Danh sách dòng hàng */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Package size={14} className="text-[#F85606]" />
+                    <span>Danh sách sản phẩm đặt hàng ({activeOrder.lines?.length || 0})</span>
+                  </h4>
+                </div>
+
+                {(() => {
+                  const hasDeliveryInfo = Boolean(
+                    activeOrder.hasShortage ||
+                    ['DELIVERED', 'CLOSED'].includes(activeOrder.status) ||
+                    activeOrder.lines?.some((l) => l.deliveredQuantity !== undefined && l.deliveredQuantity !== null)
+                  );
+
+                  return (
+                    <div className="rounded-xl border border-gray-200 overflow-hidden shadow-2xs">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs text-left">
+                          <thead className="bg-gray-50/80 text-gray-700 font-bold border-b border-gray-200">
+                            <tr>
+                              <th className="py-2.5 px-3 text-center w-12">#</th>
+                              <th className="py-2.5 px-3">Mã SKU</th>
+                              <th className="py-2.5 px-3">Tên sản phẩm</th>
+                              <th className="py-2.5 px-3 text-center">ĐVT</th>
+                              <th className="py-2.5 px-3 text-right">{hasDeliveryInfo ? 'Số lượng đặt' : 'Số lượng'}</th>
+                              {hasDeliveryInfo && (
+                                <th className="py-2.5 px-3 text-right font-bold text-orange-900 bg-orange-50/50">Thực giao</th>
+                              )}
+                              <th className="py-2.5 px-3 text-right">Đơn giá</th>
+                              <th className="py-2.5 px-3 text-right">Chiết khấu</th>
+                              <th className="py-2.5 px-3 text-right font-bold">Thành tiền</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {activeOrder.lines && activeOrder.lines.length > 0 ? (
+                              activeOrder.lines.map((line, index) => (
+                                <tr key={line.id || index} className={`hover:bg-orange-50/25 transition-colors ${line.isShortage ? 'bg-amber-50/30' : ''}`}>
+                                  <td className="py-2.5 px-3 text-center text-gray-500">{line.lineNo || index + 1}</td>
+                                  <td className="py-2.5 px-3 font-mono font-bold text-gray-800">{line.productSku}</td>
+                                  <td className="py-2.5 px-3 font-medium text-gray-900">{line.productName}</td>
+                                  <td className="py-2.5 px-3 text-center">
+                                    <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-[11px] font-semibold">
+                                      {line.unitName || line.baseUnit}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right font-semibold text-gray-800">
+                                    {formatQuantity(line.quantity)}
+                                  </td>
+                                  {hasDeliveryInfo && (
+                                    <td className="py-2.5 px-3 text-right bg-orange-50/20">
+                                      {line.deliveredQuantity !== undefined && line.deliveredQuantity !== null ? (
+                                        line.isShortage ? (
+                                          <div className="space-y-0.5">
+                                            <span className="font-black text-rose-600 font-mono">
+                                              {formatQuantity(line.deliveredQuantity)}
+                                            </span>
+                                            <span className="block text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-1 py-0.5 rounded">
+                                              Thiếu {formatQuantity(line.shortageQuantity ?? Math.max(0, line.quantity - line.deliveredQuantity))}
+                                            </span>
+                                            {line.shortageReason && (
+                                              <span className="block text-[10px] text-gray-500 italic max-w-[140px] ml-auto truncate" title={line.shortageReason}>
+                                                Lý do: {line.shortageReason}
+                                              </span>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <span className="font-bold text-emerald-600 font-mono">
+                                            {formatQuantity(line.deliveredQuantity)} (Đủ)
+                                          </span>
+                                        )
+                                      ) : (
+                                        <span className="text-gray-400 italic">Chờ giao</span>
+                                      )}
+                                    </td>
+                                  )}
+                                  <td className="py-2.5 px-3 text-right text-gray-700">
+                                    {formatCurrencyVND(line.pricePerUnit || line.unitPrice)}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right text-rose-600 font-medium">
+                                    {line.discountAmount > 0 ? `-${formatCurrencyVND(line.discountAmount)}` : '0 đ'}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right font-bold text-[#F85606]">
+                                    {formatCurrencyVND(line.netAmount || line.grossAmount - line.discountAmount)}
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan={hasDeliveryInfo ? 9 : 8} className="py-6 text-center text-gray-400">
+                                  Đơn hàng chưa có dòng sản phẩm nào
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Khối 3: Bảng tổng kết tiền */}
+              <div className="flex justify-end pt-2">
+                <div className="w-full sm:w-80 rounded-xl bg-orange-50/50 border border-orange-100 p-4 space-y-2 text-xs">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Tổng tiền hàng:</span>
+                    <span className="font-semibold text-gray-800">
+                      {formatCurrencyVND(Number(activeOrder.subtotal || 0))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>Tổng chiết khấu:</span>
+                    <span className="font-semibold text-rose-600">
+                      -{formatCurrencyVND(Number(activeOrder.discountTotal || 0))}
+                    </span>
+                  </div>
+                  <div className="pt-2 border-t border-orange-200/60 flex justify-between items-center text-sm">
+                    <span className="font-bold text-gray-900">Tổng thanh toán:</span>
+                    <span className="text-base font-extrabold text-[#F85606]">
+                      {formatCurrencyVND(Number(activeOrder.totalAmount || 0))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* S4-05 AC4: KHỐI 4: LỊCH SỬ PHÊ DUYỆT ĐƠN HÀNG (BẤT BIẾN - CHỈ XEM) */}
+              <div className="p-4 rounded-xl bg-gray-50/80 border border-gray-200/90 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <History size={14} className="text-[#F85606]" />
+                    <span>Lịch Sử Phê Duyệt Đơn Hàng </span>
+                  </h4>
+                  <span className="text-[10px] text-gray-400 font-medium italic">
+                    * Bất biến — Không thể chỉnh sửa hoặc xóa
+                  </span>
+                </div>
+
+                {approvalHistory.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic py-1">
+                    Chưa có lịch sử phê duyệt cho đơn hàng này.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {approvalHistory.map((item, idx) => (
+                      <div
+                        key={item.id || idx}
+                        className="p-2.5 rounded-lg bg-white border border-gray-200/80 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.action === 'APPROVE'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : item.action === 'REJECT'
+                                    ? 'bg-rose-100 text-rose-800'
+                                    : item.action === 'RETURN'
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-blue-100 text-blue-800'
+                                }`}
+                            >
+                              {item.actionLabel || item.action}
+                            </span>
+                            <span className="text-gray-500 text-[11px]">
+                              bởi <strong>{item.actorFullName || item.actorUsername}</strong>
+                            </span>
+                          </div>
+                          {item.comment && (
+                            <p className="text-[11px] text-gray-700 italic pl-1">
+                              &ldquo;{item.comment}&rdquo;
+                            </p>
+                          )}
+                        </div>
+
+                        <span className="text-[10px] text-gray-400 shrink-0 font-mono">
+                          {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            {activeOrder?.status === 'DRAFT' && ['ROLE_ADMIN', 'ROLE_SALES_MANAGER', 'ROLE_SALES_REP'].includes(currentRole ?? '') && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  navigate(`/orders/create?draftId=${activeOrder.id}`);
+                }}
+                className="px-4 py-2 rounded-xl bg-white border border-orange-300 text-[#F85606] hover:bg-orange-50 font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+              >
+                <Edit size={14} />
+                <span>Tiếp tục chỉnh sửa đơn nháp</span>
+              </button>
+            )}
+
+            {/* S4-05 AC2: Ba hành động Duyệt, Trả lại sửa, Từ chối (Quản lý KD & Admin; NVKD với đơn đại lý tự đặt - S4-10) */}
+            {activeOrder?.status === 'PENDING_APPROVAL' && canDecideApproval && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setApprovalModalState({ isOpen: true, actionType: 'APPROVE' })}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                  title="Phê duyệt đơn hàng"
+                >
+                  <CheckCircle2 size={14} />
+                  <span>Duyệt đơn</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setApprovalModalState({ isOpen: true, actionType: 'RETURN' })}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                  title="Trả lại yêu cầu NVKD sửa (bắt buộc nhập lý do)"
+                >
+                  <RotateCcw size={14} />
+                  <span>Trả lại sửa</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setApprovalModalState({ isOpen: true, actionType: 'REJECT' })}
+                  className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                  title="Từ chối đơn hàng (bắt buộc nhập lý do)"
+                >
+                  <XCircle size={14} />
+                  <span>Từ chối</span>
+                </button>
+              </div>
+            )}
+
+            {/* S4-06 & S5-06: Các hành động xử lý kho theo vòng đời */}
+            {activeOrder?.status === 'APPROVED' && isWarehouseOrAdmin && (
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={() => handleUpdateStatus('PICKING', 'Đang soạn hàng')}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
+                title="Bắt đầu lấy hàng và soạn hàng theo FEFO"
+              >
+                <Package size={14} className={updatingStatus ? 'animate-spin' : ''} />
+                <span>Bắt đầu soạn hàng</span>
+              </button>
+            )}
+
+            {activeOrder?.status === 'PICKING' && isWarehouseOrAdmin && (
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={() => handleUpdateStatus('DISPATCHED', 'Đã xuất kho')}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
+                title="Xác nhận hàng đã đóng gói rời kho, chuyển sang Đã xuất kho để đưa vào Chuyến giao hàng"
+              >
+                <Truck size={14} className={updatingStatus ? 'animate-spin' : ''} />
+                <span>Xác nhận xuất kho (Sẵn sàng xếp xe)</span>
+              </button>
+            )}
+
+            {activeOrder?.status === 'DISPATCHED' && (
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={() => handleUpdateStatus('DELIVERED', 'Đã giao hàng')}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
+                title="Xác nhận đại lý đã nhận hàng"
+              >
+                <CheckCheck size={14} className={updatingStatus ? 'animate-spin' : ''} />
+                <span>Xác nhận đã giao hàng</span>
+              </button>
+            )}
+
+            {activeOrder?.status === 'DELIVERED' && (isWarehouseOrAdmin || isSalesManager || currentRole === 'ROLE_ACCOUNTANT') && (
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={() => handleUpdateStatus('CLOSED', 'Hoàn tất')}
+                className="px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-50"
+                title="Hoàn tất và đóng đơn hàng"
+              >
+                <Archive size={14} className={updatingStatus ? 'animate-spin' : ''} />
+                <span>Hoàn tất đơn</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {activeOrder &&
+              ['APPROVED', 'PICKING'].includes(activeOrder.status) &&
+              canCreateOrder && (
+              <button
+                type="button"
+                onClick={() => setIsCancelModalOpen(true)}
+                className="px-3.5 py-2 rounded-xl border border-rose-300 text-rose-700 hover:bg-rose-50 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                title="Hủy đơn hàng chưa xuất kho (tự động nhả tồn đang giữ chỗ)"
+              >
+                <Ban size={14} />
+                <span>Hủy đơn</span>
+              </button>
+            )}
+
+            {activeOrder && (
+              <button
+                type="button"
+                onClick={() => setIsPdfModalOpen(true)}
+                className="px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                title="Xem trước & Tải file PDF"
+              >
+                <Printer size={14} />
+                <span>In / Xuất PDF</span>
+              </button>
+            )}
+
+            {activeOrder && activeOrder.id != null && canCreateOrder && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  if (onCloneOrder && activeOrder.id != null) {
+                    onCloneOrder(activeOrder.id);
+                  }
+                }}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition cursor-pointer"
+                title="Sao chép"
+              >
+                <Copy size={14} />
+                <span>Sao chép</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-xs transition cursor-pointer"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+
+        {/* Modal nhập lý do Duyệt / Từ chối / Trả lại sửa (S4-05) */}
+        <OrderApprovalActionModal
+          isOpen={approvalModalState.isOpen}
+          order={activeOrder}
+          actionType={approvalModalState.actionType}
+          onClose={() => setApprovalModalState((s) => ({ ...s, isOpen: false }))}
+          onSuccess={() => {
+            if (orderId) loadOrderDetailAndHistory(orderId);
+            if (onOrderUpdated) onOrderUpdated();
+          }}
+        />
+
+        {/* Modal hủy đơn hàng bắt buộc nhập lý do (S4-06) */}
+        <OrderCancelModal
+          isOpen={isCancelModalOpen}
+          order={activeOrder}
+          onClose={() => setIsCancelModalOpen(false)}
+          onSuccess={() => {
+            if (orderId) loadOrderDetailAndHistory(orderId);
+            if (onOrderUpdated) onOrderUpdated();
+          }}
+        />
+
+        {/* Modal xem trước và tải PDF đơn hàng (S4-08) */}
+        <OrderPdfPreviewModal
+          isOpen={isPdfModalOpen}
+          order={activeOrder}
+          onClose={() => setIsPdfModalOpen(false)}
+        />
+      </div>
+    </div>
+  );
+};

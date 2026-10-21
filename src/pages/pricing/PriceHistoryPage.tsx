@@ -12,6 +12,7 @@ import {
   exportPriceHistoryToExcel,
   formatVND,
   formatDateTime,
+  formatDate,
   PRICE_TYPE_OPTIONS
 } from '../../services/priceHistoryApi';
 import { ProductPriceSummaryCards } from '../../components/pricing/ProductPriceSummaryCards';
@@ -30,6 +31,7 @@ import {
 } from '../../components/common/Icons';
 import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 import { Pagination } from '../../components/common/Pagination';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const PriceHistoryPage: React.FC = () => {
   // Dữ liệu bảng lịch sử
@@ -41,7 +43,7 @@ export const PriceHistoryPage: React.FC = () => {
   // Danh mục sản phẩm tổng hợp
   const [products, setProducts] = useState<ProductPricingSummary[]>([]);
 
-  // Bộ lọc + trang lưu trên URL, vd: /pricing/history?sku=BIA-HN&trend=UP&page=2
+  // Bộ lọc + trang lưu trên URL, vd: /logs?tab=price&sku=BIA-HN&trend=UP&page=2
   const { params: urlParams, page, size, setPage, setSize, setFilters } = useUrlPaging({
     keyword: '',
     sku: 'ALL',
@@ -158,23 +160,23 @@ export const PriceHistoryPage: React.FC = () => {
   useClampPage(page, totalPages, setPage, loading);
 
   return (
-    <div className="w-full min-w-0 space-y-6 animate-fadeIn pb-12">
+    <div className="w-full min-w-0 space-y-3.5 animate-fadeIn pb-8">
       {/* 1. Nút hành động */}
-      <div className="flex items-center justify-end gap-2.5">
-        <div className="flex items-center gap-2.5">
+      <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center gap-2">
           <button
             onClick={loadData}
             disabled={loading}
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 transition shadow-xs cursor-pointer min-h-[44px]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 transition shadow-2xs cursor-pointer h-9"
             title="Làm mới lịch sử thay đổi giá"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin text-orange-600' : ''} />
+            <RefreshCw size={14} />
             <span>Làm mới</span>
           </button>
 
           <a
             href="/pricing/discounts"
-            className="min-h-[44px] inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:text-indigo-600 hover:border-indigo-200 hover:bg-gray-50 transition shadow-xs"
+            className="h-9 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-gray-700 border border-gray-200 hover:text-indigo-600 hover:border-indigo-200 hover:bg-gray-50 transition shadow-2xs"
             title="Khai báo chính sách chiết khấu theo sản lượng"
           >
             <span className="text-indigo-600 font-bold">%</span>
@@ -183,9 +185,9 @@ export const PriceHistoryPage: React.FC = () => {
 
           <button
             onClick={handleExportExcel}
-            className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition cursor-pointer"
+            className="h-9 inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition cursor-pointer"
           >
-            <FileSpreadsheet size={16} />
+            <FileSpreadsheet size={15} />
             <span>Xuất Excel (.xlsx)</span>
           </button>
         </div>
@@ -235,7 +237,7 @@ export const PriceHistoryPage: React.FC = () => {
 
           {/* Chọn sản phẩm cụ thể */}
           <div>
-            <select
+            <SearchSelect
               value={selectedSku}
               onChange={(e) => {
                 setSelectedSku(e.target.value);
@@ -249,12 +251,12 @@ export const PriceHistoryPage: React.FC = () => {
                   {p.sku} - {p.name}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
 
           {/* Chọn biểu giá */}
           <div>
-            <select
+            <SearchSelect
               value={selectedPriceType}
               onChange={(e) => {
                 setSelectedPriceType(e.target.value);
@@ -268,12 +270,12 @@ export const PriceHistoryPage: React.FC = () => {
                   {pt.name}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
 
           {/* Lọc theo khoảng thời gian */}
           <div>
-            <select
+            <SearchSelect
               value={timeRange}
               onChange={(e) => {
                 setTimeRange(e.target.value as TimeRangeFilter);
@@ -286,7 +288,7 @@ export const PriceHistoryPage: React.FC = () => {
               <option value="LAST_MONTH">Tháng trước (Tháng 09/2026)</option>
               <option value="LAST_3_MONTHS">3 tháng gần nhất</option>
               <option value="CUSTOM">Tùy chọn khoảng ngày...</option>
-            </select>
+            </SearchSelect>
           </div>
         </div>
 
@@ -404,7 +406,7 @@ export const PriceHistoryPage: React.FC = () => {
           <table className="w-full text-left text-sm border-collapse min-w-[900px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                <th className="py-3.5 px-4">Thời Điểm Áp Dụng</th>
+                <th className="py-3.5 px-4">Thời Điểm Sửa & Áp Dụng</th>
                 <th className="py-3.5 px-4">Sản Phẩm & SKU</th>
                 <th className="py-3.5 px-4">Biểu Giá</th>
                 <th className="py-3.5 px-4 text-right">Giá Cũ (Tháng trước)</th>
@@ -446,11 +448,16 @@ export const PriceHistoryPage: React.FC = () => {
                       onClick={() => handleOpenDetail(r)}
                       className="hover:bg-gray-50/80 transition cursor-pointer group"
                     >
-                      {/* Thời điểm áp dụng */}
+                      {/* Thời điểm sửa & áp dụng */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="font-semibold text-gray-900">
-                          {formatDateTime(r.effectiveDate)}
+                        <div className="font-semibold text-gray-900" title="Thời điểm thay đổi giá thực tế">
+                          {formatDateTime(r.createdAt || r.effectiveDate)}
                         </div>
+                        {r.effectiveDate && (
+                          <div className="text-[11px] text-gray-500 font-medium">
+                            Hiệu lực: {formatDate(r.effectiveDate)}
+                          </div>
+                        )}
                         <span className="text-[11px] text-gray-400 font-mono">
                           Mã: {r.id}
                         </span>

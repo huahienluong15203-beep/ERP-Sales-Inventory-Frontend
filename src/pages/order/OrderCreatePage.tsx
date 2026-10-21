@@ -1,9 +1,16 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import type { Agency, DeliveryPoint } from '../../types/agency';
-import type { OrderDraft, OrderItem, OrderBackendResponse } from '../../types/order';
+import type { Agency, DeliveryPoint, CreditStatusResponse } from '../../types/agency';
+import type {
+  OrderDraft,
+  OrderItem,
+  OrderBackendResponse,
+  CustomerPurchaseHistoryItem,
+  CustomerLastOrderItem
+} from '../../types/order';
 import type { OrderProductCatalogItem } from '../../services/orderService';
 import {
   createOrderItemFromCatalog,
+  createOrderItemFromHistory,
   recalculateOrderItem,
   calculateOrderTotals,
   applyBackendLines,
@@ -14,15 +21,22 @@ import {
   formatCurrencyVND,
   previewOrderOnBackend,
   saveDraftToBackend,
+  submitOrderToBackend,
+  cancelOrder,
   fetchBackendDrafts,
-  fetchBackendDraftById
+  fetchBackendDraftById,
+  fetchBackendProductOptions,
+  getServingWarehouseInfo
 } from '../../services/orderService';
-import { fetchAgencies, fetchDeliveryPointsByAgency } from '../../services/agencyApi';
+import { fetchAgencies, fetchDeliveryPointsByAgency, fetchCustomerCreditStatus } from '../../services/agencyApi';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from '../../routes/Router';
 import { OrderHeaderCard } from '../../components/order/OrderHeaderCard';
 import { OrderItemRow } from '../../components/order/OrderItemRow';
 import { ProductPickerModal } from '../../components/order/ProductPickerModal';
 import { OrderDraftsModal } from '../../components/order/OrderDraftsModal';
+import { CustomerPurchaseHistoryCard } from '../../components/order/CustomerPurchaseHistoryCard';
+import { DebtWarningBanner } from '../../components/customer/DebtWarningBanner';
 import {
   ShoppingCart,
   Plus,
@@ -32,7 +46,8 @@ import {
   Tag,
   AlertTriangle,
   AlertCircle,
-  Save
+  Save,
+  Check
 } from '../../components/common/Icons';
 
 /** Kết quả Backend tính tiền cho đơn đang gõ (S3-09: tiền hàng, chiết khấu, tổng phải thu) */
@@ -45,12 +60,16 @@ type PreviewState =
 const isBackendId = (id?: string | null) => Boolean(id && /^\d+$/.test(id));
 
 export const OrderCreatePage: React.FC = () => {
+  const navigate = useNavigate();
   const { user, showToast } = useAuth();
 
   // Dữ liệu đơn hàng hiện tại
   const [currentDraftId, setCurrentDraftId] = useState<string>(() => `DRAFT-${Date.now()}`);
   const [backendDraftId, setBackendDraftId] = useState<number | null>(null);
   const [backendWarnings, setBackendWarnings] = useState<string[]>([]);
+  const [creditStatus, setCreditStatus] = useState<CreditStatusResponse | null>(null);
+  const [loadingCreditStatus, setLoadingCreditStatus] = useState<boolean>(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
   const [selectedAgency, setSelectedAgency] = useState<Agency | null>(null);
   const [selectedDeliveryPoint, setSelectedDeliveryPoint] = useState<DeliveryPoint | null>(null);
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<string>(() => {
@@ -59,6 +78,7 @@ export const OrderCreatePage: React.FC = () => {
     return d.toISOString().slice(0, 10);
   });
   const [orderNote, setOrderNote] = useState<string>('');
+  const [paymentMethod, setPaymentMethod] = useState<'CREDIT' | 'COD'>('CREDIT');
   const [items, setItems] = useState<OrderItem[]>([]);
 
   // Trạng thái giao diện
@@ -67,6 +87,18 @@ export const OrderCreatePage: React.FC = () => {
   const [savedDrafts, setSavedDrafts] = useState<OrderDraft[]>([]);
   const [isSavingDraft, setIsSavingDraft] = useState<boolean>(false);
   const [preview, setPreview] = useState<PreviewState>({ status: 'idle' });
+  const [cloneNotice] = useState<{ sourceCode: string; itemCount: number } | null>(() => {
+    try {
+      const rawNotice = sessionStorage.getItem('erp_order_clone_notice');
+      if (rawNotice) {
+        sessionStorage.removeItem('erp_order_clone_notice');
+        return JSON.parse(rawNotice);
+      }
+    } catch {
+      // Bỏ qua
+    }
+    return null;
+  });
 
   // Đếm số mặt hàng / số lượng (tiền lấy từ Backend, xem `preview`)
   const totals = useMemo(() => calculateOrderTotals(items), [items]);
@@ -94,14 +126,43 @@ export const OrderCreatePage: React.FC = () => {
 
   // Khôi phục đơn đang gõ dở trên máy này khi vào lại trang (giá sẽ được Backend tính lại)
   useEffect(() => {
-    const active = getActiveDraft();
-    if (active && active.items && active.items.length > 0) {
-      setCurrentDraftId(active.id);
-      setBackendDraftId(active.backendDraftId || null);
-      setExpectedDeliveryDate(active.expectedDeliveryDate || expectedDeliveryDate);
-      setOrderNote(active.note || '');
-      setItems(active.items || []);
-      restoreAgency(active.agencyId, active.agencyCode, active.agencyName, active.deliveryPointId);
+    if (cloneNotice) {
+      showToast(
+        'Đã sao chép đơn cũ ',
+        `Đã sao chép ${cloneNotice.itemCount} dòng hàng từ đơn ${cloneNotice.sourceCode}. Đơn giá và chiết khấu đã được tự động tính lại theo bảng giá hiện hành!`,
+        'success',
+        5000
+      );
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const draftIdParam = params.get('draftId');
+    if (draftIdParam && /^\d+$/.test(draftIdParam)) {
+      fetchBackendDraftById(Number(draftIdParam))
+        .then(async (full) => {
+          setBackendDraftId(full.backendDraftId || null);
+          setCurrentDraftId(full.id);
+          setExpectedDeliveryDate(full.expectedDeliveryDate || expectedDeliveryDate);
+          setPaymentMethod(full.paymentMethod === 'COD' ? 'COD' : 'CREDIT');
+          setOrderNote(full.note || '');
+          setItems(full.items || []);
+          await restoreAgency(full.agencyId, full.agencyCode, full.agencyName, full.deliveryPointId);
+        })
+        .catch((err) => {
+          console.warn('Lỗi tải đơn nháp từ URL:', err);
+        });
+    } else {
+      const active = getActiveDraft();
+      if (active && ((active.items && active.items.length > 0) || active.agencyId || active.backendDraftId)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setCurrentDraftId(active.id);
+        setBackendDraftId(active.backendDraftId || null);
+        setExpectedDeliveryDate(active.expectedDeliveryDate || expectedDeliveryDate);
+        setPaymentMethod(active.paymentMethod === 'COD' ? 'COD' : 'CREDIT');
+        setOrderNote(active.note || '');
+        setItems(active.items || []);
+        restoreAgency(active.agencyId, active.agencyCode, active.agencyName, active.deliveryPointId);
+      }
     }
     // Số đơn nháp trên máy chủ (hiện ở nút "Đơn Nháp")
     fetchBackendDrafts()
@@ -127,6 +188,7 @@ export const OrderCreatePage: React.FC = () => {
       deliveryPointName: selectedDeliveryPoint?.name || '',
       deliveryAddress: selectedDeliveryPoint?.address || selectedAgency?.address || '',
       expectedDeliveryDate,
+      paymentMethod,
       note: orderNote,
       items,
       totalItemsCount: totals.totalItemsCount,
@@ -147,12 +209,87 @@ export const OrderCreatePage: React.FC = () => {
       setActiveDraft(buildDraftObj());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAgency, selectedDeliveryPoint, expectedDeliveryDate, orderNote, items, currentDraftId, backendDraftId]);
+  }, [selectedAgency, selectedDeliveryPoint, expectedDeliveryDate, paymentMethod, orderNote, items, currentDraftId, backendDraftId]);
 
-  // Đổi đại lý: giữ các dòng hàng, Backend sẽ tính lại giá theo bảng giá của nhóm khách hàng mới
+  // S4-02: Lấy thông tin công nợ, hạn mức và kiểm tra vượt hạn mức / quá hạn
+  useEffect(() => {
+    if (!selectedAgency) {
+      setCreditStatus(null);
+      return;
+    }
+    const currentOrderAmount = preview.status === 'ok' ? Number(preview.order.totalAmount || 0) : totals.totalPayable;
+    setLoadingCreditStatus(true);
+    fetchCustomerCreditStatus(selectedAgency.id, currentOrderAmount)
+      .then((res) => {
+        setCreditStatus(res);
+      })
+      .catch((err) => {
+        console.warn('Lỗi kiểm tra công nợ đại lý:', err);
+      })
+      .finally(() => setLoadingCreditStatus(false));
+  }, [selectedAgency?.id, preview.status === 'ok' ? preview.order.totalAmount : totals.totalPayable]);
+
+  // Tải trước (prefetch) danh mục sản phẩm của đại lý vào cache để khi người dùng mở modal, modal mở tức thì 0ms
+  useEffect(() => {
+    if (selectedAgency?.id && selectedAgency.priceList) {
+      const wh = getServingWarehouseInfo(selectedAgency);
+      fetchBackendProductOptions(selectedAgency.id, '', wh).catch(() => {});
+    }
+  }, [selectedAgency?.id, selectedAgency?.priceList]);
+
+  // Đổi đại lý: xử lý làm mới đơn hàng và bảng giá
   const handleSelectAgency = (agency: Agency) => {
+    if (selectedAgency && agency.id === selectedAgency.id) {
+      return;
+    }
+
+    const hadItems = items.length > 0;
     setSelectedAgency(agency);
     setSelectedDeliveryPoint(null);
+
+    // Khi đổi sang đại lý khác: Luôn làm mới danh sách mặt hàng để tránh lưu sản phẩm & giá cũ của đại lý trước
+    if (hadItems) {
+      setItems([]);
+      setPreview({ status: 'idle' });
+      setBackendWarnings([]);
+      setBackendDraftId(null);
+
+      if (agency.status === 'SUSPENDED') {
+        showToast(
+          'Đại lý đã ngừng giao dịch',
+          `Đại lý "${agency.name}" hiện đang ở trạng thái NGỪNG GIAO DỊCH${agency.suspendReason ? `: "${agency.suspendReason}"` : ''}. Hệ thống sẽ chặn tạo đơn mới.`,
+          'error',
+          6000
+        );
+      } else if (!agency.priceList) {
+        showToast(
+          'Đại lý chưa có bảng giá',
+          `Đại lý "${agency.name}" chưa có bảng giá hiệu lực. Đã làm mới danh sách sản phẩm.`,
+          'error'
+        );
+      } else {
+        showToast(
+          'Đã đổi đại lý',
+          `Đã chuyển sang đại lý "${agency.name}". Danh sách sản phẩm được làm mới theo bảng giá mới.`,
+          'info'
+        );
+      }
+    } else {
+      if (agency.status === 'SUSPENDED') {
+        showToast(
+          'Đại lý đã ngừng giao dịch',
+          `Đại lý "${agency.name}" hiện đang ở trạng thái NGỪNG GIAO DỊCH${agency.suspendReason ? `: "${agency.suspendReason}"` : ''}. Hệ thống sẽ chặn tạo đơn mới.`,
+          'error',
+          6000
+        );
+      } else if (!agency.priceList) {
+        showToast(
+          'Đại lý chưa có bảng giá',
+          `Đại lý "${agency.name}" chưa có bảng giá hiệu lực trong hệ thống.`,
+          'error'
+        );
+      }
+    }
   };
 
   const openProductPicker = () => {
@@ -160,24 +297,190 @@ export const OrderCreatePage: React.FC = () => {
       showToast('Chưa chọn đại lý', 'Vui lòng chọn đại lý trước để lấy đúng bảng giá', 'error');
       return;
     }
+    if (selectedAgency.status === 'SUSPENDED') {
+      showToast(
+        'Đại lý đã ngừng giao dịch',
+        `Đại lý "${selectedAgency.name}" đã ngừng giao dịch. Không thể chọn hàng để lên đơn mới.`,
+        'error',
+        5000
+      );
+      return;
+    }
+    if (creditStatus?.blocked || creditStatus?.overdue) {
+      showToast(
+        'Chặn tạo đơn hoàn toàn',
+        creditStatus.message || 'Đại lý có khoản nợ quá hạn hoặc đang bị khóa giao dịch. Không thể tạo đơn mới.',
+        'error'
+      );
+      return;
+    }
+    if (!selectedAgency.priceList) {
+      showToast(
+        'Đại lý chưa có bảng giá',
+        `Đại lý "${selectedAgency.name}" chưa có bảng giá hiệu lực. Vui lòng thiết lập bảng giá trước khi lên đơn.`,
+        'error'
+      );
+      return;
+    }
     setIsProductPickerOpen(true);
   };
 
+  // Xác định kho phục vụ đại lý (S4-03 AC1)
+  const servingWarehouse = useMemo(() => getServingWarehouseInfo(selectedAgency), [selectedAgency]);
+
   // Thêm sản phẩm từ picker vào đơn hàng
-  const handleAddProduct = (product: OrderProductCatalogItem) => {
+  const handleAddProduct = (product: OrderProductCatalogItem, preferredUnitName?: string) => {
     setItems((prev) => {
       const existingIdx = prev.findIndex((i) => i.sku === product.sku);
       if (existingIdx >= 0) {
         // Đã có -> Tăng số lượng lên 1
         const updated = [...prev];
         const curr = updated[existingIdx];
-        updated[existingIdx] = recalculateOrderItem(curr, curr.quantity + 1, curr.selectedUnit);
+        updated[existingIdx] = recalculateOrderItem(curr, curr.quantity + 1, preferredUnitName || curr.selectedUnit);
         return updated;
       }
-      return [...prev, createOrderItemFromCatalog(product, 1)];
+      const newItem = createOrderItemFromCatalog(product, 1, servingWarehouse);
+      if (preferredUnitName && preferredUnitName !== newItem.selectedUnit) {
+        return [...prev, recalculateOrderItem(newItem, 1, preferredUnitName)];
+      }
+      return [...prev, newItem];
     });
 
     showToast('Đã thêm sản phẩm vào đơn', `Đã thêm ${product.name} vào danh sách`, 'success');
+  };
+
+  // S4-04 AC2: Thêm nhanh cả nhóm hàng đã mua lần trước vào đơn mới
+  const handleQuickAddAllLastOrder = async (lastOrderItems: CustomerLastOrderItem[]) => {
+    if (!selectedAgency) {
+      showToast('Chưa chọn đại lý', 'Vui lòng chọn đại lý trước khi thêm hàng', 'error');
+      return;
+    }
+    if (!selectedAgency.priceList) {
+      showToast(
+        'Đại lý chưa có bảng giá',
+        `Đại lý "${selectedAgency.name}" chưa có bảng giá hiệu lực để tính tiền.`,
+        'error'
+      );
+      return;
+    }
+
+    try {
+      let catalog: OrderProductCatalogItem[] = [];
+      if (isBackendId(selectedAgency.id)) {
+        try {
+          catalog = await fetchBackendProductOptions(selectedAgency.id, '', servingWarehouse);
+        } catch {
+          // Bỏ qua lỗi mạng
+        }
+      }
+      if (catalog.length === 0) {
+        try {
+          catalog = await fetchBackendProductOptions(1, '', servingWarehouse);
+        } catch {
+          // Bỏ qua
+        }
+      }
+
+      setItems((prev) => {
+        const updated = [...prev];
+
+        lastOrderItems.forEach((lastItem) => {
+          const catItem = catalog.find((c) => c.sku === lastItem.sku);
+          const existingIdx = updated.findIndex((it) => it.sku === lastItem.sku);
+
+          if (existingIdx >= 0) {
+            const curr = updated[existingIdx];
+            updated[existingIdx] = recalculateOrderItem(
+              curr,
+              lastItem.quantity,
+              lastItem.unitName || curr.selectedUnit
+            );
+          } else if (catItem) {
+            const newItem = createOrderItemFromCatalog(catItem, lastItem.quantity, servingWarehouse);
+            updated.push(recalculateOrderItem(newItem, lastItem.quantity, lastItem.unitName));
+          } else {
+            const fallbackHistory: CustomerPurchaseHistoryItem = {
+              productId: lastItem.productId,
+              sku: lastItem.sku,
+              name: lastItem.name,
+              baseUnit: lastItem.unitName,
+              preferredUnit: lastItem.unitName,
+              preferredConversionFactor: lastItem.conversionFactor || 1,
+              totalQuantity3M: lastItem.quantity * 3,
+              orderCount3M: 3,
+              avgQuantityPerMonth: lastItem.quantity,
+              avgQuantityPerOrder: lastItem.quantity,
+              lastOrderedDate: new Date().toISOString().slice(0, 10),
+              lastUnitPrice: lastItem.unitPrice
+            };
+            updated.push(createOrderItemFromHistory(fallbackHistory, undefined, lastItem.quantity, servingWarehouse));
+          }
+        });
+
+        return updated;
+      });
+
+      showToast(
+        'Đã thêm nhóm hàng lần trước',
+        `Đã thêm nhanh ${lastOrderItems.length} mặt hàng từ đơn trước vào đơn mới thành công!`,
+        'success'
+      );
+    } catch (err) {
+      console.error('Lỗi khi thêm nhanh đơn cũ:', err);
+      showToast('Có lỗi xảy ra', 'Không thể thêm nhóm hàng đã mua lần trước', 'error');
+    }
+  };
+
+  // S4-04 AC1: Thêm nhanh 1 mặt hàng từ danh sách thường mua
+  const handleQuickAddSingleProduct = async (historyItem: CustomerPurchaseHistoryItem) => {
+    if (!selectedAgency) {
+      showToast('Chưa chọn đại lý', 'Vui lòng chọn đại lý trước', 'error');
+      return;
+    }
+
+    try {
+      let catalogItem: OrderProductCatalogItem | undefined;
+      if (isBackendId(selectedAgency.id)) {
+        try {
+          const catalog = await fetchBackendProductOptions(selectedAgency.id, historyItem.sku, servingWarehouse);
+          catalogItem = catalog.find((c) => c.sku === historyItem.sku);
+        } catch {
+          // Bỏ qua
+        }
+      }
+      if (!catalogItem) {
+        try {
+          const catalog = await fetchBackendProductOptions(1, historyItem.sku, servingWarehouse);
+          catalogItem = catalog.find((c) => c.sku === historyItem.sku);
+        } catch {
+          // Bỏ qua
+        }
+      }
+
+      const suggestedQty = Math.max(1, Math.round(historyItem.avgQuantityPerOrder) || 1);
+
+      setItems((prev) => {
+        const existingIdx = prev.findIndex((i) => i.sku === historyItem.sku);
+        if (existingIdx >= 0) {
+          const updated = [...prev];
+          const curr = updated[existingIdx];
+          updated[existingIdx] = recalculateOrderItem(curr, curr.quantity + suggestedQty, curr.selectedUnit);
+          return updated;
+        }
+
+        const newItem = createOrderItemFromHistory(historyItem, catalogItem, suggestedQty, servingWarehouse);
+        return [...prev, newItem];
+      });
+
+      showToast(
+        'Đã thêm sản phẩm gợi ý',
+        `Đã thêm ${historyItem.name} (${suggestedQty} ${historyItem.preferredUnit}) vào đơn hàng`,
+        'success'
+      );
+    } catch (err) {
+      console.error('Lỗi khi thêm sản phẩm gợi ý:', err);
+      showToast('Có lỗi xảy ra', 'Không thể thêm sản phẩm gợi ý', 'error');
+    }
   };
 
   // Cập nhật số lượng
@@ -192,6 +495,38 @@ export const OrderCreatePage: React.FC = () => {
     );
   };
 
+  // S4-01: Cập nhật đơn giá thủ công / khôi phục giá niêm yết
+  const handleUpdatePrice = (id: string, newPrice: number, resetToOriginal?: boolean) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? recalculateOrderItem(item, undefined, undefined, newPrice, resetToOriginal) : item
+      )
+    );
+    if (resetToOriginal) {
+      showToast('Đã khôi phục giá', 'Đơn giá đã được đặt lại theo giá niêm yết của bảng giá', 'info');
+    } else {
+      showToast('Đã cập nhật đơn giá', 'Đơn giá mới đã áp dụng, hệ thống đang tính lại tiền', 'success');
+    }
+  };
+
+  // Danh sách các dòng bán dưới giá sàn (S4-01 AC3)
+  const belowFloorItems = useMemo(() => items.filter((i) => i.isBelowFloor), [items]);
+
+  // S4-03 AC3: Danh sách các dòng đặt vượt tồn khả dụng
+  const overStockItems = useMemo(() => items.filter((i) => i.isOverStock), [items]);
+
+  // S4-03 AC3: Tự động điều chỉnh tất cả mặt hàng vượt tồn về mức tồn tối đa còn đặt được
+  const handleAutoFixOverStock = () => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (!item.isOverStock) return item;
+        const maxAllowed = item.maxAllowedQuantity ?? item.availableInSelectedUnit ?? 0;
+        return recalculateOrderItem(item, Math.max(1, maxAllowed));
+      })
+    );
+    showToast('Đã chỉnh về tồn tối đa', 'Đã tự động điều chỉnh số lượng các mặt hàng về mức tồn khả dụng', 'success');
+  };
+
   // Xóa dòng hàng
   const handleRemoveItem = (id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
@@ -203,6 +538,7 @@ export const OrderCreatePage: React.FC = () => {
     setBackendDraftId(null);
     setSelectedAgency(null);
     setSelectedDeliveryPoint(null);
+    setPaymentMethod('CREDIT');
     setOrderNote('');
     setItems([]);
     clearActiveDraft();
@@ -212,22 +548,25 @@ export const OrderCreatePage: React.FC = () => {
   // Yêu cầu tính tiền gửi Backend: chỉ đổi khi đại lý / điểm giao / ngày / ghi chú / SKU-ĐVT-số lượng đổi
   const previewKey = useMemo(() => {
     if (!selectedAgency || !isBackendId(selectedAgency.id) || items.length === 0) return '';
+    if (items.some((it) => !it.quantity || it.quantity <= 0)) return '';
     return JSON.stringify(
       buildBackendRequest({
         draftId: backendDraftId,
         agencyId: selectedAgency.id,
         deliveryPointId: selectedDeliveryPoint?.id,
         expectedDeliveryDate,
+        paymentMethod,
         note: orderNote,
         items
       })
     );
-  }, [selectedAgency, selectedDeliveryPoint?.id, expectedDeliveryDate, orderNote, items, backendDraftId]);
+  }, [selectedAgency, selectedDeliveryPoint?.id, expectedDeliveryDate, paymentMethod, orderNote, items, backendDraftId]);
 
   // S3-09: Backend tính tiền hàng, chiết khấu, tổng phải thu ngay khi thêm / sửa dòng (chờ 350ms sau lần gõ cuối)
   const previewSeq = useRef(0);
   useEffect(() => {
     if (!previewKey) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPreview({ status: 'idle' });
       setBackendWarnings([]);
       return;
@@ -260,8 +599,39 @@ export const OrderCreatePage: React.FC = () => {
       showToast('Chưa chọn đại lý', 'Vui lòng chọn đại lý trước khi lưu nháp', 'error');
       return;
     }
+    if (!selectedAgency.priceList) {
+      showToast('Chưa có bảng giá', 'Đại lý chưa có bảng giá hiệu lực, không thể lưu nháp đơn hàng', 'error');
+      return;
+    }
     if (items.length === 0) {
       showToast('Chưa có sản phẩm', 'Vui lòng thêm ít nhất 1 sản phẩm trước khi lưu nháp', 'error');
+      return;
+    }
+
+    if (creditStatus?.blocked || creditStatus?.overdue) {
+      showToast(
+        'Chặn tạo đơn hoàn toàn',
+        creditStatus.message || 'Đại lý có khoản nợ quá hạn hoặc bị khóa. Không thể lưu nháp.',
+        'error'
+      );
+      return;
+    }
+
+    if (overStockItems.length > 0) {
+      showToast(
+        'Vượt tồn khả dụng',
+        `Có ${overStockItems.length} mặt hàng đặt vượt tồn khả dụng tại ${servingWarehouse.name}. Vui lòng chỉnh số lượng trước khi lưu.`,
+        'error'
+      );
+      return;
+    }
+    const zeroDraftItems = items.filter((i) => !i.quantity || i.quantity <= 0);
+    if (zeroDraftItems.length > 0) {
+      showToast(
+        'Số lượng chưa hợp lệ',
+        `Mặt hàng "${zeroDraftItems[0].name}" có số lượng bằng 0 hoặc để trống. Vui lòng nhập số lượng lớn hơn 0 trước khi lưu.`,
+        'error'
+      );
       return;
     }
 
@@ -272,6 +642,7 @@ export const OrderCreatePage: React.FC = () => {
         agencyId: selectedAgency.id,
         deliveryPointId: selectedDeliveryPoint?.id,
         expectedDeliveryDate,
+        paymentMethod,
         note: orderNote,
         items
       });
@@ -289,6 +660,87 @@ export const OrderCreatePage: React.FC = () => {
       showToast('Lưu nháp thất bại', err instanceof Error ? err.message : 'Không lưu được đơn nháp', 'error');
     } finally {
       setIsSavingDraft(false);
+    }
+  };
+
+  // S4-02 & S4-05: Chốt đơn đặt hàng
+  const handleSubmitOrder = async () => {
+    if (!selectedAgency) {
+      showToast('Chưa chọn đại lý', 'Vui lòng chọn đại lý trước khi chốt đơn', 'error');
+      return;
+    }
+    if (creditStatus?.blocked || creditStatus?.overdue) {
+      showToast(
+        'Chặn tạo đơn hoàn toàn',
+        creditStatus.message || 'Đại lý có nợ quá hạn hoặc đang bị khóa, hệ thống chặn chốt đơn.',
+        'error'
+      );
+      return;
+    }
+    if (!selectedAgency.priceList) {
+      showToast('Chưa có bảng giá', 'Đại lý chưa có bảng giá hiệu lực, không thể chốt đơn', 'error');
+      return;
+    }
+    if (items.length === 0) {
+      showToast('Chưa có sản phẩm', 'Vui lòng thêm ít nhất 1 sản phẩm trước khi chốt đơn', 'error');
+      return;
+    }
+    if (overStockItems.length > 0) {
+      showToast('Vượt tồn khả dụng', 'Có sản phẩm vượt tồn kho khả dụng. Vui lòng chỉnh số lượng trước khi chốt đơn.', 'error');
+      return;
+    }
+    const zeroSubmitItems = items.filter((i) => !i.quantity || i.quantity <= 0);
+    if (zeroSubmitItems.length > 0) {
+      showToast(
+        'Số lượng chưa hợp lệ',
+        `Mặt hàng "${zeroSubmitItems[0].name}" có số lượng bằng 0 hoặc để trống. Vui lòng nhập số lượng lớn hơn 0 trước khi chốt đơn.`,
+        'error'
+      );
+      return;
+    }
+
+    setIsSubmittingOrder(true);
+    try {
+      // Lưu nháp trước để đảm bảo dữ liệu mới nhất trên backend
+      const request = buildBackendRequest({
+        draftId: backendDraftId,
+        agencyId: selectedAgency.id,
+        deliveryPointId: selectedDeliveryPoint?.id,
+        expectedDeliveryDate,
+        paymentMethod,
+        note: orderNote,
+        items
+      });
+      const saved = await saveDraftToBackend(request, backendDraftId);
+      const targetId = saved.id || backendDraftId;
+      if (!targetId) {
+        throw new Error('Không lấy được mã đơn hàng để chốt đơn');
+      }
+
+      // Gửi yêu cầu chốt đơn
+      const submitted = await submitOrderToBackend(targetId);
+      clearActiveDraft();
+
+      if (submitted.status === 'APPROVED') {
+        showToast(
+          'Chốt đơn thành công',
+          `Đơn hàng [${submitted.code || targetId}] đã được duyệt tự động thành công (không vượt nợ, không dưới giá sàn).`,
+          'success',
+          6000
+        );
+      } else {
+        showToast(
+          'Đơn chuyển sang Chờ duyệt',
+          `Đơn hàng [${submitted.code || targetId}] đã chuyển sang trạng thái CHỜ DUYỆT do vượt hạn mức công nợ hoặc bán dưới giá sàn.`,
+          'info',
+          7000
+        );
+      }
+      navigate('/orders');
+    } catch (err: unknown) {
+      showToast('Chốt đơn thất bại', err instanceof Error ? err.message : 'Có lỗi xảy ra khi chốt đơn hàng', 'error');
+    } finally {
+      setIsSubmittingOrder(false);
     }
   };
 
@@ -310,6 +762,7 @@ export const OrderCreatePage: React.FC = () => {
       setBackendDraftId(full.backendDraftId || null);
       setCurrentDraftId(full.id);
       setExpectedDeliveryDate(full.expectedDeliveryDate || expectedDeliveryDate);
+      setPaymentMethod(full.paymentMethod === 'COD' ? 'COD' : 'CREDIT');
       setOrderNote(full.note || '');
       setItems(full.items || []);
       setSelectedAgency(null);
@@ -322,27 +775,74 @@ export const OrderCreatePage: React.FC = () => {
     }
   };
 
-  // Chốt đơn chính thức (giữ chỗ tồn, kiểm hạn mức, duyệt giá sàn) thuộc Sprint 4 (S4-02, S4-03, S4-05, S4-06):
-  // Backend chưa có API chốt đơn nên KHÔNG giả lập "tạo đơn thành công" ở trình duyệt.
-  const submitBlockedReason = undefined;
+  // Xóa / Hủy đơn nháp
+  const handleDeleteDraft = async (draftId: string) => {
+    const draftToDelete = savedDrafts.find((d) => d.id === draftId);
+    if (!draftToDelete) return;
+
+    const draftDisplayName = draftToDelete.orderNumber || draftToDelete.agencyName || draftToDelete.id;
+
+    try {
+      if (draftToDelete.backendDraftId) {
+        await cancelOrder(draftToDelete.backendDraftId, 'Xóa đơn hàng nháp');
+      }
+
+      // Xóa cache đơn đang gõ dở nếu trùng
+      const active = getActiveDraft();
+      if (active && (active.id === draftId || (draftToDelete.backendDraftId && active.backendDraftId === draftToDelete.backendDraftId))) {
+        clearActiveDraft();
+      }
+
+      // Nếu đơn bị xóa đang mở trên form hiện tại thì reset form
+      if (backendDraftId && draftToDelete.backendDraftId && backendDraftId === draftToDelete.backendDraftId) {
+        setBackendDraftId(null);
+        setCurrentDraftId(`DRAFT-${Date.now()}`);
+        setItems([]);
+        setPreview({ status: 'idle' });
+      }
+
+      setSavedDrafts((prev) => prev.filter((d) => d.id !== draftId));
+      showToast('Đã xóa đơn nháp', `Đã xóa đơn nháp "${draftDisplayName}" thành công`, 'success', 3000);
+    } catch (err: unknown) {
+      showToast('Không thể xóa đơn nháp', err instanceof Error ? err.message : 'Vui lòng thử lại', 'error');
+    }
+  };
 
   const isAgencyLocked = Boolean(selectedAgency?.transactionLocked);
+  const isAgencySuspended = selectedAgency?.status === 'SUSPENDED';
   const money = preview.status === 'ok' ? preview.order : null;
 
+  // S4-02 & S4-03: Lý do chặn chốt đơn (ngừng giao dịch, quá hạn công nợ, vượt tồn khả dụng, khóa giao dịch)
+  const submitBlockedReason = useMemo(() => {
+    if (isAgencySuspended) {
+      return `Chặn tạo đơn: Đại lý ${selectedAgency?.name || ''} (${selectedAgency?.code || ''}) đã ngừng giao dịch. Vui lòng đổi đại lý khác.`;
+    }
+    if (creditStatus?.overdue || creditStatus?.blocked) {
+      return creditStatus?.message || `Chặn tạo đơn hoàn toàn: Đại lý có nợ quá hạn (${creditStatus?.overdueDays || 0} ngày) hoặc đang bị khóa giao dịch.`;
+    }
+    if (overStockItems.length > 0) {
+      return `Chặn chốt đơn: Có ${overStockItems.length} mặt hàng vượt quá tồn khả dụng tại kho ${servingWarehouse.name}. Vui lòng chỉnh số lượng.`;
+    }
+    if (isAgencyLocked) {
+      return 'Đại lý đang bị khóa giao dịch - chặn tạo đơn mới.';
+    }
+    return undefined;
+  }, [isAgencySuspended, creditStatus?.overdue, creditStatus?.blocked, creditStatus?.message, creditStatus?.overdueDays, overStockItems.length, servingWarehouse.name, isAgencyLocked, selectedAgency?.name, selectedAgency?.code]);
+
   return (
-    <div className="w-full min-w-0 space-y-5 animate-in fade-in duration-300 pb-10">
+    <div className="w-full min-w-0 space-y-3.5 animate-in fade-in duration-300 pb-8">
       {/* 1. Header Trang & Các Phím Thao Tác Nhanh */}
-      <div className="flex items-center justify-end gap-2 pb-1">
+      <div className="flex items-center justify-end gap-2 pb-0.5">
         {/* Nút thao tác góc phải */}
         <div className="flex items-center gap-2">
           {/* Nút Xem danh sách đơn nháp */}
           <button
             type="button"
             onClick={handleOpenDraftsModal}
-            className="px-3 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:border-orange-200 hover:text-[#F85606] hover:bg-orange-50/50 flex items-center gap-1.5 transition-all relative"
+            className="px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:border-orange-200 hover:text-[#F85606] hover:bg-orange-50/50 flex items-center gap-1.5 transition-all relative h-9 shadow-2xs"
             title="Xem các đơn nháp đã lưu trên máy hoặc máy chủ"
           >
-            <FileText size={15} />
+            <FileText size={14} />
             <span>Đơn Nháp</span>
             {savedDrafts.length > 0 && (
               <span className="w-5 h-5 rounded-full bg-[#F85606] text-white text-[10px] font-bold flex items-center justify-center">
@@ -355,18 +855,23 @@ export const OrderCreatePage: React.FC = () => {
           <button
             type="button"
             onClick={handleResetOrder}
-            className="p-2 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition"
+            className="w-9 h-9 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition flex items-center justify-center shadow-2xs"
             title="Xóa form và tạo đơn mới"
           >
-            <RefreshCw size={16} />
+            <RefreshCw size={14} />
           </button>
         </div>
       </div>
 
       {/* Nội dung tạo đơn */}
-      <div className="space-y-5">
-
-        {/* CẢNH BÁO TỪ BACKEND NẾU CÓ (S3-07 / S3-09) */}
+      <div className="space-y-3.5">
+        {/* CẢNH BÁO NỢ QUÁ HẠN & KHÓA GIAO DỊCH TỰ ĐỘNG */}
+        {selectedAgency && creditStatus && (
+          <DebtWarningBanner
+            creditStatus={creditStatus}
+            customerName={selectedAgency.name}
+          />
+        )}
         {backendWarnings.length > 0 && (
           <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 space-y-1.5 animate-in fade-in">
             {backendWarnings.map((warn, wIdx) => (
@@ -375,6 +880,58 @@ export const OrderCreatePage: React.FC = () => {
                 <span>{warn}</span>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* CẢNH BÁO VƯỢT TỒN KHẢ DỤNG - CHẶN ĐẶT HÀNG (S4-03 AC3) */}
+        {overStockItems.length > 0 && (
+          <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-400 text-rose-950 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
+            <div className="flex items-start gap-3 min-w-0">
+              <AlertTriangle size={22} className="text-rose-600 shrink-0 mt-0.5" />
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-xs sm:text-sm font-bold text-rose-900">
+                    Chặn đặt hàng: Có {overStockItems.length} mặt hàng vượt quá tồn khả dụng tại {servingWarehouse.name}!
+                  </h4>
+                  <span className="px-2 py-0.5 rounded-full bg-rose-200 text-rose-900 text-[10px] font-bold">
+                    CHẶN LƯU & CHỐT ĐƠN
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-rose-800 leading-relaxed">
+                  Các sản phẩm ({overStockItems.map((i) => `${i.name} [Đang đặt: ${i.quantity} ${i.selectedUnit} / Tồn: ${i.maxAllowedQuantity ?? 0} ${i.selectedUnit}]`).join('; ')}) vượt quá khả năng xuất kho. Hệ thống chặn lưu và chốt đơn để không thất hứa với đại lý.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleAutoFixOverStock}
+              className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shrink-0 shadow-sm cursor-pointer transition active:scale-95 flex items-center gap-1.5 self-end sm:self-center"
+              title="Tự động chỉnh số lượng tất cả mặt hàng về mức tồn khả dụng tối đa"
+            >
+              <Check size={14} />
+              <span>Chỉnh tất cả về tồn tối đa</span>
+            </button>
+          </div>
+        )}
+
+        {/* CẢNH BÁO ĐƠN GIÁ DƯỚI GIÁ SÀN - CẦN QUẢN LÝ DUYỆT (S4-01 AC3) */}
+        {belowFloorItems.length > 0 && (
+          <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-400 text-amber-900 shadow-xs flex items-start gap-3 animate-in fade-in">
+            <AlertTriangle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-1 min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-xs sm:text-sm font-bold text-amber-900">
+                  Cảnh báo: Có {belowFloorItems.length} mặt hàng bán dưới giá sàn!
+                </h4>
+                <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[10px] font-bold">
+                  Trạng thái đơn: CẦN DUYỆT
+                </span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-amber-800 leading-relaxed">
+                Các sản phẩm ({belowFloorItems.map((i) => `${i.name} [${i.sku}]`).join(', ')}) có đơn giá thấp hơn giá sàn quy định.
+                Đơn hàng khi chốt sẽ chuyển sang trạng thái <strong>"Chờ duyệt"</strong> và cần Quản lý kinh doanh phê duyệt trước khi xuất kho.
+              </p>
+            </div>
           </div>
         )}
 
@@ -388,11 +945,27 @@ export const OrderCreatePage: React.FC = () => {
           onChangeExpectedDeliveryDate={setExpectedDeliveryDate}
           orderNote={orderNote}
           onChangeOrderNote={setOrderNote}
+          paymentMethod={paymentMethod}
+          onChangePaymentMethod={setPaymentMethod}
+          creditStatus={creditStatus}
+          loadingCreditStatus={loadingCreditStatus}
         />
+
+        {/* S4-04: GỢI Ý & LỊCH SỬ MUA HÀNG 3 THÁNG CỦA ĐẠI LÝ */}
+        {selectedAgency && (
+          <CustomerPurchaseHistoryCard
+            selectedAgency={selectedAgency}
+            currentUser={user}
+            servingWarehouse={servingWarehouse}
+            existingCartItems={items}
+            onQuickAddAllLastOrder={handleQuickAddAllLastOrder}
+            onQuickAddSingleProduct={handleQuickAddSingleProduct}
+          />
+        )}
 
         {/* 3. KHỐI 2: DANH SÁCH DÒNG SẢN PHẨM ĐẶT HÀNG */}
         <div className="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-4 sm:p-5 space-y-4">
-          <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 pb-3 border-b border-gray-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
             <div>
               <h2 className="text-sm sm:text-base font-bold text-gray-900 leading-tight flex items-center gap-2">
                 <span>2. Danh Sách Sản Phẩm Đặt Hàng</span>
@@ -400,16 +973,16 @@ export const OrderCreatePage: React.FC = () => {
                   {items.length} món
                 </span>
               </h2>
-              <p className="text-[11px] text-gray-500">
-                Tìm kiếm mã SKU, chọn ĐVT (thùng/lốc/lon) và nhập số lượng
-              </p>
             </div>
 
-            {/* Nút mở Picker thêm sản phẩm */}
+            {/* Nút mở Picker thêm sản phẩm duy nhất */}
             <button
               type="button"
               onClick={openProductPicker}
-              className="px-3.5 py-2 rounded-xl bg-[#F85606] hover:bg-orange-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 active:scale-98 transition cursor-pointer shrink-0"
+              className={`px-4 py-2 rounded-xl text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition cursor-pointer self-start sm:self-auto shrink-0 ${selectedAgency && !selectedAgency.priceList
+                ? 'bg-gray-400 hover:bg-gray-500 shadow-none'
+                : 'bg-[#F85606] hover:bg-orange-600 shadow-orange-500/20 active:scale-98'
+                }`}
             >
               <Plus size={16} />
               <span>Thêm Sản Phẩm</span>
@@ -418,26 +991,43 @@ export const OrderCreatePage: React.FC = () => {
 
           {/* Vùng hiển thị các dòng hàng */}
           {items.length === 0 ? (
-            <div className="py-12 px-4 rounded-xl border border-dashed border-gray-200 bg-gray-50/50 text-center space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-orange-50 text-[#F85606] flex items-center justify-center mx-auto">
-                <ShoppingCart size={28} />
+            <div
+              onClick={openProductPicker}
+              className={`py-12 px-4 rounded-xl border border-dashed text-center space-y-3 cursor-pointer transition-colors group ${selectedAgency && !selectedAgency.priceList
+                ? 'border-amber-200 bg-amber-50/40 hover:bg-amber-50/60'
+                : 'border-gray-200 hover:border-orange-300 bg-gray-50/50 hover:bg-orange-50/20'
+                }`}
+              title="Nhấn để tìm và thêm sản phẩm vào đơn hàng"
+            >
+              <div
+                className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto transition-colors ${selectedAgency && !selectedAgency.priceList
+                  ? 'bg-amber-100 text-amber-600'
+                  : 'bg-orange-50 group-hover:bg-orange-100 text-[#F85606]'
+                  }`}
+              >
+                {selectedAgency && !selectedAgency.priceList ? (
+                  <AlertTriangle size={28} />
+                ) : (
+                  <ShoppingCart size={28} />
+                )}
               </div>
               <div>
-                <strong className="text-sm text-gray-800 font-bold block">
-                  Đơn hàng chưa có sản phẩm nào
+                <strong
+                  className={`text-sm font-bold block transition-colors ${selectedAgency && !selectedAgency.priceList
+                    ? 'text-amber-900'
+                    : 'text-gray-800 group-hover:text-[#F85606]'
+                    }`}
+                >
+                  {selectedAgency && !selectedAgency.priceList
+                    ? 'Đại lý chưa có bảng giá hiệu lực'
+                    : 'Đơn hàng chưa có sản phẩm nào'}
                 </strong>
                 <span className="text-xs text-gray-500 max-w-sm block mx-auto mt-0.5">
-                  Nhấn nút "+ Thêm Sản Phẩm" để tìm nhanh SKU theo danh mục và chọn đơn vị quy đổi (thùng/lốc/lon).
+                  {selectedAgency && !selectedAgency.priceList
+                    ? `Nhóm khách hàng "${selectedAgency.customerGroupName}" chưa có bảng giá nào đang hoạt động. Vui lòng thiết lập bảng giá trước khi lên đơn.`
+                    : 'Nhấn nút "+ Thêm Sản Phẩm" để tìm nhanh SKU theo danh mục và chọn đơn vị quy đổi (thùng/lốc/lon).'}
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={openProductPicker}
-                className="px-4 py-2 rounded-xl bg-orange-100 hover:bg-orange-200 text-[#F85606] font-bold text-xs inline-flex items-center gap-1.5 transition"
-              >
-                <Plus size={15} />
-                <span>Thêm sản phẩm đầu tiên</span>
-              </button>
             </div>
           ) : (
             <div className="space-y-3">
@@ -448,6 +1038,7 @@ export const OrderCreatePage: React.FC = () => {
                   itemIndex={idx}
                   onUpdateQuantity={handleUpdateQuantity}
                   onUpdateUnit={handleUpdateUnit}
+                  onUpdatePrice={handleUpdatePrice}
                   onRemoveItem={handleRemoveItem}
                 />
               ))}
@@ -479,9 +1070,17 @@ export const OrderCreatePage: React.FC = () => {
             </span>
           </div>
 
-          {/* Tiền do Backend tính theo bảng giá + chính sách chiết khấu sản lượng đang hiệu lực */}
+          {/* Tiền do Backend tính theo bảng giá + chính sách chiết khấu sản lượng đang hiệu lực (Nhảy số tức thì trên client) */}
           {!selectedAgency ? (
             <p className="text-xs text-gray-500">Chọn đại lý và thêm sản phẩm để hệ thống tính tiền.</p>
+          ) : !selectedAgency.priceList ? (
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2">
+              <AlertTriangle size={16} className="shrink-0 mt-0.5 text-amber-600" />
+              <div>
+                <strong className="block">Đại lý chưa có bảng giá hiệu lực</strong>
+                <span>Cần có bảng giá đang áp dụng để tính tiền hàng và chiết khấu.</span>
+              </div>
+            </div>
           ) : items.length === 0 ? (
             <p className="text-xs text-gray-500">Thêm sản phẩm để hệ thống tính tiền.</p>
           ) : preview.status === 'error' ? (
@@ -493,19 +1092,84 @@ export const OrderCreatePage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className={`space-y-2 text-xs ${preview.status === 'loading' ? 'opacity-60' : ''}`}>
+            <div className={`space-y-2.5 text-xs transition-opacity ${preview.status === 'loading' ? 'opacity-75' : ''}`}>
               <div className="flex justify-between text-gray-600">
-                <span>Tổng tiền hàng (theo bảng giá):</span>
-                <span className="font-mono font-medium">{money ? formatCurrencyVND(Number(money.subtotal)) : '—'}</span>
+                <span>Tổng tiền hàng (trước chiết khấu):</span>
+                <span className="font-mono font-bold text-gray-900">
+                  {formatCurrencyVND(money ? Number(money.subtotal) : totals.subtotalAmount)}
+                </span>
               </div>
 
-              {money && Number(money.discountTotal) > 0 && (
+              {(money ? Number(money.discountTotal) > 0 : totals.discountAmount > 0) && (
                 <div className="flex justify-between text-emerald-700 font-medium">
                   <span className="flex items-center gap-1">
                     <Tag size={12} />
-                    <span>Chiết khấu sản lượng:</span>
+                    <span>Chiết khấu sản lượng tự động:</span>
                   </span>
-                  <span className="font-mono font-bold">-{formatCurrencyVND(Number(money.discountTotal))}</span>
+                  <span className="font-mono font-bold">
+                    -{formatCurrencyVND(money ? Number(money.discountTotal) : totals.discountAmount)}
+                  </span>
+                </div>
+              )}
+
+              {/* Dòng cảnh báo mặt hàng vượt tồn khả dụng (S4-03 AC3) */}
+              {overStockItems.length > 0 && (
+                <div className="flex justify-between items-center text-rose-950 font-semibold bg-rose-100/90 p-2.5 rounded-xl border border-rose-300">
+                  <span className="flex items-center gap-1.5 text-[11px]">
+                    <AlertTriangle size={14} className="text-rose-600 shrink-0" />
+                    <span>Mặt hàng vượt tồn khả dụng:</span>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs bg-rose-200 text-rose-900 px-2 py-0.5 rounded-full">
+                      {overStockItems.length} mặt hàng (Bị chặn)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleAutoFixOverStock}
+                      className="text-[11px] text-rose-700 underline font-bold hover:text-rose-900 cursor-pointer"
+                    >
+                      Tự động chỉnh
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Dòng cảnh báo mặt hàng dưới giá sàn (AC3) */}
+              {belowFloorItems.length > 0 && (
+                <div className="flex justify-between items-center text-amber-900 font-semibold bg-amber-100/80 p-2 rounded-xl border border-amber-300">
+                  <span className="flex items-center gap-1.5 text-[11px]">
+                    <AlertTriangle size={14} className="text-amber-600 shrink-0" />
+                    <span>Mặt hàng bán dưới giá sàn:</span>
+                  </span>
+                  <span className="font-bold text-xs bg-amber-200 px-2 py-0.5 rounded-full text-amber-900">
+                    {belowFloorItems.length} mặt hàng (Cần Quản lý duyệt)
+                  </span>
+                </div>
+              )}
+
+              {/* S4-02: Dòng cảnh báo đơn vượt hạn mức công nợ */}
+              {creditStatus?.exceedsLimit && !creditStatus.overdue && (
+                <div className="flex justify-between items-center text-amber-900 font-semibold bg-amber-100/80 p-2.5 rounded-xl border border-amber-300 animate-in fade-in">
+                  <span className="flex items-center gap-1.5 text-[11px]">
+                    <AlertTriangle size={14} className="text-amber-600 shrink-0" />
+                    <span>Đơn vượt hạn mức nợ (Vượt {formatCurrencyVND(creditStatus.exceededAmount)}):</span>
+                  </span>
+                  <span className="font-bold text-xs bg-amber-200 px-2 py-0.5 rounded-full text-amber-900">
+                    Cần Quản lý duyệt
+                  </span>
+                </div>
+              )}
+
+              {/* S4-02: Dòng cảnh báo nợ quá hạn chặn tạo đơn hoàn toàn */}
+              {creditStatus?.overdue && (
+                <div className="flex justify-between items-center text-rose-950 font-semibold bg-rose-100/90 p-2.5 rounded-xl border border-rose-300 animate-in fade-in">
+                  <span className="flex items-center gap-1.5 text-[11px]">
+                    <AlertTriangle size={14} className="text-rose-600 shrink-0" />
+                    <span>Nợ quá hạn {creditStatus.overdueDays} ngày ({formatCurrencyVND(creditStatus.overdueAmount)}):</span>
+                  </span>
+                  <span className="font-bold text-xs bg-rose-200 text-rose-900 px-2 py-0.5 rounded-full">
+                    Chặn tạo đơn hoàn toàn
+                  </span>
                 </div>
               )}
 
@@ -515,45 +1179,89 @@ export const OrderCreatePage: React.FC = () => {
                   <span>Tổng tiền phải thu:</span>
                 </span>
                 <strong className="text-lg sm:text-xl font-black text-[#F85606] font-mono">
-                  {money ? formatCurrencyVND(Number(money.totalAmount)) : 'Đang tính...'}
+                  {formatCurrencyVND(money ? Number(money.totalAmount) : totals.totalPayable)}
                 </strong>
               </div>
             </div>
           )}
-
-          <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-[11px] leading-relaxed flex items-start gap-2">
-            <Tag size={14} className="shrink-0 text-amber-600 mt-0.5" />
-            <div>
-              Đơn giá lấy từ <strong>bảng giá đang hiệu lực</strong> của nhóm khách hàng mà đại lý thuộc về; chiết khấu sản lượng
-              theo <strong>chính sách chiết khấu</strong> đang áp dụng. Hệ thống tự tính lại mỗi khi đổi số lượng hoặc đơn vị tính.
-            </div>
-          </div>
 
           {/* Hàng nút bấm Lưu Nháp & Chốt Đơn (Nằm gọn trong trang, không bám theo taskbar/sidebar) */}
           <div className="pt-3 border-t border-gray-100 flex flex-wrap items-center justify-end gap-3">
             <button
               type="button"
               onClick={handleSaveDraft}
-              disabled={isSavingDraft}
-              className="h-10 px-4 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50"
-              title="Lưu nháp đơn hàng để tiếp tục sau"
+              disabled={isSavingDraft || overStockItems.length > 0 || Boolean(creditStatus?.blocked || creditStatus?.overdue)}
+              className={`h-10 px-4 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 cursor-pointer ${creditStatus?.blocked || creditStatus?.overdue
+                ? 'border-rose-300 bg-rose-50 text-rose-800 cursor-not-allowed opacity-60'
+                : overStockItems.length > 0
+                  ? 'border-rose-300 bg-rose-50 text-rose-800 cursor-not-allowed opacity-60'
+                  : belowFloorItems.length > 0
+                    ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'
+                    : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700'
+                }`}
+              title={
+                creditStatus?.blocked || creditStatus?.overdue
+                  ? 'Không thể lưu nháp do đại lý bị chặn nợ quá hạn'
+                  : overStockItems.length > 0
+                    ? 'Không thể lưu nháp khi có mặt hàng vượt tồn khả dụng'
+                    : belowFloorItems.length > 0
+                      ? 'Lưu đơn nháp (đơn có dòng dưới giá sàn sẽ ở trạng thái cần duyệt)'
+                      : 'Lưu nháp đơn hàng để tiếp tục sau'
+              }
             >
-              <Save size={15} className="text-gray-600" />
-              <span>{isSavingDraft ? 'Đang lưu...' : 'Lưu Nháp'}</span>
+              {creditStatus?.blocked || creditStatus?.overdue ? (
+                <AlertTriangle size={15} className="text-rose-600" />
+              ) : overStockItems.length > 0 ? (
+                <AlertTriangle size={15} className="text-rose-600" />
+              ) : belowFloorItems.length > 0 ? (
+                <AlertTriangle size={15} className="text-amber-600" />
+              ) : (
+                <Save size={15} className="text-gray-600" />
+              )}
+              <span>
+                {isSavingDraft
+                  ? 'Đang lưu...'
+                  : creditStatus?.blocked || creditStatus?.overdue
+                    ? 'Bị Chặn (Nợ Quá Hạn)'
+                    : overStockItems.length > 0
+                      ? 'Bị Chặn (Vượt Tồn Kho)'
+                      : belowFloorItems.length > 0
+                        ? 'Lưu Đơn (Cần Duyệt Giá)'
+                        : 'Lưu Nháp'}
+              </span>
             </button>
 
             <button
               type="button"
-              disabled
+              onClick={handleSubmitOrder}
+              disabled={
+                isSubmittingOrder ||
+                isSavingDraft ||
+                items.length === 0 ||
+                overStockItems.length > 0 ||
+                Boolean(creditStatus?.blocked || creditStatus?.overdue) ||
+                isAgencyLocked
+              }
               title={submitBlockedReason}
-              className="h-10 px-5 rounded-xl font-bold text-xs sm:text-sm text-white flex items-center gap-1.5 bg-gray-400 cursor-not-allowed opacity-70"
+              className={`h-10 px-5 rounded-xl font-bold text-xs sm:text-sm text-white flex items-center gap-1.5 transition shadow-xs cursor-pointer ${submitBlockedReason || items.length === 0
+                ? 'bg-gray-400 cursor-not-allowed opacity-70'
+                : creditStatus?.exceedsLimit || belowFloorItems.length > 0
+                  ? 'bg-amber-600 hover:bg-amber-700 active:scale-98 shadow-amber-600/25'
+                  : 'bg-[#F85606] hover:bg-[#d94800] active:scale-98 shadow-orange-500/25'
+                }`}
             >
               <CheckCircle2 size={16} />
-              <span>Chốt Đơn Đặt Hàng</span>
+              <span>
+                {isSubmittingOrder
+                  ? 'Đang chốt đơn...'
+                  : creditStatus?.exceedsLimit || belowFloorItems.length > 0
+                    ? 'Chốt Đơn (Gửi Phê Duyệt)'
+                    : 'Chốt Đơn Đặt Hàng'}
+              </span>
             </button>
           </div>
           <p className="text-[11px] text-gray-500 text-right">
-            {isAgencyLocked ? 'Đại lý đang bị khóa giao dịch - chặn tạo đơn mới (S3-07). ' : ''}
+            {isAgencyLocked ? 'Đại lý đang bị khóa giao dịch - chặn tạo đơn mới. ' : ''}
             {submitBlockedReason}
           </p>
         </div>
@@ -566,6 +1274,10 @@ export const OrderCreatePage: React.FC = () => {
         onSelectProduct={handleAddProduct}
         addedSkuList={addedSkuList}
         agency={selectedAgency}
+        cartItems={items}
+        onUpdateQuantity={handleUpdateQuantity}
+        onUpdateUnit={handleUpdateUnit}
+        onRemoveItem={handleRemoveItem}
       />
 
       {/* MODAL 2: XEM VÀ MỞ LẠI ĐƠN NHÁP */}
@@ -574,8 +1286,8 @@ export const OrderCreatePage: React.FC = () => {
         onClose={() => setIsDraftsModalOpen(false)}
         drafts={savedDrafts}
         onSelectDraft={handleSelectSavedDraft}
+        onDeleteDraft={handleDeleteDraft}
       />
-
     </div>
   );
 };

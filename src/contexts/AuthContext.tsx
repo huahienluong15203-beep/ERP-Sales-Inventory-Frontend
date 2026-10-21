@@ -430,11 +430,11 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
           <div
             role="status"
             aria-live="polite"
-            className="erp-login-toast"
+            className="erp-login-toast no-print print:hidden"
             style={{
               position: 'fixed',
-              top: '16px',
-              right: '20px',
+              bottom: '24px',
+              right: '24px',
               zIndex: 999999,
               display: 'flex',
               flexDirection: 'column',

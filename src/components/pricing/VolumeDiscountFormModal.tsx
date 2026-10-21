@@ -9,11 +9,12 @@ import type {
 } from '../../types/discount';
 import type { CatalogProduct } from '../../types/pricing';
 import {
-  BEST_DEAL_RULE_STATEMENT,
   fetchDiscountProductOptions,
   fetchDiscountCategoryOptions
 } from '../../services/volumeDiscountApi';
 import type { DiscountCategoryOption } from '../../services/volumeDiscountApi';
+import { SearchSelect } from '../common/SearchSelect';
+import { NumberInput } from '../common/NumberInput';
 
 interface VolumeDiscountFormModalProps {
   isOpen: boolean;
@@ -330,12 +331,12 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
         setErrorMsg(`Bậc ${i + 1}: Số lượng tối đa phải lớn hơn số lượng tối thiểu!`);
         return;
       }
-      if (t.discountValue <= 0) {
-        setErrorMsg(`Bậc ${i + 1}: Mức chiết khấu phải lớn hơn 0!`);
+      if (t.discountValue < 0) {
+        setErrorMsg(`Bậc ${i + 1}: Mức chiết khấu không được âm!`);
         return;
       }
-      if (t.discountType === 'PERCENT' && t.discountValue > 100) {
-        setErrorMsg(`Bậc ${i + 1}: Chiết khấu phần trăm không được vượt quá 100%!`);
+      if (t.discountType === 'PERCENT' && t.discountValue > 99) {
+        setErrorMsg(`Bậc ${i + 1}: Chiết khấu phần trăm chỉ được từ 0% đến 99%!`);
         return;
       }
     }
@@ -396,7 +397,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                   : 'Cập Nhật Chính Sách Chiết Khấu'}
               </h3>
               <p className="text-xs text-orange-100">
-                Tự động so sánh và áp dụng mức chiết khấu có lợi nhất cho khách hàng
+                Khai báo chính sách chiết khấu theo số lượng cho từng đối tượng khách hàng
               </p>
             </div>
           </div>
@@ -490,7 +491,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                     {scopeType === 'SKU' ? 'Chọn sản phẩm (SKU)' : 'Chọn nhóm hàng'} <span className="text-red-500">*</span>
                   </label>
                   {scopeType === 'SKU' ? (
-                    <select
+                    <SearchSelect
                       value={targetId}
                       onChange={(e) => handleProductSelect(e.target.value)}
                       className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs sm:text-sm font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
@@ -512,9 +513,9 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                           {prod.defaultCategory ? ` (${prod.defaultCategory})` : ''}
                         </option>
                       ))}
-                    </select>
+                    </SearchSelect>
                   ) : (
-                    <select
+                    <SearchSelect
                       value={targetId}
                       onChange={(e) => handleCategorySelect(e.target.value)}
                       className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs sm:text-sm font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
@@ -533,7 +534,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                           {cat.level > 1 ? `${'— '.repeat(cat.level - 1)}` : ''}Nhóm: {cat.name}
                         </option>
                       ))}
-                    </select>
+                    </SearchSelect>
                   )}
                 </div>
 
@@ -542,15 +543,27 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                   <label className="mb-1 block text-xs font-semibold text-gray-700">
                     Đối tượng đại lý / khách hàng
                   </label>
-                  <select
+                  <SearchSelect
                     value={customerGroup}
-                    disabled
                     onChange={(e) => setCustomerGroup(e.target.value as DiscountCustomerScope)}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-100 px-3.5 py-2.5 text-xs sm:text-sm font-medium text-gray-600 shadow-2xs cursor-not-allowed"
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
                   >
                     <option value="ALL">Tất cả nhóm đại lý</option>
-                  </select>
-                  <p className="mt-1 text-[11px] text-gray-500">Áp dụng cho mọi nhóm đại lý</p>
+                    <option value="DEALER_LEVEL_1">Đại lý cấp 1 (Tổng thầu / NPP lớn)</option>
+                    <option value="DEALER_LEVEL_2">Đại lý cấp 2 (Bán buôn khu vực)</option>
+                    <option value="RETAIL">Khách lẻ / Showroom</option>
+                  </SearchSelect>
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    {customerGroup === 'ALL'
+                      ? 'Áp dụng cho mọi nhóm đại lý'
+                      : `Chỉ áp dụng riêng cho ${
+                          customerGroup === 'DEALER_LEVEL_1'
+                            ? 'Đại lý Cấp 1'
+                            : customerGroup === 'DEALER_LEVEL_2'
+                            ? 'Đại lý Cấp 2'
+                            : 'Khách lẻ / Showroom'
+                        }`}
+                  </p>
                 </div>
 
                 {/* Ngày bắt đầu */}
@@ -638,8 +651,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                         <label className="mb-1 block text-[11px] font-semibold text-gray-700">
                           Từ số lượng (≥)
                         </label>
-                        <input
-                          type="number"
+                        <NumberInput
                           min="1"
                           step="1"
                           required
@@ -671,8 +683,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                           </div>
                         ) : (
                           <div className="relative">
-                            <input
-                              type="number"
+                            <NumberInput
                               min={tier.minQuantity}
                               step="1"
                               value={tier.maxQuantity ?? ''}
@@ -702,7 +713,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                         <label className="mb-1 block text-[11px] font-semibold text-gray-700">
                           Hình thức CK
                         </label>
-                        <select
+                        <SearchSelect
                           value={tier.discountType}
                           onChange={(e) =>
                             handleTierChange(idx, 'discountType', e.target.value as DiscountCalculationType)
@@ -711,7 +722,7 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                         >
                           <option value="PERCENT">Phần trăm (%)</option>
                           <option value="FIXED_AMOUNT">Số tiền (đ/đv)</option>
-                        </select>
+                        </SearchSelect>
                       </div>
 
                       {/* Giá trị chiết khấu */}
@@ -720,11 +731,10 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
                           Mức giảm ({tier.discountType === 'PERCENT' ? '%' : 'VND/đv'})
                         </label>
                         <div className="relative">
-                          <input
-                            type="number"
-                            min="0.1"
-                            step={tier.discountType === 'PERCENT' ? '0.5' : '1000'}
-                            max={tier.discountType === 'PERCENT' ? 100 : undefined}
+                          <NumberInput
+                            min="0"
+                            step="any"
+                            max={tier.discountType === 'PERCENT' ? 99 : undefined}
                             required
                             value={tier.discountValue}
                             onChange={(e) =>
@@ -756,16 +766,6 @@ export const VolumeDiscountFormModal: React.FC<VolumeDiscountFormModalProps> = (
               </div>
             </div>
 
-            {/* Nhóm 3: Banner cam kết quy tắc Best-Deal */}
-            <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3.5 text-xs text-amber-900">
-              <div className="flex items-start space-x-2">
-                <Icons.CheckSquare size={16} className="mt-0.5 shrink-0 text-amber-700" />
-                <p>
-                  <strong className="font-bold">Quy tắc có lợi nhất cho khách </strong>
-                  {BEST_DEAL_RULE_STATEMENT}
-                </p>
-              </div>
-            </div>
 
             {/* Nhóm 4: Ghi chú mô tả thêm */}
             <div>

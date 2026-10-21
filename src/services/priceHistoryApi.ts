@@ -672,12 +672,40 @@ export function formatVND(amount: number): string {
 }
 
 /**
+ * Định dạng ngày thuần Việt Nam (dd/MM/yyyy)
+ */
+export function formatDate(dateString?: string): string {
+  if (!dateString) return '--';
+  try {
+    // Tránh lệch múi giờ khi parse YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
+      const parts = dateString.substring(0, 10).split('-');
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    return new Intl.DateTimeFormat('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(date);
+  } catch {
+    return dateString;
+  }
+}
+
+/**
  * Định dạng ngày giờ chuẩn Việt Nam (UTC+7)
  */
-export function formatDateTime(isoString: string): string {
+export function formatDateTime(isoString?: string): string {
   if (!isoString) return '--';
   try {
+    // Nếu chỉ có ngày YYYY-MM-DD (không có giờ) -> format ngày để tránh bị timezone lệch thành 07:00
+    if (/^\d{4}-\d{2}-\d{2}$/.test(isoString)) {
+      return formatDate(isoString);
+    }
     const date = new Date(isoString);
+    if (isNaN(date.getTime())) return isoString;
     return new Intl.DateTimeFormat('vi-VN', {
       year: 'numeric',
       month: '2-digit',
@@ -708,7 +736,8 @@ export function exportPriceHistoryToExcel(
     'Giá Mới (VND)': r.newPrice,
     'Chênh Lệch (VND)': r.difference,
     'Tỷ Lệ Biến Động (%)': `${r.percentageChange > 0 ? '+' : ''}${r.percentageChange.toFixed(2)}%`,
-    'Thời Điểm Áp Dụng': formatDateTime(r.effectiveDate),
+    'Thời Điểm Thay Đổi (Thực tế)': formatDateTime(r.createdAt),
+    'Ngày Hiệu Lực Bảng Giá': formatDate(r.effectiveDate),
     'Người Sửa Giá': `${r.modifierName} (${r.modifierUsername})`,
     'Vai Trò': r.modifierRole,
     'Số Quyết Định / Căn Cứ': r.decisionCode,

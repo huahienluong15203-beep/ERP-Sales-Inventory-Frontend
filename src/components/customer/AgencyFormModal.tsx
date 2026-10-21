@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import type {
   Agency,
@@ -6,16 +6,19 @@ import type {
   UpdateAgencyPayload,
   CustomerGroupId,
   SalesRepOption,
-  RegionOption
+  RegionOption,
+  PriceListOption
 } from '../../types/agency';
 import {
   CUSTOMER_GROUP_OPTIONS,
   fetchAgencyFormOptions,
-  getPricingTierByGroup
+  getRealPriceListForGroup,
+  type PortalUserOption
 } from '../../services/agencyApi';
 import { X, Building2, AlertTriangle, CheckCircle2, Info } from '../common/Icons';
 import { AddressPicker } from '../common/AddressPicker';
 import { useAuth } from '../../contexts/AuthContext';
+import { SearchSelect } from '../common/SearchSelect';
 
 interface AgencyFormModalProps {
   isOpen: boolean;
@@ -36,15 +39,18 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
   const canChangeSalesRep = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER';
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Khu vực + nhân viên kinh doanh lấy từ Backend (id thật trong DB)
+  // Khu vực + nhân viên kinh doanh + bảng giá lấy từ Backend (id thật trong DB)
   const [salesReps, setSalesReps] = useState<SalesRepOption[]>([]);
   const [regions, setRegions] = useState<RegionOption[]>([]);
+  const [priceLists, setPriceLists] = useState<PriceListOption[]>([]);
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [taxCode, setTaxCode] = useState('');
   const [customerGroup, setCustomerGroup] = useState<CustomerGroupId>('TIER_1');
   const [regionId, setRegionId] = useState('');
   const [assignedRepId, setAssignedRepId] = useState('');
+  const [portalUsers, setPortalUsers] = useState<PortalUserOption[]>([]);
+  const [portalUserId, setPortalUserId] = useState<string>('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
@@ -55,10 +61,12 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      fetchAgencyFormOptions()
+      fetchAgencyFormOptions(true)
         .then((options) => {
           setRegions(options.regions);
           setSalesReps(options.salesReps);
+          setPriceLists(options.priceLists || []);
+          setPortalUsers(options.portalUsers || []);
           // Chỉ khi THÊM MỚI mới chọn sẵn khu vực / người phụ trách đầu tiên.
           // Sửa đại lý chưa có người phụ trách thì giữ trống, không tự gán người khác.
           if (!initialData) {
@@ -68,10 +76,17 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
         })
         .catch(() => setError('Không tải được danh mục khu vực và nhân viên kinh doanh. Vui lòng thử lại!'));
     }
-  }, [isOpen]);
+  }, [isOpen, initialData]);
 
-  // Bảng giá hiện thời được ánh xạ trực tiếp từ Nhóm khách hàng đã chọn
-  const activePricingTier = getPricingTierByGroup(customerGroup);
+  // Bảng giá hiện thời được ánh xạ trực tiếp từ Nhóm khách hàng đã chọn (dữ liệu thật trong hệ thống)
+  const activePricingTier = useMemo(() => {
+    const calculated = getRealPriceListForGroup(customerGroup, priceLists);
+    if (calculated.id) return calculated;
+    if (initialData?.customerGroup === customerGroup && initialData?.pricingTier?.id) {
+      return initialData.pricingTier;
+    }
+    return calculated;
+  }, [customerGroup, priceLists, initialData]);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -85,6 +100,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
       setPhone(initialData.phone || '');
       setEmail(initialData.email || '');
       setAddress(initialData.address || '');
+      setPortalUserId(initialData.portalUserId ? String(initialData.portalUserId) : '');
       // Hạn mức 0 là giá trị thật (chưa cấp nợ), không được tự đổi thành 50 triệu
       setCreditLimit(initialData.creditLimit ?? 0);
     } else {
@@ -94,6 +110,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
       setCustomerGroup('TIER_1');
       setRegionId(regions[0]?.id || '');
       setAssignedRepId(salesReps[0]?.id || '');
+      setPortalUserId('');
       setPhone('');
       setEmail('');
       setAddress('');
@@ -160,7 +177,9 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
           assignedRepId,
           phone: cleanPhone,
           email: email.trim(),
-          address: address.trim()
+          address: address.trim(),
+          portalUserId: portalUserId ? Number(portalUserId) : null,
+          changePortalUser: portalUserId !== (initialData?.portalUserId ? String(initialData.portalUserId) : '')
           // Không gửi hạn mức khi sửa: đổi hạn mức phải qua "Hạn mức công nợ" có lý do thật để ghi nhật ký
         });
       } else {
@@ -174,7 +193,8 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
           phone: cleanPhone,
           email: email.trim(),
           address: address.trim(),
-          creditLimit
+          creditLimit,
+          portalUserId: portalUserId ? Number(portalUserId) : null
         });
       }
 
@@ -302,7 +322,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
                 <label className="block text-[11px] font-semibold text-gray-600 mb-1">
                   Chọn Nhóm Khách Hàng:
                 </label>
-                <select
+                <SearchSelect
                   value={customerGroup}
                   onChange={(e) => setCustomerGroup(e.target.value as CustomerGroupId)}
                   className="w-full px-3 py-2 text-sm bg-white rounded-lg border border-orange-200 focus:border-[#F85606] outline-none font-medium"
@@ -312,7 +332,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
                       {g.name}
                     </option>
                   ))}
-                </select>
+                </SearchSelect>
               </div>
 
               {/* Bảng giá tự động ánh xạ */}
@@ -321,17 +341,20 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
                   Bảng Giá Áp Dụng Tự Động:
                 </label>
                 <div
-                  className="px-3 py-2 rounded-lg border flex items-center justify-between text-xs font-bold"
+                  className="px-3 py-2 rounded-lg border flex items-center justify-between text-xs font-bold gap-2"
                   style={{
                     backgroundColor: activePricingTier.badgeBg,
                     color: activePricingTier.badgeColor,
                     borderColor: 'currentColor'
                   }}
+                  title={`${activePricingTier.code} - ${activePricingTier.name}`}
                 >
-                  <span>{activePricingTier.name}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-white/80 text-[10px] tracking-wide">
-                    CK {activePricingTier.discountPercent}%
-                  </span>
+                  <span className="truncate">{activePricingTier.name}</span>
+                  {activePricingTier.code && (
+                    <span className="px-2 py-0.5 rounded-full bg-white/90 text-[10px] font-mono tracking-wider shrink-0 border border-black/10">
+                      {activePricingTier.code}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -348,7 +371,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
                 Khu Vực / Địa Bàn <span className="text-red-500">*</span>
               </label>
-              <select
+              <SearchSelect
                 value={regionId}
                 onChange={(e) => setRegionId(e.target.value)}
                 className="w-full px-3.5 py-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:border-[#F85606] outline-none"
@@ -359,7 +382,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
                     {r.name}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
             </div>
 
             {/* Nhân viên phụ trách (Sales Rep) */}
@@ -367,7 +390,7 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
                 Người Phụ Trách (Sales Rep) <span className="text-red-500">*</span>
               </label>
-              <select
+              <SearchSelect
                 value={assignedRepId}
                 onChange={(e) => setAssignedRepId(e.target.value)}
                 disabled={isEdit && !canChangeSalesRep}
@@ -382,8 +405,38 @@ export const AgencyFormModal: React.FC<AgencyFormModalProps> = ({
                     {rep.fullName} {rep.phone ? `(${rep.phone})` : ''}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
             </div>
+          </div>
+
+          {/* S4-10: Tài khoản Cổng Đại Lý B2B (ROLE_CUSTOMER) */}
+          <div className="p-3.5 rounded-xl border border-orange-100 bg-orange-50/40 space-y-1.5">
+            <label className="block text-xs font-semibold text-gray-800 uppercase tracking-wider flex items-center justify-between">
+              <span>Tài Khoản Đăng Nhập Cổng Đại Lý (B2B Portal)</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-100 text-[#F85606]">
+                ROLE_CUSTOMER
+              </span>
+            </label>
+            <SearchSelect
+              value={portalUserId}
+              onChange={(e) => setPortalUserId(e.target.value)}
+              className="w-full px-3.5 py-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:border-[#F85606] outline-none font-medium"
+            >
+              <option value="">— Không gắn tài khoản (hoặc gỡ liên kết cổng) —</option>
+              {portalUserId && !portalUsers.some((u) => u.id === portalUserId) && (
+                <option value={portalUserId}>
+                  {initialData?.portalUserName || `Tài khoản #${portalUserId}`} (Đang liên kết)
+                </option>
+              )}
+              {portalUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.fullName} (@{u.username})
+                </option>
+              ))}
+            </SearchSelect>
+            <p className="text-[11px] text-gray-500">
+              Chọn tài khoản vai trò Đại lý để cấp quyền truy cập Cổng đặt hàng trực tuyến B2B (<code>/portal</code>).
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

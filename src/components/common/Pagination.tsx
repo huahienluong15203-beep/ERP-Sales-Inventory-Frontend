@@ -10,6 +10,8 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
   /** Có truyền thì hiện ô chọn số dòng/trang. */
   onSizeChange?: (size: number) => void;
+  /** Danh sách số dòng/trang tùy chọn, vd: [30, 50, 100]. Mặc định [10, 20, 50]. */
+  sizeOptions?: number[];
   /** Đơn vị đếm, vd: "tài khoản", "đại lý". */
   itemLabel?: string;
   disabled?: boolean;
@@ -36,6 +38,7 @@ export function Pagination({
   size,
   onPageChange,
   onSizeChange,
+  sizeOptions,
   itemLabel = 'bản ghi',
   disabled = false
 }: PaginationProps) {
@@ -43,6 +46,14 @@ export function Pagination({
   const current = Math.min(page, pages - 1) + 1;
   const from = totalElements === 0 ? 0 : (current - 1) * size + 1;
   const to = Math.min(current * size, totalElements);
+
+  const availableSizes = (() => {
+    const list = sizeOptions || PAGE_SIZE_OPTIONS;
+    if (!list.includes(size)) {
+      return [...list, size].sort((a, b) => a - b);
+    }
+    return list;
+  })();
 
   const go = (target: number) => {
     if (disabled || target < 1 || target > pages || target === current) return;
@@ -66,9 +77,9 @@ export function Pagination({
               value={size}
               disabled={disabled}
               onChange={(e) => onSizeChange(Number(e.target.value))}
-              className="h-[32px] rounded-lg border border-gray-200 bg-white px-2 text-sm font-semibold text-gray-700 focus:outline-none focus:border-[#F85606]"
+              className="h-[32px] rounded-lg border border-gray-200 bg-white px-2 text-sm font-semibold text-gray-700 focus:outline-none focus:border-[#F85606] cursor-pointer"
             >
-              {PAGE_SIZE_OPTIONS.map((opt) => (
+              {availableSizes.map((opt) => (
                 <option key={opt} value={opt}>
                   {opt}
                 </option>

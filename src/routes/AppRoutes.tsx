@@ -8,20 +8,64 @@ import { ProfilePage } from '../pages/profile/ProfilePage';
 import { UserManagementPage } from '../pages/admin/UserManagementPage';
 import { UserImportPage } from '../pages/admin/UserImportPage';
 import { AgencyManagementPage } from '../pages/customer/AgencyManagementPage';
+import { CreateAgencyPage } from '../pages/customer/CreateAgencyPage';
+import { TransferTerritoryPage } from '../pages/customer/TransferTerritoryPage';
 import { ProductManagementPage } from '../pages/product/ProductManagementPage';
 import { ProductImportPage } from '../pages/product/ProductImportPage';
 import { PriceListPage } from '../pages/pricing/PriceListPage';
-import { PriceHistoryPage } from '../pages/pricing/PriceHistoryPage';
+import { PriceListCreatePage } from '../pages/pricing/PriceListCreatePage';
 import { VolumeDiscountPage } from '../pages/pricing/VolumeDiscountPage';
 import { CategoryManagementPage } from '../pages/category/CategoryManagementPage';
 import { OrderCreatePage } from '../pages/order/OrderCreatePage';
+import { OrderListPage } from '../pages/order/OrderListPage';
+import { OrderDetailPage } from '../pages/order/OrderDetailPage';
 import { SupplierManagementPage } from '../pages/supplier/SupplierManagementPage';
-import { AuditLogPage } from '../pages/admin/AuditLogPage';
+import { CreateSupplierPage } from '../pages/supplier/CreateSupplierPage';
+import { SystemLogPage } from '../pages/system-log/SystemLogPage';
 import { ModulePage } from '../pages/common/ModulePage';
 import { ForbiddenPage } from '../pages/common/ForbiddenPage';
 import { NotFoundPage } from '../pages/common/NotFoundPage';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
+import { CustomerOrderPortalPage } from '../pages/portal/CustomerOrderPortalPage';
+import { GoodsReceiptManagementPage } from '../pages/inventory/GoodsReceiptManagementPage';
+import { GoodsReceiptCreatePage } from '../pages/inventory/GoodsReceiptCreatePage';
+import { GoodsReceiptDetailPage } from '../pages/inventory/GoodsReceiptDetailPage';
+import { StockTransferManagementPage } from '../pages/inventory/StockTransferManagementPage';
+import { StockTransferCreatePage } from '../pages/inventory/StockTransferCreatePage';
+import { TransferProductPickerPage } from '../pages/inventory/TransferProductPickerPage';
+import { StockTransferDetailPage } from '../pages/inventory/StockTransferDetailPage';
+import { StockLedgerPage } from '../pages/inventory/StockLedgerPage';
+import { StockCardPage } from '../pages/inventory/StockCardPage';
+import { StockTakeManagementPage } from '../pages/inventory/StockTakeManagementPage';
+import { StockTakeCreatePage } from '../pages/inventory/StockTakeCreatePage';
+import { StockTakeDetailPage } from '../pages/inventory/StockTakeDetailPage';
+import { WarehouseManagementPage } from '../pages/inventory/WarehouseManagementPage';
+import { PickingListManagementPage } from '../pages/inventory/PickingListManagementPage';
+import { PickingListCreatePage } from '../pages/inventory/PickingListCreatePage';
+import { PickingListDetailPage } from '../pages/inventory/PickingListDetailPage';
+import { DeliveryTripManagementPage } from '../pages/inventory/DeliveryTripManagementPage';
+import { DeliveryTripCreatePage } from '../pages/inventory/DeliveryTripCreatePage';
+import { DeliveryTripDetailPage } from '../pages/inventory/DeliveryTripDetailPage';
+import { DebtAdjustmentPage } from '../pages/payment/DebtAdjustmentPage';
+import { PaymentReconciliationPage } from '../pages/payment/PaymentReconciliationPage';
+import { ProductLotManagementPage } from '../pages/inventory/ProductLotManagementPage';
+import { ProductLotCreatePage } from '../pages/inventory/ProductLotCreatePage';
+import { InvoiceManagementPage } from '../pages/payment/InvoiceManagementPage';
+import { InvoiceCreatePage } from '../pages/payment/InvoiceCreatePage';
+import { SalesTargetManagementPage } from '../pages/kpi/SalesTargetManagementPage';
+import { InventoryAgingReportPage } from '../pages/inventory/InventoryAgingReportPage';
+import { InTransitDashboardPage } from '../pages/inventory/InTransitDashboardPage';
+import { StockAdjustmentListPage } from '../pages/inventory/StockAdjustmentListPage';
+import { StockAdjustmentCreatePage } from '../pages/inventory/StockAdjustmentCreatePage';
+import { StockAdjustmentDetailPage } from '../pages/inventory/StockAdjustmentDetailPage';
+import { DebtAgingLedgerPage } from '../pages/debt/DebtAgingLedgerPage';
+import { DebtReconciliationPage } from '../pages/debt/DebtReconciliationPage';
+import { CustomerDebtStatementPage } from '../pages/debt/CustomerDebtStatementPage';
+import { SalesReturnListPage } from '../pages/salesreturn/SalesReturnListPage';
+import { CreateSalesReturnPage } from '../pages/salesreturn/CreateSalesReturnPage';
+import { MultidimensionalSalesReportPage } from '../pages/report/MultidimensionalSalesReportPage';
+import { OverdueDebtReportPage } from '../pages/report/OverdueDebtReportPage';
 import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
 
 /**
@@ -31,7 +75,7 @@ import { ALL_SYSTEM_MENUS } from '../services/menuConfig';
  */
 export const AppRoutes: React.FC = () => {
   const { pathname } = useLocation();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, currentRole } = useAuth();
 
   // 1. Tuyến đường trang Đăng nhập
   if (pathname === '/login') {
@@ -46,6 +90,19 @@ export const AppRoutes: React.FC = () => {
   // 2. Nếu chưa đăng nhập -> Chuyển hướng về /login
   if (!isAuthenticated && !isLoading) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Cổng đại lý đặt hàng & Quản lý công nợ (B2B Customer Portal)
+  // Khách hàng/đại lý (ROLE_CUSTOMER) không dùng giao diện Dashboard nội bộ, luôn vào thẳng cổng đặt hàng & công nợ
+  if (currentRole === 'ROLE_CUSTOMER') {
+    if (pathname !== '/portal' && pathname !== '/portal/debt') {
+      return <Navigate to="/portal" replace />;
+    }
+    return <CustomerOrderPortalPage />;
+  }
+
+  if (pathname === '/portal' || pathname === '/portal/debt') {
+    return <CustomerOrderPortalPage />;
   }
 
   // 3. Toàn bộ các trang nghiệp vụ bên trong dùng chung MainLayout
@@ -100,6 +157,37 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* Khai báo hồ sơ đại lý mới (Trang riêng) */}
+        <Route
+          path="/customers/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <CreateAgencyPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Chuyển giao địa bàn hàng loạt (Trang riêng) */}
+        <Route
+          path="/customers/transfer"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <TransferTerritoryPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Quản lý danh mục sản phẩm (Sprint 2: S2-05) */}
         <Route
           path="/products"
@@ -147,6 +235,536 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* Khai báo đối tác cung ứng mới (Trang riêng) */}
+        <Route
+          path="/suppliers/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ADMIN',
+                'ROLE_WH_MANAGER',
+                'ROLE_WAREHOUSE',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <CreateSupplierPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S5-04: Lập phiếu nhập kho từ nhà cung cấp (Trang riêng) */}
+        <Route
+          path="/inventory/receipts/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <GoodsReceiptCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/goods-receipts/create"
+          element={<Navigate to="/inventory/receipts/create" replace />}
+        />
+
+        {/* S5-04: Phiếu nhập kho từ nhà cung cấp (Kho & Kế toán) */}
+        <Route
+          path="/inventory/receipts"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <GoodsReceiptManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* S5-04: Chi tiết phiếu nhập kho trang riêng (có phân trang đầy đủ) */}
+        <Route
+          path="/inventory/receipts/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <GoodsReceiptDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/goods-receipts/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <GoodsReceiptDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S5-07: Lập phiếu chuyển kho nội bộ (Trang riêng) */}
+        <Route
+          path="/inventory/transfers/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <StockTransferCreatePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S5-07: Chọn sản phẩm điều chuyển kho (Trang riêng toàn màn hình) */}
+        <Route
+          path="/inventory/transfers/create/products"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <TransferProductPickerPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S5-07: Phiếu chuyển kho nội bộ (Kho & Quản lý kho) */}
+        <Route
+          path="/inventory/transfers"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockTransferManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S5-07: Chi tiết phiếu chuyển kho nội bộ (Trang riêng) */}
+        <Route
+          path="/inventory/transfers/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockTransferDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S5-09: Sổ tồn kho & Cảnh báo tồn tối thiểu (Kho & Quản lý kho) */}
+        <Route
+          path="/inventory/ledger"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <StockLedgerPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/stock-ledger"
+          element={<Navigate to="/inventory/ledger" replace />}
+        />
+
+        {/* S6-02: Thẻ kho chi tiết (Kho, Quản lý kho, Admin, Kế toán, QL kinh doanh) */}
+        <Route
+          path="/inventory/stock-card"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <StockCardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/card"
+          element={<Navigate to="/inventory/stock-card" replace />}
+        />
+
+        {/* S5-08: Kiểm kê kho & ghi nhận chênh lệch */}
+        <Route
+          path="/inventory/stocktakes"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockTakeManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* S5-08: Tạo phiếu kiểm kê kho trang riêng */}
+        <Route
+          path="/inventory/stocktakes/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <StockTakeCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/stock-takes/create"
+          element={<Navigate to="/inventory/stocktakes/create" replace />}
+        />
+        {/* S5-08: Chi tiết & thực hiện kiểm kê kho trang riêng */}
+        <Route
+          path="/inventory/stocktakes/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockTakeDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/stock-takes/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockTakeDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Quản lý kho hàng & sơ đồ vị trí lưu trữ */}
+        <Route
+          path="/inventory/warehouses"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <WarehouseManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/warehouses" element={<Navigate to="/inventory/warehouses" replace />} />
+
+        {/* Theo dõi lô & hạn sử dụng, cảnh báo cận date */}
+        <Route
+          path="/inventory/lots"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <ProductLotManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Khai báo lô hàng mới (Trang riêng) */}
+        <Route
+          path="/inventory/lots/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <ProductLotCreatePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Báo cáo luân chuyển kho & tuổi hàng (S8-07) */}
+        <Route
+          path="/inventory/aging"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <InventoryAgingReportPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Theo dõi hàng đi đường & tiến độ giao hàng (S6-07) */}
+        <Route
+          path="/inventory/in-transit"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <InTransitDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S6-03: Phiếu soạn hàng (Wave Picking) */}
+        <Route
+          path="/inventory/picking-lists"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <PickingListManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/picking-lists/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <PickingListCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/picking-lists/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <PickingListDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S6-06: Phân tuyến giao hàng (Delivery Trips & Route Dispatch) */}
+        <Route
+          path="/inventory/delivery-trips"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WH_MANAGER',
+                'ROLE_WAREHOUSE',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <DeliveryTripManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/delivery-trips/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WH_MANAGER',
+                'ROLE_WAREHOUSE',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <DeliveryTripCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/delivery-trips/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WH_MANAGER',
+                'ROLE_WAREHOUSE',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER'
+              ]}
+            >
+              <DeliveryTripDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S8-03: Quản lý & Lập phiếu điều chỉnh tồn kho */}
+        <Route
+          path="/inventory/stock-adjustments"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockAdjustmentListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/stock-adjustments/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <StockAdjustmentCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/stock-adjustments/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT'
+              ]}
+            >
+              <StockAdjustmentDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="/inventory" element={<Navigate to="/inventory/receipts" replace />} />
+
+        {/* S2-10: Trang riêng Khai báo / Chỉnh sửa Bảng giá sản phẩm */}
+        <Route
+          path="/pricing/create"
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_SALES_MANAGER']}>
+              <PriceListCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/price-lists/create"
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_SALES_MANAGER']}>
+              <PriceListCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pricing/:id/edit"
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_SALES_MANAGER']}>
+              <PriceListCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/price-lists/:id/edit"
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_SALES_MANAGER']}>
+              <PriceListCreatePage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Quản lý bảng giá sản phẩm (S2-10 / SCRUM-55 / EP-02) */}
         <Route
           path="/pricing"
@@ -179,22 +797,8 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
-        {/* Lịch sử thay đổi giá & Biểu giá (Sprint 3: S3-02 / SCRUM-13 / EP-02) */}
-        <Route
-          path="/pricing/history"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                'ROLE_SALES_MANAGER',
-                'ROLE_ADMIN',
-                'ROLE_SALES_REP',
-                'ROLE_ACCOUNTANT'
-              ]}
-            >
-              <PriceHistoryPage />
-            </ProtectedRoute>
-          }
-        />
+        {/* Lịch sử thay đổi giá đã gộp vào "Nhật ký hệ thống" (link cũ tự chuyển sang tab tương ứng) */}
+        <Route path="/pricing/history" element={<Navigate to="/logs?tab=price" replace />} />
 
         {/* Chính sách chiết khấu theo sản lượng (Sprint 3: S3-01 / SCRUM-12 / SCRUM-77 / EP-02) */}
         <Route
@@ -230,6 +834,25 @@ export const AppRoutes: React.FC = () => {
             </ProtectedRoute>
           }
         />
+        {/* S4-06 / S4-07: Chi tiết đơn hàng trang riêng biệt */}
+        <Route
+          path="/orders/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_REP',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER'
+              ]}
+            >
+              <OrderDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* S4-07: Danh sách đơn hàng có bộ lọc đa chiều & tổng tiền (Quản lý kinh doanh, NVKD, Admin, Kế toán) */}
         <Route
           path="/orders"
           element={
@@ -237,13 +860,231 @@ export const AppRoutes: React.FC = () => {
               allowedRoles={[
                 'ROLE_SALES_REP',
                 'ROLE_SALES_MANAGER',
-                'ROLE_ADMIN'
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_WAREHOUSE',
+                'ROLE_WH_MANAGER'
               ]}
             >
-              <OrderCreatePage />
+              <OrderListPage />
             </ProtectedRoute>
           }
         />
+
+        {/* Chứng từ giảm trừ công nợ khi trả hàng */}
+        <Route
+          path="/payments/adjustments"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <DebtAdjustmentPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S7-01: Phát hành và quản lý hoá đơn bán hàng từ phiếu đã giao */}
+        <Route
+          path="/invoices"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <InvoiceManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invoices/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <InvoiceCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invoices/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <InvoiceManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S8-01: Trả hàng nhập kho */}
+        <Route
+          path="/sales-returns"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_REP',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_WH_MANAGER',
+                'ROLE_WAREHOUSE'
+              ]}
+            >
+              <SalesReturnListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sales-returns/create"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_REP',
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN',
+                'ROLE_ACCOUNTANT',
+                'ROLE_WH_MANAGER',
+                'ROLE_WAREHOUSE'
+              ]}
+            >
+              <CreateSalesReturnPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Đối chiếu thu tiền theo tuyến & nộp quỹ (S7-05) */}
+        <Route
+          path="/payments/reconciliation"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <PaymentReconciliationPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S7-03: Sổ công nợ & tuổi nợ theo đại lý */}
+        <Route
+          path="/debts/ledger"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <DebtAgingLedgerPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S7-06: Đối chiếu công nợ định kỳ */}
+        <Route
+          path="/debts/reconciliation"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_CUSTOMER'
+              ]}
+            >
+              <DebtReconciliationPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S8-10: Sổ chi tiết công nợ đại lý */}
+        <Route
+          path="/debts/statement"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP',
+                'ROLE_CUSTOMER'
+              ]}
+            >
+              <CustomerDebtStatementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S8-09: Báo cáo công nợ quá hạn theo tuổi nợ & đại lý rủi ro */}
+        <Route
+          path="/reports/overdue-debts"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_ACCOUNTANT',
+                'ROLE_ADMIN',
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
+              ]}
+            >
+              <OverdueDebtReportPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Chỉ tiêu doanh số (KPI) & Tiến độ (S8-04) */}
+        <Route
+          path="/kpi/targets"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <SalesTargetManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* S8-06: Báo cáo doanh số đa chiều & Biên lợi nhuận gộp */}
+        <Route
+          path="/reports/sales"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'ROLE_SALES_MANAGER',
+                'ROLE_ADMIN'
+              ]}
+            >
+              <MultidimensionalSalesReportPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/sales-reports" element={<Navigate to="/reports/sales" replace />} />
 
         {/* Hồ sơ cá nhân (Mọi vai trò đều xem được) */}
         <Route path="/profile" element={<ProfilePage />} />
@@ -258,37 +1099,25 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
-        {/* Nhật ký thao tác tồn kho & công nợ (Sprint 2: S2-04) */}
+        {/* Nhật ký hệ thống: gộp Nhật ký thao tác (S2-04) + Lịch sử thay đổi giá (S3-02), lọc theo loại ở tab */}
         <Route
-          path="/audit-logs"
+          path="/logs"
           element={
             <ProtectedRoute
               allowedRoles={[
                 'ROLE_ADMIN',
                 'ROLE_ACCOUNTANT',
                 'ROLE_WH_MANAGER',
-                'ROLE_SALES_MANAGER'
+                'ROLE_SALES_MANAGER',
+                'ROLE_SALES_REP'
               ]}
             >
-              <AuditLogPage />
+              <SystemLogPage />
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/admin/audit-logs"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                'ROLE_ADMIN',
-                'ROLE_ACCOUNTANT',
-                'ROLE_WH_MANAGER',
-                'ROLE_SALES_MANAGER'
-              ]}
-            >
-              <AuditLogPage />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/audit-logs" element={<Navigate to="/logs?tab=audit" replace />} />
+        <Route path="/admin/audit-logs" element={<Navigate to="/logs?tab=audit" replace />} />
 
         {/* Trang 403 Forbidden trực tiếp */}
         <Route path="/forbidden" element={<ForbiddenPage />} />
@@ -310,8 +1139,11 @@ export const AppRoutes: React.FC = () => {
             m.path !== '/pricing/history' &&
             m.path !== '/orders/create' &&
             m.path !== '/orders' &&
+            m.path !== '/portal' &&
+            m.path !== '/inventory/receipts' &&
             m.path !== '/audit-logs' &&
-            m.path !== '/admin/audit-logs'
+            m.path !== '/admin/audit-logs' &&
+            m.path !== '/logs'
         ).map((menuItem) => (
           <Route
             key={menuItem.path}

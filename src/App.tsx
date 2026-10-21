@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AppRoutes } from './routes/AppRoutes';
 import { ErrorBoundary } from './pages/common/ErrorBoundary';
+import { ModalScrollLockManager } from './components/common/ModalScrollLockManager';
 import './App.css';
 
 export function App() {
@@ -11,6 +12,7 @@ export function App() {
       <ThemeProvider>
         <AuthProvider>
           <BrowserRouter>
+            <ModalScrollLockManager />
             <AppRoutes />
           </BrowserRouter>
         </AuthProvider>
@@ -20,3 +22,4 @@ export function App() {
 }
 
 export default App;
+

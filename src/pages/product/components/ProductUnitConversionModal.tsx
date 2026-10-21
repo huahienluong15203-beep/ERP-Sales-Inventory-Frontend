@@ -9,6 +9,7 @@ import type {
 import { productUnitConversionService } from '../../../services/productUnitConversionService';
 import { API_BASE_URL, getStoredToken } from '../../../services/api';
 import { Icons } from '../../../components/common/Icons';
+import { SearchSelect } from '../../../components/common/SearchSelect';
 
 interface ProductUnitConversionModalProps {
   isOpen: boolean;
@@ -437,7 +438,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] my-auto flex flex-col shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95">
+      <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[92vh] my-auto flex flex-col shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95">
         {/* Header Modal */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-orange-50/70 via-white to-amber-50/40 shrink-0">
           <div className="flex items-center space-x-3.5">
@@ -504,7 +505,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
         <div className="px-6 pt-3 pb-0 shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-orange-50/50 border border-orange-200/70 text-xs">
             <div className="flex items-center gap-3">
-              <span className="text-gray-600 font-medium">Đơn vị cơ sở chuẩn (Base Unit):</span>
+              <span className="text-gray-600 font-medium">Đơn vị cơ sở chuẩn:</span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-600 text-white font-bold shadow-xs">
                 <span>{product.baseUnit}</span>
                 <span className="text-[10px] opacity-80">(Hệ số = 1.0)</span>
@@ -737,14 +738,14 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                     {editingUnit && (
                       <div className="flex items-center gap-2 ml-auto">
                         <span className="font-semibold text-gray-600">Trạng thái:</span>
-                        <select
+                        <SearchSelect
                           value={formStatus}
                           onChange={(e) => setFormStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
                           className="px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-xs font-medium"
                         >
                           <option value="ACTIVE">Đang áp dụng</option>
                           <option value="INACTIVE">Ngừng áp dụng</option>
-                        </select>
+                        </SearchSelect>
                       </div>
                     )}
                   </div>
@@ -983,7 +984,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                     <label className="block text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
                       1. Chọn đơn vị tính trên phiếu
                     </label>
-                    <select
+                    <SearchSelect
                       value={calcUnitName}
                       onChange={(e) => handleCalculateConversion(e.target.value, calcQuantity)}
                       className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
@@ -996,7 +997,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                           {u.unitName} (Hệ số: {formatConversionFactor(u.conversionFactor)} {product.baseUnit})
                         </option>
                       ))}
-                    </select>
+                    </SearchSelect>
                   </div>
 
                   <div>
@@ -1006,6 +1007,7 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                     <input
                       type="text"
                       inputMode="decimal"
+                      maxLength={12}
                       value={calcQuantity}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -1016,6 +1018,12 @@ export const ProductUnitConversionModal: React.FC<ProductUnitConversionModalProp
                       placeholder="VD: 10 hoặc 2,5"
                       className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                     />
+                    {Boolean(calcQuantity && Number(calcQuantity.replace(/,/g, '.')) > 10000000) && (
+                      <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-center gap-1.5 mt-2">
+                        <Icons.AlertTriangle size={14} className="text-amber-600 shrink-0" />
+                        <span>Cảnh báo: Số lượng nhập quá lớn (&gt; 10,000,000). Vui lòng kiểm tra lại để tránh sai lệch tồn kho!</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

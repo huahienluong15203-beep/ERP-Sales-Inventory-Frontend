@@ -71,12 +71,13 @@ export const LoginPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [forgotCooldown]);
 
-  // Nếu đã đăng nhập và không phải đang đổi mật khẩu thì vào dashboard
+  // Nếu đã đăng nhập và không phải đang đổi mật khẩu: đại lý vào thẳng /portal, vai trò khác vào /dashboard
   useEffect(() => {
     if (isAuthenticated && !user?.mustChangePassword && !showForceChangeModal && !loginSuccessMessage) {
-      navigate('/dashboard', { replace: true });
+      const isCustomer = user?.roles?.includes('ROLE_CUSTOMER') || user?.role === 'ROLE_CUSTOMER';
+      navigate(isCustomer ? '/portal' : '/dashboard', { replace: true });
     }
-  }, [isAuthenticated, user?.mustChangePassword, showForceChangeModal, loginSuccessMessage, navigate]);
+  }, [isAuthenticated, user, showForceChangeModal, loginSuccessMessage, navigate]);
 
   // Xử lý Đăng Nhập (S1-01)
   const handleLoginSubmit = async (e: FormEvent) => {
@@ -104,8 +105,9 @@ export const LoginPage: React.FC = () => {
           setShowForceChangeModal(true);
         } else {
           setLoginSuccessMessage('Đăng nhập thành công! Đang chuyển hướng vào hệ thống...');
+          const isCustomer = result.user?.roles?.includes('ROLE_CUSTOMER') || result.user?.role === 'ROLE_CUSTOMER';
           setTimeout(() => {
-            navigate('/dashboard', { replace: true });
+            navigate(isCustomer ? '/portal' : '/dashboard', { replace: true });
           }, 350);
         }
       } else {
@@ -187,7 +189,8 @@ export const LoginPage: React.FC = () => {
       if (res.success) {
         clearMustChangePassword();
         setShowForceChangeModal(false);
-        navigate('/dashboard', { replace: true });
+        const isCustomer = user?.roles?.includes('ROLE_CUSTOMER') || user?.role === 'ROLE_CUSTOMER';
+        navigate(isCustomer ? '/portal' : '/dashboard', { replace: true });
       } else {
         setErrorMessage(res.message);
       }

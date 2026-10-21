@@ -1,0 +1,542 @@
+import React, { useRef, useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  Printer,
+  X,
+  Building2,
+  MapPin,
+  Calendar,
+  User,
+  Phone,
+  FileText,
+  BadgePercent,
+  AlertTriangle
+} from 'lucide-react';
+import type { OrderBackendResponse, OrderApprovalHistoryResponse } from '../../types/order';
+import { formatCurrencyVND, formatQuantity, fetchOrderApprovalHistory } from '../../services/orderService';
+import { fetchAgencyById } from '../../services/agencyApi';
+import { useAuth } from '../../contexts/AuthContext';
+import { API_BASE_URL, authFetch } from '../../services/api';
+
+/** S4-08: Đơn chưa hoặc không còn hiệu lực: hiển thị dấu chìm và cảnh báo */
+const STAMPS: Record<string, string> = {
+  DRAFT: 'BẢN NHÁP',
+  CANCELLED: 'ĐÃ HUỶ',
+  REJECTED: 'BỊ TỪ CHỐI'
+};
+
+interface OrderPdfPreviewModalProps {
+  isOpen: boolean;
+  order: OrderBackendResponse | null;
+  approvalHistory?: OrderApprovalHistoryResponse[];
+  onClose: () => void;
+}
+
+// Bảng độ rộng vạch chuẩn Code 128 (giá trị 0..106), giống backend (Code128Svg.java)
+const CODE128_PATTERNS = [
+  '212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312', '132212', '221213',
+  '221312', '231212', '112232', '122132', '122231', '113222', '123122', '123221', '223211', '221132',
+  '221231', '213212', '223112', '312131', '311222', '321122', '321221', '312212', '322112', '322211',
+  '212123', '212321', '232121', '111323', '131123', '131321', '112313', '132113', '132311', '211313',
+  '231113', '231311', '112133', '112331', '132131', '113123', '113321', '133121', '313121', '211331',
+  '231131', '213113', '213311', '213131', '311123', '311321', '331121', '312113', '312311', '332111',
+  '314111', '221411', '431111', '111224', '111422', '121124', '121421', '141122', '141221', '112214',
+  '112412', '122114', '122411', '142112', '142211', '241211', '221114', '413111', '241112', '134111',
+  '111242', '121142', '121241', '114212', '124112', '124211', '411212', '421112', '421211', '212141',
+  '214121', '412121', '111143', '111341', '131141', '114113', '114311', '411113', '411311', '113141',
+  '114131', '311141', '411131', '211412', '211214', '211232', '2331112'
+];
+
+/** Code 128 bộ B: Start B (104) + dữ liệu + checksum mod 103 + Stop (106). Trả null nếu có ký tự ngoài ASCII. */
+function code128Symbols(data: string): number[] | null {
+  if (!data) return null;
+  const values = [104];
+  let checksum = 104;
+  for (let i = 0; i < data.length; i++) {
+    const c = data.charCodeAt(i);
+    if (c < 32 || c > 126) return null;
+    values.push(c - 32);
+    checksum += (c - 32) * (i + 1);
+  }
+  values.push(checksum % 103, 106);
+  return values;
+}
+
+/**
+ * S4-08 AC2: Mã vạch Code 128 THẬT (máy quét đọc được) của mã đơn, vẽ bằng SVG.
+ * Bản in chính thức lấy từ backend (GET /api/orders/{id}/print) cũng dùng đúng thuật toán này.
+ */
+const BarcodeSvg: React.FC<{ code: string }> = ({ code }) => {
+  const symbols = code128Symbols(code);
+  if (!symbols) {
+    return <span className="font-mono text-[11px] font-bold text-gray-800">{code}</span>;
+  }
+  const rects: { x: number; w: number }[] = [];
+  let x = 10; // khoảng trắng 10 mô-đun
+  symbols.forEach((v) => {
+    const pattern = CODE128_PATTERNS[v];
+    for (let i = 0; i < pattern.length; i++) {
+      const w = Number(pattern[i]);
+      if (i % 2 === 0) rects.push({ x, w });
+      x += w;
+    }
+  });
+  const width = x + 10;
+
+  return (
+    <div className="flex flex-col items-center">
+      <svg
+        className="h-12 w-56"
+        viewBox={`0 0 ${width} 40`}
+        preserveAspectRatio="none"
+        xmlns="http://www.w3.org/2000/svg"
+        role="img"
+        aria-label={`Mã vạch ${code}`}
+      >
+        <rect width="100%" height="100%" fill="white" />
+        {rects.map((r) => (
+          <rect key={r.x} x={r.x} y="0" width={r.w} height="40" fill="black" />
+        ))}
+      </svg>
+      <span className="font-mono text-[11px] tracking-widest font-bold text-gray-800 mt-0.5">{code}</span>
+    </div>
+  );
+};
+
+export const OrderPdfPreviewModal: React.FC<OrderPdfPreviewModalProps> = ({
+  isOpen,
+  order,
+  approvalHistory,
+  onClose
+}) => {
+  const { showToast } = useAuth();
+  const printContentRef = useRef<HTMLDivElement>(null);
+
+  const [agencySalesRep, setAgencySalesRep] = useState<string>('');
+  const [internalHistory, setInternalHistory] = useState<OrderApprovalHistoryResponse[]>([]);
+
+  // Tải NVKD phụ trách đại lý từ hồ sơ đại lý
+  useEffect(() => {
+    if (!order?.customerId) return;
+    let isMounted = true;
+    fetchAgencyById(order.customerId)
+      .then((agency) => {
+        if (isMounted && agency?.assignedRepName && agency.assignedRepName !== 'Chưa gán') {
+          setAgencySalesRep(agency.assignedRepName);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [order?.customerId]);
+
+  // Tải lịch sử duyệt nếu chưa truyền vào
+  useEffect(() => {
+    if (!approvalHistory && order?.id) {
+      let isMounted = true;
+      fetchOrderApprovalHistory(order.id)
+        .then((h) => {
+          if (isMounted) setInternalHistory(h);
+        })
+        .catch(() => {});
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [approvalHistory, order?.id]);
+
+  const effectiveHistory = approvalHistory || internalHistory;
+
+  // Xác định tên Nhân viên kinh doanh phụ trách (tuyệt đối không để customer_agent)
+  const salesRepDisplay = useMemo(() => {
+    if (agencySalesRep) {
+      return agencySalesRep;
+    }
+    const anyOrder = order as unknown as { salesRepName?: string };
+    if (anyOrder?.salesRepName) {
+      return anyOrder.salesRepName;
+    }
+    const creator = order?.createdByUsername;
+    if (creator && !creator.toLowerCase().includes('customer') && creator !== 'client') {
+      return creator;
+    }
+    return agencySalesRep || 'Nhân viên kinh doanh';
+  }, [agencySalesRep, order]);
+
+  // Xác định Thủ kho xuất hàng (người thực tế thực hiện xuất kho)
+  const dispatchActorDisplay = useMemo(() => {
+    // 1. Kiểm tra trong lịch sử duyệt xem ai là người thực hiện xuất kho
+    const dispatchEvent = effectiveHistory.find(
+      (h) =>
+        h.toStatus === 'DISPATCHED' ||
+        h.toStatus === 'SHIPPED' ||
+        h.action === 'DISPATCH' ||
+        h.action === 'DISPATCHED'
+    );
+    if (dispatchEvent?.actorFullName) {
+      return dispatchEvent.actorFullName;
+    }
+    if (dispatchEvent?.actorUsername) {
+      return dispatchEvent.actorUsername;
+    }
+
+    // 2. Kiểm tra fulfillment trên đơn
+    if (order?.fulfillment?.dispatchedByUsername) {
+      return order.fulfillment.dispatchedByUsername;
+    }
+
+    // 3. Nếu đơn chưa xuất kho
+    const st = order?.status?.toUpperCase();
+    if (st === 'DRAFT' || st === 'PENDING_APPROVAL' || st === 'APPROVED' || st === 'PICKING') {
+      return '(Ký khi xuất hàng)';
+    }
+
+    return 'Thủ kho xuất hàng';
+  }, [effectiveHistory, order]);
+
+  if (!isOpen || !order) return null;
+
+  /**
+   * S4-08: Lấy mẫu in chuẩn từ backend (GET /api/orders/{id}/print, có mã vạch Code 128, đã kiểm quyền ở server)
+   * rồi in qua một khung ẩn. "Tải file PDF" = chọn máy in "Lưu dưới dạng PDF" (Save as PDF) trong hộp thoại in.
+   */
+  const printFromBackend = async (savePdf: boolean) => {
+    let html: string;
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/orders/${order.id}/print`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        showToast('Không in được đơn', data?.message || 'Máy chủ không trả về mẫu in đơn hàng.', 'error');
+        return;
+      }
+      html = await res.text();
+    } catch {
+      showToast('Không in được đơn', 'Không kết nối được máy chủ. Vui lòng thử lại!', 'error');
+      return;
+    }
+
+    if (savePdf) {
+      showToast(
+        'Xuất PDF',
+        'Trong hộp thoại in, chọn máy in "Lưu dưới dạng PDF" (Save as PDF) để tải file về máy.',
+        'info',
+        5000
+      );
+    }
+
+    const frame = document.createElement('iframe');
+    frame.style.position = 'fixed';
+    frame.style.right = '0';
+    frame.style.bottom = '0';
+    frame.style.width = '0';
+    frame.style.height = '0';
+    frame.style.border = '0';
+    frame.setAttribute('aria-hidden', 'true');
+    frame.onload = () => {
+      const win = frame.contentWindow;
+      if (!win) return;
+      win.focus();
+      win.print();
+      // Gỡ khung sau khi hộp thoại in đóng
+      setTimeout(() => frame.remove(), 60000);
+    };
+    frame.srcdoc = html;
+    document.body.appendChild(frame);
+  };
+
+  const handlePrint = () => {
+    void printFromBackend(false);
+  };
+
+  const lines = order.lines || [];
+  const stamp = order.status ? STAMPS[order.status] : null;
+
+  // Render thẳng ra document.body: nếu nằm trong vùng nội dung trang (có hiệu ứng / transform), "fixed" bị tính
+  // theo vùng đó nên thanh tiêu đề và menu trái đè lên cửa sổ. z-[10000] để nằm trên cả topbar và modal chi tiết đơn.
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 print:p-0 print:bg-white">
+      <div
+        className="bg-white w-full max-w-4xl max-h-[95vh] rounded-2xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:border-none print:shadow-none print:max-h-none print:w-full print:rounded-none"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header Modal (Ẩn khi in) */}
+        <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between bg-gray-50/80 print:hidden">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#F85606] text-white flex items-center justify-center">
+              <FileText size={17} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 leading-tight">
+                Xem Trước & Xuất Mẫu In PDF Đơn Hàng
+              </h3>
+              <p className="text-[11px] text-gray-500">
+                Mẫu in chuẩn khổ A4 dùng đưa đại lý xác nhận hoặc gửi kho chuẩn bị hàng
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-900 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+              title="In phiếu"
+            >
+              <Printer size={14} />
+              <span>In Phiếu</span>
+            </button>
+
+
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 flex items-center justify-center transition cursor-pointer"
+              aria-label="Đóng"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Khung nội dung in khổ A4 (Có thể cuộn xem trước, in sắc nét) */}
+        <div className="flex-1 overflow-y-auto p-2 sm:p-4 bg-gray-100/60 print:p-0 print:bg-white print:overflow-visible flex justify-center">
+          <div
+            ref={printContentRef}
+            className="w-full max-w-[760px] transform scale-[0.88] sm:scale-[0.92] origin-top bg-white p-6 sm:p-8 rounded-xl shadow-xs border border-gray-200/80 print:border-none print:shadow-none print:p-0 print:max-w-none print:scale-100 text-gray-900 space-y-5 relative overflow-hidden"
+          >
+            {/* S4-08: Dấu chìm watermark cho đơn nháp / đơn huỷ / bị từ chối */}
+            {stamp && (
+              <div
+                className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-10 overflow-hidden"
+                aria-hidden="true"
+              >
+                <span className="text-red-500/18 text-6xl sm:text-7xl md:text-8xl font-black tracking-widest uppercase transform -rotate-30 border-4 border-dashed border-red-500/20 px-8 py-3 rounded-2xl whitespace-nowrap">
+                  {stamp}
+                </span>
+              </div>
+            )}
+
+            {/* 1. Header Phiếu: Thông tin Công ty & Mã Đơn / Barcode */}
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-4 border-b border-gray-300 pb-5">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold tracking-widest text-orange-600 uppercase block">
+                  HỆ THỐNG PHÂN PHỐI & BÁN HÀNG ERP
+                </span>
+                <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight leading-tight">
+                  PHIẾU ĐẶT HÀNG BÁN BUÔN
+                </h1>
+                <p className="text-xs text-gray-500">
+                  Sales Order Confirmation • Kho vận FEFO & Quản lý công nợ
+                </p>
+              </div>
+
+              {/* S4-08 AC2: Mã đơn và Mã vạch để kho tra cứu nhanh */}
+              <div className="flex flex-col items-center sm:items-end self-center sm:self-auto bg-gray-50/80 p-2 rounded-lg border border-gray-200/70">
+                <BarcodeSvg code={order.code || `DH-${order.id}`} />
+                <span className="text-[10px] text-gray-500 mt-1">
+                  Mã tra cứu kho: <strong>{order.code || `#${order.id}`}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* S4-08: Cảnh báo đơn chưa hoặc không còn hiệu lực */}
+            {stamp && (
+              <div className="p-3 bg-red-50 border-2 border-red-500/80 rounded-lg text-red-700 text-xs font-bold space-y-1 relative z-20">
+                <div className="flex items-center gap-1.5 text-red-800">
+                  <AlertTriangle size={15} className="text-red-600 shrink-0" />
+                  <span>Đơn {stamp.toLowerCase()} — không dùng làm chứng từ giao hàng</span>
+                </div>
+                {(order.cancelReason || order.lastApprovalComment) && (
+                  <div className="font-normal text-red-600 pl-5 text-[11px]">
+                    Lý do: <strong>{order.cancelReason || order.lastApprovalComment}</strong>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 2. S4-08 AC1: Thông tin Đại lý & Điểm giao hàng */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs bg-gray-50/60 p-4 rounded-xl border border-gray-200">
+              {/* Cột trái: Thông tin đại lý */}
+              <div className="space-y-1.5">
+                <h4 className="font-bold text-gray-700 uppercase tracking-wider text-[11px] flex items-center gap-1">
+                  <Building2 size={13} className="text-[#F85606]" />
+                  <span>Thông tin đại lý đặt hàng:</span>
+                </h4>
+                <div className="pl-4 space-y-0.5">
+                  <p className="font-bold text-sm text-gray-900">{order.customerName}</p>
+                  <p className="text-gray-600">Mã đại lý: <strong className="font-mono">{order.customerCode}</strong></p>
+                  <p className="text-gray-600">Nhóm KH: <strong>{order.customerGroupLabel || order.customerGroup}</strong></p>
+                  {order.deliveryAddress?.receiverPhone && (
+                    <p className="text-gray-600 flex items-center gap-1">
+                      <Phone size={11} /> SĐT: <strong>{order.deliveryAddress.receiverPhone}</strong>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Cột phải: Điểm giao hàng & Thời gian */}
+              <div className="space-y-1.5 border-t sm:border-t-0 sm:border-l border-gray-200 sm:pl-4 pt-2 sm:pt-0">
+                <h4 className="font-bold text-gray-700 uppercase tracking-wider text-[11px] flex items-center gap-1">
+                  <MapPin size={13} className="text-[#F85606]" />
+                  <span>Địa điểm & Thời gian giao:</span>
+                </h4>
+                <div className="pl-4 space-y-0.5">
+                  <p className="text-gray-800">
+                    Kho/Điểm nhận: <strong>{order.deliveryAddress?.label || 'Địa chỉ hồ sơ'}</strong>
+                  </p>
+                  <p className="text-gray-600 leading-tight">
+                    Địa chỉ: {order.deliveryAddress?.address || 'Tại trụ sở đại lý'}
+                  </p>
+                  <p className="text-gray-600 flex items-center gap-1 pt-0.5">
+                    <Calendar size={11} /> Ngày giao dự kiến: <strong>{order.desiredDeliveryDate ? new Date(order.desiredDeliveryDate).toLocaleDateString('vi-VN') : 'Theo thoả thuận'}</strong>
+                  </p>
+                  <p className="text-gray-600 flex items-center gap-1">
+                    <User size={11} /> NVKD phụ trách: <strong>{salesRepDisplay}</strong>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Banner hình thức thanh toán cho tài xế & kho */}
+            {order.paymentMethod === 'COD' ? (
+              <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold flex items-center justify-between">
+                <span>⚠️ HÌNH THỨC: THANH TOÁN KHI NHẬN HÀNG (COD)</span>
+                <span className="text-amber-800 font-semibold text-[11px]">
+                  Tài xế thu đủ: {formatCurrencyVND(Number(order.totalAmount || 0))} mới bàn giao hàng
+                </span>
+              </div>
+            ) : (
+              <div className="p-2 rounded-lg bg-blue-50/70 border border-blue-200 text-blue-900 text-xs font-semibold flex items-center justify-between">
+                <span>✓ HÌNH THỨC: THANH TOÁN TÍN DỤNG (CREDIT)</span>
+                <span className="text-blue-700 text-[11px]">Đại lý ký biên bản giao nhận hàng</span>
+              </div>
+            )}
+
+            {/* 3. S4-08 AC1: Chi tiết dòng hàng */}
+            <div className="space-y-2">
+              <h4 className="font-bold text-xs uppercase tracking-wider text-gray-700 flex items-center justify-between">
+                <span>Chi tiết danh mục hàng hóa đặt</span>
+                <span className="text-[11px] font-normal text-gray-500">
+                  Tổng {lines.length} mặt hàng
+                </span>
+              </h4>
+
+              <div className="overflow-x-auto border border-gray-200 rounded-xl">
+                <table className="w-full text-xs text-left divide-y divide-gray-200">
+                  <thead className="bg-gray-100 font-bold text-gray-700">
+                    <tr>
+                      <th className="py-2.5 px-3 text-center w-10">STT</th>
+                      <th className="py-2.5 px-3">Mã SKU</th>
+                      <th className="py-2.5 px-3">Tên sản phẩm</th>
+                      <th className="py-2.5 px-3 text-center">ĐVT</th>
+                      <th className="py-2.5 px-3 text-right">Số lượng</th>
+                      <th className="py-2.5 px-3 text-right">Đơn giá (VNĐ)</th>
+                      <th className="py-2.5 px-3 text-right">Thành tiền</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {lines.map((line, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50/50">
+                        <td className="py-2.5 px-3 text-center text-gray-500">{idx + 1}</td>
+                        <td className="py-2.5 px-3 font-mono font-bold text-gray-800">{line.productSku}</td>
+                        <td className="py-2.5 px-3 font-semibold text-gray-900">{line.productName}</td>
+                        <td className="py-2.5 px-3 text-center text-gray-600">{line.unitName}</td>
+                        <td className="py-2.5 px-3 text-right font-bold text-gray-900">
+                          {formatQuantity(Number(line.quantity || 0))}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono text-gray-700">
+                          {formatCurrencyVND(Number(line.pricePerUnit || 0))}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-gray-900">
+                          {formatCurrencyVND(Number(line.netAmount || 0))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 4. S4-08 AC1: Chiết khấu và Tổng tiền thanh toán */}
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pt-1">
+              <div className="text-xs text-gray-500 max-w-sm space-y-1">
+                {order.note && (
+                  <p className="italic text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-200">
+                    <strong>Ghi chú đơn:</strong>{' '}
+                    {order.note.replace(/\s*\(S\d+-\d+\)/gi, '').replace(/\s*\(AC\s*\d+\)/gi, '').trim()}
+                  </p>
+                )}
+                <p className="text-[10px] text-gray-400">
+                  * Hàng hóa xuất theo tiêu chuẩn xuất kho FEFO (hạn sử dụng gần nhất xuất trước).
+                </p>
+              </div>
+
+              {/* Bảng tính tổng tiền */}
+              <div className="w-full sm:w-72 bg-gray-50 p-3.5 rounded-xl border border-gray-200 space-y-2 text-xs">
+                <div className="flex justify-between text-gray-600">
+                  <span>Tiền hàng trước CK:</span>
+                  <span className="font-semibold text-gray-800">
+                    {formatCurrencyVND(Number(order.subtotal || 0))}
+                  </span>
+                </div>
+
+                <div className="flex justify-between text-emerald-700 font-semibold">
+                  <span className="flex items-center gap-1">
+                    <BadgePercent size={13} />
+                    <span>Chiết khấu sản lượng:</span>
+                  </span>
+                  <span className="font-mono">
+                    -{formatCurrencyVND(Number(order.discountTotal || 0))}
+                  </span>
+                </div>
+
+                <div className="pt-2 border-t border-gray-300 flex justify-between items-baseline text-sm">
+                  <strong className="text-gray-900 font-bold">Tổng thanh toán:</strong>
+                  <strong className="text-base font-black text-[#F85606] font-mono">
+                    {formatCurrencyVND(Number(order.totalAmount || 0))}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            {/* 5. Khối ký nhận 3 bên */}
+            <div className="pt-8 border-t border-gray-200 grid grid-cols-3 gap-4 text-center text-xs">
+              <div className="space-y-12">
+                <div>
+                  <strong className="block text-gray-800 font-bold">ĐẠI DIỆN ĐẠI LÝ</strong>
+                  <span className="text-[10px] text-gray-400">(Ký, ghi rõ họ tên)</span>
+                </div>
+                <div className="text-[11px] text-gray-400 font-medium italic">
+                  {order.customerName}
+                </div>
+              </div>
+
+              <div className="space-y-12">
+                <div>
+                  <strong className="block text-gray-800 font-bold">NHÂN VIÊN KINH DOANH</strong>
+                  <span className="text-[10px] text-gray-400">(Ký, ghi rõ họ tên)</span>
+                </div>
+                <div className="text-[11px] text-gray-700 font-bold">
+                  {salesRepDisplay}
+                </div>
+              </div>
+
+              <div className="space-y-12">
+                <div>
+                  <strong className="block text-gray-800 font-bold">THỦ KHO XUẤT HÀNG</strong>
+                  <span className="text-[10px] text-gray-400">(Ký, ghi rõ họ tên)</span>
+                </div>
+                <div className="text-[11px] text-gray-700 font-bold">
+                  {dispatchActorDisplay}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};

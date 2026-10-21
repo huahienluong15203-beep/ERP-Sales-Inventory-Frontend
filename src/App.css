@@ -25,7 +25,8 @@
   color: var(--erp-text-main);
   display: flex;
   flex-direction: column;
-  z-index: 100;
+  /* Thấp hơn các cửa sổ (modal) z-50 để nền tối của modal phủ được cả menu trái */
+  z-index: 46;
   transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.04);
   border-right: 1px solid var(--erp-border-sidebar);
@@ -202,6 +203,41 @@
   width: 100%;
 }
 
+/* Tiêu đề nhóm chức năng trên Sidebar (vd BÁN HÀNG, SẢN PHẨM & KHO) */
+.erp-menu-group {
+  margin: 12px 14px 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #9CA3AF;
+  list-style: none;
+}
+
+.erp-menu-group:first-child {
+  margin-top: 4px;
+}
+
+.erp-sidebar.collapsed .erp-menu-group {
+  margin: 8px 0 4px;
+  display: flex;
+  justify-content: center;
+}
+
+.erp-menu-group-divider {
+  display: block;
+  width: 24px;
+  border-top: 1px solid #E5E7EB;
+}
+
+html.dark .erp-menu-group {
+  color: #71717A;
+}
+
+html.dark .erp-menu-group-divider {
+  border-color: #3F3F46;
+}
+
 .erp-sidebar.collapsed .erp-menu-item {
   display: flex;
   justify-content: center;
@@ -343,7 +379,8 @@
   padding: 0 28px;
   position: sticky;
   top: 0;
-  z-index: 90;
+  /* Thấp hơn modal z-50 để thanh tiêu đề không đè lên cửa sổ; vẫn cao hơn thanh tổng tiền đơn (40) */
+  z-index: 42;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
@@ -465,7 +502,7 @@
 .erp-page-content {
   flex: 1;
   min-width: 0;
-  padding: 24px 28px;
+  padding: 14px 24px 24px;
   width: 100%;
 }
 
@@ -473,20 +510,20 @@
 .erp-stat-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
 .erp-stat-card {
   background: #FFFFFF;
   border-radius: var(--erp-radius-lg);
-  padding: 22px;
+  padding: 16px;
   border: 1px solid var(--erp-border);
   box-shadow: var(--erp-shadow-sm);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 130px;
+  min-height: 110px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -697,7 +734,7 @@
   }
 
   .erp-page-content {
-    padding: 16px;
+    padding: 12px 14px 18px;
   }
 
   .erp-stat-grid {
@@ -721,7 +758,8 @@
     height: 100vh;
     background: rgba(0, 0, 0, 0.45);
     backdrop-filter: blur(4px);
-    z-index: 95;
+    /* Trên thanh tiêu đề, dưới menu trái khi mở menu trên điện thoại */
+    z-index: 45;
     animation: erpFadeIn 0.2s ease-out;
   }
 }
@@ -740,7 +778,7 @@
   }
 
   .erp-page-content {
-    padding: 12px 10px;
+    padding: 10px 8px 14px;
   }
 }
 
@@ -1557,7 +1595,7 @@
 .user-mgmt-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 9999;
   background: rgba(17, 24, 39, 0.55);
   backdrop-filter: blur(4px);
   display: flex;
@@ -2137,4 +2175,26 @@ html.dark .hover\:bg-gray-50\/80:hover {
 html.dark .hover\:text-gray-900:hover,
 html.dark .hover\:text-gray-800:hover {
   color: #FFFFFF !important;
+}
+/* Ô chọn có tìm kiếm (SearchSelect) - giao diện tối giống các ô <select> cũ */
+html.dark .erp-search-select {
+  background-color: #202024 !important;
+  color: #FFFFFF !important;
+  border-color: #38383E !important;
+}
+
+html.dark .erp-sidebar-role-name .erp-search-select {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  font-weight: 700 !important;
+}
+
+html.dark .erp-search-select-panel {
+  background-color: #18181b !important;
+  border-color: #38383E !important;
+  color: #FFFFFF;
+}
+
+html.dark .erp-search-select-panel .erp-search-select-active {
+  background-color: rgba(248, 86, 6, 0.18) !important;
 }

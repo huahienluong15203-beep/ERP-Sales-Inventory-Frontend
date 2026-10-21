@@ -230,3 +230,52 @@ export async function moveProductsToCategory(targetId: string, productIds: strin
     movedCount: data.movedCount
   };
 }
+
+export interface HierarchicalCategoryOption {
+  value: string;
+  label: string;
+  level: number;
+  productCount: number;
+}
+
+/**
+ * Sắp xếp nhóm hàng theo phân cấp cây DFS trực quan cho combobox/select lọc
+ * Khớp hoàn toàn với cây nhóm hàng trong Quản lý nhóm hàng & Quản lý sản phẩm
+ */
+export function buildHierarchicalCategoryOptions(
+  categories: CategoryWithCount[],
+  options: { includeCount?: boolean } = {}
+): HierarchicalCategoryOption[] {
+  if (!categories || !categories.length) return [];
+  const map = new Map<string | null, CategoryWithCount[]>();
+  for (const c of categories) {
+    const pid = c.parentId ?? null;
+    if (!map.has(pid)) map.set(pid, []);
+    map.get(pid)!.push(c);
+  }
+  const result: HierarchicalCategoryOption[] = [];
+  const traverse = (parentId: string | null, depth: number) => {
+    const list = map.get(parentId) || [];
+    list.sort((a, b) => a.code.localeCompare(b.code));
+    for (const item of list) {
+      let prefix = '';
+      if (depth === 2) prefix = '└─ ';
+      else if (depth === 3) prefix = '└── ';
+      else if (depth > 3) prefix = `${'──'.repeat(depth - 1)} `;
+
+      const badge = item.level === 1 ? '[Ngành]' : item.level === 2 ? '[Nhóm]' : '';
+      const countText =
+        options.includeCount !== false && item.productCount > 0 ? ` (${item.productCount} SP)` : '';
+      result.push({
+        value: item.name,
+        label: `${prefix}${badge} ${item.name}${countText}`.trim(),
+        level: item.level,
+        productCount: item.productCount,
+      });
+      traverse(item.id, depth + 1);
+    }
+  };
+  traverse(null, 1);
+  return result;
+}
+

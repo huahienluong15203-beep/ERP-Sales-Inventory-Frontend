@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Product, ProductStatus } from '../../types/product';
 import {
   productService,
-  PRODUCT_CATEGORIES,
   canManageCostPrice,
   formatCurrencyVND
 } from '../../services/productService';
@@ -13,13 +12,18 @@ import { useNavigate } from '../../routes/Router';
 import { useUrlPaging } from '../../hooks/useUrlParams';
 import { useServerSearch } from '../../hooks/useServerSearch';
 import { Pagination } from '../../components/common/Pagination';
-import { fetchCategories } from '../../services/categoryApi';
+import { fetchCategories, type CategoryWithCount } from '../../services/categoryApi';
 import { ProductUnitConversionModal } from './components/ProductUnitConversionModal';
+import { SearchSelect } from '../../components/common/SearchSelect';
+import { RowActionMenu } from '../../components/common/RowActionMenu';
+import { toggleProductBatchManagement } from '../../services/productLotApi';
 
 export const ProductManagementPage: React.FC = () => {
   const { currentRole } = useAuth();
   const canSeeCost = canManageCostPrice(currentRole);
   const canManageProducts = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_SALES_MANAGER';
+  const canToggleBatch =
+    currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_WH_MANAGER' || currentRole === 'ROLE_SALES_MANAGER';
 
   const navigate = useNavigate();
 
@@ -27,7 +31,7 @@ export const ProductManagementPage: React.FC = () => {
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, categoryCount: 0 });
-  const [categoryOptions, setCategoryOptions] = useState<string[]>([...PRODUCT_CATEGORIES]);
+  const [categories, setCategories] = useState<CategoryWithCount[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -85,19 +89,67 @@ export const ProductManagementPage: React.FC = () => {
   // Số liệu thẻ đầu trang (đếm trên toàn bộ sản phẩm) + danh sách nhóm hàng cho ô lọc
   const loadStats = useCallback(async () => {
     try {
-      const [s, categories] = await Promise.all([
+      const [s, catList] = await Promise.all([
         productService.getStats(),
         fetchCategories().catch(() => [])
       ]);
-      const names = Array.from(
-        new Set([...PRODUCT_CATEGORIES, ...categories.map((c) => c.name)].filter(Boolean))
-      );
-      setCategoryOptions(names);
-      setStats({ ...s, categoryCount: categories.length || PRODUCT_CATEGORIES.length });
+      setCategories(catList || []);
+      setStats({ ...s, categoryCount: catList?.length || 0 });
     } catch {
       // Lỗi đã báo ở loadProducts
     }
   }, []);
+
+  // Sắp xếp nhóm hàng theo phân cấp cây DFS trực quan cho combobox lọc
+  const hierarchicalCategoryOptions = useMemo(() => {
+    if (!categories.length) return [];
+    const map = new Map<string | null, CategoryWithCount[]>();
+    for (const c of categories) {
+      const pid = c.parentId ?? null;
+      if (!map.has(pid)) map.set(pid, []);
+      map.get(pid)!.push(c);
+    }
+    const result: { value: string; label: string; level: number; productCount: number }[] = [];
+    const traverse = (parentId: string | null, depth: number) => {
+      const list = map.get(parentId) || [];
+      list.sort((a, b) => a.code.localeCompare(b.code));
+      for (const item of list) {
+        let prefix = '';
+        if (depth === 2) prefix = '└─ ';
+        else if (depth === 3) prefix = '└── ';
+        else if (depth > 3) prefix = `${'──'.repeat(depth - 1)} `;
+
+        const badge = item.level === 1 ? '[Ngành]' : item.level === 2 ? '[Nhóm]' : '';
+        const countText = item.productCount > 0 ? ` (${item.productCount} SP)` : '';
+        result.push({
+          value: item.name,
+          label: `${prefix}${badge} ${item.name}${countText}`.trim(),
+          level: item.level,
+          productCount: item.productCount,
+        });
+        traverse(item.id, depth + 1);
+      }
+    };
+    traverse(null, 1);
+    return result;
+  }, [categories]);
+
+  // Map tra cứu nhóm cha cho từng nhóm hàng để hiển thị đầy đủ trong bảng
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, { parentName?: string }>();
+    for (const c of categories) {
+      let parentName: string | undefined;
+      if (c.parentId) {
+        const parent = categories.find((p) => p.id === c.parentId);
+        if (parent) {
+          parentName = parent.name;
+        }
+      }
+      map.set(c.name.toLowerCase(), { parentName });
+      map.set(c.id, { parentName });
+    }
+    return map;
+  }, [categories]);
 
   useEffect(() => {
     loadProducts();
@@ -142,8 +194,26 @@ export const ProductManagementPage: React.FC = () => {
     if (res.success) reloadAll();
   };
 
+  const handleToggleBatch = async (product: Product) => {
+    const nextValue = !product.hasBatchManagement;
+    try {
+      await toggleProductBatchManagement(product.id, nextValue);
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, hasBatchManagement: nextValue } : p))
+      );
+      showToast(
+        nextValue
+          ? `Đã bật theo dõi lô & HSD cho sản phẩm ${product.sku}`
+          : `Đã tắt theo dõi lô & HSD cho sản phẩm ${product.sku}`,
+        'success'
+      );
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Không thể thay đổi cấu hình quản lý lô', 'error');
+    }
+  };
+
   return (
-    <div className="w-full min-w-0 space-y-6">
+    <div className="w-full min-w-0 space-y-3.5">
       {/* Toast thông báo */}
       {toastMessage && (
         <div
@@ -160,16 +230,16 @@ export const ProductManagementPage: React.FC = () => {
       )}
 
       {/* Header Phân hệ - Nút tác vụ */}
-      <div className="flex items-center justify-end gap-2.5">
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+      <div className="flex items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={reloadAll}
             disabled={isLoading}
-            className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 text-sm font-semibold rounded-xl bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 transition shadow-xs cursor-pointer min-h-[44px]"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 transition shadow-2xs cursor-pointer h-9"
             title="Làm mới danh sách sản phẩm"
           >
-            <Icons.RefreshCw size={16} className={isLoading ? 'animate-spin text-orange-600' : ''} />
+            <Icons.RefreshCw size={14} />
             <span>Làm mới</span>
           </button>
 
@@ -178,19 +248,19 @@ export const ProductManagementPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/products/import')}
-                className="inline-flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-sm font-semibold px-4 py-2.5 rounded-xl shadow-2xs hover:shadow-xs transition-all duration-200 min-h-[44px]"
+                className="inline-flex items-center justify-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-semibold px-3.5 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all duration-200 h-9"
                 title="Nhập danh mục sản phẩm từ file Excel"
               >
-                <Icons.ClipboardList size={18} className="text-emerald-700" />
+                <Icons.ClipboardList size={16} className="text-emerald-700" />
                 <span>Nhập từ Excel</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleOpenCreate}
-                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow transition-all duration-200 min-h-[44px]"
+                className="inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg shadow-sm hover:shadow transition-all duration-200 h-9"
               >
-                <Icons.Plus size={18} />
+                <Icons.Plus size={16} />
                 <span>Thêm sản phẩm mới</span>
               </button>
             </>
@@ -200,86 +270,86 @@ export const ProductManagementPage: React.FC = () => {
 
 
       {/* Hàng Stat Cards chuẩn App ETC */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex items-center justify-between">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-2xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Tổng sản phẩm</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
+            <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Tổng sản phẩm</p>
+            <p className="text-xl font-bold text-gray-900 mt-0.5">{stats.total}</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center border border-orange-100">
-            <Icons.Package size={20} />
+            <Icons.Package size={18} />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex items-center justify-between">
+        <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-2xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Đang kinh doanh</p>
-            <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.active}</p>
+            <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Đang kinh doanh</p>
+            <p className="text-xl font-bold text-emerald-600 mt-0.5">{stats.active}</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
-            <Icons.CheckCircle2 size={20} />
+            <Icons.CheckCircle2 size={18} />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex items-center justify-between">
+        <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-2xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Ngừng kinh doanh</p>
-            <p className="text-2xl font-bold text-gray-500 mt-1">{stats.inactive}</p>
+            <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Ngừng kinh doanh</p>
+            <p className="text-xl font-bold text-gray-500 mt-0.5">{stats.inactive}</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center border border-gray-200">
-            <Icons.AlertCircle size={20} />
+            <Icons.AlertCircle size={18} />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex items-center justify-between">
+        <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-2xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Nhóm hàng</p>
-            <p className="text-2xl font-bold text-blue-600 mt-1">{stats.categoryCount}</p>
+            <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Nhóm hàng</p>
+            <p className="text-xl font-bold text-blue-600 mt-0.5">{stats.categoryCount}</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-            <Icons.Building2 size={20} />
+            <Icons.Building2 size={18} />
           </div>
         </div>
       </div>
 
       {/* Thanh tìm kiếm và bộ lọc */}
-      <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-xs flex flex-wrap items-center gap-3">
-        <div className="flex-1 min-w-[240px] relative">
-          <Icons.Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+      <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-2xs flex flex-wrap items-center gap-2.5">
+        <div className="w-full sm:max-w-sm relative">
+          <Icons.Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="Tìm theo Mã SKU, tên hàng, quy cách đóng gói..."
-            className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
+            className="w-full pl-8.5 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[38px]"
           />
         </div>
 
-        <div className="w-full sm:w-52">
-          <select
+        <div className="w-full sm:w-64">
+          <SearchSelect
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
+            className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[38px]"
           >
-            <option value="ALL">Tất cả nhóm hàng</option>
-            {categoryOptions.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            <option value="ALL">Tất cả nhóm hàng ({categories.length})</option>
+            {hierarchicalCategoryOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
-          </select>
+          </SearchSelect>
         </div>
 
         <div className="w-full sm:w-48">
-          <select
+          <SearchSelect
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value as ProductStatus | 'ALL')}
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[44px]"
+            className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all min-h-[38px]"
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang kinh doanh</option>
             <option value="INACTIVE">Ngừng kinh doanh</option>
-          </select>
+          </SearchSelect>
         </div>
 
         <div className="w-full sm:w-auto sm:ml-auto text-xs sm:text-sm text-gray-500 font-medium">
@@ -299,6 +369,7 @@ export const ProductManagementPage: React.FC = () => {
                 <th className="py-3.5 px-4 w-44 whitespace-nowrap">Nhóm hàng</th>
                 <th className="py-3.5 px-4 w-28 text-center whitespace-nowrap">ĐVT cơ sở</th>
                 <th className="py-3.5 px-4 w-44 whitespace-nowrap">Quy cách đóng gói</th>
+                <th className="py-3.5 px-4 w-36 text-center whitespace-nowrap">Theo dõi lô & HSD</th>
                 <th className="py-3.5 px-4 w-36 text-right whitespace-nowrap">Giá vốn</th>
                 <th className="py-3.5 px-4 w-36 text-center whitespace-nowrap">Trạng thái</th>
                 <th className="py-3.5 px-4 w-28 text-center whitespace-nowrap">Thao tác</th>
@@ -307,13 +378,13 @@ export const ProductManagementPage: React.FC = () => {
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-gray-400 text-sm">
+                  <td colSpan={10} className="text-center py-12 text-gray-400 text-sm">
                     Đang tải dữ liệu sản phẩm...
                   </td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-14 text-gray-500">
+                  <td colSpan={10} className="text-center py-14 text-gray-500">
                     <div className="flex flex-col items-center gap-2">
                       <Icons.Package size={36} className="text-gray-300" />
                       <span className="text-sm font-medium">Không tìm thấy sản phẩm nào phù hợp</span>
@@ -370,8 +441,15 @@ export const ProductManagementPage: React.FC = () => {
                       </td>
 
                       {/* 4. Nhóm hàng */}
-                      <td className="py-3 px-4 text-gray-600 whitespace-nowrap">
-                        {p.category}
+                      <td className="py-3 px-4 text-gray-700 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-gray-900 text-xs">{p.category}</span>
+                          {categoryMap.get(p.category.toLowerCase())?.parentName && (
+                            <span className="text-[10px] text-gray-400">
+                              {categoryMap.get(p.category.toLowerCase())?.parentName}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* 5. ĐVT cơ sở */}
@@ -390,6 +468,43 @@ export const ProductManagementPage: React.FC = () => {
                       {/* 6. Quy cách đóng gói */}
                       <td className="py-3 px-4 text-gray-600 text-xs">
                         {p.packagingSpec}
+                      </td>
+
+                      {/* Theo dõi lô & HSD */}
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        {canToggleBatch ? (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleBatch(p)}
+                            title={
+                              p.hasBatchManagement
+                                ? 'Nhấp để tắt theo dõi lô & HSD cho SKU này'
+                                : 'Nhấp để bật theo dõi lô & HSD cho SKU này'
+                            }
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
+                              p.hasBatchManagement
+                                ? 'bg-orange-100 text-orange-900 border border-orange-300 shadow-2xs hover:bg-orange-200'
+                                : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'
+                            }`}
+                          >
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                p.hasBatchManagement ? 'bg-[#F85606]' : 'bg-gray-400'
+                              }`}
+                            />
+                            <span>{p.hasBatchManagement ? 'Theo dõi lô' : 'Tắt'}</span>
+                          </button>
+                        ) : (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${
+                              p.hasBatchManagement
+                                ? 'bg-orange-50 text-orange-700 border border-orange-200'
+                                : 'text-gray-400'
+                            }`}
+                          >
+                            {p.hasBatchManagement ? 'Theo dõi lô' : '—'}
+                          </span>
+                        )}
                       </td>
 
                       {/* 7. GIÁ VỐN (Bảo mật RBAC) */}
@@ -425,47 +540,49 @@ export const ProductManagementPage: React.FC = () => {
                       {/* 9. Thao tác */}
                       <td className="py-3 px-4 text-center whitespace-nowrap">
                         <div className="inline-flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            title="Quản lý đơn vị tính quy đổi"
-                            onClick={() => setUnitConversionProduct(p)}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
-                          >
-                            <Icons.Scale size={16} />
-                          </button>
-
                           {canManageProducts && (
-                            <>
-                              <button
-                                type="button"
-                                title="Sửa thông tin sản phẩm"
-                                onClick={() => handleOpenEdit(p)}
-                                className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
-                              >
-                                <Icons.Edit size={16} />
-                              </button>
-
-                              {p.status === 'ACTIVE' ? (
-                                <button
-                                  type="button"
-                                  title="Ngừng kinh doanh (sản phẩm không xoá khỏi hệ thống)"
-                                  onClick={() => setDeactivateTarget(p)}
-                                  className="p-1.5 rounded-lg transition-colors cursor-pointer text-red-500 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Icons.Trash2 size={16} />
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  title="Mở lại kinh doanh"
-                                  onClick={() => handleActivate(p)}
-                                  className="p-1.5 rounded-lg transition-colors cursor-pointer text-emerald-600 hover:bg-emerald-50"
-                                >
-                                  <Icons.RotateCcw size={16} />
-                                </button>
-                              )}
-                            </>
+                            <button
+                              type="button"
+                              title="Sửa thông tin sản phẩm"
+                              onClick={() => handleOpenEdit(p)}
+                              className="p-1.5 rounded-lg text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
+                            >
+                              <Icons.Edit size={16} />
+                            </button>
                           )}
+
+                          {/* Thao tác phụ (đơn vị quy đổi, xem thẻ kho, ngừng / mở kinh doanh) gom vào menu "⋯" */}
+                          <RowActionMenu
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors cursor-pointer"
+                            items={[
+                              {
+                                label: 'Xem thẻ kho',
+                                icon: <Icons.BookOpenCheck size={14} />,
+                                title: 'Xem lịch sử nhập xuất biến động thẻ kho của SKU này (S6-02)',
+                                onClick: () => navigate(`/inventory/stock-card?sku=${encodeURIComponent(p.sku)}&productId=${p.id}`),
+                              },
+                              {
+                                label: 'Đơn vị tính quy đổi',
+                                icon: <Icons.Scale size={14} />,
+                                title: 'Quản lý đơn vị tính quy đổi',
+                                onClick: () => setUnitConversionProduct(p),
+                              },
+                              {
+                                label: 'Ngừng kinh doanh',
+                                icon: <Icons.Trash2 size={14} />,
+                                title: 'Ngừng kinh doanh (sản phẩm không xoá khỏi hệ thống)',
+                                onClick: () => setDeactivateTarget(p),
+                                hidden: !canManageProducts || p.status !== 'ACTIVE',
+                                danger: true,
+                              },
+                              {
+                                label: 'Mở lại kinh doanh',
+                                icon: <Icons.RotateCcw size={14} />,
+                                onClick: () => handleActivate(p),
+                                hidden: !canManageProducts || p.status === 'ACTIVE',
+                              },
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>

@@ -29,9 +29,9 @@ export const AuditLogPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Thống kê toàn cục
-  const [allLogsForStats] = useState<AuditLogItem[]>(() => getLocalAuditLogs());
+  const [allLogsForStats, setAllLogsForStats] = useState<AuditLogItem[]>(() => getLocalAuditLogs());
 
-  // Bộ lọc + trang lưu trên URL, vd: /audit-logs?module=PRICING&range=TODAY&page=2
+  // Bộ lọc + trang lưu trên URL, vd: /logs?tab=audit&module=PRICING&range=TODAY&page=2
   const { params: urlParams, page, size, setPage, setSize, setFilters: setUrlFilters } = useUrlPaging({
     keyword: '',
     module: 'ALL',
@@ -56,8 +56,24 @@ export const AuditLogPage: React.FC = () => {
   const [selectedLog, setSelectedLog] = useState<AuditLogItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Cập nhật thống kê toàn cục từ backend
+  const refreshStats = useCallback(() => {
+    fetchAuditLogs({ size: 100 })
+      .then((res) => {
+        if (res.content.length > 0) {
+          setAllLogsForStats(res.content);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const isDateRangeInvalid = useMemo(() => {
+    return Boolean(filters.startDate && filters.endDate && filters.startDate > filters.endDate);
+  }, [filters.startDate, filters.endDate]);
+
   // Tải dữ liệu theo trang và bộ lọc
   const loadData = useCallback(async () => {
+    if (isDateRangeInvalid) return;
     setLoading(true);
     try {
       const res = await fetchAuditLogs({
@@ -68,14 +84,20 @@ export const AuditLogPage: React.FC = () => {
       setLogs(res.content);
       setTotalElements(res.totalElements);
       setTotalPages(res.totalPages);
+      refreshStats();
     } catch (err) {
       console.error('Lỗi khi tải nhật ký thao tác:', err);
     } finally {
       setLoading(false);
     }
-  }, [filters, page, size]);
+  }, [filters, page, size, refreshStats, isDateRangeInvalid]);
 
   useEffect(() => {
+    if (isDateRangeInvalid) {
+      setLoading(false);
+      return;
+    }
+
     let ignore = false;
     fetchAuditLogs({
       ...filters,
@@ -97,10 +119,12 @@ export const AuditLogPage: React.FC = () => {
         }
       });
 
+    refreshStats();
+
     return () => {
       ignore = true;
     };
-  }, [filters, page, size]);
+  }, [filters, page, size, refreshStats, isDateRangeInvalid]);
 
   // Thống kê KPI
   const stats: AuditStatsSummary = useMemo(() => {
@@ -132,6 +156,7 @@ export const AuditLogPage: React.FC = () => {
 
   // Xuất file Excel
   const handleExportExcel = () => {
+    if (isDateRangeInvalid) return;
     exportAuditLogsToExcel(logs, 'Nhat_Ky_Thao_Tac_Ton_Kho_Cong_No_S2_04');
   };
 
@@ -139,29 +164,31 @@ export const AuditLogPage: React.FC = () => {
   useClampPage(page, totalPages, setPage, loading);
 
   return (
-    <div className="w-full min-w-0 space-y-6">
+    <div className="w-full min-w-0 space-y-3.5">
       {/* 1. Nút tác vụ chính */}
-      <div className="flex items-center justify-end gap-2.5">
-          <button
-            type="button"
-            onClick={loadData}
-            disabled={loading}
-            title="Làm mới nhật ký thao tác"
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white border border-slate-200 text-slate-700 hover:text-orange-600 rounded-xl hover:bg-slate-50 text-xs sm:text-sm font-semibold transition shadow-xs cursor-pointer min-h-[44px]"
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            <span>Làm mới</span>
-          </button>
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={loadData}
+          disabled={loading || isDateRangeInvalid}
+          title={isDateRangeInvalid ? 'Khoảng ngày không hợp lệ (Ngày kết thúc < Ngày bắt đầu)' : 'Làm mới nhật ký thao tác'}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:text-orange-600 rounded-lg hover:bg-slate-50 text-xs font-semibold transition shadow-2xs cursor-pointer h-9 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <RefreshCw size={14} />
+          <span>Làm mới</span>
+        </button>
 
-          <button
-            type="button"
-            onClick={handleExportExcel}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs hover:shadow transition cursor-pointer"
-          >
-            <FileSpreadsheet size={16} />
-            <span>Xuất Excel Kiểm Toán</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleExportExcel}
+          disabled={isDateRangeInvalid}
+          title={isDateRangeInvalid ? 'Khoảng ngày không hợp lệ (Ngày kết thúc < Ngày bắt đầu)' : 'Xuất Excel'}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition cursor-pointer h-9 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <FileSpreadsheet size={15} />
+          <span>Xuất Excel Kiểm Toán</span>
+        </button>
+      </div>
 
       {/* 2. Thẻ KPI thống kê biến động */}
       <AuditLogStats

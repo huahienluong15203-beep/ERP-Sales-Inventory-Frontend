@@ -1,0 +1,169 @@
+/**
+ * Định nghĩa kiểu dữ liệu Phân hệ Quản lý Kho & Tồn kho (Sprint 5)
+ * S5-04: Phiếu nhập kho từ nhà cung cấp
+ * S5-07: Phiếu chuyển kho nội bộ
+ * S5-09: Cảnh báo tồn tối thiểu
+ */
+
+import type { UserProfile, RoleName } from './user';
+
+export type GoodsReceiptStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED';
+
+export interface WarehouseOption {
+  id: number | string;
+  code: string;
+  name: string;
+  address?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+}
+
+export const SYSTEM_WAREHOUSES: WarehouseOption[] = [
+  {
+    id: 3,
+    code: 'WH-MB01',
+    name: 'Kho Tổng Miền Bắc',
+    address: 'KCN Sài Đồng B, Long Biên, Hà Nội',
+    status: 'ACTIVE'
+  },
+  {
+    id: 4,
+    code: 'WH-MT01',
+    name: 'Kho Miền Trung',
+    address: 'KCN Hòa Khánh, Liên Chiểu, Đà Nẵng',
+    status: 'ACTIVE'
+  },
+  {
+    id: 5,
+    code: 'WH-MN01',
+    name: 'Kho Tổng Miền Nam',
+    address: 'KCN Sóng Thần 1, Dĩ An, Bình Dương',
+    status: 'ACTIVE'
+  },
+  {
+    id: 2,
+    code: 'KHO-HCM',
+    name: 'Kho Tổng TP.HCM',
+    address: 'KCN Cao, Quận 9, TP. Thủ Đức, TP.HCM',
+    status: 'ACTIVE'
+  },
+  {
+    id: 1,
+    code: 'KHO-HN',
+    name: 'Kho Tổng Hà Nội',
+    address: 'KCN Đài Tư, Long Biên, Hà Nội',
+    status: 'ACTIVE'
+  }
+];
+
+/**
+ * Lọc danh sách kho mà người dùng có quyền phụ trách:
+ * - ADMIN, ACCOUNTANT, SALES_MANAGER: có quyền xem toàn bộ hệ thống kho
+ * - WAREHOUSE, WH_MANAGER: chỉ được xem/thao tác trên các kho được phân công (kho nào không có quyền thì không hiện)
+ */
+export function getAllowedWarehouses(user: UserProfile | null | undefined, role?: RoleName | null): WarehouseOption[] {
+  if (!user) return SYSTEM_WAREHOUSES;
+  const current = role || user.role;
+  const isBroad = current === 'ROLE_ADMIN' || current === 'ROLE_ACCOUNTANT' || current === 'ROLE_SALES_MANAGER'
+    || (user.roles && (user.roles.includes('ROLE_ADMIN') || user.roles.includes('ROLE_ACCOUNTANT') || user.roles.includes('ROLE_SALES_MANAGER')));
+
+  if (isBroad) {
+    return SYSTEM_WAREHOUSES;
+  }
+
+  if (user.warehouseCodes && user.warehouseCodes.length > 0) {
+    const filtered = SYSTEM_WAREHOUSES.filter((wh) => user.warehouseCodes!.includes(wh.code));
+    if (filtered.length > 0) return filtered;
+  }
+  if (user.warehouse) {
+    const filtered = SYSTEM_WAREHOUSES.filter(
+      (wh) => user.warehouse!.includes(wh.code) || user.warehouse!.includes(wh.name)
+    );
+    if (filtered.length > 0) return filtered;
+  }
+  return SYSTEM_WAREHOUSES;
+}
+
+
+/**
+ * Một dòng hàng trong Phiếu nhập kho (S5-04)
+ */
+export interface GoodsReceiptLine {
+  id: string;
+  productId: number;
+  productSku: string;
+  productName: string;
+  category?: string;
+  baseUnit: string;
+  selectedUnit: string;
+  conversionFactor: number;
+  quantity: number;
+  baseQuantity: number;
+  unitPrice: number;
+  totalAmount: number;
+  batchNumber?: string;
+  expiredDate?: string;
+  hasBatchManagement?: boolean;
+  note?: string;
+}
+
+/**
+ * Phiếu nhập kho từ nhà cung cấp (S5-04)
+ */
+export interface GoodsReceipt {
+  id: number | string;
+  code: string;
+  supplierId: number;
+  supplierCode: string;
+  supplierName: string;
+  documentNumber: string;
+  receiptDate: string;
+  warehouseCode: string;
+  warehouseName: string;
+  status: GoodsReceiptStatus;
+  lines: GoodsReceiptLine[];
+  totalLines: number;
+  totalBaseQuantity: number;
+  totalAmount: number;
+  vehiclePlate?: string;
+  driverName?: string;
+  note?: string;
+  createdByUsername: string;
+  confirmedAt?: string;
+  confirmedByUsername?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Dữ liệu payload tạo/sửa phiếu nhập kho (S5-04)
+ */
+export interface GoodsReceiptFormPayload {
+  supplierId: number;
+  supplierCode: string;
+  supplierName: string;
+  documentNumber: string;
+  receiptDate: string;
+  warehouseCode: string;
+  warehouseName: string;
+  vehiclePlate?: string;
+  driverName?: string;
+  note?: string;
+  status: GoodsReceiptStatus;
+  lines: Array<{
+    productId: number;
+    productSku: string;
+    productName: string;
+    category?: string;
+    baseUnit: string;
+    selectedUnit: string;
+    conversionFactor: number;
+    quantity: number;
+    baseQuantity: number;
+    unitPrice: number;
+    totalAmount: number;
+    batchNumber?: string;
+    expiredDate?: string;
+    hasBatchManagement?: boolean;
+    note?: string;
+  }>;
+}

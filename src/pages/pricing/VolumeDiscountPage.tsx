@@ -16,13 +16,13 @@ import {
   deleteVolumeDiscountPolicy,
   togglePolicyStatus,
   exportPoliciesToCsv,
-  getVolumeDiscountStats,
-  BEST_DEAL_RULE_STATEMENT
+  getVolumeDiscountStats
 } from '../../services/volumeDiscountApi';
 import type { VolumeDiscountStatsData } from '../../services/volumeDiscountApi';
 import { useUrlPaging, useClampPage } from '../../hooks/useUrlParams';
 import { useServerSearch } from '../../hooks/useServerSearch';
 import { Pagination } from '../../components/common/Pagination';
+import { SearchSelect } from '../../components/common/SearchSelect';
 
 export const VolumeDiscountPage: React.FC = () => {
   // Quyền ghi (tạo/sửa/đổi trạng thái) chỉ dành cho ADMIN, SALES_MANAGER — backend cũng kiểm @PreAuthorize
@@ -120,41 +120,6 @@ export const VolumeDiscountPage: React.FC = () => {
     setIsFormModalOpen(true);
   };
 
-  // Nhân bản chính sách (Clone)
-  const handleClonePolicy = async (policy: VolumeDiscountPolicy) => {
-    try {
-      const clonedReq: VolumeDiscountPolicyRequest = {
-        code: `${policy.code}-COPY`,
-        name: `${policy.name} (Bản sao)`,
-        scopeType: policy.scopeType,
-        targetId: policy.targetId,
-        targetName: policy.targetName,
-        customerGroup: policy.customerGroup,
-        startDate: new Date().toISOString().slice(0, 10),
-        endDate: policy.endDate,
-        status: 'ACTIVE',
-        priority: policy.priority + 1,
-        description: policy.description ? `Bản sao từ ${policy.code}: ${policy.description}` : '',
-        tiers: policy.tiers.map((t, idx) => ({
-          tierOrder: idx + 1,
-          minQuantity: t.minQuantity,
-          maxQuantity: t.maxQuantity,
-          discountType: t.discountType,
-          discountValue: t.discountValue,
-          note: t.note
-        }))
-      };
-      await createVolumeDiscountPolicy(clonedReq);
-      showToast(`Đã nhân bản chính sách "${policy.code}" thành công!`);
-      loadPolicies();
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        showToast(err.message, 'error');
-      } else {
-        showToast('Nhân bản thất bại!', 'error');
-      }
-    }
-  };
 
   // Lưu form (Tạo hoặc Sửa)
   const handleFormSubmit = async (data: VolumeDiscountPolicyRequest) => {
@@ -183,16 +148,16 @@ export const VolumeDiscountPage: React.FC = () => {
     }
   };
 
-  // Ngừng áp dụng chính sách (không xoá cứng — chuyển INACTIVE)
+  // Xóa chính sách
   const handleConfirmDelete = async () => {
     if (!deleteTargetPolicy || !canManage) return;
     try {
       await deleteVolumeDiscountPolicy(deleteTargetPolicy.id);
-      showToast(`Đã ngừng áp dụng chính sách "${deleteTargetPolicy.code}"!`);
+      showToast(`Đã xóa chính sách "${deleteTargetPolicy.code}" thành công!`);
       setDeleteTargetPolicy(null);
       loadPolicies();
     } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : 'Ngừng áp dụng chính sách thất bại!', 'error');
+      showToast(err instanceof Error ? err.message : 'Xóa chính sách thất bại!', 'error');
     }
   };
 
@@ -216,11 +181,11 @@ export const VolumeDiscountPage: React.FC = () => {
   useClampPage(page, totalPages, setPage, isLoading);
 
   return (
-    <div className="w-full min-w-0 space-y-6 pb-12">
+    <div className="w-full min-w-0 space-y-3.5 pb-8">
       {/* Toast thông báo */}
       {toastMsg && (
         <div
-          className={`fixed right-6 top-20 z-[10000] flex max-w-sm items-center space-x-2 rounded-xl border bg-white px-4 py-3 text-xs font-semibold shadow-lg ${toastMsg.type === 'success' ? 'border-emerald-200 text-emerald-800' : 'border-red-200 text-red-700'
+          className={`fixed right-6 bottom-6 z-[10000] flex max-w-sm items-center space-x-2 rounded-xl border bg-white px-4 py-3 text-xs font-semibold shadow-lg ${toastMsg.type === 'success' ? 'border-emerald-200 text-emerald-800' : 'border-red-200 text-red-700'
             }`}
         >
           {toastMsg.type === 'success' ? (
@@ -233,25 +198,25 @@ export const VolumeDiscountPage: React.FC = () => {
       )}
 
       {/* Nút hành động chính */}
-      <div className="flex items-center justify-end gap-2.5">
-        <div className="flex flex-wrap items-center gap-2.5">
+      <div className="flex items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={loadPolicies}
             disabled={isLoading}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-gray-700 shadow-xs transition-colors hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 min-h-[44px] cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-2xs transition-colors hover:bg-gray-50 hover:text-[#F85606] hover:border-orange-200 h-9 cursor-pointer"
             title="Làm mới danh sách chính sách chiết khấu"
           >
-            <Icons.RefreshCw size={16} className={isLoading ? 'animate-spin text-orange-600' : ''} />
+            <Icons.RefreshCw size={14} />
             <span>Làm mới</span>
           </button>
 
           <button
             type="button"
             onClick={handleExportCsv}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-gray-700 shadow-xs transition-colors hover:bg-gray-50 min-h-[44px] cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-2xs transition-colors hover:bg-gray-50 h-9 cursor-pointer"
           >
-            <Icons.ClipboardList size={16} className="text-gray-500" />
+            <Icons.ClipboardList size={14} className="text-gray-500" />
             <span>Xuất CSV / Excel</span>
           </button>
 
@@ -259,7 +224,7 @@ export const VolumeDiscountPage: React.FC = () => {
             <button
               type="button"
               onClick={handleOpenCreateModal}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#F85606] px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-orange-500/20 transition-all hover:bg-[#E04D05] min-h-[44px] cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#F85606] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm shadow-orange-500/20 transition-all hover:bg-[#E04D05] h-9 cursor-pointer"
             >
               <span className="text-sm font-bold">+</span>
               <span>Khai báo chính sách mới</span>
@@ -271,22 +236,7 @@ export const VolumeDiscountPage: React.FC = () => {
       {/* KPI Cards Thống kê */}
       <VolumeDiscountStats policies={policies} stats={stats} />
 
-      {/* Banner Quy tắc nghiệp vụ Best-Deal */}
-      <div className="flex items-center justify-between rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50/90 via-amber-50/50 to-white p-4 text-xs text-orange-950 shadow-2xs">
-        <div className="flex items-start space-x-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F85606] text-white shadow-xs">
-            <Icons.BookOpenCheck size={18} />
-          </div>
-          <div>
-            <h4 className="font-bold text-orange-950">
-              Cam kết quy tắc bán buôn minh bạch
-            </h4>
-            <p className="mt-0.5 text-gray-600 leading-relaxed">
-              {BEST_DEAL_RULE_STATEMENT}
-            </p>
-          </div>
-        </div>
-      </div>
+
 
       {/* Bộ lọc và Tìm kiếm */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs">
@@ -320,7 +270,7 @@ export const VolumeDiscountPage: React.FC = () => {
             <label className="mb-1 block text-[11px] font-semibold text-gray-500">
               Phạm vi áp dụng
             </label>
-            <select
+            <SearchSelect
               value={scopeFilter}
               onChange={(e) => setScopeFilter(e.target.value as 'ALL' | DiscountScopeType)}
               className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:outline-none focus:ring-2 focus:ring-orange-500/20"
@@ -328,7 +278,7 @@ export const VolumeDiscountPage: React.FC = () => {
               <option value="ALL">Tất cả phạm vi</option>
               <option value="SKU">Theo SKU cụ thể</option>
               <option value="CATEGORY">Theo Nhóm hàng</option>
-            </select>
+            </SearchSelect>
           </div>
 
           {/* Lọc theo Trạng thái & Reset */}
@@ -337,7 +287,7 @@ export const VolumeDiscountPage: React.FC = () => {
               Trạng thái
             </label>
             <div className="flex gap-2">
-              <select
+              <SearchSelect
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as 'ALL' | DiscountPolicyStatus)}
                 className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-900 shadow-2xs focus:border-[#F85606] focus:outline-none focus:ring-2 focus:ring-orange-500/20"
@@ -346,7 +296,7 @@ export const VolumeDiscountPage: React.FC = () => {
                 <option value="ACTIVE">Đang hiệu lực</option>
                 <option value="INACTIVE">Tạm dừng</option>
                 <option value="EXPIRED">Đã hết hạn</option>
-              </select>
+              </SearchSelect>
               {(searchKeyword || scopeFilter !== 'ALL' || statusFilter !== 'ALL') && (
                 <button
                   onClick={handleResetFilters}
@@ -528,9 +478,9 @@ export const VolumeDiscountPage: React.FC = () => {
                         <button
                           onClick={() => setDetailPolicy(policy)}
                           title="Xem chi tiết chính sách"
-                          className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                          className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors cursor-pointer"
                         >
-                          <Icons.ClipboardList size={16} />
+                          <Icons.Eye size={16} />
                         </button>
 
                         {canManage && (
@@ -539,30 +489,19 @@ export const VolumeDiscountPage: React.FC = () => {
                             <button
                               onClick={() => handleOpenEditModal(policy)}
                               title="Chỉnh sửa chính sách"
-                              className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                              className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors cursor-pointer"
                             >
-                              <Icons.CheckSquare size={16} />
+                              <Icons.Edit size={16} />
                             </button>
 
-                            {/* Nút nhân bản */}
+                            {/* Nút xóa */}
                             <button
-                              onClick={() => handleClonePolicy(policy)}
-                              title="Nhân bản chính sách (Clone)"
-                              className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                              onClick={() => setDeleteTargetPolicy(policy)}
+                              title="Xóa chính sách"
+                              className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer"
                             >
-                              <Icons.Boxes size={16} />
+                              <Icons.Trash2 size={16} />
                             </button>
-
-                            {/* Nút ngừng áp dụng (không xoá cứng) */}
-                            {policy.status !== 'INACTIVE' && (
-                              <button
-                                onClick={() => setDeleteTargetPolicy(policy)}
-                                title="Ngừng áp dụng chính sách"
-                                className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-50 hover:text-rose-700"
-                              >
-                                <Icons.ShieldAlert size={16} />
-                              </button>
-                            )}
                           </>
                         )}
                       </div>
@@ -598,7 +537,7 @@ export const VolumeDiscountPage: React.FC = () => {
 
       {/* Modal Xem chi tiết chính sách */}
       {detailPolicy && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-gray-900/60 p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-gray-900/60 p-4 backdrop-blur-xs">
           <div className="relative my-8 w-full max-w-2xl rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-200 pb-3">
               <div className="flex items-center space-x-2">
@@ -674,10 +613,7 @@ export const VolumeDiscountPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-orange-200 bg-orange-50/60 p-3 text-orange-950">
-                <strong className="font-semibold text-orange-900">Quy tắc Best-Deal: </strong>
-                {BEST_DEAL_RULE_STATEMENT}
-              </div>
+
             </div>
 
             <div className="mt-6 flex justify-end border-t border-gray-200 pt-3">
@@ -692,36 +628,36 @@ export const VolumeDiscountPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Xác nhận ngừng áp dụng */}
+      {/* Modal Xác nhận xóa */}
       {deleteTargetPolicy && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-gray-900/60 p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-gray-900/60 p-4 backdrop-blur-xs">
           <div className="relative w-full max-w-md rounded-2xl border border-rose-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center space-x-3 text-rose-600">
-              <Icons.ShieldAlert size={28} />
-              <h3 className="text-base font-bold">Xác nhận ngừng áp dụng chính sách chiết khấu</h3>
+              <Icons.Trash2 size={26} />
+              <h3 className="text-base font-bold">Xác nhận xóa chính sách chiết khấu</h3>
             </div>
             <p className="mt-3 text-xs text-gray-600">
-              Bạn có chắc chắn muốn ngừng áp dụng chính sách{' '}
+              Bạn có chắc chắn muốn xóa chính sách{' '}
               <strong className="text-gray-900">
                 "{deleteTargetPolicy.code} - {deleteTargetPolicy.name}"
               </strong>
-              ? Chính sách sẽ chuyển sang trạng thái Tạm dừng (dữ liệu được giữ lại, có thể bật lại sau).
+              ? Dữ liệu chính sách này sẽ bị xóa khỏi hệ thống.
             </p>
 
             <div className="mt-6 flex items-center justify-end space-x-3">
               <button
                 type="button"
                 onClick={() => setDeleteTargetPolicy(null)}
-                className="rounded-xl border border-gray-300 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                className="rounded-xl border border-gray-300 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer"
               >
                 Hủy bỏ
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDelete}
-                className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/20 hover:bg-rose-700"
+                className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/20 hover:bg-rose-700 cursor-pointer"
               >
-                Ngừng áp dụng
+                Xóa chính sách
               </button>
             </div>
           </div>

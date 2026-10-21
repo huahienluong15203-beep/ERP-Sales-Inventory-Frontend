@@ -27,7 +27,10 @@ import type {
   AssignSalesRepPayload,
   TransferCustomersPayload,
   CustomerTransactionLockPayload,
-  OrderCreationCheckResponse
+  OrderCreationCheckResponse,
+  CreditStatusResponse,
+  PricingTier,
+  PriceListOption
 } from '../types/agency';
 
 // Danh mục Nhóm khách hàng & Bảng giá tương ứng
@@ -37,11 +40,10 @@ export const CUSTOMER_GROUP_OPTIONS: CustomerGroupOption[] = [
     name: 'Đại lý Cấp 1 (Tổng thầu / NPP Lớn)',
     description: 'Áp dụng cho các nhà phân phối độc quyền cấp tỉnh, sản lượng lớn',
     defaultPricingTier: {
-      id: 'PRICE_TIER_1',
-      code: 'BG-CK25',
-      name: 'Bảng giá Sỉ Cấp 1',
-      discountPercent: 25,
-      description: 'Chiết khấu 25% trực tiếp trên giá bán niêm yết',
+      id: 'BG-DL1-2026',
+      code: 'BG-DL1-2026',
+      name: 'Bảng giá Đại lý Cấp 1 (NPP Toàn quốc 2026)',
+      description: 'Bảng giá chuẩn dành cho Nhà phân phối Cấp 1',
       badgeBg: '#FEF3C7',
       badgeColor: '#92400E'
     }
@@ -51,11 +53,10 @@ export const CUSTOMER_GROUP_OPTIONS: CustomerGroupOption[] = [
     name: 'Đại lý Cấp 2 (Bán buôn khu vực)',
     description: 'Áp dụng cho các cửa hàng đại lý vùng, doanh số trung bình',
     defaultPricingTier: {
-      id: 'PRICE_TIER_2',
-      code: 'BG-CK15',
-      name: 'Bảng giá Đại lý Cấp 2',
-      discountPercent: 15,
-      description: 'Chiết khấu 15% trực tiếp trên giá bán niêm yết',
+      id: 'BG-DL2-2026',
+      code: 'BG-DL2-2026',
+      name: 'Bảng giá Đại lý Cấp 2 (Bán buôn khu vực 2026)',
+      description: 'Bảng giá chuẩn dành cho Đại lý Bán buôn Cấp 2',
       badgeBg: '#E0E7FF',
       badgeColor: '#3730A3'
     }
@@ -65,11 +66,10 @@ export const CUSTOMER_GROUP_OPTIONS: CustomerGroupOption[] = [
     name: 'Đại lý Showroom & Bán lẻ VIP',
     description: 'Áp dụng cho các điểm giới thiệu sản phẩm và đối tác thương mại',
     defaultPricingTier: {
-      id: 'PRICE_STANDARD',
-      code: 'BG-STANDARD',
-      name: 'Bảng giá Niêm yết Chuẩn',
-      discountPercent: 0,
-      description: 'Bán theo đúng giá niêm yết công ty, bảo hộ giá thị trường',
+      id: 'BG-RETAIL-2026',
+      code: 'BG-RETAIL-2026',
+      name: 'Bảng giá Niêm yết Khách lẻ & Showroom 2026',
+      description: 'Bảng giá bán lẻ niêm yết trực tiếp showroom',
       badgeBg: '#F3F4F6',
       badgeColor: '#374151'
     }
@@ -124,11 +124,11 @@ export const SALES_REP_OPTIONS: SalesRepOption[] = [
  * Lấy danh sách nhân viên kinh doanh đang hoạt động để phân công phụ trách.
  * Tự động đồng bộ với danh sách tài khoản thực tế trên hệ thống (User Management).
  */
-export async function fetchActiveSalesReps(): Promise<SalesRepOption[]> {
+export async function fetchActiveSalesReps(forceReload: boolean = false): Promise<SalesRepOption[]> {
   // Dùng /api/customers/form-options (Admin, QL kinh doanh, Kế toán, NV kinh doanh đều gọi được).
   // Không gọi /api/admin/users vì chỉ Admin có quyền -> vai trò khác bị 403 và văng ra màn đăng nhập.
   try {
-    const options = await fetchAgencyFormOptions();
+    const options = await fetchAgencyFormOptions(forceReload);
     if (options.salesReps.length > 0) return options.salesReps;
   } catch {
     // dùng danh sách mẫu bên dưới
@@ -427,6 +427,10 @@ interface BackendCustomer {
   transactionLocked?: boolean | null;
   transactionLockReason?: string | null;
   transactionLockedAt?: string | null;
+  priceList?: { id: number; code: string; name: string } | null;
+  deliveryPointCount?: number | null;
+  portalUser?: { id: number; code: string; name: string } | null;
+  currentDebt?: number | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 }
@@ -435,6 +439,36 @@ function mapCustomer(c: BackendCustomer): Agency {
   const groupId = groupFromBackend(c.customerGroup);
   const groupOption = CUSTOMER_GROUP_OPTIONS.find((g) => g.id === groupId);
   const suspended = c.status === 'INACTIVE';
+
+  // Lấy bảng giá thật từ Backend nếu có, hoặc dùng fallback theo nhóm
+  const groupStyles: Record<CustomerGroupId, { badgeBg: string; badgeColor: string }> = {
+    TIER_1: { badgeBg: '#FEF3C7', badgeColor: '#92400E' },
+    TIER_2: { badgeBg: '#E0E7FF', badgeColor: '#3730A3' },
+    RETAIL_SHOWROOM: { badgeBg: '#F3F4F6', badgeColor: '#374151' }
+  };
+  const style = groupStyles[groupId] || groupStyles.RETAIL_SHOWROOM;
+
+  let pricingTier: PricingTier;
+  if (c.priceList) {
+    pricingTier = {
+      id: String(c.priceList.id),
+      code: c.priceList.code,
+      name: c.priceList.name,
+      description: `Bảng giá áp dụng: ${c.priceList.code}`,
+      badgeBg: style.badgeBg,
+      badgeColor: style.badgeColor
+    };
+  } else {
+    pricingTier = {
+      id: '',
+      code: '',
+      name: 'Chưa có bảng giá áp dụng',
+      description: 'Chưa có bảng giá hiệu lực cho nhóm này',
+      badgeBg: '#FEF2F2',
+      badgeColor: '#B91C1C'
+    };
+  }
+
   return {
     id: String(c.id),
     code: c.code,
@@ -442,7 +476,8 @@ function mapCustomer(c: BackendCustomer): Agency {
     taxCode: c.taxCode || '',
     customerGroup: groupId,
     customerGroupName: c.customerGroupLabel || groupOption?.name || groupId,
-    pricingTier: getPricingTierByGroup(groupId),
+    pricingTier,
+    priceList: c.priceList || null,
     regionId: c.region?.id != null ? String(c.region.id) : '',
     regionName: c.region?.name || 'Chưa xác định',
     assignedRepId: c.salesRep?.id != null ? String(c.salesRep.id) : '',
@@ -454,27 +489,78 @@ function mapCustomer(c: BackendCustomer): Agency {
     suspendReason: suspended ? c.statusReason || undefined : undefined,
     hasTransactions: false,
     transactionCount: 0,
-    totalDebt: 0,
+    totalDebt: Number(c.currentDebt ?? 0),
     creditLimit: Number(c.creditLimit ?? 0),
     maxDebtDays: c.maxDebtDays ?? undefined,
     transactionLocked: Boolean(c.transactionLocked),
     transactionLockReason: c.transactionLockReason || '',
     transactionLockedAt: c.transactionLockedAt || undefined,
+    deliveryPointCount: typeof c.deliveryPointCount === 'number'
+      ? c.deliveryPointCount
+      : (c.address?.trim() ? 1 : 0),
+    portalUserId: c.portalUser?.id != null ? Number(c.portalUser.id) : undefined,
+    portalUserName: c.portalUser?.name || c.portalUser?.code || undefined,
     createdAt: formatBackendDate(c.createdAt),
     updatedAt: formatBackendDate(c.updatedAt)
   };
 }
 
+export interface PortalUserOption {
+  id: string;
+  username: string;
+  fullName: string;
+}
+
 export interface AgencyFormOptions {
   regions: RegionOption[];
   salesReps: SalesRepOption[];
+  priceLists: PriceListOption[];
+  portalUsers: PortalUserOption[];
 }
 
 let formOptionsCache: Promise<AgencyFormOptions> | null = null;
 
-/** Khu vực + nhân viên kinh doanh thật từ Backend (GET /api/customers/form-options), tải 1 lần. */
-export function fetchAgencyFormOptions(): Promise<AgencyFormOptions> {
-  if (!formOptionsCache) {
+export function invalidateAgencyFormOptionsCache(): void {
+  formOptionsCache = null;
+}
+
+/** Lấy Bảng giá thực tế khớp theo Nhóm khách hàng từ danh mục formOptions */
+export function getRealPriceListForGroup(
+  groupId: CustomerGroupId,
+  availablePriceLists?: PriceListOption[]
+): PricingTier {
+  const backendGroup = GROUP_TO_BACKEND[groupId];
+  const found = availablePriceLists?.find((pl) => pl.customerGroup === backendGroup && pl.status !== 'INACTIVE');
+  const groupStyles: Record<CustomerGroupId, { badgeBg: string; badgeColor: string }> = {
+    TIER_1: { badgeBg: '#FEF3C7', badgeColor: '#92400E' },
+    TIER_2: { badgeBg: '#E0E7FF', badgeColor: '#3730A3' },
+    RETAIL_SHOWROOM: { badgeBg: '#F3F4F6', badgeColor: '#374151' }
+  };
+  const style = groupStyles[groupId] || groupStyles.RETAIL_SHOWROOM;
+
+  if (found) {
+    return {
+      id: String(found.id),
+      code: found.code,
+      name: found.name,
+      description: `Bảng giá áp dụng: ${found.code}`,
+      badgeBg: style.badgeBg,
+      badgeColor: style.badgeColor
+    };
+  }
+  return {
+    id: '',
+    code: '',
+    name: 'Chưa có bảng giá áp dụng',
+    description: 'Chưa có bảng giá hiệu lực cho nhóm khách hàng này trong hệ thống',
+    badgeBg: '#FEF2F2',
+    badgeColor: '#B91C1C'
+  };
+}
+
+/** Khu vực + nhân viên kinh doanh + bảng giá thật từ Backend (GET /api/customers/form-options). */
+export function fetchAgencyFormOptions(forceReload: boolean = false): Promise<AgencyFormOptions> {
+  if (forceReload || !formOptionsCache) {
     formOptionsCache = authFetch(`${CUSTOMERS_URL}/form-options`)
       .then(async (res) => {
         if (!res.ok) throw new Error(await readBackendError(res, 'Không tải được danh mục khu vực'));
@@ -492,6 +578,21 @@ export function fetchAgencyFormOptions(): Promise<AgencyFormOptions> {
             phone: '',
             email: '',
             regionId: ''
+          })),
+          priceLists: (data?.priceLists || []).map((pl: { id: number; code: string; name: string; customerGroup: string; customerGroupLabel?: string; startDate?: string; endDate?: string | null; status?: string }) => ({
+            id: pl.id,
+            code: pl.code,
+            name: pl.name,
+            customerGroup: pl.customerGroup,
+            customerGroupLabel: pl.customerGroupLabel,
+            startDate: pl.startDate,
+            endDate: pl.endDate,
+            status: pl.status
+          })),
+          portalUsers: (data?.portalUsers || []).map((u: { id: number; code: string; name: string }) => ({
+            id: String(u.id),
+            username: u.code || '',
+            fullName: u.name
           }))
         };
       })
@@ -562,6 +663,13 @@ async function fetchCustomer(id: string): Promise<BackendCustomer | null> {
   return res.ok ? res.json() : null;
 }
 
+/** Lấy chi tiết thông tin đại lý theo ID */
+export async function fetchAgencyById(id: string | number): Promise<Agency | null> {
+  if (!id) return null;
+  const customer = await fetchCustomer(String(id));
+  return customer ? mapCustomer(customer) : null;
+}
+
 /** Hạn mức công nợ đổi qua API riêng vì Backend bắt buộc lý do để ghi nhật ký (S3-05). */
 async function saveCreditLimit(id: string, creditLimit: number, maxDebtDays: number, reason: string) {
   const res = await authFetch(`${CUSTOMERS_URL}/${id}/debt-limit`, {
@@ -582,7 +690,9 @@ function profileBody(payload: CreateAgencyPayload | UpdateAgencyPayload, current
     regionId: /^\d+$/.test(payload.regionId) ? Number(payload.regionId) : null,
     phone: payload.phone.trim(),
     email: payload.email.trim(),
-    address: payload.address.trim()
+    address: payload.address.trim(),
+    portalUserId: payload.portalUserId !== undefined ? payload.portalUserId : (current?.portalUser?.id ?? null),
+    changePortalUser: 'changePortalUser' in payload ? payload.changePortalUser : (payload.portalUserId !== undefined)
   };
 }
 
@@ -706,14 +816,26 @@ export async function reactivateAgency(id: string): Promise<{ success: boolean; 
 }
 
 /**
- * 6. Đại lý KHÔNG xoá cứng khỏi hệ thống (quy tắc 8: dữ liệu đã phát sinh giao dịch chỉ chuyển trạng thái).
+ * 6. Xoá hồ sơ đại lý (Admin, Kế toán công nợ), bắt buộc lý do.
+ * Backend chỉ cho xoá đại lý CHƯA phát sinh đơn hàng; đã có đơn -> code CUSTOMER_HAS_TRANSACTIONS
+ * (quy tắc 8: giữ lịch sử, dùng "Dừng giao dịch" thay thế).
  */
-export async function deleteAgency(id: string): Promise<{ success: boolean; message: string }> {
-  void id;
+export async function deleteAgency(
+  id: string,
+  reason: string
+): Promise<{ success: boolean; message: string; code?: string }> {
+  const res = await authFetch(`${CUSTOMERS_URL}/${id}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ reason })
+  });
+  if (res.ok) {
+    return { success: true, message: 'Đã xoá hồ sơ đại lý khỏi hệ thống' };
+  }
+  const data = await res.clone().json().catch(() => null);
   return {
     success: false,
-    message:
-      'Hồ sơ đại lý không xoá khỏi hệ thống để giữ lịch sử đơn hàng và công nợ. Vui lòng dùng "Dừng giao dịch" thay cho xoá.'
+    code: data?.code,
+    message: await readBackendError(res, 'Không thể xoá đại lý')
   };
 }
 
@@ -1050,6 +1172,102 @@ export async function fetchAssignmentHistory(agencyId: string): Promise<Customer
   return (allHistories[agencyId] || []).sort(
     (a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime()
   );
+}
+
+export interface AssignmentHistoryFilterParams {
+  keyword?: string;
+  customerId?: string;
+  fromSalesRepId?: string;
+  toSalesRepId?: string;
+  changeType?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  size?: number;
+}
+
+export interface AssignmentHistoryPageResponse {
+  content: CustomerAssignmentHistory[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+/**
+ * Lấy lịch sử phân công và chuyển giao địa bàn toàn hệ thống (dùng cho Nhật ký hệ thống)
+ */
+export async function fetchAllAssignmentHistories(
+  params: AssignmentHistoryFilterParams = {}
+): Promise<AssignmentHistoryPageResponse> {
+  const query = new URLSearchParams();
+  if (params.keyword?.trim()) query.set('keyword', params.keyword.trim());
+  if (params.customerId && params.customerId !== 'ALL') query.set('customerId', params.customerId);
+  if (params.fromSalesRepId && params.fromSalesRepId !== 'ALL') query.set('fromSalesRepId', params.fromSalesRepId);
+  if (params.toSalesRepId && params.toSalesRepId !== 'ALL') query.set('toSalesRepId', params.toSalesRepId);
+  if (params.changeType && params.changeType !== 'ALL') query.set('changeType', params.changeType);
+  if (params.startDate) query.set('startDate', params.startDate);
+  if (params.endDate) query.set('endDate', params.endDate);
+  query.set('page', String(params.page ?? 0));
+  query.set('size', String(params.size ?? 20));
+
+  try {
+    const res = await authFetch(`${API_BASE_URL}/api/customers/assignment-histories?${query.toString()}`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('Lỗi fetchAllAssignmentHistories backend, dùng mock fallback:', err);
+  }
+
+  // Fallback từ storedAssignmentHistories
+  const allHistoriesMap = getStoredAssignmentHistories();
+  let list: CustomerAssignmentHistory[] = [];
+  for (const [agencyId, items] of Object.entries(allHistoriesMap)) {
+    for (const item of items) {
+      list.push({
+        ...item,
+        customer: item.customer || { id: agencyId, code: agencyId, name: `Đại lý ${agencyId}` }
+      });
+    }
+  }
+
+  // Filter
+  if (params.keyword) {
+    const kw = params.keyword.toLowerCase();
+    list = list.filter(
+      (h) =>
+        h.customer?.name?.toLowerCase().includes(kw) ||
+        h.customer?.code?.toLowerCase().includes(kw) ||
+        h.reason?.toLowerCase().includes(kw) ||
+        h.fromSalesRep?.fullName?.toLowerCase().includes(kw) ||
+        h.toSalesRep?.fullName?.toLowerCase().includes(kw)
+    );
+  }
+  if (params.changeType && params.changeType !== 'ALL') {
+    list = list.filter((h) => h.changeType === params.changeType);
+  }
+  if (params.fromSalesRepId && params.fromSalesRepId !== 'ALL') {
+    list = list.filter((h) => String(h.fromSalesRep?.id) === params.fromSalesRepId);
+  }
+  if (params.toSalesRepId && params.toSalesRepId !== 'ALL') {
+    list = list.filter((h) => String(h.toSalesRep?.id) === params.toSalesRepId);
+  }
+
+  list.sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime());
+
+  const page = params.page ?? 0;
+  const size = params.size ?? 20;
+  const start = page * size;
+  const content = list.slice(start, start + size);
+
+  return {
+    content,
+    page,
+    size,
+    totalElements: list.length,
+    totalPages: Math.max(1, Math.ceil(list.length / size))
+  };
 }
 
 /**
@@ -1403,6 +1621,72 @@ export async function checkCustomerOrderCreation(
     creditLimit: target.creditLimit,
     maxDebtDays: target.maxDebtDays || 30,
     transactionLocked: false
+  };
+}
+
+/**
+ * S4-02: Lấy thông tin công nợ hiện tại, hạn mức và kiểm tra vượt hạn mức / quá hạn khi tạo đơn
+ * Endpoint Backend: GET /api/customers/{id}/credit-status?orderAmount={amount}
+ */
+export async function fetchCustomerCreditStatus(
+  agencyId: string | number,
+  orderAmount: number = 0
+): Promise<CreditStatusResponse> {
+  const isBackendId = /^\d+$/.test(String(agencyId));
+  if (isBackendId) {
+    try {
+      const url = `${API_BASE_URL}/api/customers/${agencyId}/credit-status${
+        orderAmount ? `?orderAmount=${orderAmount}` : ''
+      }`;
+      const res = await authFetch(url);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Fallback xuống mock
+    }
+  }
+
+  // Dữ liệu fallback
+  const list = getStoredAgencies();
+  const target = list.find((a) => a.id === String(agencyId));
+  const creditLimit = Number(target?.creditLimit ?? 50000000);
+  const currentDebt = Number(target?.totalDebt ?? 0);
+  const availableCredit = creditLimit - currentDebt;
+  const debtAfterOrder = currentDebt + orderAmount;
+  const exceedsLimit = debtAfterOrder > creditLimit;
+  const exceededAmount = exceedsLimit ? debtAfterOrder - creditLimit : 0;
+  const maxDebtDays = Number(target?.maxDebtDays ?? 30);
+  const overdue = Boolean(target?.hasOverdueDebt);
+  const blocked = Boolean(target?.transactionLocked || overdue);
+
+  let message = '';
+  if (blocked) {
+    message = overdue
+      ? `Đại lý có khoản nợ quá hạn ${maxDebtDays} ngày, hệ thống chặn tạo đơn mới hoàn toàn.`
+      : 'Đại lý đang bị khóa giao dịch, không thể tạo đơn hàng mới.';
+  } else if (exceedsLimit) {
+    message = `Đơn hàng làm vượt hạn mức công nợ (${exceededAmount.toLocaleString('vi-VN')} đ), đơn sẽ cần Quản lý duyệt.`;
+  }
+
+  return {
+    customerId: agencyId,
+    customerCode: target?.code || '',
+    customerName: target?.name || '',
+    creditLimit,
+    currentDebt,
+    availableCredit,
+    orderAmount,
+    debtAfterOrder,
+    exceedsLimit,
+    exceededAmount,
+    maxDebtDays,
+    overdue,
+    overdueOrderCount: overdue ? 1 : 0,
+    overdueAmount: overdue ? currentDebt : 0,
+    overdueDays: overdue ? 45 : 0,
+    blocked,
+    message
   };
 }
 

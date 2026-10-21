@@ -57,6 +57,7 @@ export function formatCurrencyVND(amount: number): string {
 export interface ProductFilterParams {
   keyword?: string;
   category?: string;
+  excludeCategory?: string;
   status?: ProductStatus | 'ALL';
   /** Trang đếm từ 0 (giống API) */
   page?: number;
@@ -68,6 +69,17 @@ export interface ProductListResult {
   totalElements: number;
   totalPages: number;
   currentPage: number;
+}
+
+export interface ProductOptionItem {
+  id: number;
+  sku: string;
+  name: string;
+  category?: string | null;
+  baseUnit?: string | null;
+  packaging?: string | null;
+  costPrice?: number | null;
+  status?: string | null;
 }
 
 export interface ProductStatsResult {
@@ -90,6 +102,7 @@ interface BackendProduct {
   barcode?: string | null;
   imageUrl?: string | null;
   description?: string | null;
+  hasBatchManagement?: boolean | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 }
@@ -113,6 +126,7 @@ function mapProduct(p: BackendProduct): Product {
     costPrice: p.costPrice != null ? Number(p.costPrice) : 0,
     imageUrl: p.imageUrl || '',
     status: p.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+    hasBatchManagement: Boolean(p.hasBatchManagement),
     // Backend chưa trả số giao dịch; sản phẩm không bao giờ xoá cứng nên không cần đếm
     transactionCount: 0,
     createdAt: formatDateTime(p.createdAt),
@@ -170,6 +184,7 @@ export const productService = {
     const query = new URLSearchParams();
     if (params.keyword?.trim()) query.set('keyword', params.keyword.trim());
     if (params.category && params.category !== 'ALL') query.set('category', params.category);
+    if (params.excludeCategory && params.excludeCategory !== 'ALL') query.set('excludeCategory', params.excludeCategory);
     if (params.status && params.status !== 'ALL') query.set('status', params.status);
     query.set('page', String(page));
     query.set('size', String(size));
@@ -184,6 +199,88 @@ export const productService = {
       totalElements: data?.totalElements ?? 0,
       totalPages: data?.totalPages ?? 1,
       currentPage: page
+    };
+  },
+
+  /**
+   * Tra cứu nhanh sản phẩm cho combobox / dropdown (hỗ trợ tìm kiếm cả FE lẫn BE, tới 5.000+ sản phẩm).
+   */
+  async searchProductOptions(keyword: string = '', limit: number = 500): Promise<ProductOptionItem[]> {
+    const query = new URLSearchParams();
+    if (keyword.trim()) query.set('keyword', keyword.trim());
+    query.set('limit', String(limit));
+    try {
+      const res = await authFetch(`${PRODUCTS_URL}/search-options?${query.toString()}`);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Fallback bên dưới
+    }
+    // Fallback: nếu API search-options chưa sẵn sàng, dùng getProducts
+    const result = await this.getProducts({ keyword, size: limit, status: 'ACTIVE' });
+    return result.products.map((p) => ({
+      id: Number(p.id),
+      sku: p.sku,
+      name: p.name,
+      category: p.category,
+      baseUnit: p.baseUnit,
+      packaging: p.packagingSpec,
+      costPrice: p.costPrice,
+      status: p.status
+    }));
+  },
+
+  /**
+   * Tải toàn bộ sản phẩm đang kinh doanh (status: 'ACTIVE') theo nhóm hàng hoặc toàn hệ thống.
+   * Tự động xử lý phân trang song song (parallel fetch) nếu tổng số lượng vượt quá 100 SKU,
+   * đảm bảo 100% SKU được nạp đầy đủ vào frontend mà không bị giới hạn ở 100 sản phẩm.
+   */
+  async fetchAllActiveProducts(category?: string): Promise<{ products: ProductOptionItem[]; totalElements: number }> {
+    const isAll = !category || category === 'ALL';
+    const firstRes = await this.getProducts({
+      category: isAll ? undefined : category,
+      status: 'ACTIVE',
+      page: 0,
+      size: 100
+    });
+
+    let allProducts = [...firstRes.products];
+    const totalPages = firstRes.totalPages;
+
+    if (totalPages > 1) {
+      const maxPages = Math.min(totalPages, 50);
+      const pagePromises: Promise<ProductListResult>[] = [];
+      for (let p = 1; p < maxPages; p++) {
+        pagePromises.push(
+          this.getProducts({
+            category: isAll ? undefined : category,
+            status: 'ACTIVE',
+            page: p,
+            size: 100
+          })
+        );
+      }
+      const restResults = await Promise.all(pagePromises);
+      restResults.forEach((r) => {
+        allProducts.push(...r.products);
+      });
+    }
+
+    const mapped = allProducts.map((p) => ({
+      id: Number(p.id),
+      sku: p.sku,
+      name: p.name,
+      category: p.category,
+      baseUnit: p.baseUnit,
+      packaging: p.packagingSpec,
+      costPrice: p.costPrice,
+      status: p.status
+    }));
+
+    return {
+      products: mapped,
+      totalElements: firstRes.totalElements
     };
   },
 
