@@ -31,7 +31,11 @@ export const DebtAdjustmentModal: React.FC<DebtAdjustmentModalProps> = ({
   adjustment,
   onSuccess
 }) => {
-  const { user, showToast } = useAuth();
+  const { user, showToast, currentRole } = useAuth();
+  // Khớp backend (DebtAdjustmentService.requireDecide): chỉ Kế toán công nợ / Admin được duyệt hoặc từ chối.
+  // QL kinh doanh vẫn xem được chứng từ nhưng không thấy nút thao tác (trước đây bấm vào mới báo lỗi).
+  const userRoles: string[] = (user?.roles as string[] | undefined) || [];
+  const canDecide = ['ROLE_ACCOUNTANT', 'ROLE_ADMIN'].some((r) => r === currentRole || userRoles.includes(r));
   const [approvalNote, setApprovalNote] = useState<string>('Đồng ý giảm trừ công nợ theo đúng giá gốc');
   const [rejectReason, setRejectReason] = useState<string>('');
   const [showRejectInput, setShowRejectInput] = useState<boolean>(false);
@@ -40,6 +44,7 @@ export const DebtAdjustmentModal: React.FC<DebtAdjustmentModalProps> = ({
   if (!isOpen || !adjustment) return null;
 
   const isPending = adjustment.status === 'PENDING_APPROVAL';
+  const canAct = isPending && canDecide;
 
   const handleApprove = async () => {
     try {
@@ -60,8 +65,8 @@ export const DebtAdjustmentModal: React.FC<DebtAdjustmentModalProps> = ({
   };
 
   const handleReject = async () => {
-    if (!rejectReason.trim()) {
-      showToast('Vui lòng nhập lý do từ chối chứng từ', 'error');
+    if (rejectReason.trim().length < 5) {
+      showToast('Vui lòng nhập lý do từ chối (tối thiểu 5 ký tự)', 'error');
       return;
     }
     try {
@@ -245,8 +250,14 @@ export const DebtAdjustmentModal: React.FC<DebtAdjustmentModalProps> = ({
             </p>
           </div>
 
+          {isPending && !canDecide && (
+            <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+              Chứng từ đang chờ <strong>Kế toán công nợ</strong> duyệt. Bạn chỉ có quyền xem.
+            </p>
+          )}
+
           {/* Form duyệt / từ chối */}
-          {isPending && (
+          {canAct && (
             <div className="space-y-3 pt-1 border-t border-gray-200">
               {!showRejectInput ? (
                 <div className="space-y-1.5">
@@ -300,7 +311,7 @@ export const DebtAdjustmentModal: React.FC<DebtAdjustmentModalProps> = ({
             Đóng
           </button>
 
-          {isPending && (
+          {canAct && (
             <div className="flex items-center gap-2">
               {!showRejectInput ? (
                 <>

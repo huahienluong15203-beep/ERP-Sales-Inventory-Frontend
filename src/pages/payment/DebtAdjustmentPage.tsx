@@ -16,6 +16,8 @@ import type { DebtAdjustment } from '../../types/debtAdjustment';
 import type { Agency } from '../../types/agency';
 import { SearchSelect } from '../../components/common/SearchSelect';
 import { DebtAdjustmentModal } from '../../components/payment/DebtAdjustmentModal';
+import { useServerSearch } from '../../hooks/useServerSearch';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const DebtAdjustmentPage: React.FC = () => {
   const navigate = useNavigate();
@@ -32,12 +34,38 @@ export const DebtAdjustmentPage: React.FC = () => {
   const [selectedAdjustment, setSelectedAdjustment] = useState<DebtAdjustment | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const { showToast } = useAuth();
+  // Chỉ gọi API khi gõ đủ 2 ký tự và ngừng gõ (trước đây mỗi phím gõ gọi API 1 lần)
+  const { serverKeyword } = useServerSearch(keyword);
+
+  // Đại lý: tìm trên server + cuộn tải thêm (trước đây chỉ lấy 100 đại lý đầu)
+  const [agencyPage, setAgencyPage] = useState<number>(0);
+  const [agencyHasMore, setAgencyHasMore] = useState<boolean>(true);
+  const [loadingAgencies, setLoadingAgencies] = useState<boolean>(false);
+  const [agencyKeyword, setAgencyKeyword] = useState<string>('');
+
+  const loadAgencies = useCallback(async (targetPage: number, kw: string, append: boolean) => {
+    setLoadingAgencies(true);
+    try {
+      const res = await fetchAgencies({ page: targetPage, size: 20, keyword: kw.trim() || undefined });
+      const items = res.content || [];
+      setAgencies((prev) => {
+        if (!append) return items;
+        const ids = new Set(prev.map((a) => a.id));
+        return [...prev, ...items.filter((a) => !ids.has(a.id))];
+      });
+      setAgencyPage(targetPage);
+      setAgencyHasMore(targetPage + 1 < (res.totalPages || 0));
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Không tải được danh sách đại lý', 'error');
+    } finally {
+      setLoadingAgencies(false);
+    }
+  }, [showToast]);
 
   useEffect(() => {
-    fetchAgencies({ size: 100 })
-      .then((res) => setAgencies(res.content || []))
-      .catch((err) => console.warn('Lỗi tải đại lý:', err));
-  }, []);
+    loadAgencies(0, '', false);
+  }, [loadAgencies]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -46,7 +74,7 @@ export const DebtAdjustmentPage: React.FC = () => {
       const data = await fetchDebtAdjustments({
         status: statusFilter,
         customerId: selectedCustomerId,
-        keyword
+        keyword: serverKeyword
       });
       setAdjustments(data);
     } catch (err) {
@@ -56,7 +84,7 @@ export const DebtAdjustmentPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, selectedCustomerId, keyword]);
+  }, [statusFilter, selectedCustomerId, serverKeyword]);
 
   useEffect(() => {
     loadData();
@@ -156,6 +184,15 @@ export const DebtAdjustmentPage: React.FC = () => {
               value={selectedCustomerId}
               onChange={(e) => setSelectedCustomerId(e.target.value)}
               searchPlaceholder="Gõ để tìm đại lý..."
+              onSearchChange={(val) => {
+                setAgencyKeyword(val);
+                loadAgencies(0, val, false);
+              }}
+              onLoadMore={() => {
+                if (!loadingAgencies && agencyHasMore) loadAgencies(agencyPage + 1, agencyKeyword, true);
+              }}
+              hasMore={agencyHasMore}
+              isLoading={loadingAgencies}
               className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
             >
               <option value="ALL">Tất cả đại lý / Khách hàng</option>
