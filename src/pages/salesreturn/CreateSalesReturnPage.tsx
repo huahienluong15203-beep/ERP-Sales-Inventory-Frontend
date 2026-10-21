@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ArrowLeft,
   RotateCcw,
@@ -24,6 +24,13 @@ import {
 import type { InvoiceSummaryResponse } from '../../types/invoice';
 import type { Warehouse } from '../../types/warehouse';
 import { formatCurrencyVND } from '../../services/orderService';
+import { fetchAgencies } from '../../services/agencyApi';
+import type { Agency } from '../../types/agency';
+import { SearchSelect } from '../../components/common/SearchSelect';
+import { useServerSearch } from '../../hooks/useServerSearch';
+
+const INVOICE_PAGE_SIZE = 20;
+const AGENCY_PAGE_SIZE = 20;
 
 interface LineItemState extends ReturnableInvoiceLine {
   selected: boolean;
@@ -56,14 +63,6 @@ const isDamagedReturnReason = (reason: string): boolean => {
   );
 };
 
-const DEFAULT_WAREHOUSES: Warehouse[] = [
-  { id: 1, code: 'KHO-HN', name: 'Kho Tổng Hà Nội', address: 'KCN Tiên Sơn, Bắc Ninh', status: 'ACTIVE', locationCount: 1, activeLocationCount: 1 },
-  { id: 2, code: 'KHO-HCM', name: 'Kho Tổng TP.HCM', address: 'KCN Tân Bình, TP.HCM', status: 'ACTIVE', locationCount: 0, activeLocationCount: 0 },
-  { id: 3, code: 'WH-MB01', name: 'Kho Tổng Miền Bắc', address: 'KCN Tiên Sơn, Bắc Ninh', status: 'ACTIVE', locationCount: 10, activeLocationCount: 10 },
-  { id: 4, code: 'WH-MT01', name: 'Kho Miền Trung', address: 'KCN Hòa Khánh, Đà Nẵng', status: 'ACTIVE', locationCount: 0, activeLocationCount: 0 },
-  { id: 5, code: 'WH-MN01', name: 'Kho Tổng Miền Nam', address: 'KCN Tân Bình, TP.HCM', status: 'ACTIVE', locationCount: 10, activeLocationCount: 10 }
-];
-
 const getTodayLocalDateString = () => {
   const now = new Date();
   const year = now.getFullYear();
@@ -72,84 +71,36 @@ const getTodayLocalDateString = () => {
   return `${year}-${month}-${day}`;
 };
 
-const FALLBACK_INVOICES: InvoiceSummaryResponse[] = [
-  {
-    id: 1,
-    code: 'HD2026-000001',
-    invoiceDate: '2026-10-15',
-    status: 'ISSUED',
-    customerId: 1,
-    customerCode: 'DL-HN-001',
-    customerName: 'Đại lý VinMart Cầu Giấy',
-    totalAmount: 12500000,
-    paidAmount: 5000000,
-    remainingAmount: 7500000
-  },
-  {
-    id: 2,
-    code: 'HD2026-000002',
-    invoiceDate: '2026-10-16',
-    status: 'ISSUED',
-    customerId: 2,
-    customerCode: 'DL-HN-002',
-    customerName: 'Đại lý Bách Hóa Xanh Đống Đa',
-    totalAmount: 18400000,
-    paidAmount: 18400000,
-    remainingAmount: 0
-  }
-];
-
-const FALLBACK_RETURNABLE_LINES: ReturnableInvoiceLine[] = [
-  {
-    invoiceLineId: 1,
-    lineNo: 1,
-    productId: 1,
-    productSku: 'SP.COCA.330',
-    productName: 'Nước Ngọt Coca-Cola Lon 330ml',
-    unitName: 'Lon',
-    conversionFactor: 1,
-    deliveredQuantity: 100,
-    previouslyReturnedQuantity: 0,
-    remainingReturnableQuantity: 100,
-    pricePerUnit: 10000,
-    hasBatchManagement: true,
-    batchNumber: 'VNM-2611-L01',
-    manufactureDate: '2026-10-01',
-    expiredDate: '2027-10-01'
-  },
-  {
-    invoiceLineId: 2,
-    lineNo: 2,
-    productId: 2,
-    productSku: 'SP.AQUAFINA.500',
-    productName: 'Nước Khoáng Aquafina Chai 500ml',
-    unitName: 'Chai',
-    conversionFactor: 1,
-    deliveredQuantity: 50,
-    previouslyReturnedQuantity: 0,
-    remainingReturnableQuantity: 50,
-    pricePerUnit: 5000,
-    hasBatchManagement: false
-  }
-];
-
 export const CreateSalesReturnPage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useAuth();
 
-  // Danh sách kho & hoá đơn (mặc định nạp sẵn kho hệ thống để không bị trắng)
-  const [warehouses, setWarehouses] = useState<Warehouse[]>(DEFAULT_WAREHOUSES);
-  const [invoices, setInvoices] = useState<InvoiceSummaryResponse[]>(FALLBACK_INVOICES);
+  // Danh sách kho & hoá đơn: chỉ lấy dữ liệu thật từ API (không dùng dữ liệu mẫu khi lỗi)
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceSummaryResponse[]>([]);
   const [loadingInitial, setLoadingInitial] = useState<boolean>(true);
+  const [loadingInvoices, setLoadingInvoices] = useState<boolean>(false);
+  const [invoicePage, setInvoicePage] = useState<number>(0);
+  const [invoiceTotal, setInvoiceTotal] = useState<number>(0);
+  const [invoiceHasMore, setInvoiceHasMore] = useState<boolean>(false);
+
+  // Đại lý: tìm trên server + cuộn tải thêm (không giới hạn trong vài chục hoá đơn đầu)
+  const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [agencyPage, setAgencyPage] = useState<number>(0);
+  const [agencyHasMore, setAgencyHasMore] = useState<boolean>(true);
+  const [loadingAgencies, setLoadingAgencies] = useState<boolean>(false);
+  const [agencyKeyword, setAgencyKeyword] = useState<string>('');
+  const [selectedCustomerLabel, setSelectedCustomerLabel] = useState<string>('');
 
   // Form State
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceSummaryResponse | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | 'ALL'>('ALL');
   const [invoiceKeyword, setInvoiceKeyword] = useState<string>('');
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | ''>(DEFAULT_WAREHOUSES[0].id);
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | ''>('');
   const [returnReason, setReturnReason] = useState<string>('Hàng lỗi do nhà sản xuất');
   const [returnDate, setReturnDate] = useState<string>(getTodayLocalDateString);
   const [generalNotes, setGeneralNotes] = useState<string>('');
+  const { serverKeyword: invoiceServerKeyword, flush: flushInvoiceSearch } = useServerSearch(invoiceKeyword);
 
   // Danh sách dòng hàng của hoá đơn
   const [loadingLines, setLoadingLines] = useState<boolean>(false);
@@ -161,9 +112,9 @@ export const CreateSalesReturnPage: React.FC = () => {
     setSelectedInvoice(inv);
     setLoadingLines(true);
     try {
-      let lines = await fetchReturnableInvoiceLines(inv.id).catch(() => []);
-      if (!lines || lines.length === 0) {
-        lines = FALLBACK_RETURNABLE_LINES;
+      const lines = (await fetchReturnableInvoiceLines(inv.id)) || [];
+      if (lines.length === 0) {
+        showToast(`Hoá đơn ${inv.code} không còn mặt hàng nào trả được`, 'warning');
       }
       const mapped = lines.map((l) => {
         const canReturn = (Number(l.remainingReturnableQuantity) || 0) > 0;
@@ -194,78 +145,124 @@ export const CreateSalesReturnPage: React.FC = () => {
     }
   }, [showToast]);
 
-  // Tải dữ liệu ban đầu
+  // Tải danh sách đại lý (tìm trên server + cuộn tải thêm)
+  const loadAgencies = useCallback(async (targetPage: number, kw: string, append: boolean) => {
+    setLoadingAgencies(true);
+    try {
+      const res = await fetchAgencies({ page: targetPage, size: AGENCY_PAGE_SIZE, keyword: kw.trim() || undefined });
+      const items = res.content || [];
+      setAgencies((prev) => {
+        if (!append) return items;
+        const ids = new Set(prev.map((a) => a.id));
+        return [...prev, ...items.filter((a) => !ids.has(a.id))];
+      });
+      setAgencyPage(targetPage);
+      setAgencyHasMore(targetPage + 1 < (res.totalPages || 0));
+    } catch (err: any) {
+      showToast(err?.message || 'Không tải được danh sách đại lý', 'error');
+    } finally {
+      setLoadingAgencies(false);
+    }
+  }, [showToast]);
+
+  // Tải hoá đơn theo đại lý + từ khoá (lọc trên server, có phân trang)
+  const loadInvoices = useCallback(async (targetPage: number, append: boolean) => {
+    setLoadingInvoices(true);
+    try {
+      const res = await searchInvoices({
+        customerId: selectedCustomerId === 'ALL' ? undefined : selectedCustomerId,
+        keyword: invoiceServerKeyword || undefined,
+        page: targetPage,
+        size: INVOICE_PAGE_SIZE
+      });
+      const items = res.content || [];
+      setInvoices((prev) => {
+        if (!append) return items;
+        const ids = new Set(prev.map((i) => i.id));
+        return [...prev, ...items.filter((i) => !ids.has(i.id))];
+      });
+      setInvoicePage(targetPage);
+      setInvoiceTotal(res.totalElements || 0);
+      setInvoiceHasMore(targetPage + 1 < (res.totalPages || 0));
+    } catch (err: any) {
+      showToast(err?.message || 'Không tải được danh sách hoá đơn', 'error');
+      if (!append) setInvoices([]);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  }, [selectedCustomerId, invoiceServerKeyword, showToast]);
+
+  useEffect(() => {
+    loadInvoices(0, false);
+  }, [loadInvoices]);
+
+  // Tải dữ liệu ban đầu: kho tiếp nhận, đại lý, hoá đơn truyền qua ?invoiceId=
   useEffect(() => {
     const initData = async () => {
       setLoadingInitial(true);
       try {
-        const [whRes, invRes] = await Promise.allSettled([
-          fetchWarehouses(),
-          searchInvoices({ size: 50 })
-        ]);
-
-        if (whRes.status === 'fulfilled' && whRes.value && whRes.value.length > 0) {
-          setWarehouses(whRes.value);
-          setSelectedWarehouseId((prev) => prev || whRes.value[0].id);
-        } else {
-          setWarehouses(DEFAULT_WAREHOUSES);
-          setSelectedWarehouseId((prev) => prev || DEFAULT_WAREHOUSES[0].id);
+        try {
+          const whs = await fetchWarehouses();
+          setWarehouses(whs || []);
+          if (whs && whs.length > 0) {
+            setSelectedWarehouseId((prev) => prev || whs[0].id);
+          }
+        } catch (err: any) {
+          showToast(err?.message || 'Không tải được danh sách kho tiếp nhận', 'error');
         }
-
-        let loadedInvoices: InvoiceSummaryResponse[] = FALLBACK_INVOICES;
-        if (invRes.status === 'fulfilled' && (invRes.value?.content || []).length > 0) {
-          loadedInvoices = invRes.value.content;
-          setInvoices(loadedInvoices);
-        } else {
-          setInvoices(FALLBACK_INVOICES);
-        }
+        loadAgencies(0, '', false);
 
         // Tự động chọn hoá đơn nếu được truyền từ trang hoá đơn qua query param ?invoiceId=...
-        const searchParams = new URLSearchParams(window.location.search);
-        const paramInvoiceIdStr = searchParams.get('invoiceId');
+        const paramInvoiceIdStr = new URLSearchParams(window.location.search).get('invoiceId');
         if (paramInvoiceIdStr) {
           const paramInvoiceId = Number(paramInvoiceIdStr);
-          let targetInv = loadedInvoices.find((i) => i.id === paramInvoiceId);
-          if (!targetInv) {
-            try {
-              const singleInv = await fetchInvoiceById(paramInvoiceId);
-              if (singleInv) {
-                const singleSummary: InvoiceSummaryResponse = {
-                  id: singleInv.id ?? paramInvoiceId,
-                  code: singleInv.code ?? `HD-${paramInvoiceId}`,
-                  invoiceDate: singleInv.invoiceDate,
-                  status: singleInv.status,
-                  customerId: singleInv.customerId,
-                  customerCode: singleInv.customerCode,
-                  customerName: singleInv.customerName,
-                  totalAmount: singleInv.totalAmount,
-                  notes: singleInv.note,
-                  issuedAt: singleInv.issuedAt,
-                  issuedByUsername: singleInv.issuedByUsername
-                };
-                targetInv = singleSummary;
-                setInvoices((prev) => {
-                  if (prev.some((i) => i.id === singleSummary.id)) return prev;
-                  return [singleSummary, ...prev];
-                });
+          try {
+            const singleInv = await fetchInvoiceById(paramInvoiceId);
+            if (singleInv) {
+              const singleSummary: InvoiceSummaryResponse = {
+                id: singleInv.id ?? paramInvoiceId,
+                code: singleInv.code ?? `HD-${paramInvoiceId}`,
+                invoiceDate: singleInv.invoiceDate,
+                status: singleInv.status,
+                customerId: singleInv.customerId,
+                customerCode: singleInv.customerCode,
+                customerName: singleInv.customerName,
+                totalAmount: singleInv.totalAmount,
+                notes: singleInv.note,
+                issuedAt: singleInv.issuedAt,
+                issuedByUsername: singleInv.issuedByUsername
+              };
+              if (singleSummary.customerId) {
+                setSelectedCustomerId(singleSummary.customerId);
+                setSelectedCustomerLabel(`[${singleSummary.customerCode ?? ''}] ${singleSummary.customerName ?? ''}`);
               }
-            } catch (e) {
-              console.warn('Could not fetch invoice by param ID:', e);
+              handleSelectInvoice(singleSummary);
             }
-          }
-
-          if (targetInv) {
-            handleSelectInvoice(targetInv);
+          } catch (err: any) {
+            showToast(err?.message || 'Không tải được hoá đơn được chọn', 'error');
           }
         }
-      } catch (err: any) {
-        setInvoices(FALLBACK_INVOICES);
       } finally {
         setLoadingInitial(false);
       }
     };
     initData();
-  }, [handleSelectInvoice]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSelectCustomer = (value: string) => {
+    if (!value || value === 'ALL') {
+      setSelectedCustomerId('ALL');
+      setSelectedCustomerLabel('');
+    } else {
+      const id = Number(value);
+      const ag = agencies.find((a) => String(a.id) === value);
+      setSelectedCustomerId(id);
+      setSelectedCustomerLabel(ag ? `[${ag.code}] ${ag.name}` : '');
+    }
+    setSelectedInvoice(null);
+    setLineItems([]);
+  };
 
   // Cập nhật chọn/bỏ chọn dòng hàng
   const handleToggleSelectLine = (invoiceLineId: number) => {
@@ -432,31 +429,9 @@ export const CreateSalesReturnPage: React.FC = () => {
     );
   };
 
-  // Trích xuất danh sách đại lý duy nhất từ các hoá đơn hiện có
-  const customerOptions = useMemo(() => {
-    const map = new Map<number, { id: number; code: string; name: string }>();
-    invoices.forEach((inv) => {
-      if (inv.customerId && !map.has(inv.customerId)) {
-        map.set(inv.customerId, {
-          id: inv.customerId,
-          code: inv.customerCode || `DL-${inv.customerId}`,
-          name: inv.customerName || `Đại lý #${inv.customerId}`
-        });
-      }
-    });
-    return Array.from(map.values());
-  }, [invoices]);
-
-  const filteredInvoices = invoices.filter((inv) => {
-    const matchesCustomer =
-      selectedCustomerId === 'ALL' || inv.customerId === selectedCustomerId;
-    const kw = invoiceKeyword.toLowerCase().trim();
-    const matchesKeyword =
-      !kw ||
-      (inv.code && inv.code.toLowerCase().includes(kw)) ||
-      (inv.customerName && inv.customerName.toLowerCase().includes(kw));
-    return matchesCustomer && matchesKeyword;
-  });
+  // Hoá đơn đang chọn luôn hiện trong danh sách (kể cả khi được mở qua ?invoiceId= và nằm ở trang sau)
+  const displayedInvoices =
+    selectedInvoice && !invoices.some((i) => i.id === selectedInvoice.id) ? [selectedInvoice, ...invoices] : invoices;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20 antialiased">
@@ -528,34 +503,36 @@ export const CreateSalesReturnPage: React.FC = () => {
                 {selectedCustomerId !== 'ALL' && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setSelectedCustomerId('ALL');
-                      setSelectedInvoice(null);
-                      setLineItems([]);
-                    }}
+                    onClick={() => handleSelectCustomer('ALL')}
                     className="text-[11px] text-[#F85606] hover:underline font-semibold cursor-pointer"
                   >
                     Xem tất cả đại lý
                   </button>
                 )}
               </div>
-              <select
-                value={selectedCustomerId}
-                onChange={(e) => {
-                  const val = e.target.value === 'ALL' ? 'ALL' : Number(e.target.value);
-                  setSelectedCustomerId(val);
-                  setSelectedInvoice(null);
-                  setLineItems([]);
+              <SearchSelect
+                value={selectedCustomerId === 'ALL' ? 'ALL' : String(selectedCustomerId)}
+                onChange={(e) => handleSelectCustomer(e.target.value)}
+                selectedLabel={selectedCustomerLabel || undefined}
+                searchPlaceholder="Gõ tên, mã đại lý, SĐT..."
+                onSearchChange={(val) => {
+                  setAgencyKeyword(val);
+                  loadAgencies(0, val, false);
                 }}
+                onLoadMore={() => {
+                  if (!loadingAgencies && agencyHasMore) loadAgencies(agencyPage + 1, agencyKeyword, true);
+                }}
+                hasMore={agencyHasMore}
+                isLoading={loadingAgencies}
                 className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:border-[#F85606] focus:bg-white focus:outline-none transition cursor-pointer font-medium"
               >
-                <option value="ALL">-- Tất cả đại lý ({customerOptions.length} đại lý) --</option>
-                {customerOptions.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    [{c.code}] {c.name}
+                <option value="ALL">-- Tất cả đại lý --</option>
+                {agencies.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    [{a.code}] {a.name}
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
             </div>
 
             {/* Ô tìm kiếm hoá đơn */}
@@ -565,6 +542,12 @@ export const CreateSalesReturnPage: React.FC = () => {
                 type="text"
                 value={invoiceKeyword}
                 onChange={(e) => setInvoiceKeyword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    flushInvoiceSearch();
+                  }
+                }}
                 placeholder="Tìm mã hoá đơn (HD...) hoặc tên đại lý..."
                 className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:border-[#F85606] focus:bg-white focus:outline-none transition"
               />
@@ -572,12 +555,12 @@ export const CreateSalesReturnPage: React.FC = () => {
 
             {/* Danh sách hoá đơn (chứa tối đa 4 hoá đơn, nhiều hơn vuốt xuống) */}
             <div className="max-h-[280px] overflow-y-auto pr-1 divide-y divide-gray-100">
-              {loadingInitial ? (
+              {(loadingInitial || loadingInvoices) && displayedInvoices.length === 0 ? (
                 <div className="text-center py-8 text-xs text-gray-400">Đang tải danh sách hoá đơn...</div>
-              ) : filteredInvoices.length === 0 ? (
+              ) : displayedInvoices.length === 0 ? (
                 <div className="text-center py-8 text-xs text-gray-400">Không tìm thấy hoá đơn phù hợp</div>
               ) : (
-                filteredInvoices.map((inv) => {
+                displayedInvoices.map((inv) => {
                   const isSelected = selectedInvoice?.id === inv.id;
                   return (
                     <div key={inv.id} className="py-1">
@@ -628,7 +611,22 @@ export const CreateSalesReturnPage: React.FC = () => {
                   );
                 })
               )}
+              {invoiceHasMore && (
+                <div className="pt-2 text-center">
+                  <button
+                    type="button"
+                    disabled={loadingInvoices}
+                    onClick={() => loadInvoices(invoicePage + 1, true)}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-bold text-gray-700 hover:border-orange-300 hover:text-[#F85606] cursor-pointer disabled:opacity-50"
+                  >
+                    {loadingInvoices ? 'Đang tải...' : 'Tải thêm hoá đơn'}
+                  </button>
+                </div>
+              )}
             </div>
+            <p className="text-[11px] text-gray-400">
+              Đang hiển thị {invoices.length} / {invoiceTotal} hoá đơn
+            </p>
           </div>
         </div>
 
