@@ -33,4 +33,15 @@ export interface InventoryAgingFilterParams {
   categoryId?: string;
   agingBracket?: AgingBracket;
   keyword?: string;
+  page?: number;
+  size?: number;
+}
+
+export interface InventoryAgingReportResponse {
+  items: InventoryAgingItem[];
+  summary: InventoryAgingSummary;
+  page?: number;
+  size?: number;
+  totalElements?: number;
+  totalPages?: number;
 }

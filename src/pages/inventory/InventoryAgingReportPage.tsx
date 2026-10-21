@@ -36,9 +36,11 @@ export const InventoryAgingReportPage: React.FC = () => {
   const [agingBracket, setAgingBracket] = useState<AgingBracket>('ALL');
   const [keyword, setKeyword] = useState<string>('');
 
-  // Phân trang
+  // Phân trang Server-side & Client sync
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
+  const [totalElements, setTotalElements] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
 
   // Tải danh mục kho và nhóm hàng khi mở trang
   useEffect(() => {
@@ -51,35 +53,35 @@ export const InventoryAgingReportPage: React.FC = () => {
     });
   }, []);
 
-  // Tải dữ liệu báo cáo
-  const loadData = useCallback(async () => {
+  // Tải dữ liệu báo cáo luân chuyển kho từ Backend theo phân trang
+  const loadData = useCallback(async (pageToLoad: number = currentPage, sizeToLoad: number = pageSize) => {
     setLoading(true);
     try {
       const res = await fetchInventoryAgingReport({
         warehouseId: selectedWarehouseId,
         categoryId: selectedCategory,
         agingBracket,
-        keyword
+        keyword,
+        page: pageToLoad,
+        size: sizeToLoad
       });
-      setItems(res.items);
-      setSummary(res.summary);
-      setCurrentPage(1);
+      setItems(res.items || []);
+      setSummary(res.summary || null);
+      setTotalElements(res.totalElements ?? (res.items?.length || 0));
+      setTotalPages(res.totalPages ?? Math.max(1, Math.ceil((res.totalElements ?? (res.items?.length || 0)) / sizeToLoad)));
     } catch (err) {
       console.error('Lỗi tải báo cáo luân chuyển kho:', err);
     } finally {
       setLoading(false);
     }
-  }, [selectedWarehouseId, selectedCategory, agingBracket, keyword]);
+  }, [selectedWarehouseId, selectedCategory, agingBracket, keyword, currentPage, pageSize]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadData(currentPage, pageSize);
+  }, [loadData, currentPage, pageSize]);
 
-  const totalItems = items.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalItems);
-  const currentItems = items.slice(startIndex, endIndex);
+  const startIndex = totalElements === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalElements);
 
   // Sắp xếp nhóm hàng theo phân cấp cây DFS trực quan cho combobox lọc (Style cây DFS, truyền id chuẩn xác)
   const hierarchicalCategoryOptions = useMemo(() => {
@@ -129,8 +131,8 @@ export const InventoryAgingReportPage: React.FC = () => {
     return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
   };
 
-  // Xuất file Excel báo cáo luân chuyển kho
-  const handleExportExcel = () => {
+  // Xuất file Excel báo cáo luân chuyển kho (Tải toàn bộ dữ liệu không bị giới hạn trang)
+  const handleExportExcel = async () => {
     try {
       setExporting(true);
       const selectedWh = warehouses.find((w) => String(w.id) === String(selectedWarehouseId));
@@ -138,7 +140,18 @@ export const InventoryAgingReportPage: React.FC = () => {
       const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const fileName = `Bao_cao_luan_chuyen_kho_${whCode}_${todayStr}.xlsx`;
 
-      const exportRows = items.map((i, idx) => ({
+      const fullRes = await fetchInventoryAgingReport({
+        warehouseId: selectedWarehouseId,
+        categoryId: selectedCategory,
+        agingBracket,
+        keyword,
+        page: 1,
+        size: 50000
+      });
+
+      const exportList = fullRes.items || items;
+
+      const exportRows = exportList.map((i, idx) => ({
         'STT': idx + 1,
         'Mã SKU': i.productSku,
         'Tên sản phẩm': i.productName,
@@ -208,7 +221,7 @@ export const InventoryAgingReportPage: React.FC = () => {
             {summary ? formatCurrencyVND(summary.totalInventoryValue) : '--'}
           </div>
           <div className="text-[11px] text-gray-500">
-            Dựa trên giá vốn của <strong>{items.length}</strong> sản phẩm
+            Dựa trên giá vốn của <strong>{totalElements}</strong> sản phẩm
           </div>
         </div>
 
@@ -264,7 +277,10 @@ export const InventoryAgingReportPage: React.FC = () => {
             <input
               type="text"
               value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
+              onChange={(e) => {
+                setCurrentPage(1);
+                setKeyword(e.target.value);
+              }}
               placeholder="Tìm theo mã SKU, tên sản phẩm..."
               className="w-full pl-9 pr-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition min-h-[38px]"
             />
@@ -283,7 +299,10 @@ export const InventoryAgingReportPage: React.FC = () => {
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setAgingBracket(tab.key as AgingBracket)}
+                onClick={() => {
+                  setCurrentPage(1);
+                  setAgingBracket(tab.key as AgingBracket);
+                }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
                   agingBracket === tab.key
                     ? 'bg-orange-500 text-white shadow-xs'
@@ -304,7 +323,10 @@ export const InventoryAgingReportPage: React.FC = () => {
             </label>
             <SearchSelect
               value={selectedWarehouseId}
-              onChange={(e) => setSelectedWarehouseId(e.target.value)}
+              onChange={(e) => {
+                setCurrentPage(1);
+                setSelectedWarehouseId(e.target.value);
+              }}
               searchPlaceholder="Gõ để tìm kho hàng..."
               className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
             >
@@ -323,7 +345,10 @@ export const InventoryAgingReportPage: React.FC = () => {
             </label>
             <SearchSelect
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={(e) => {
+                setCurrentPage(1);
+                setSelectedCategory(e.target.value);
+              }}
               searchPlaceholder="Gõ để tìm nhóm hàng..."
               className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
             >
@@ -341,6 +366,7 @@ export const InventoryAgingReportPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
+                  setCurrentPage(1);
                   setSelectedWarehouseId('ALL');
                   setSelectedCategory('ALL');
                   setAgingBracket('ALL');
@@ -392,7 +418,7 @@ export const InventoryAgingReportPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                currentItems.map((item) => (
+                items.map((item) => (
                   <tr key={item.id} className="hover:bg-orange-50/30 transition">
                     <td className="py-3 px-4 font-mono font-bold text-gray-900 whitespace-nowrap">
                       {item.productSku}
@@ -461,11 +487,11 @@ export const InventoryAgingReportPage: React.FC = () => {
         </div>
 
         {/* Thanh phân trang ở cuối trang */}
-        {totalItems > 0 && (
+        {totalElements > 0 && (
           <div className="p-3.5 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-600">
             <div className="flex items-center gap-3">
               <span>
-                Hiển thị <strong>{startIndex + 1}–{endIndex}</strong> / <strong>{totalItems}</strong> sản phẩm
+                Hiển thị <strong>{startIndex}–{endIndex}</strong> / <strong>{totalElements}</strong> sản phẩm
               </span>
               <div className="flex items-center gap-1.5 text-gray-500">
                 <span>Số dòng/trang:</span>
@@ -488,7 +514,7 @@ export const InventoryAgingReportPage: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                disabled={currentPage <= 1}
+                disabled={currentPage <= 1 || loading}
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 aria-label="Trang trước"
                 className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-xs transition cursor-pointer"
@@ -507,6 +533,7 @@ export const InventoryAgingReportPage: React.FC = () => {
                   <button
                     key={pageItem}
                     type="button"
+                    disabled={loading}
                     onClick={() => setCurrentPage(pageItem)}
                     className={`w-7 h-7 rounded-lg text-xs font-bold transition cursor-pointer ${
                       currentPage === pageItem
@@ -520,7 +547,7 @@ export const InventoryAgingReportPage: React.FC = () => {
               })}
               <button
                 type="button"
-                disabled={currentPage >= totalPages}
+                disabled={currentPage >= totalPages || loading}
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 aria-label="Trang sau"
                 className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-xs transition cursor-pointer"
