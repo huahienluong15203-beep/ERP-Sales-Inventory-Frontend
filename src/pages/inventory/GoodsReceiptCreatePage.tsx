@@ -597,6 +597,22 @@ export const GoodsReceiptCreatePage: React.FC = () => {
     }
   };
 
+  // Cuộn mượt xuống nút xác nhận nhập kho bên dưới chân trang
+  const scrollToBottomConfirm = () => {
+    const btn = document.getElementById('btn-confirm-receipt-bottom');
+    const container = document.getElementById('goods-receipt-bottom-actions');
+    const target = btn || container;
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (btn) {
+        btn.classList.add('ring-4', 'ring-emerald-400/50', 'scale-105', 'transition-all', 'duration-300');
+        setTimeout(() => {
+          btn.classList.remove('ring-4', 'ring-emerald-400/50', 'scale-105');
+        }, 1200);
+      }
+    }
+  };
+
   // Kiểm tra hợp lệ trước khi lưu
   const validateForm = (): boolean => {
     const errors: string[] = [];
@@ -731,42 +747,17 @@ export const GoodsReceiptCreatePage: React.FC = () => {
 
       {/* 2. HERO HEADER CARD CỦA TRANG */}
       <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 bg-gradient-to-r from-orange-50/60 via-amber-50/20 to-white">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#F85606] to-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/25">
-              <Warehouse size={28} />
-            </div>
-            <div className="space-y-1">
-              <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-                Lập Phiếu Nhập Kho Từ Nhà Cung Cấp
-              </h1>
-              <p className="text-xs sm:text-sm text-gray-500 font-medium">
-                Ghi nhận hàng hóa về đúng lô, đúng hạn sử dụng và tự động quy đổi về đơn vị cơ sở
-              </p>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#F85606] to-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/25">
+            <Warehouse size={28} />
           </div>
-
-          {/* Action buttons on header */}
-          <div className="flex items-center gap-2.5 flex-wrap pt-2 lg:pt-0 border-t lg:border-t-0 border-gray-100">
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={() => handleSave('DRAFT')}
-              className="px-4 py-2.5 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs inline-flex items-center gap-2 transition cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50"
-            >
-              <Save size={15} />
-              <span>Lưu Phiếu Nháp</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={() => handleSave('CONFIRMED')}
-              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-md shadow-emerald-600/20 transition cursor-pointer active:scale-95 disabled:opacity-50"
-            >
-              <Check size={16} />
-              <span>Xác Nhận Nhập Kho (Cộng Tồn)</span>
-            </button>
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+              Lập Phiếu Nhập Kho Từ Nhà Cung Cấp
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-500 font-medium">
+              Ghi nhận hàng hóa về đúng lô, đúng hạn sử dụng và tự động quy đổi về đơn vị cơ sở
+            </p>
           </div>
         </div>
       </div>
@@ -1324,7 +1315,10 @@ export const GoodsReceiptCreatePage: React.FC = () => {
       </div>
 
       {/* 6. FOOTER ACTIONS DƯỚI CÙNG */}
-      <div className="bg-white rounded-3xl border border-gray-200 p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div
+        id="goods-receipt-bottom-actions"
+        className="bg-white rounded-3xl border border-gray-200 p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3"
+      >
         <p className="text-xs text-gray-500 italic text-center sm:text-left">
           Quy tắc ghi sổ: Xác nhận phiếu mới cộng tồn kho; Phiếu nháp không làm thay đổi tồn.
         </p>
@@ -1349,6 +1343,7 @@ export const GoodsReceiptCreatePage: React.FC = () => {
           </button>
 
           <button
+            id="btn-confirm-receipt-bottom"
             type="button"
             disabled={submitting}
             onClick={() => handleSave('CONFIRMED')}
@@ -1403,8 +1398,9 @@ export const GoodsReceiptCreatePage: React.FC = () => {
             <button
               type="button"
               disabled={submitting}
-              onClick={() => handleSave('CONFIRMED')}
+              onClick={scrollToBottomConfirm}
               className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-md shadow-emerald-600/30 cursor-pointer active:scale-95 disabled:opacity-50"
+              title="Cuộn nhanh xuống nút xác nhận nhập kho"
             >
               <Check size={15} />
               <span>Xác nhận nhập kho</span>
