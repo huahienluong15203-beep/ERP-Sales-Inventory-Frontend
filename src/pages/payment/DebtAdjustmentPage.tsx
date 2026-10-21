@@ -18,10 +18,14 @@ import { SearchSelect } from '../../components/common/SearchSelect';
 import { DebtAdjustmentModal } from '../../components/payment/DebtAdjustmentModal';
 import { useServerSearch } from '../../hooks/useServerSearch';
 import { useAuth } from '../../contexts/AuthContext';
+import { Pagination } from '../../components/common/Pagination';
+import { useClientPagination } from '../../hooks/useClientPagination';
 
 export const DebtAdjustmentPage: React.FC = () => {
   const navigate = useNavigate();
   const [adjustments, setAdjustments] = useState<DebtAdjustment[]>([]);
+  // Phân trang tại chỗ, cùng kiểu với các trang danh sách khác
+  const pager = useClientPagination(adjustments);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -264,7 +268,7 @@ export const DebtAdjustmentPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                adjustments.map((adj) => (
+                pager.pageItems.map((adj) => (
                   <tr key={adj.id} className="hover:bg-orange-50/20 transition">
                     <td className="py-3 px-4 font-mono font-bold text-gray-900 whitespace-nowrap">
                       {adj.adjustmentCode || <span className="text-gray-400 font-normal">Chưa cấp số</span>}
@@ -316,6 +320,20 @@ export const DebtAdjustmentPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        {/* Phân trang dùng chung toàn hệ thống */}
+        {pager.totalElements > 0 && (
+          <div className="px-4 py-3 border-t border-gray-100">
+            <Pagination
+              page={pager.page}
+              totalPages={pager.totalPages}
+              totalElements={pager.totalElements}
+              size={pager.size}
+              itemLabel="chứng từ"
+              onPageChange={pager.setPage}
+              onSizeChange={pager.setSize}
+            />
+          </div>
+        )}
       </div>
 
       {/* Modal duyệt chứng từ điều chỉnh */}

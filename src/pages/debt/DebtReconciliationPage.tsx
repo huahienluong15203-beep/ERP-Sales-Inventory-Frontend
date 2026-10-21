@@ -26,6 +26,8 @@ import {
 } from '../../services/debtReconciliationApi';
 import { ReconciliationPrintModal } from '../../components/debt/ReconciliationPrintModal';
 import { ReconciliationDisputeModal } from '../../components/debt/ReconciliationDisputeModal';
+import { Pagination } from '../../components/common/Pagination';
+import { useClientPagination } from '../../hooks/useClientPagination';
 
 export const DebtReconciliationPage: React.FC = () => {
   const navigate = useNavigate();
@@ -38,6 +40,8 @@ export const DebtReconciliationPage: React.FC = () => {
 
   // Danh sách biên bản
   const [statements, setStatements] = useState<PeriodicReconciliationStatement[]>([]);
+  // Phân trang tại chỗ, cùng kiểu với các trang danh sách khác
+  const pager = useClientPagination(statements);
   const [loading, setLoading] = useState<boolean>(true);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
@@ -615,7 +619,7 @@ export const DebtReconciliationPage: React.FC = () => {
                       </td>
                     </tr>
                   ) : (
-                    statements.map((stmt) => {
+                    pager.pageItems.map((stmt) => {
                       const isDisputed = stmt.status === 'AGENCY_DISPUTED';
                       return (
                         <tr
@@ -725,6 +729,20 @@ export const DebtReconciliationPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            {/* Phân trang dùng chung toàn hệ thống */}
+            {pager.totalElements > 0 && (
+              <div className="px-4 py-3 border-t border-gray-100">
+                <Pagination
+                  page={pager.page}
+                  totalPages={pager.totalPages}
+                  totalElements={pager.totalElements}
+                  size={pager.size}
+                  itemLabel="biên bản"
+                  onPageChange={pager.setPage}
+                  onSizeChange={pager.setSize}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}

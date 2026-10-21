@@ -20,6 +20,8 @@ import { SYSTEM_WAREHOUSES, type WarehouseOption } from '../../types/inventory';
 import { PickingListPrintModal } from '../../components/inventory/PickingListPrintModal';
 import { fetchWarehouses } from '../../services/warehouseApi';
 import { SearchSelect } from '../../components/common/SearchSelect';
+import { Pagination } from '../../components/common/Pagination';
+import { useClientPagination } from '../../hooks/useClientPagination';
 
 export const PickingListManagementPage: React.FC = () => {
   const navigate = useNavigate();
@@ -69,6 +71,8 @@ export const PickingListManagementPage: React.FC = () => {
   }, [user, currentRole, warehousesList]);
 
   const [pickingLists, setPickingLists] = useState<PickingList[]>([]);
+  // Phân trang tại chỗ, cùng kiểu với các trang danh sách khác
+  const pager = useClientPagination(pickingLists);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Filters: Nhân viên kho mặc định chọn kho mình phụ trách
@@ -361,7 +365,7 @@ export const PickingListManagementPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {pickingLists.map((list) => {
+                {pager.pageItems.map((list) => {
                   const percent = list.totalItems > 0 ? Math.round((list.completedItems / list.totalItems) * 100) : 0;
                   return (
                     <tr
@@ -419,6 +423,20 @@ export const PickingListManagementPage: React.FC = () => {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        {/* Phân trang dùng chung toàn hệ thống */}
+        {pager.totalElements > 0 && (
+          <div className="px-4 py-3 border-t border-gray-100">
+            <Pagination
+              page={pager.page}
+              totalPages={pager.totalPages}
+              totalElements={pager.totalElements}
+              size={pager.size}
+              itemLabel="phiếu soạn"
+              onPageChange={pager.setPage}
+              onSizeChange={pager.setSize}
+            />
           </div>
         )}
       </div>

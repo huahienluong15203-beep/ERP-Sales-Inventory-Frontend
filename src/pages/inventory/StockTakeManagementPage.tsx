@@ -7,9 +7,7 @@ import {
   CheckCircle2,
   Ban,
   Eye,
-  Layers,
-  ChevronLeft,
-  ChevronRight
+  Layers
 } from 'lucide-react';
 import type { StockTake } from '../../types/stockTake';
 import type { WarehouseOption } from '../../types/inventory';
@@ -17,6 +15,7 @@ import { fetchStockTakes, fetchWarehousesList } from '../../services/stockTakeAp
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from '../../routes/Router';
 import { RowActionMenu } from '../../components/common/RowActionMenu';
+import { Pagination } from '../../components/common/Pagination';
 
 /**
  * S5-08: Trang Quản Lý Kiểm Kê Kho & Ghi Nhận Chênh Lệch
@@ -39,7 +38,7 @@ export const StockTakeManagementPage: React.FC = () => {
 
   // Pagination & filter state
   const [page, setPage] = useState<number>(0);
-  const [size] = useState<number>(15);
+  const [size, setSize] = useState<number>(20);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalElements, setTotalElements] = useState<number>(0);
 
@@ -465,33 +464,23 @@ export const StockTakeManagementPage: React.FC = () => {
           </table>
         </div>
 
-        {/* 5. Phân Trang */}
-        <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-          <div>
-            Hiển thị <strong>{stockTakes.length}</strong> trên tổng số <strong>{totalElements}</strong> phiếu
+        {/* Phân trang dùng chung toàn hệ thống */}
+        {totalElements > 0 && (
+          <div className="px-4 py-3 border-t border-gray-100">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalElements={totalElements}
+              size={size}
+              itemLabel="phiếu kiểm kê"
+              onPageChange={(p) => setPage(p)}
+              onSizeChange={(sz) => {
+                setSize(sz);
+                setPage(0);
+              }}
+            />
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={page <= 0}
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="font-medium">
-              Trang {page + 1} / {totalPages || 1}
-            </span>
-            <button
-              type="button"
-              disabled={page >= totalPages - 1}
-              onClick={() => setPage((p) => p + 1)}
-              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

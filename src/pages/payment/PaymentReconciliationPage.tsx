@@ -37,6 +37,10 @@ import { PaymentReceiptPrintModal } from '../../components/payment/PaymentReceip
 import { PaymentAdjustmentModal } from '../../components/payment/PaymentAdjustmentModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { useAuthImageSrc } from '../../hooks/useAuthImageSrc';
+import { Pagination } from '../../components/common/Pagination';
+import { useClientPagination } from '../../hooks/useClientPagination';
+
+const NO_ITEMS: PaymentReconciliationResponse['items'] = [];
 
 export const PaymentReconciliationPage: React.FC = () => {
   const { user, showToast } = useAuth();
@@ -50,6 +54,8 @@ export const PaymentReconciliationPage: React.FC = () => {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [data, setData] = useState<PaymentReconciliationResponse | null>(null);
+  // Phân trang tại chỗ, cùng kiểu với các trang danh sách khác
+  const pager = useClientPagination(data?.items ?? NO_ITEMS);
   const [collectors, setCollectors] = useState<PaymentCollector[]>([]);
 
   useEffect(() => {
@@ -398,7 +404,7 @@ export const PaymentReconciliationPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                data.items.map((item) => (
+                pager.pageItems.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                     <td className="px-4 py-3 font-mono font-bold text-gray-900 dark:text-white">
                       {item.code}
@@ -586,6 +592,20 @@ export const PaymentReconciliationPage: React.FC = () => {
 
           </table>
         </div>
+        {/* Phân trang dùng chung toàn hệ thống */}
+        {pager.totalElements > 0 && (
+          <div className="px-4 py-3 border-t border-gray-100">
+            <Pagination
+              page={pager.page}
+              totalPages={pager.totalPages}
+              totalElements={pager.totalElements}
+              size={pager.size}
+              itemLabel="phiếu thu"
+              onPageChange={pager.setPage}
+              onSizeChange={pager.setSize}
+            />
+          </div>
+        )}
       </div>
 
       {/* Modal Lightbox xem ảnh biên lai */}
