@@ -12,7 +12,6 @@ import {
   Search,
   X,
   Loader2,
-  ArrowUp,
   ArrowDown
 } from 'lucide-react';
 import type { GoodsReceiptFormPayload } from '../../types/inventory';
@@ -597,22 +596,6 @@ export const GoodsReceiptCreatePage: React.FC = () => {
     }
   };
 
-  // Cuộn mượt xuống nút xác nhận nhập kho bên dưới chân trang
-  const scrollToBottomConfirm = () => {
-    const btn = document.getElementById('btn-confirm-receipt-bottom');
-    const container = document.getElementById('goods-receipt-bottom-actions');
-    const target = btn || container;
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      if (btn) {
-        btn.classList.add('ring-4', 'ring-emerald-400/50', 'scale-105', 'transition-all', 'duration-300');
-        setTimeout(() => {
-          btn.classList.remove('ring-4', 'ring-emerald-400/50', 'scale-105');
-        }, 1200);
-      }
-    }
-  };
-
   // Kiểm tra hợp lệ trước khi lưu
   const validateForm = (): boolean => {
     const errors: string[] = [];
@@ -725,7 +708,7 @@ export const GoodsReceiptCreatePage: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-w-0 space-y-6 antialiased pb-24 animate-in fade-in duration-200">
+    <div className="w-full min-w-0 space-y-6 antialiased pb-8 animate-in fade-in duration-200">
       {/* 1. THANH ĐIỀU HƯỚNG QUAY LẠI & BREADCRUMBS */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -1354,60 +1337,6 @@ export const GoodsReceiptCreatePage: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* 7. FLOATING QUICK BAR KHI ĐÃ CHỌN SẢN PHẨM & CUỘN TRANG */}
-      {lines.length > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-4xl bg-gray-900/95 backdrop-blur-md text-white p-3 sm:px-6 sm:py-3.5 rounded-2xl shadow-2xl border border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in slide-in-from-bottom duration-200">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#F85606] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-orange-500/30">
-              {lines.length}
-            </div>
-            <div>
-              <div className="font-bold text-white text-xs sm:text-sm">
-                Đã chọn {lines.length} mặt hàng nhập kho
-              </div>
-              <div className="text-[11px] text-gray-300">
-                Quy đổi: <strong className="text-emerald-400 font-mono">{formatQuantity(totalBaseQty)}</strong> đvcs • Tổng tiền: <strong className="text-orange-400 font-mono">{formatCurrencyVND(totalAmount)}</strong>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                const el = document.getElementById('receipt-lines-section');
-                el?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="px-3 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold text-xs transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <ArrowUp size={14} />
-              <span>Xem dòng hàng ({lines.length})</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={() => handleSave('DRAFT')}
-              className="px-3 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold text-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              <Save size={14} />
-              <span>Lưu nháp</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={scrollToBottomConfirm}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-md shadow-emerald-600/30 cursor-pointer active:scale-95 disabled:opacity-50"
-              title="Cuộn nhanh xuống nút xác nhận nhập kho"
-            >
-              <Check size={15} />
-              <span>Xác nhận nhập kho</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
