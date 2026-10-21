@@ -25,6 +25,8 @@ import {
 import { fetchWarehouses } from '../../services/warehouseApi';
 import type { Warehouse } from '../../types/warehouse';
 import { formatCurrencyVND } from '../../services/orderService';
+import { Pagination } from '../../components/common/Pagination';
+import { useServerSearch } from '../../hooks/useServerSearch';
 
 const getTodayLocalDateString = () => {
   const now = new Date();
@@ -33,14 +35,6 @@ const getTodayLocalDateString = () => {
   const day = String(now.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
-
-const DEFAULT_WAREHOUSES: Warehouse[] = [
-  { id: 1, code: 'KHO-HN', name: 'Kho Tổng Hà Nội', address: 'KCN Tiên Sơn, Bắc Ninh', status: 'ACTIVE', locationCount: 1, activeLocationCount: 1 },
-  { id: 2, code: 'KHO-HCM', name: 'Kho Tổng TP.HCM', address: 'KCN Tân Bình, TP.HCM', status: 'ACTIVE', locationCount: 0, activeLocationCount: 0 },
-  { id: 3, code: 'WH-MB01', name: 'Kho Tổng Miền Bắc', address: 'KCN Tiên Sơn, Bắc Ninh', status: 'ACTIVE', locationCount: 10, activeLocationCount: 10 },
-  { id: 4, code: 'WH-MT01', name: 'Kho Miền Trung', address: 'KCN Hòa Khánh, Đà Nẵng', status: 'ACTIVE', locationCount: 0, activeLocationCount: 0 },
-  { id: 5, code: 'WH-MN01', name: 'Kho Tổng Miền Nam', address: 'KCN Tân Bình, TP.HCM', status: 'ACTIVE', locationCount: 10, activeLocationCount: 10 }
-];
 
 export const SalesReturnListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -52,10 +46,8 @@ export const SalesReturnListPage: React.FC = () => {
     roleStr.includes('ADMIN') ||
     roleStr.includes('WH_MANAGER') ||
     roleStr.includes('WAREHOUSE') ||
-    roleStr.includes('SALES_MANAGER') ||
-    userRoles.some((r) =>
-      ['ROLE_ADMIN', 'ROLE_WH_MANAGER', 'ROLE_WAREHOUSE', 'ROLE_SALES_MANAGER'].includes(r)
-    );
+    // Khớp quyền backend POST /api/sales-returns/{id}/receive: chỉ NV kho, QL kho, Admin
+    userRoles.some((r) => ['ROLE_ADMIN', 'ROLE_WH_MANAGER', 'ROLE_WAREHOUSE'].includes(r));
 
   const canCreateReturn =
     ['ROLE_SALES_REP', 'ROLE_SALES_MANAGER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT', 'ROLE_WH_MANAGER', 'ROLE_WAREHOUSE'].includes(currentRole ?? '') ||
@@ -70,11 +62,13 @@ export const SalesReturnListPage: React.FC = () => {
 
   // Data states
   const [items, setItems] = useState<SalesReturnItem[]>([]);
-  const [warehouses, setWarehouses] = useState<Warehouse[]>(DEFAULT_WAREHOUSES);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [page, setPage] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalElements, setTotalElements] = useState<number>(0);
+  const [pageSize, setPageSize] = useState<number>(20);
+  const { serverKeyword, flush: flushSearch } = useServerSearch(keyword);
 
   // Modal chi tiết
   const [detailItem, setDetailItem] = useState<SalesReturnItem | null>(null);
@@ -280,26 +274,22 @@ export const SalesReturnListPage: React.FC = () => {
   // Load kho
   useEffect(() => {
     fetchWarehouses()
-      .then((whs) => {
-        if (whs && whs.length > 0) {
-          setWarehouses(whs);
-        }
-      })
-      .catch((err) => console.warn('Lỗi tải danh sách kho:', err));
+      .then((whs) => setWarehouses(whs || []))
+      .catch((err) => showToast(err?.message || 'Không tải được danh sách kho', 'error'));
   }, []);
 
   // Load danh sách phiếu trả
-  const loadData = async (targetPage = 0) => {
+  const loadData = async (targetPage = 0, size = pageSize) => {
     setLoading(true);
     try {
       const res = await fetchSalesReturns({
-        keyword: keyword.trim() || undefined,
+        keyword: serverKeyword || undefined,
         status: statusFilter,
         warehouseId: selectedWarehouseId !== '' ? Number(selectedWarehouseId) : undefined,
         fromDate: fromDate || undefined,
         toDate: toDate || undefined,
         page: targetPage,
-        size: 15
+        size
       });
       setItems(res.content || []);
       setTotalPages(res.totalPages || 1);
@@ -314,11 +304,13 @@ export const SalesReturnListPage: React.FC = () => {
 
   useEffect(() => {
     loadData(0);
-  }, [statusFilter, selectedWarehouseId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, selectedWarehouseId, serverKeyword, fromDate, toDate]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loadData(0);
+    // Từ khoá đổi -> effect tự tải lại; không đổi -> tải lại ngay
+    if (!flushSearch()) loadData(0);
   };
 
   // Xác nhận nhận hàng & cộng tồn kho ngược lại (AC4)
@@ -614,33 +606,22 @@ export const SalesReturnListPage: React.FC = () => {
           </div>
         )}
 
-        {/* Phân trang */}
-        {totalPages > 1 && (
-          <div className="p-3.5 bg-gray-50 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
-            <div>
-              Hiển thị <strong>{items.length}</strong> / <strong>{totalElements}</strong> phiếu
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={page <= 0}
-                onClick={() => loadData(page - 1)}
-                className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 disabled:opacity-50 cursor-pointer font-bold"
-              >
-                Trước
-              </button>
-              <span className="font-bold">
-                Trang {page + 1} / {totalPages}
-              </span>
-              <button
-                type="button"
-                disabled={page >= totalPages - 1}
-                onClick={() => loadData(page + 1)}
-                className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 disabled:opacity-50 cursor-pointer font-bold"
-              >
-                Sau
-              </button>
-            </div>
+        {/* Phân trang dùng chung toàn hệ thống */}
+        {totalElements > 0 && (
+          <div className="px-4 py-3 border-t border-gray-200">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalElements={totalElements}
+              size={pageSize}
+              itemLabel="phiếu"
+              disabled={loading}
+              onPageChange={(p) => loadData(p)}
+              onSizeChange={(sz) => {
+                setPageSize(sz);
+                loadData(0, sz);
+              }}
+            />
           </div>
         )}
       </div>
