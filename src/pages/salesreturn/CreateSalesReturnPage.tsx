@@ -24,13 +24,10 @@ import {
 import type { InvoiceSummaryResponse } from '../../types/invoice';
 import type { Warehouse } from '../../types/warehouse';
 import { formatCurrencyVND } from '../../services/orderService';
-import { fetchAgencies } from '../../services/agencyApi';
-import type { Agency } from '../../types/agency';
-import { SearchSelect } from '../../components/common/SearchSelect';
+import { AgencySelect } from '../../components/common/AgencySelect';
 import { useServerSearch } from '../../hooks/useServerSearch';
 
 const INVOICE_PAGE_SIZE = 20;
-const AGENCY_PAGE_SIZE = 20;
 
 interface LineItemState extends ReturnableInvoiceLine {
   selected: boolean;
@@ -84,12 +81,7 @@ export const CreateSalesReturnPage: React.FC = () => {
   const [invoiceTotal, setInvoiceTotal] = useState<number>(0);
   const [invoiceHasMore, setInvoiceHasMore] = useState<boolean>(false);
 
-  // Đại lý: tìm trên server + cuộn tải thêm (không giới hạn trong vài chục hoá đơn đầu)
-  const [agencies, setAgencies] = useState<Agency[]>([]);
-  const [agencyPage, setAgencyPage] = useState<number>(0);
-  const [agencyHasMore, setAgencyHasMore] = useState<boolean>(true);
-  const [loadingAgencies, setLoadingAgencies] = useState<boolean>(false);
-  const [agencyKeyword, setAgencyKeyword] = useState<string>('');
+  // Nhãn đại lý khi mở trang từ hoá đơn (?invoiceId=), ô chọn đại lý dùng chung AgencySelect
   const [selectedCustomerLabel, setSelectedCustomerLabel] = useState<string>('');
 
   // Form State
@@ -145,26 +137,6 @@ export const CreateSalesReturnPage: React.FC = () => {
     }
   }, [showToast]);
 
-  // Tải danh sách đại lý (tìm trên server + cuộn tải thêm)
-  const loadAgencies = useCallback(async (targetPage: number, kw: string, append: boolean) => {
-    setLoadingAgencies(true);
-    try {
-      const res = await fetchAgencies({ page: targetPage, size: AGENCY_PAGE_SIZE, keyword: kw.trim() || undefined });
-      const items = res.content || [];
-      setAgencies((prev) => {
-        if (!append) return items;
-        const ids = new Set(prev.map((a) => a.id));
-        return [...prev, ...items.filter((a) => !ids.has(a.id))];
-      });
-      setAgencyPage(targetPage);
-      setAgencyHasMore(targetPage + 1 < (res.totalPages || 0));
-    } catch (err: any) {
-      showToast(err?.message || 'Không tải được danh sách đại lý', 'error');
-    } finally {
-      setLoadingAgencies(false);
-    }
-  }, [showToast]);
-
   // Tải hoá đơn theo đại lý + từ khoá (lọc trên server, có phân trang)
   const loadInvoices = useCallback(async (targetPage: number, append: boolean) => {
     setLoadingInvoices(true);
@@ -210,7 +182,6 @@ export const CreateSalesReturnPage: React.FC = () => {
         } catch (err: any) {
           showToast(err?.message || 'Không tải được danh sách kho tiếp nhận', 'error');
         }
-        loadAgencies(0, '', false);
 
         // Tự động chọn hoá đơn nếu được truyền từ trang hoá đơn qua query param ?invoiceId=...
         const paramInvoiceIdStr = new URLSearchParams(window.location.search).get('invoiceId');
@@ -253,13 +224,10 @@ export const CreateSalesReturnPage: React.FC = () => {
   const handleSelectCustomer = (value: string) => {
     if (!value || value === 'ALL') {
       setSelectedCustomerId('ALL');
-      setSelectedCustomerLabel('');
     } else {
-      const id = Number(value);
-      const ag = agencies.find((a) => String(a.id) === value);
-      setSelectedCustomerId(id);
-      setSelectedCustomerLabel(ag ? `[${ag.code}] ${ag.name}` : '');
+      setSelectedCustomerId(Number(value));
     }
+    setSelectedCustomerLabel('');
     setSelectedInvoice(null);
     setLineItems([]);
   };
@@ -510,29 +478,13 @@ export const CreateSalesReturnPage: React.FC = () => {
                   </button>
                 )}
               </div>
-              <SearchSelect
-                value={selectedCustomerId === 'ALL' ? 'ALL' : String(selectedCustomerId)}
-                onChange={(e) => handleSelectCustomer(e.target.value)}
+              <AgencySelect
+                value={selectedCustomerId === 'ALL' ? '' : selectedCustomerId}
+                onChange={(id) => handleSelectCustomer(id)}
+                allLabel="-- Tất cả đại lý --"
                 selectedLabel={selectedCustomerLabel || undefined}
-                searchPlaceholder="Gõ tên, mã đại lý, SĐT..."
-                onSearchChange={(val) => {
-                  setAgencyKeyword(val);
-                  loadAgencies(0, val, false);
-                }}
-                onLoadMore={() => {
-                  if (!loadingAgencies && agencyHasMore) loadAgencies(agencyPage + 1, agencyKeyword, true);
-                }}
-                hasMore={agencyHasMore}
-                isLoading={loadingAgencies}
                 className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:border-[#F85606] focus:bg-white focus:outline-none transition cursor-pointer font-medium"
-              >
-                <option value="ALL">-- Tất cả đại lý --</option>
-                {agencies.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    [{a.code}] {a.name}
-                  </option>
-                ))}
-              </SearchSelect>
+              />
             </div>
 
             {/* Ô tìm kiếm hoá đơn */}

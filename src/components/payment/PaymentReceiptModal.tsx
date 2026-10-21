@@ -24,7 +24,7 @@ import {
   submitRouteCashCollection,
   fetchPaymentCollectors
 } from '../../services/paymentApi';
-import { fetchAgencies } from '../../services/agencyApi';
+import { fetchAgencyById } from '../../services/agencyApi';
 import type { Agency, CreditStatusResponse } from '../../types/agency';
 import type {
   PaymentReceipt,
@@ -34,6 +34,7 @@ import type {
   PaymentCollector
 } from '../../types/payment';
 import { SearchSelect } from '../common/SearchSelect';
+import { AgencySelect } from '../common/AgencySelect';
 import { PaymentReceiptPrintModal } from './PaymentReceiptPrintModal';
 
 interface PaymentReceiptModalProps {
@@ -51,12 +52,11 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 }) => {
   const { user, showToast } = useAuth();
 
-  // Danh sách đại lý để chọn nếu chưa truyền initialCustomerId
-  const [agencies, setAgencies] = useState<Agency[]>([]);
+  // Đại lý đang chọn (đủ địa chỉ / SĐT để in phiếu thu)
+  const [selectedAgencyInfo, setSelectedAgencyInfo] = useState<Agency | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
     initialCustomerId ? String(initialCustomerId) : ''
   );
-  const [loadingAgencies, setLoadingAgencies] = useState<boolean>(false);
 
   // Dữ liệu công nợ & hoá đơn của khách hàng được chọn
   const [creditStatus, setCreditStatus] = useState<CreditStatusResponse | null>(null);
@@ -152,24 +152,14 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     setSpecificAllocations({});
     setNotes('');
 
+    // Không tự chọn đại lý đầu danh sách: kế toán phải chọn đúng đại lý nộp tiền
+    setSelectedCustomerId(initialCustomerId ? String(initialCustomerId) : '');
+    setSelectedAgencyInfo(null);
     if (initialCustomerId) {
-      setSelectedCustomerId(String(initialCustomerId));
+      fetchAgencyById(initialCustomerId)
+        .then((ag) => setSelectedAgencyInfo(ag))
+        .catch(() => setSelectedAgencyInfo(null));
     }
-
-    setLoadingAgencies(true);
-    fetchAgencies({ size: 100 })
-      .then((res) => {
-        setAgencies(res.content || []);
-        if (!initialCustomerId && res.content?.length > 0) {
-          setSelectedCustomerId(String(res.content[0].id));
-        }
-      })
-      .catch((err) => {
-        console.warn('Lỗi tải danh mục đại lý:', err);
-      })
-      .finally(() => {
-        setLoadingAgencies(false);
-      });
   }, [isOpen, initialCustomerId]);
 
   // Tải danh sách nhân sự đủ điều kiện lập phiếu thu / thu tiền (Kế toán, Quản trị, Sales)
@@ -386,7 +376,12 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     setValidationError(null);
 
     try {
-      const selectedAgency = agencies.find((a) => String(a.id) === String(selectedCustomerId));
+      const selectedAgency: Partial<Agency> | null =
+        selectedAgencyInfo && String(selectedAgencyInfo.id) === String(selectedCustomerId)
+          ? selectedAgencyInfo
+          : creditStatus
+          ? { code: creditStatus.customerCode, name: creditStatus.customerName }
+          : null;
       const selectedCollector = collectors.find((c) => String(c.id) === String(selectedCollectorId));
       let created: PaymentReceipt;
 
@@ -530,20 +525,21 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                 )}
               </div>
 
-              <SearchSelect
+              <AgencySelect
                 value={selectedCustomerId}
-                onChange={(e) => setSelectedCustomerId(e.target.value)}
-                disabled={loadingAgencies || !!initialCustomerId}
-                searchPlaceholder="Gõ để tìm kiếm đại lý..."
+                onChange={(id, ag) => {
+                  setSelectedCustomerId(id);
+                  setSelectedAgencyInfo(ag);
+                }}
+                disabled={!!initialCustomerId}
+                placeholder="-- Chọn đại lý thanh toán --"
+                selectedLabel={
+                  creditStatus && String(creditStatus.customerId) === String(selectedCustomerId)
+                    ? `[${creditStatus.customerCode}] ${creditStatus.customerName}`
+                    : undefined
+                }
                 className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500"
-              >
-                <option value="">-- Chọn đại lý thanh toán --</option>
-                {agencies.map((ag) => (
-                  <option key={ag.id} value={ag.id}>
-                    {ag.code} - {ag.name} ({ag.customerGroupName || 'Đại lý'})
-                  </option>
-                ))}
-              </SearchSelect>
+              />
 
               {/* Thẻ trạng thái công nợ nhanh */}
               {loadingDebtData ? (

@@ -39,8 +39,9 @@ import {
   cancelOrder,
   fetchBackorders
 } from '../../services/orderService';
-import { fetchAgencies, fetchAgencyFormOptions } from '../../services/agencyApi';
-import type { Agency, RegionOption, SalesRepOption } from '../../types/agency';
+import { fetchAgencyFormOptions } from '../../services/agencyApi';
+import { AgencySelect } from '../../components/common/AgencySelect';
+import type { RegionOption, SalesRepOption } from '../../types/agency';
 import type {
   OrderSummaryItem,
   OrderTotalsSummary,
@@ -129,7 +130,6 @@ export const OrderListPage: React.FC = () => {
   }, [isWarehouseRole]);
 
   // State danh mục hỗ trợ lọc
-  const [agencies, setAgencies] = useState<Agency[]>([]);
   const [regions, setRegions] = useState<RegionOption[]>([]);
   const [salesReps, setSalesReps] = useState<SalesRepOption[]>([]);
 
@@ -345,10 +345,6 @@ export const OrderListPage: React.FC = () => {
 
   // Tải danh mục phục vụ bộ lọc (Đại lý, Khu vực, NVKD)
   useEffect(() => {
-    fetchAgencies({ size: 100 })
-      .then((res) => setAgencies(res.content || []))
-      .catch((err) => console.warn('Lỗi tải danh sách đại lý:', err));
-
     fetchAgencyFormOptions()
       .then((opts) => {
         setRegions(opts.regions || []);
@@ -796,21 +792,15 @@ export const OrderListPage: React.FC = () => {
             <label className="text-[11px] font-bold text-gray-600 uppercase">Đại lý</label>
             <div className="relative">
               <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              <SearchSelect
+              <AgencySelect
                 value={selectedAgencyId}
-                onChange={(e) => {
-                  setSelectedAgencyId(e.target.value);
+                onChange={(id) => {
+                  setSelectedAgencyId(id);
                   setPage(0);
                 }}
+                allLabel="Tất cả đại lý"
                 className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#F85606] focus:bg-white transition appearance-none cursor-pointer"
-              >
-                <option value="">Tất cả đại lý</option>
-                {agencies.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({a.code})
-                  </option>
-                ))}
-              </SearchSelect>
+              />
             </div>
           </div>
 

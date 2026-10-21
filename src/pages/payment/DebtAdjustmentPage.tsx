@@ -11,10 +11,8 @@ import {
 import { useNavigate } from '../../routes/Router';
 import { formatCurrencyVND } from '../../services/orderService';
 import { fetchDebtAdjustments } from '../../services/debtAdjustmentApi';
-import { fetchAgencies } from '../../services/agencyApi';
 import type { DebtAdjustment } from '../../types/debtAdjustment';
-import type { Agency } from '../../types/agency';
-import { SearchSelect } from '../../components/common/SearchSelect';
+import { AgencySelect } from '../../components/common/AgencySelect';
 import { DebtAdjustmentModal } from '../../components/payment/DebtAdjustmentModal';
 import { useServerSearch } from '../../hooks/useServerSearch';
 import { useAuth } from '../../contexts/AuthContext';
@@ -26,7 +24,6 @@ export const DebtAdjustmentPage: React.FC = () => {
   const [adjustments, setAdjustments] = useState<DebtAdjustment[]>([]);
   // Phân trang tại chỗ, cùng kiểu với các trang danh sách khác
   const pager = useClientPagination(adjustments);
-  const [agencies, setAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Bộ lọc
@@ -42,35 +39,6 @@ export const DebtAdjustmentPage: React.FC = () => {
   // Chỉ gọi API khi gõ đủ 2 ký tự và ngừng gõ (trước đây mỗi phím gõ gọi API 1 lần)
   const { serverKeyword } = useServerSearch(keyword);
 
-  // Đại lý: tìm trên server + cuộn tải thêm (trước đây chỉ lấy 100 đại lý đầu)
-  const [agencyPage, setAgencyPage] = useState<number>(0);
-  const [agencyHasMore, setAgencyHasMore] = useState<boolean>(true);
-  const [loadingAgencies, setLoadingAgencies] = useState<boolean>(false);
-  const [agencyKeyword, setAgencyKeyword] = useState<string>('');
-
-  const loadAgencies = useCallback(async (targetPage: number, kw: string, append: boolean) => {
-    setLoadingAgencies(true);
-    try {
-      const res = await fetchAgencies({ page: targetPage, size: 20, keyword: kw.trim() || undefined });
-      const items = res.content || [];
-      setAgencies((prev) => {
-        if (!append) return items;
-        const ids = new Set(prev.map((a) => a.id));
-        return [...prev, ...items.filter((a) => !ids.has(a.id))];
-      });
-      setAgencyPage(targetPage);
-      setAgencyHasMore(targetPage + 1 < (res.totalPages || 0));
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không tải được danh sách đại lý', 'error');
-    } finally {
-      setLoadingAgencies(false);
-    }
-  }, [showToast]);
-
-  useEffect(() => {
-    loadAgencies(0, '', false);
-  }, [loadAgencies]);
-
   const loadData = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
@@ -84,11 +52,13 @@ export const DebtAdjustmentPage: React.FC = () => {
     } catch (err) {
       console.error('Lỗi tải danh sách chứng từ điều chỉnh:', err);
       setAdjustments([]);
-      setLoadError(err instanceof Error ? err.message : 'Không tải được danh sách chứng từ điều chỉnh');
+      const msg = err instanceof Error ? err.message : 'Không tải được danh sách chứng từ điều chỉnh';
+      setLoadError(msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, selectedCustomerId, serverKeyword]);
+  }, [statusFilter, selectedCustomerId, serverKeyword, showToast]);
 
   useEffect(() => {
     loadData();
@@ -184,28 +154,12 @@ export const DebtAdjustmentPage: React.FC = () => {
 
           {/* SearchSelect Đại lý */}
           <div>
-            <SearchSelect
-              value={selectedCustomerId}
-              onChange={(e) => setSelectedCustomerId(e.target.value)}
-              searchPlaceholder="Gõ để tìm đại lý..."
-              onSearchChange={(val) => {
-                setAgencyKeyword(val);
-                loadAgencies(0, val, false);
-              }}
-              onLoadMore={() => {
-                if (!loadingAgencies && agencyHasMore) loadAgencies(agencyPage + 1, agencyKeyword, true);
-              }}
-              hasMore={agencyHasMore}
-              isLoading={loadingAgencies}
+            <AgencySelect
+              value={selectedCustomerId === 'ALL' ? '' : selectedCustomerId}
+              onChange={(id) => setSelectedCustomerId(id || 'ALL')}
+              allLabel="Tất cả đại lý / Khách hàng"
               className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-[#F85606]"
-            >
-              <option value="ALL">Tất cả đại lý / Khách hàng</option>
-              {agencies.map((ag) => (
-                <option key={ag.id} value={ag.id}>
-                  [{ag.code}] {ag.name}
-                </option>
-              ))}
-            </SearchSelect>
+            />
           </div>
 
           {/* Lọc trạng thái (Pills) */}
