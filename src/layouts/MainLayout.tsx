@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation, Link } from '../routes/Router';
 import { ROLE_METADATA_MAP } from '../types/user';
 import type { RoleName } from '../types/user';
-import { Icons, DynamicIcon } from '../components/common/Icons';
+import { Icons, DynamicIcon, ChevronDown } from '../components/common/Icons';
 import { changePasswordApi } from '../services/api';
 import { LogoutConfirmModal } from '../components/common/LogoutConfirmModal';
 import { UserAvatarMenu } from '../components/common/UserAvatarMenu';
@@ -27,6 +27,28 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
 
   // Trạng thái mở/đóng Sidebar trên Mobile (tối ưu hóa màn hình 360px)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+
+  // Gom nhóm Sidebar: mỗi nhóm chức năng (Bán hàng, Sản phẩm & Kho...) thu gọn / mở ra được, nhớ theo trình duyệt
+  const [closedGroups, setClosedGroups] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('erp_sidebar_closed_groups');
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((g) => typeof g === 'string') : [];
+    } catch {
+      return [];
+    }
+  });
+  const toggleGroup = (group: string) => {
+    setClosedGroups((prev) => {
+      const next = prev.includes(group) ? prev.filter((g) => g !== group) : [...prev, group];
+      try {
+        localStorage.setItem('erp_sidebar_closed_groups', JSON.stringify(next));
+      } catch {
+        // Trình duyệt chặn lưu trữ: vẫn thu gọn trong phiên hiện tại
+      }
+      return next;
+    });
+  };
 
   // Trạng thái thu gọn Sidebar trên Desktop (lưu localStorage)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
@@ -300,13 +322,33 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
                 const isActive = activeMenu?.path === item.path;
                 // Gom nhóm theo chức năng: hiện tiêu đề nhóm khi sang nhóm mới
                 const showGroup = Boolean(item.group) && item.group !== displayedMenus[idx - 1]?.group;
+                // Nhóm đang chứa trang hiện tại luôn mở để không "mất" mục đang xem
+                const groupHasActive = Boolean(item.group) && activeMenu?.group === item.group;
+                const groupOpen =
+                  isSidebarCollapsed || !item.group || groupHasActive || !closedGroups.includes(item.group);
                 return (
                   <Fragment key={item.path}>
                     {showGroup && (
                       <li className="erp-menu-group" aria-hidden={isSidebarCollapsed}>
-                        {isSidebarCollapsed ? <span className="erp-menu-group-divider" /> : item.group}
+                        {isSidebarCollapsed ? (
+                          <span className="erp-menu-group-divider" />
+                        ) : (
+                          <button
+                            type="button"
+                            className="erp-menu-group-toggle"
+                            onClick={() => item.group && toggleGroup(item.group)}
+                            aria-expanded={groupOpen}
+                            title={groupOpen ? 'Thu gọn nhóm' : 'Mở nhóm'}
+                          >
+                            <span>{item.group}</span>
+                            <span className={`erp-menu-group-chevron ${groupOpen ? 'open' : ''}`}>
+                              <ChevronDown size={14} />
+                            </span>
+                          </button>
+                        )}
                       </li>
                     )}
+                    {groupOpen && (
                     <li className="erp-menu-item">
                       <Link
                         to={item.path}
@@ -326,6 +368,7 @@ export const MainLayout: FC<MainLayoutProps> = ({ children }) => {
                         )}
                       </Link>
                     </li>
+                    )}
                   </Fragment>
                 );
               })}

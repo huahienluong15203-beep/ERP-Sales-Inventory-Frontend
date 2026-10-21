@@ -224,6 +224,37 @@
   justify-content: center;
 }
 
+.erp-menu-group-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 0;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  min-height: 28px;
+}
+
+.erp-menu-group-toggle:hover {
+  color: #F85606;
+}
+
+.erp-menu-group-chevron {
+  display: inline-flex;
+  transition: transform 0.15s ease;
+  transform: rotate(-90deg);
+}
+
+.erp-menu-group-chevron.open {
+  transform: rotate(0deg);
+}
+
 .erp-menu-group-divider {
   display: block;
   width: 24px;
