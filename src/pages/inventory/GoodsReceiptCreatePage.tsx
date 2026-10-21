@@ -12,7 +12,6 @@ import {
   Search,
   X,
   Loader2,
-  ArrowUp,
   ArrowDown
 } from 'lucide-react';
 import type { GoodsReceiptFormPayload } from '../../types/inventory';
@@ -709,7 +708,7 @@ export const GoodsReceiptCreatePage: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-w-0 space-y-6 antialiased pb-24 animate-in fade-in duration-200">
+    <div className="w-full min-w-0 space-y-6 antialiased pb-8 animate-in fade-in duration-200">
       {/* 1. THANH ĐIỀU HƯỚNG QUAY LẠI & BREADCRUMBS */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -731,42 +730,17 @@ export const GoodsReceiptCreatePage: React.FC = () => {
 
       {/* 2. HERO HEADER CARD CỦA TRANG */}
       <div className="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 bg-gradient-to-r from-orange-50/60 via-amber-50/20 to-white">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#F85606] to-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/25">
-              <Warehouse size={28} />
-            </div>
-            <div className="space-y-1">
-              <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-                Lập Phiếu Nhập Kho Từ Nhà Cung Cấp
-              </h1>
-              <p className="text-xs sm:text-sm text-gray-500 font-medium">
-                Ghi nhận hàng hóa về đúng lô, đúng hạn sử dụng và tự động quy đổi về đơn vị cơ sở
-              </p>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#F85606] to-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/25">
+            <Warehouse size={28} />
           </div>
-
-          {/* Action buttons on header */}
-          <div className="flex items-center gap-2.5 flex-wrap pt-2 lg:pt-0 border-t lg:border-t-0 border-gray-100">
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={() => handleSave('DRAFT')}
-              className="px-4 py-2.5 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs inline-flex items-center gap-2 transition cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50"
-            >
-              <Save size={15} />
-              <span>Lưu Phiếu Nháp</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={() => handleSave('CONFIRMED')}
-              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-2 shadow-md shadow-emerald-600/20 transition cursor-pointer active:scale-95 disabled:opacity-50"
-            >
-              <Check size={16} />
-              <span>Xác Nhận Nhập Kho (Cộng Tồn)</span>
-            </button>
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+              Lập Phiếu Nhập Kho Từ Nhà Cung Cấp
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-500 font-medium">
+              Ghi nhận hàng hóa về đúng lô, đúng hạn sử dụng và tự động quy đổi về đơn vị cơ sở
+            </p>
           </div>
         </div>
       </div>
@@ -1324,7 +1298,10 @@ export const GoodsReceiptCreatePage: React.FC = () => {
       </div>
 
       {/* 6. FOOTER ACTIONS DƯỚI CÙNG */}
-      <div className="bg-white rounded-3xl border border-gray-200 p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div
+        id="goods-receipt-bottom-actions"
+        className="bg-white rounded-3xl border border-gray-200 p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3"
+      >
         <p className="text-xs text-gray-500 italic text-center sm:text-left">
           Quy tắc ghi sổ: Xác nhận phiếu mới cộng tồn kho; Phiếu nháp không làm thay đổi tồn.
         </p>
@@ -1349,6 +1326,7 @@ export const GoodsReceiptCreatePage: React.FC = () => {
           </button>
 
           <button
+            id="btn-confirm-receipt-bottom"
             type="button"
             disabled={submitting}
             onClick={() => handleSave('CONFIRMED')}
@@ -1359,59 +1337,6 @@ export const GoodsReceiptCreatePage: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* 7. FLOATING QUICK BAR KHI ĐÃ CHỌN SẢN PHẨM & CUỘN TRANG */}
-      {lines.length > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-4xl bg-gray-900/95 backdrop-blur-md text-white p-3 sm:px-6 sm:py-3.5 rounded-2xl shadow-2xl border border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in slide-in-from-bottom duration-200">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#F85606] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-orange-500/30">
-              {lines.length}
-            </div>
-            <div>
-              <div className="font-bold text-white text-xs sm:text-sm">
-                Đã chọn {lines.length} mặt hàng nhập kho
-              </div>
-              <div className="text-[11px] text-gray-300">
-                Quy đổi: <strong className="text-emerald-400 font-mono">{formatQuantity(totalBaseQty)}</strong> đvcs • Tổng tiền: <strong className="text-orange-400 font-mono">{formatCurrencyVND(totalAmount)}</strong>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                const el = document.getElementById('receipt-lines-section');
-                el?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="px-3 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold text-xs transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <ArrowUp size={14} />
-              <span>Xem dòng hàng ({lines.length})</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={() => handleSave('DRAFT')}
-              className="px-3 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold text-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              <Save size={14} />
-              <span>Lưu nháp</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={() => handleSave('CONFIRMED')}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-md shadow-emerald-600/30 cursor-pointer active:scale-95 disabled:opacity-50"
-            >
-              <Check size={15} />
-              <span>Xác nhận nhập kho</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
