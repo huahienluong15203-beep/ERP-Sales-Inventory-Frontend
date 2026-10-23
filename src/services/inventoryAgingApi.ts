@@ -28,3 +28,23 @@ export async function fetchInventoryAgingReport(
   }
   return await res.json();
 }
+
+/**
+ * Tải trực tiếp file Excel từ Backend (S8-07 /export) với Apache POI định dạng chuẩn
+ */
+export async function downloadInventoryAgingExcel(
+  params: InventoryAgingFilterParams = {}
+): Promise<Blob> {
+  const query = new URLSearchParams();
+  if (params.warehouseId && params.warehouseId !== 'ALL') query.set('warehouseId', params.warehouseId);
+  if (params.categoryId && params.categoryId !== 'ALL') query.set('categoryId', params.categoryId);
+  if (params.agingBracket && params.agingBracket !== 'ALL') query.set('agingBracket', params.agingBracket);
+  if (params.keyword && params.keyword.trim()) query.set('keyword', params.keyword.trim());
+
+  const res = await authFetch(`${AGING_BASE_URL}/export?${query.toString()}`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.message || 'Không thể xuất file Excel báo cáo luân chuyển kho');
+  }
+  return await res.blob();
+}

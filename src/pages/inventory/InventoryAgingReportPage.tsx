@@ -9,13 +9,12 @@ import {
   Download,
   Boxes
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import type {
   InventoryAgingItem,
   InventoryAgingSummary,
   AgingBracket
 } from '../../types/inventoryAging';
-import { fetchInventoryAgingReport } from '../../services/inventoryAgingApi';
+import { fetchInventoryAgingReport, downloadInventoryAgingExcel } from '../../services/inventoryAgingApi';
 import { fetchWarehouses } from '../../services/warehouseApi';
 import { fetchCategories, type CategoryWithCount } from '../../services/categoryApi';
 import type { Warehouse } from '../../types/warehouse';
@@ -34,7 +33,9 @@ export const InventoryAgingReportPage: React.FC = () => {
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [agingBracket, setAgingBracket] = useState<AgingBracket>('ALL');
-  const [keyword, setKeyword] = useState<string>('');
+  const [keywordInput, setKeywordInput] = useState<string>('');
+  const [debouncedKeyword, setDebouncedKeyword] = useState<string>('');
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   // Phân trang Server-side & Client sync
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -53,7 +54,17 @@ export const InventoryAgingReportPage: React.FC = () => {
     });
   }, []);
 
-  // Tải dữ liệu báo cáo luân chuyển kho từ Backend theo phân trang
+  // Debounce ô tìm kiếm 300ms để tránh gửi request dồn dập khi đang gõ
+  useEffect(() => {
+    if (keywordInput.trim() === debouncedKeyword) return;
+    const timer = setTimeout(() => {
+      setDebouncedKeyword(keywordInput.trim());
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [keywordInput, debouncedKeyword]);
+
+  // Tải dữ liệu báo cáo luân chuyển kho từ Backend theo phân trang Server-side
   const loadData = useCallback(async (pageToLoad: number = currentPage, sizeToLoad: number = pageSize) => {
     setLoading(true);
     try {
@@ -61,7 +72,7 @@ export const InventoryAgingReportPage: React.FC = () => {
         warehouseId: selectedWarehouseId,
         categoryId: selectedCategory,
         agingBracket,
-        keyword,
+        keyword: debouncedKeyword,
         page: pageToLoad,
         size: sizeToLoad
       });
@@ -74,7 +85,7 @@ export const InventoryAgingReportPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedWarehouseId, selectedCategory, agingBracket, keyword, currentPage, pageSize]);
+  }, [selectedWarehouseId, selectedCategory, agingBracket, debouncedKeyword, currentPage, pageSize]);
 
   useEffect(() => {
     loadData(currentPage, pageSize);
@@ -82,6 +93,15 @@ export const InventoryAgingReportPage: React.FC = () => {
 
   const startIndex = totalElements === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endIndex = Math.min(currentPage * pageSize, totalElements);
+
+  // Đảm bảo an toàn không bao giờ render vượt quá pageSize bản ghi lên DOM tránh tràn bộ nhớ trình duyệt
+  const displayItems = useMemo(() => {
+    if (items.length > pageSize) {
+      const start = (currentPage - 1) * pageSize;
+      return items.slice(start, start + pageSize);
+    }
+    return items;
+  }, [items, currentPage, pageSize]);
 
   // Sắp xếp nhóm hàng theo phân cấp cây DFS trực quan cho combobox lọc (Style cây DFS, truyền id chuẩn xác)
   const hierarchicalCategoryOptions = useMemo(() => {
@@ -131,7 +151,18 @@ export const InventoryAgingReportPage: React.FC = () => {
     return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
   };
 
-  // Xuất file Excel báo cáo luân chuyển kho (Tải toàn bộ dữ liệu không bị giới hạn trang)
+  // Làm mới dữ liệu báo cáo (chỉ quay icon khi người dùng chủ động bấm)
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadData(1, pageSize);
+      setCurrentPage(1);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Xuất file Excel báo cáo luân chuyển kho (Stream trực tiếp từ Backend định dạng Apache POI cực nhanh)
   const handleExportExcel = async () => {
     try {
       setExporting(true);
@@ -140,43 +171,21 @@ export const InventoryAgingReportPage: React.FC = () => {
       const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const fileName = `Bao_cao_luan_chuyen_kho_${whCode}_${todayStr}.xlsx`;
 
-      const fullRes = await fetchInventoryAgingReport({
+      const blob = await downloadInventoryAgingExcel({
         warehouseId: selectedWarehouseId,
         categoryId: selectedCategory,
         agingBracket,
-        keyword,
-        page: 1,
-        size: 50000
+        keyword: debouncedKeyword
       });
 
-      const exportList = fullRes.items || items;
-
-      const exportRows = exportList.map((i, idx) => ({
-        'STT': idx + 1,
-        'Mã SKU': i.productSku,
-        'Tên sản phẩm': i.productName,
-        'Nhóm hàng': i.categoryName,
-        'Kho lưu trữ': i.warehouseName,
-        'Đơn vị tính': i.baseUnit,
-        'Số lượng tồn': i.quantity,
-        'Giá vốn (VNĐ)': i.costPrice,
-        'Tổng giá trị tồn (VNĐ)': i.totalValue,
-        'Số ngày lưu kho bình quân': i.averageAgingDays,
-        'Tốc độ luân chuyển':
-          i.turnoverSpeed === 'FAST'
-            ? 'Nhanh (0-30 ngày)'
-            : i.turnoverSpeed === 'NORMAL'
-            ? 'Bình thường (31-60 ngày)'
-            : i.turnoverSpeed === 'SLOW'
-            ? 'Chậm luân chuyển (61-90 ngày)'
-            : 'Chôn vốn (> 90 ngày)',
-        'Ngày biến động gần nhất': i.lastMovementDate || 'Chưa ghi nhận'
-      }));
-
-      const ws = XLSX.utils.json_to_sheet(exportRows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Luan_chuyen_kho');
-      XLSX.writeFile(wb, fileName);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Lỗi xuất Excel báo cáo luân chuyển:', err);
     } finally {
@@ -198,14 +207,16 @@ export const InventoryAgingReportPage: React.FC = () => {
           <span>{exporting ? 'Đang xuất Excel...' : 'Xuất Excel'}</span>
         </button>
 
+        {/* Nút Làm mới dữ liệu - Chỉ quay khi người dùng chủ động nhấn làm mới */}
         <button
           type="button"
-          onClick={() => loadData()}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-700 hover:text-orange-600 hover:border-orange-300 rounded-xl text-xs font-semibold transition cursor-pointer shadow-2xs"
+          onClick={handleRefresh}
+          disabled={loading || isRefreshing}
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-700 hover:text-orange-600 hover:border-orange-300 rounded-xl text-xs font-semibold transition cursor-pointer shadow-2xs disabled:opacity-60"
+          title="Làm mới lại dữ liệu báo cáo"
         >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          <span>Làm mới</span>
+          <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-orange-500' : ''} />
+          <span>{isRefreshing ? 'Đang làm mới...' : 'Làm mới'}</span>
         </button>
       </div>
 
@@ -276,11 +287,8 @@ export const InventoryAgingReportPage: React.FC = () => {
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              value={keyword}
-              onChange={(e) => {
-                setCurrentPage(1);
-                setKeyword(e.target.value);
-              }}
+              value={keywordInput}
+              onChange={(e) => setKeywordInput(e.target.value)}
               placeholder="Tìm theo mã SKU, tên sản phẩm..."
               className="w-full pl-9 pr-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition min-h-[38px]"
             />
@@ -362,7 +370,7 @@ export const InventoryAgingReportPage: React.FC = () => {
           </div>
 
           <div className="flex items-end">
-            {(selectedWarehouseId !== 'ALL' || selectedCategory !== 'ALL' || agingBracket !== 'ALL' || keyword) && (
+            {(selectedWarehouseId !== 'ALL' || selectedCategory !== 'ALL' || agingBracket !== 'ALL' || keywordInput) && (
               <button
                 type="button"
                 onClick={() => {
@@ -370,7 +378,8 @@ export const InventoryAgingReportPage: React.FC = () => {
                   setSelectedWarehouseId('ALL');
                   setSelectedCategory('ALL');
                   setAgingBracket('ALL');
-                  setKeyword('');
+                  setKeywordInput('');
+                  setDebouncedKeyword('');
                 }}
                 className="w-full sm:w-auto px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl text-xs font-semibold transition cursor-pointer"
               >
@@ -408,7 +417,7 @@ export const InventoryAgingReportPage: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ) : items.length === 0 ? (
+              ) : displayItems.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-14 text-center text-gray-400">
                     <div className="flex flex-col items-center gap-2">
@@ -418,7 +427,7 @@ export const InventoryAgingReportPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                items.map((item) => (
+                displayItems.map((item) => (
                   <tr key={item.id} className="hover:bg-orange-50/30 transition">
                     <td className="py-3 px-4 font-mono font-bold text-gray-900 whitespace-nowrap">
                       {item.productSku}

@@ -148,6 +148,13 @@ export const CustomerDebtPortalView: React.FC = () => {
     setPrintInvoiceId(inv.id);
   };
 
+  const currentDebtVal = summary?.currentDebt ?? summary?.invoicedDebt ?? 0;
+  const invoicedDebtVal = summary?.invoicedDebt ?? 0;
+  const uninvoicedDebtVal = summary?.uninvoicedDebt ?? 0;
+  const creditLimitVal = summary?.creditLimit ?? 0;
+  const availableCreditVal = summary?.availableCredit ?? 0;
+  const isOverLimit = availableCreditVal < 0;
+
   return (
     <div className="space-y-6">
       {/* 4 Thẻ KPI Tóm tắt Công nợ & Hạn mức */}
@@ -161,9 +168,14 @@ export const CustomerDebtPortalView: React.FC = () => {
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black font-mono text-rose-600">
-            {formatCurrencyVND(summary?.invoicedDebt ?? summary?.currentDebt ?? 0)}
+            {formatCurrencyVND(currentDebtVal)}
           </div>
-          <p className="text-[11px] text-gray-500 mt-1">Số tiền đại lý cần thanh toán</p>
+          <div className="text-[11px] text-gray-500 mt-1 flex flex-col gap-0.5">
+            <span>Nợ hoá đơn: <strong className="text-gray-800">{formatCurrencyVND(invoicedDebtVal)}</strong></span>
+            {uninvoicedDebtVal > 0 && (
+              <span>Đơn chưa xuất HĐ: <strong className="text-gray-800">{formatCurrencyVND(uninvoicedDebtVal)}</strong></span>
+            )}
+          </div>
         </div>
 
         {/* Hạn mức công nợ được cấp */}
@@ -175,23 +187,35 @@ export const CustomerDebtPortalView: React.FC = () => {
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black font-mono text-gray-900">
-            {formatCurrencyVND(summary?.creditLimit ?? 0)}
+            {formatCurrencyVND(creditLimitVal)}
           </div>
           <p className="text-[11px] text-gray-500 mt-1">Hạn mức tín dụng tối đa</p>
         </div>
 
         {/* Hạn mức còn lại được lấy hàng */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-emerald-200 bg-emerald-50/20 shadow-xs">
-          <div className="flex items-center justify-between text-emerald-800 mb-1">
+        <div
+          className={`bg-white p-4 sm:p-5 rounded-2xl border shadow-xs ${
+            isOverLimit
+              ? 'border-rose-200 bg-rose-50/20'
+              : 'border-emerald-200 bg-emerald-50/20'
+          }`}
+        >
+          <div className={`flex items-center justify-between mb-1 ${isOverLimit ? 'text-rose-700' : 'text-emerald-800'}`}>
             <span className="text-xs font-bold uppercase tracking-wider">Còn được lấy hàng</span>
-            <div className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
-              <ShieldCheck size={16} />
+            <div className={`p-1.5 rounded-lg ${isOverLimit ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+              {isOverLimit ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />}
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black font-mono text-emerald-700">
-            {formatCurrencyVND(summary?.availableCredit ?? 0)}
+          <div
+            className={`text-xl sm:text-2xl font-black font-mono ${
+              isOverLimit ? 'text-rose-600' : 'text-emerald-700'
+            }`}
+          >
+            {formatCurrencyVND(availableCreditVal)}
           </div>
-          <p className="text-[11px] text-emerald-600 mt-1">Hạn mức khả dụng để lên đơn mới</p>
+          <p className={`text-[11px] mt-1 font-medium ${isOverLimit ? 'text-rose-600' : 'text-emerald-600'}`}>
+            {isOverLimit ? 'Đã vượt hạn mức tín dụng' : 'Hạn mức khả dụng để lên đơn mới'}
+          </p>
         </div>
 
         {/* Tình trạng thanh toán */}
@@ -217,7 +241,7 @@ export const CustomerDebtPortalView: React.FC = () => {
           </div>
           <p className="text-[11px] text-gray-500 mt-1">
             {summary?.overdue
-              ? `${summary.overdueCount ?? 0} hoá đơn quá hạn`
+              ? `${summary.overdueCount ?? 0} hoá đơn quá hạn${summary?.overdueDays ? ` (${summary.overdueDays} ngày)` : ''}`
               : 'Không có nợ quá hạn'}
           </p>
         </div>
