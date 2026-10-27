@@ -1,3 +1,24 @@
+# ERP Sales & Inventory - Frontend
+
+React 19 + TypeScript + Vite + Tailwind.
+
+## Chạy khi phát triển
+```bash
+npm install
+npm run dev        # http://localhost:5173, gọi backend ở cổng 8080
+```
+
+## Chạy bằng Docker
+File `Dockerfile` (build bằng Node, phục vụ bằng nginx) và `nginx.conf` nằm ở repo này.
+Chạy cả hệ thống (PostgreSQL + Backend + Frontend) bằng `docker-compose.yml` bên repo
+**ERP-Sales-Inventory-Backend**, xem hướng dẫn trong README của repo đó:
+```bash
+cd ../ERP-Sales-Inventory-Backend
+docker compose up -d --build   # giao diện: http://localhost:3000
+```
+
+---
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
