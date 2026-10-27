@@ -1,0 +1,19 @@
+# Chỉ gửi vào Docker những gì cần để build giao diện
+.git
+.gitignore
+.agents
+.vscode
+.idea
+node_modules
+dist
+dist-ssr
+coverage
+*.log
+.env
+.env.*
+*.local
+docs
+AGENTS.md
+README.md
+Dockerfile
+.dockerignore
